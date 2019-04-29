@@ -86,6 +86,9 @@ func (g *Game) handleEventCommand(msg ui.EventCommand) {
 		g.cursor.South()
 	case "west":
 		g.cursor.West()
+	default:
+		g.UI.Write("sorry, I don't understand")
+		return
 	}
 	l, _ := g.cursor.GetLocation()
 	g.UI.Write(l.Description)
