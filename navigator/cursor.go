@@ -15,24 +15,14 @@ func init() {
 	typecaster.AddType(Location{})
 }
 
-type cursor struct {
-	chaintree *chaintree.ChainTree
-	locX      int
-	locY      int
+type Cursor struct {
+	locX int
+	locY int
 }
 
-// Location is the representation of a grid element
-type Location struct {
-	Description string
-}
-
-func (c *cursor) setLocation(x, y int) (*Location, error) {
-	// log.Printf(spew.Sdump(c.chaintree))
-
-	tree := c.chaintree.Dag
-
+func (c *Cursor) GetLocation(tree *chaintree.ChainTree) (*Location, error) {
 	// log.Printf(spew.Sdump(tree.Get(tree.Tip)))
-	pth, remain, err := tree.Resolve(strings.Split(fmt.Sprintf("tree/data/jasons-game/%d/%d", x, y), "/"))
+	pth, remain, err := tree.Dag.Resolve(strings.Split(fmt.Sprintf("tree/data/jasons-game/%d/%d", c.locX, c.locY), "/"))
 	if err != nil {
 		return nil, fmt.Errorf("error resolving: %v", err)
 	}
@@ -45,6 +35,14 @@ func (c *cursor) setLocation(x, y int) (*Location, error) {
 	if err != nil {
 		return nil, fmt.Errorf("error casting: %v", err)
 	}
-
 	return l, nil
+}
+
+func (c *Cursor) SetLocation(x, y int) *Cursor {
+	// log.Printf(spew.Sdump(c.chaintree))
+
+	c.locX = x
+	c.locY = y
+
+	return c
 }
