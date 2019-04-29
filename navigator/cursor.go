@@ -1,24 +1,33 @@
 package navigator
 
 import (
-	"fmt"
-	"strings"
-
-	cbor "github.com/ipfs/go-ipld-cbor"
-
 	"github.com/quorumcontrol/chaintree/chaintree"
-	"github.com/quorumcontrol/chaintree/typecaster"
 )
-
-func init() {
-	cbor.RegisterCborType(Location{})
-	typecaster.AddType(Location{})
-}
 
 type Cursor struct {
 	tree *chaintree.ChainTree
 	locX int
 	locY int
+}
+
+func (c *Cursor) North() *Cursor {
+	c.locY++
+	return c
+}
+
+func (c *Cursor) South() *Cursor {
+	c.locY--
+	return c
+}
+
+func (c *Cursor) East() *Cursor {
+	c.locX++
+	return c
+}
+
+func (c *Cursor) West() *Cursor {
+	c.locX--
+	return c
 }
 
 func (c *Cursor) SetChainTree(tree *chaintree.ChainTree) *Cursor {
@@ -27,20 +36,7 @@ func (c *Cursor) SetChainTree(tree *chaintree.ChainTree) *Cursor {
 }
 
 func (c *Cursor) GetLocation() (*Location, error) {
-	pth, remain, err := c.tree.Dag.Resolve(strings.Split(fmt.Sprintf("tree/data/jasons-game/%d/%d", c.locX, c.locY), "/"))
-	if err != nil {
-		return nil, fmt.Errorf("error resolving: %v", err)
-	}
-	if len(remain) > 0 {
-		return nil, fmt.Errorf("error, path remaining: %v", remain)
-	}
-
-	l := new(Location)
-	err = typecaster.ToType(pth, l)
-	if err != nil {
-		return nil, fmt.Errorf("error casting: %v", err)
-	}
-	return l, nil
+	return locationFromTree(c.tree, c.locX, c.locY)
 }
 
 func (c *Cursor) SetLocation(x, y int) *Cursor {
