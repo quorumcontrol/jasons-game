@@ -29,7 +29,7 @@ func TestCursor(t *testing.T) {
 	emptyDag, err := dag.NewDagWithNodes(store, root, tree, chain)
 	require.Nil(t, err)
 
-	updated, err := emptyDag.SetAsLink([]string{"tree", "data", "jasons-game", "0", "0"}, "hi")
+	updated, err := emptyDag.SetAsLink([]string{"tree", "data", "jasons-game", "0", "0"}, &Location{Description: "hi"})
 	require.Nil(t, err)
 	require.NotNil(t, updated)
 
@@ -45,5 +45,5 @@ func TestCursor(t *testing.T) {
 	}
 	output, err := cursor.setLocation(0, 0)
 	require.Nil(t, err)
-	require.Equal(t, "hi", output)
+	require.Equal(t, &Location{Description: "hi"}, output)
 }
