@@ -48,6 +48,7 @@ func newTextGameInputField(stream *eventstream.EventStream) *textGameInputField 
 			eventType: eventTypeCommand,
 			payload:   inputField.GetText(),
 		})
+		inputField.SetText("")
 	})
 
 	return &textGameInputField{
