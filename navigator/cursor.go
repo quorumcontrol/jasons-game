@@ -16,13 +16,18 @@ func init() {
 }
 
 type Cursor struct {
+	tree *chaintree.ChainTree
 	locX int
 	locY int
 }
 
-func (c *Cursor) GetLocation(tree *chaintree.ChainTree) (*Location, error) {
-	// log.Printf(spew.Sdump(tree.Get(tree.Tip)))
-	pth, remain, err := tree.Dag.Resolve(strings.Split(fmt.Sprintf("tree/data/jasons-game/%d/%d", c.locX, c.locY), "/"))
+func (c *Cursor) SetChainTree(tree *chaintree.ChainTree) *Cursor {
+	c.tree = tree
+	return c
+}
+
+func (c *Cursor) GetLocation() (*Location, error) {
+	pth, remain, err := c.tree.Dag.Resolve(strings.Split(fmt.Sprintf("tree/data/jasons-game/%d/%d", c.locX, c.locY), "/"))
 	if err != nil {
 		return nil, fmt.Errorf("error resolving: %v", err)
 	}
@@ -39,8 +44,6 @@ func (c *Cursor) GetLocation(tree *chaintree.ChainTree) (*Location, error) {
 }
 
 func (c *Cursor) SetLocation(x, y int) *Cursor {
-	// log.Printf(spew.Sdump(c.chaintree))
-
 	c.locX = x
 	c.locY = y
 

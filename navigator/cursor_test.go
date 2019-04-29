@@ -41,7 +41,7 @@ func TestCursor(t *testing.T) {
 	require.Nil(t, err)
 
 	cursor := new(Cursor)
-	output, err := cursor.SetLocation(0, 0).GetLocation(chainTree)
+	output, err := cursor.SetLocation(0, 0).SetChainTree(chainTree).GetLocation()
 	require.Nil(t, err)
 	require.Equal(t, &Location{Description: "hi"}, output)
 }

@@ -8,6 +8,7 @@ require (
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc
 	github.com/gdamore/tcell v1.1.1
 	github.com/ipfs/go-ipfs-http-client v0.0.1 // indirect
+	github.com/ipfs/go-ipld-cbor v1.5.1-0.20190302174746-59d816225550
 	github.com/lucasb-eyer/go-colorful v1.0.2 // indirect
 	github.com/multiformats/go-multihash v0.0.5 // indirect
 	github.com/quorumcontrol/chaintree v0.0.0-20180808140020-9145fcfcdb66e952d8c7da1fc27d23169710c8d3
