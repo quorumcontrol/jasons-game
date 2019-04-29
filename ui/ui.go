@@ -6,9 +6,12 @@ import (
 	"github.com/rivo/tview"
 )
 
-const (
-	eventTypeCommand uint8 = iota
-)
+// the UIs event for when a new command has been typed
+type EventCommand string
+
+func (ec EventCommand) String() string {
+	return string(ec)
+}
 
 // JasonsGameUI is the basic 3 box UI for a text game
 type JasonsGameUI struct {
@@ -18,17 +21,17 @@ type JasonsGameUI struct {
 	EventStream *eventstream.EventStream
 }
 
-func (jsgui *JasonsGameUI) Write(bits []byte) (n int, err error) {
-	return jsgui.txtField.Write(bits)
+func (jsgui *JasonsGameUI) Write(msg string) (n int, err error) {
+	return jsgui.txtField.Write([]byte(msg + "\n"))
 }
 
 func (jsgui *JasonsGameUI) Run() error {
 	return jsgui.app.Run()
 }
 
-type event struct {
-	eventType uint8
-	payload   interface{}
+type Event struct {
+	EventType uint8
+	Payload   interface{}
 }
 
 type textGameInputField struct {
@@ -44,10 +47,7 @@ func newTextGameInputField(stream *eventstream.EventStream) *textGameInputField 
 		SetFieldWidth(128)
 
 	inputField.SetDoneFunc(func(key tcell.Key) {
-		stream.Publish(&event{
-			eventType: eventTypeCommand,
-			payload:   inputField.GetText(),
-		})
+		stream.Publish(EventCommand(inputField.GetText()))
 		inputField.SetText("")
 	})
 
@@ -70,7 +70,9 @@ func New() (*JasonsGameUI, error) {
 
 	txt := tview.NewTextView()
 	txt.SetBorder(true).SetTitle("Hello, dog!")
-	txt.Write([]byte("hi hi\n"))
+	txt.SetChangedFunc(func() {
+		app.Draw()
+	})
 
 	inptField := newTextGameInputField(events)
 
