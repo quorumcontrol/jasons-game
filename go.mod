@@ -3,7 +3,7 @@ module github.com/quorumcontrol/jasons-game
 go 1.12
 
 require (
-	github.com/AsynkronIT/protoactor-go v0.0.0-20190429003634-f81631684a62
+	github.com/AsynkronIT/protoactor-go v0.0.0-20190318154652-aa1aa20c2fa0
 	github.com/btcsuite/btcd v0.0.0-20190427004231-96897255fd17 // indirect
 	github.com/ethereum/go-ethereum v1.8.27
 	github.com/gdamore/tcell v1.1.1

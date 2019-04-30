@@ -1,66 +1,78 @@
 package ui
 
 import (
-	"github.com/AsynkronIT/protoactor-go/eventstream"
+	"fmt"
+
+	"github.com/AsynkronIT/protoactor-go/actor"
 	"github.com/gdamore/tcell"
+	"github.com/quorumcontrol/jasons-game/navigator"
 	"github.com/rivo/tview"
 )
 
-// the UIs event for when a new command has been typed
-type EventCommand string
+const (
+	gameOutputLabel   = "locationOutput"
+	commandInputField = "commandInputField"
+)
 
-func (ec EventCommand) String() string {
-	return string(ec)
+// UserInput is the event outputted when a user interacts with the UI
+type UserInput struct {
+	Message string
 }
 
-// JasonsGameUI is the basic 3 box UI for a text game
-type JasonsGameUI struct {
-	app         *tview.Application
-	inputField  *textGameInputField
-	txtField    *tview.TextView
-	EventStream *eventstream.EventStream
+// MessageToUser is used to communicate directly to the game output
+// outside of normal messages like Location
+type MessageToUser struct {
+	Message string
 }
 
-func (jsgui *JasonsGameUI) Write(msg string) (n int, err error) {
-	return jsgui.txtField.Write([]byte(msg + "\n"))
+// Subscribe is used to get and receive UI events
+type Subscribe struct{}
+
+type elementMap map[string]tview.Primitive
+
+type jasonsGameUI struct {
+	app        *tview.Application
+	elements   elementMap
+	subscriber *actor.PID
 }
 
-func (jsgui *JasonsGameUI) Run() error {
-	return jsgui.app.Run()
-}
-
-type Event struct {
-	EventType uint8
-	Payload   interface{}
-}
-
-type textGameInputField struct {
-	inputField  *tview.InputField
-	inputBuffer []byte
-}
-
-func newTextGameInputField(stream *eventstream.EventStream) *textGameInputField {
-	var buffer []byte
-
-	inputField := tview.NewInputField().
-		SetLabel("What to do?").
-		SetFieldWidth(128)
-
-	inputField.SetDoneFunc(func(key tcell.Key) {
-		stream.Publish(EventCommand(inputField.GetText()))
-		inputField.SetText("")
+// NewUIProps returns the actor props necessary to spin up a new UI
+func NewUIProps() *actor.Props {
+	return actor.PropsFromProducer(func() actor.Actor {
+		return &jasonsGameUI{
+			elements: make(elementMap),
+		}
 	})
+}
 
-	return &textGameInputField{
-		inputField:  inputField,
-		inputBuffer: buffer,
+func (jsgui *jasonsGameUI) Receive(actorCtx actor.Context) {
+	switch msg := actorCtx.Message().(type) {
+	case *actor.Started:
+		if err := jsgui.initialize(); err != nil {
+			panic(fmt.Errorf("error initializing: %v", err))
+		}
+	case *actor.Stopping:
+		jsgui.app.Stop()
+	case *Subscribe:
+		jsgui.subscriber = actorCtx.Sender()
+	case *navigator.Location:
+		jsgui.handleLocation(msg)
+	case *MessageToUser:
+		jsgui.handleMessageToUser(msg)
 	}
 }
 
+func (jsgui *jasonsGameUI) handleLocation(loc *navigator.Location) {
+	jsgui.elements[gameOutputLabel].(*tview.TextView).Write([]byte(loc.Description + "\n"))
+}
+
+func (jsgui *jasonsGameUI) handleMessageToUser(msg *MessageToUser) {
+	jsgui.elements[gameOutputLabel].(*tview.TextView).Write([]byte(msg.Message + "\n"))
+}
+
 // run the UI
-func New() (*JasonsGameUI, error) {
+func (jsgui *jasonsGameUI) initialize() error {
 	app := tview.NewApplication()
-	events := &eventstream.EventStream{}
 
 	mainFlex := tview.NewFlex()
 	todoReplaceBox := tview.NewBox().SetBorder(true).SetTitle("Your Stuff").SetBorderPadding(10, 5, 5, 5)
@@ -74,18 +86,27 @@ func New() (*JasonsGameUI, error) {
 		app.Draw()
 	})
 
-	inptField := newTextGameInputField(events)
+	inputField := tview.NewInputField().
+		SetLabel("What to do?").
+		SetFieldWidth(128)
+
+	inputField.SetDoneFunc(func(key tcell.Key) {
+		actor.EmptyRootContext.Send(jsgui.subscriber, &UserInput{
+			Message: inputField.GetText(),
+		})
+		inputField.SetText("")
+	})
 
 	txtFlex.AddItem(txt, 0, 90, false)
-	txtFlex.AddItem(inptField.inputField, 10, 10, true)
+	txtFlex.AddItem(inputField, 10, 10, true)
 
 	mainFlex.AddItem(txtFlex, 0, 75, true)
 	mainFlex.AddItem(todoReplaceBox, 0, 25, false)
 	app.SetRoot(mainFlex, true)
-	return &JasonsGameUI{
-		app:         app,
-		inputField:  inptField,
-		txtField:    txt,
-		EventStream: events,
-	}, nil
+	jsgui.app = app
+
+	jsgui.elements[commandInputField] = inputField
+	jsgui.elements[gameOutputLabel] = txt
+	go app.Run()
+	return nil
 }
