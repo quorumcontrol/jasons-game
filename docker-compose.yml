@@ -1,0 +1,17 @@
+version: "3"
+services:
+  game:
+    build: ./devdocker
+    command: ["go", "run", "main.go"]
+    volumes:
+      - .:/app:cached
+      - ./devdocker/.tmp:/root/.cache:delegated
+      - $GOPATH/pkg/mod:/go/pkg/mod:delegated
+    environment:
+      - GOPATH=/go
+      - TUPELO_BOOTSTRAP_NODES="/ip4/172.16.238.10/tcp/34001/ipfs/16Uiu2HAm3TGSEKEjagcCojSJeaT5rypaeJMKejijvYSnAjviWwV5"
+
+networks:
+  default:
+    external:
+      name: tupelo_default

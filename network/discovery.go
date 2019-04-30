@@ -12,7 +12,7 @@ import (
 	pstore "github.com/libp2p/go-libp2p-peerstore"
 )
 
-const nameSpace = "jasons-game"
+const nameSpace = "jasons-game-tupelo"
 
 const maxConnected = 300
 

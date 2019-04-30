@@ -16,3 +16,5 @@ vendor/
 
 # Test report output dir
 test_results/
+
+.tmp

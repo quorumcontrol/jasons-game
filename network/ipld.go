@@ -4,15 +4,12 @@ import (
 	"context"
 
 	ipfslite "github.com/hsanjuan/ipfs-lite"
+	"github.com/ipfs/go-datastore"
 	crypto "github.com/libp2p/go-libp2p-crypto"
 	"github.com/multiformats/go-multiaddr"
 )
 
-func NewIPLDClient(ctx context.Context, path string) (*ipfslite.Peer, error) {
-	ds, err := ipfslite.BadgerDatastore(path)
-	if err != nil {
-		panic(err)
-	}
+func NewIPLDClient(ctx context.Context, ds datastore.Batching) (*ipfslite.Peer, error) {
 	priv, _, err := crypto.GenerateKeyPair(crypto.RSA, 2048)
 	if err != nil {
 		panic(err)
