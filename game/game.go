@@ -47,6 +47,9 @@ func (g *Game) initialize(actorCtx actor.Context) {
 
 func (g *Game) handleUserInput(actorCtx actor.Context, input *ui.UserInput) {
 	switch input.Message {
+	case "exit":
+		actorCtx.Send(g.ui, &ui.Exit{})
+		return
 	case "north":
 		g.cursor.North()
 	case "east":

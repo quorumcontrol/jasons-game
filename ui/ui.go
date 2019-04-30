@@ -14,6 +14,8 @@ const (
 	commandInputField = "commandInputField"
 )
 
+type Exit struct{}
+
 // UserInput is the event outputted when a user interacts with the UI
 type UserInput struct {
 	Message string
@@ -53,6 +55,8 @@ func (jsgui *jasonsGameUI) Receive(actorCtx actor.Context) {
 		}
 	case *actor.Stopping:
 		jsgui.app.Stop()
+	case *Exit:
+		actorCtx.Self().Poison()
 	case *Subscribe:
 		jsgui.subscriber = actorCtx.Sender()
 	case *navigator.Location:
