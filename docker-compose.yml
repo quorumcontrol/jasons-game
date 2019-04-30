@@ -1,15 +1,27 @@
 version: "3"
+# TODO: this should actually launch a whole tupelo signer network using the canned docker images
 services:
   game:
     build: ./devdocker
     command: ["go", "run", "main.go"]
     volumes:
-      - .:/app:cached
+      - .:/app:delegated
       - ./devdocker/.tmp:/root/.cache:delegated
       - $GOPATH/pkg/mod:/go/pkg/mod:delegated
     environment:
-      - GOPATH=/go
-      - TUPELO_BOOTSTRAP_NODES="/ip4/172.16.238.10/tcp/34001/ipfs/16Uiu2HAm3TGSEKEjagcCojSJeaT5rypaeJMKejijvYSnAjviWwV5"
+      GOPATH: /go
+      TUPELO_BOOTSTRAP_NODES: /ip4/172.16.238.10/tcp/34001/ipfs/16Uiu2HAm3TGSEKEjagcCojSJeaT5rypaeJMKejijvYSnAjviWwV5
+
+  integration:
+    build: ./devdocker
+    command: ["go", "test", "-v", "-tags=integration", "-timeout=2m", "./..."]
+    volumes:
+      - .:/app:delegated
+      - ./devdocker/.tmp:/root/.cache:delegated
+      - $GOPATH/pkg/mod:/go/pkg/mod:delegated
+    environment:
+      GOPATH: /go
+      TUPELO_BOOTSTRAP_NODES: /ip4/172.16.238.10/tcp/34001/ipfs/16Uiu2HAm3TGSEKEjagcCojSJeaT5rypaeJMKejijvYSnAjviWwV5
 
 networks:
   default:

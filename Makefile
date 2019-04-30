@@ -28,9 +28,7 @@ test: $(gosources) $(generated) go.mod go.sum $(FIRSTGOPATH)/bin/gotestsum
 	gotestsum
 
 integration-test: docker-image
-	docker run -e TUPELO_BOOTSTRAP_NODES=/ip4/172.16.238.10/tcp/34001/ipfs/\
-16Uiu2HAm3TGSEKEjagcCojSJeaT5rypaeJMKejijvYSnAjviWwV5 --net tupelo_default \
-quorumcontrol/jasons-game go test -mod=vendor -tags=integration -timeout=2m ./...
+	docker-compose run --rm integration
 
 docker-image: vendor $(gosources) $(generated) Dockerfile .dockerignore
 	docker build -t quorumcontrol/jasons-game:$(TAG) .
