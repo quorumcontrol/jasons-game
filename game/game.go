@@ -9,6 +9,7 @@ import (
 	"github.com/quorumcontrol/jasons-game/network"
 	"github.com/quorumcontrol/jasons-game/ui"
 	"github.com/quorumcontrol/tupelo-go-client/consensus"
+	"github.com/sbstjn/allot"
 )
 
 var log = logging.Logger("game")
@@ -98,30 +99,35 @@ func (g *Game) initialize(actorCtx actor.Context) {
 }
 
 func (g *Game) handleUserInput(actorCtx actor.Context, input *ui.UserInput) {
-	cmd, _ := g.commands.findCommand(input.Message)
+	cmd, matches := g.commands.findCommand(input.Message)
 	if cmd != nil {
 		switch cmd.name {
 		case "exit":
 			actorCtx.Send(g.ui, &ui.Exit{})
-			return
-		case "north":
-			g.cursor.North()
-		case "east":
-			g.cursor.East()
-		case "south":
-			g.cursor.South()
-		case "west":
-			g.cursor.West()
+		case "north", "east", "south", "west":
+			g.handleLocationInput(actorCtx, cmd, matches)
 		default:
-			actorCtx.Send(g.ui, &ui.MessageToUser{Message: "I'm sorry I don't understand."})
-			return
+			log.Error("unhandled but matched command", cmd.name)
 		}
-		l, err := g.cursor.GetLocation()
-		if err != nil {
-			actorCtx.Send(g.ui, &ui.MessageToUser{Message: fmt.Sprintf("some sort of error happened: %v", err)})
-		}
-		actorCtx.Send(g.ui, l)
 		return
 	}
 	actorCtx.Send(g.ui, &ui.MessageToUser{Message: "I'm sorry I don't understand."})
+}
+
+func (g *Game) handleLocationInput(actorCtx actor.Context, cmd *command, matches allot.MatchInterface) {
+	switch cmd.name {
+	case "north":
+		g.cursor.North()
+	case "east":
+		g.cursor.East()
+	case "south":
+		g.cursor.South()
+	case "west":
+		g.cursor.West()
+	}
+	l, err := g.cursor.GetLocation()
+	if err != nil {
+		actorCtx.Send(g.ui, &ui.MessageToUser{Message: fmt.Sprintf("some sort of error happened: %v", err)})
+	}
+	actorCtx.Send(g.ui, l)
 }

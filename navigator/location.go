@@ -17,6 +17,9 @@ func init() {
 
 // Location is the representation of a grid element
 type Location struct {
+	Did         string
+	X           int
+	Y           int
 	Description string
 }
 
@@ -34,5 +37,8 @@ func locationFromTree(tree *consensus.SignedChainTree, x, y int) (*Location, err
 	if err != nil {
 		return nil, fmt.Errorf("error casting: %v", err)
 	}
+	l.Did = tree.MustId()
+	l.X = x
+	l.Y = y
 	return l, nil
 }

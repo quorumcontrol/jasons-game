@@ -8,6 +8,7 @@ import (
 
 	"github.com/ethereum/go-ethereum/crypto"
 	ipfslite "github.com/hsanjuan/ipfs-lite"
+	cid "github.com/ipfs/go-cid"
 	"github.com/ipfs/go-datastore"
 	logging "github.com/ipfs/go-log"
 	"github.com/pkg/errors"
@@ -25,6 +26,7 @@ type Network interface {
 	CreateNamedChainTree(name string) (*consensus.SignedChainTree, error)
 	GetChainTreeByName(name string) (*consensus.SignedChainTree, error)
 	GetRemoteTree(did string) (*consensus.SignedChainTree, error)
+	GetTreeByTip(tip cid.Cid) (*consensus.SignedChainTree, error)
 	UpdateChainTree(tree *consensus.SignedChainTree, path string, value interface{}) (*consensus.SignedChainTree, error)
 }
 
@@ -152,7 +154,10 @@ func (n *RemoteNetwork) GetRemoteTree(did string) (*consensus.SignedChainTree, e
 	if err != nil {
 		return nil, errors.Wrap(err, "error getting tip")
 	}
+	return n.GetTreeByTip(tip)
+}
 
+func (n *RemoteNetwork) GetTreeByTip(tip cid.Cid) (*consensus.SignedChainTree, error) {
 	storedTree := dag.NewDag(tip, n.TreeStore)
 
 	tree, err := chaintree.NewChainTree(storedTree, nil, consensus.DefaultTransactors)

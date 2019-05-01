@@ -67,7 +67,7 @@ func (jsgui *jasonsGameUI) Receive(actorCtx actor.Context) {
 }
 
 func (jsgui *jasonsGameUI) handleLocation(loc *navigator.Location) {
-	jsgui.elements[gameOutputLabel].(*tview.TextView).Write([]byte(loc.Description + "\n"))
+	jsgui.elements[gameOutputLabel].(*tview.TextView).Write([]byte(loc.Did + fmt.Sprintf(" (%d,%d)\n", loc.X, loc.Y) + loc.Description + "\n"))
 }
 
 func (jsgui *jasonsGameUI) handleMessageToUser(msg *MessageToUser) {

@@ -7,6 +7,7 @@ import (
 
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ipfs/go-blockservice"
+	cid "github.com/ipfs/go-cid"
 	"github.com/ipfs/go-datastore"
 	blockstore "github.com/ipfs/go-ipfs-blockstore"
 	offline "github.com/ipfs/go-ipfs-exchange-offline"
@@ -78,6 +79,11 @@ func (ln *LocalNetwork) GetChainTreeByName(name string) (*consensus.SignedChainT
 }
 
 func (ln *LocalNetwork) GetRemoteTree(did string) (*consensus.SignedChainTree, error) {
+	// TODO: if we enable this, we'll need to also do some sort of "insert" for test purposes
+	return nil, fmt.Errorf("unimplemented")
+}
+
+func (ln *LocalNetwork) GetTreeByTip(tip cid.Cid) (*consensus.SignedChainTree, error) {
 	// TODO: if we enable this, we'll need to also do some sort of "insert" for test purposes
 	return nil, fmt.Errorf("unimplemented")
 }
