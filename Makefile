@@ -27,7 +27,7 @@ lint: $(FIRSTGOPATH)/bin/golangci-lint
 test: $(gosources) $(generated) go.mod go.sum $(FIRSTGOPATH)/bin/gotestsum
 	gotestsum
 
-integration-test: docker-image
+integration-test: $(gosources) $(generated) go.mod go.sum
 	docker-compose run --rm integration
 
 docker-image: vendor $(gosources) $(generated) Dockerfile .dockerignore

@@ -4,14 +4,13 @@ import (
 	"context"
 	"crypto/ecdsa"
 	"fmt"
-	"path/filepath"
 	"time"
 
 	"github.com/ethereum/go-ethereum/crypto"
 	ipfslite "github.com/hsanjuan/ipfs-lite"
 	"github.com/ipfs/go-datastore"
-	"github.com/quorumcontrol/chaintree/nodestore"
-	"github.com/quorumcontrol/storage"
+	"github.com/pkg/errors"
+	"github.com/quorumcontrol/tupelo-go-client/consensus"
 	"github.com/quorumcontrol/tupelo-go-client/gossip3/remote"
 	"github.com/quorumcontrol/tupelo-go-client/gossip3/types"
 	"github.com/quorumcontrol/tupelo-go-client/p2p"
@@ -21,22 +20,30 @@ type Network struct {
 	Tupelo        *Tupelo
 	Ipld          *ipfslite.Peer
 	KeyValueStore datastore.Batching
+	TreeStore     TreeStore
 }
 
 func NewRemoteNetwork(ctx context.Context, group *types.NotaryGroup, path string) (*Network, error) {
 	remote.Start()
 
-	ds, err := ipfslite.BadgerDatastore(filepath.Join(path, "ipld"))
+	ds, err := ipfslite.BadgerDatastore(path)
 	if err != nil {
-		return nil, fmt.Errorf("error creating store: %v", err)
+		return nil, errors.Wrap(err, "error creating store")
 	}
 	net := &Network{
 		KeyValueStore: ds,
 	}
 
-	key, err := net.GetOrCreatePrivateKey()
+	lite, err := NewIPLDClient(ctx, ds)
 	if err != nil {
-		return nil, fmt.Errorf("error getting private key: %v", err)
+		return nil, errors.Wrap(err, "error creating IPLD client")
+	}
+	net.Ipld = lite
+
+	// TODO: keep the keys in a separate KeyStore
+	key, err := net.getOrCreatePrivateKey()
+	if err != nil {
+		return nil, errors.Wrap(err, "error getting private key")
 	}
 
 	p2pHost, err := p2p.NewLibP2PHost(ctx, key, 0)
@@ -53,12 +60,8 @@ func NewRemoteNetwork(ctx context.Context, group *types.NotaryGroup, path string
 	remote.NewRouter(p2pHost)
 	group.SetupAllRemoteActors(&key.PublicKey)
 
-	tupeloBadger, err := storage.NewBadgerStorage(filepath.Join(path, "tupelo"))
-	if err != nil {
-		return nil, fmt.Errorf("error creating storage: %v", err)
-	}
-
-	store := nodestore.NewStorageBasedStore(tupeloBadger)
+	store := NewIPLDTreeStore(lite.BlockStore(), ds)
+	net.TreeStore = store
 
 	pubsub := remote.NewNetworkPubSub(p2pHost)
 
@@ -70,16 +73,10 @@ func NewRemoteNetwork(ctx context.Context, group *types.NotaryGroup, path string
 	}
 	net.Tupelo = tup
 
-	lite, err := NewIPLDClient(ctx, ds)
-	if err != nil {
-		return nil, fmt.Errorf("error creating IPLD client: %v", err)
-	}
-	net.Ipld = lite
-
 	return net, nil
 }
 
-func (n *Network) GetOrCreatePrivateKey() (*ecdsa.PrivateKey, error) {
+func (n *Network) getOrCreatePrivateKey() (*ecdsa.PrivateKey, error) {
 	var key *ecdsa.PrivateKey
 
 	storeKey := datastore.NewKey("privateKey")
@@ -87,24 +84,44 @@ func (n *Network) GetOrCreatePrivateKey() (*ecdsa.PrivateKey, error) {
 	if err == nil {
 		reconstituted, err := crypto.ToECDSA(stored)
 		if err != nil {
-			return nil, fmt.Errorf("error putting key back together: %v", err)
+			return nil, errors.Wrap(err, "error putting key back together")
 		}
 		key = reconstituted
 	} else {
 		if err != datastore.ErrNotFound {
-			return nil, fmt.Errorf("error getting key: %v", err)
+			return nil, errors.Wrap(err, "error getting key")
 		}
 		// key wasn't found generate a new key and save it
 		newKey, err := crypto.GenerateKey()
 		if err != nil {
-			return nil, fmt.Errorf("error generating key: %v", err)
+			return nil, errors.Wrap(err, "error generating key")
 		}
 		err = n.KeyValueStore.Put(storeKey, crypto.FromECDSA(newKey))
 		if err != nil {
-			return nil, fmt.Errorf("error putting key: %v", err)
+			return nil, errors.Wrap(err, "error putting key")
 		}
 		key = newKey
 	}
 
 	return key, nil
+}
+
+func (n *Network) CreateNamedChainTree(name string) (*consensus.SignedChainTree, error) {
+	tree, err := n.Tupelo.CreateChainTree()
+	if err != nil {
+		return nil, errors.Wrap(err, "error creating tree")
+	}
+	err = n.TreeStore.SaveTreeMetadata(tree)
+	if err != nil {
+		return nil, errors.Wrap(err, "error saving tree")
+	}
+	return tree, n.KeyValueStore.Put(datastore.NewKey("-n-"+name), []byte(tree.MustId()))
+}
+
+func (n *Network) GetChainTreeByName(name string) (*consensus.SignedChainTree, error) {
+	did, err := n.KeyValueStore.Get(datastore.NewKey("-n-" + name))
+	if err != nil {
+		return nil, errors.Wrap(err, "error getting tree")
+	}
+	return n.TreeStore.GetTree(string(did))
 }
