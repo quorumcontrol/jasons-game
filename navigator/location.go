@@ -5,8 +5,8 @@ import (
 	"strings"
 
 	cbor "github.com/ipfs/go-ipld-cbor"
+	"github.com/quorumcontrol/tupelo-go-client/consensus"
 
-	"github.com/quorumcontrol/chaintree/chaintree"
 	"github.com/quorumcontrol/chaintree/typecaster"
 )
 
@@ -20,8 +20,8 @@ type Location struct {
 	Description string
 }
 
-func locationFromTree(tree *chaintree.ChainTree, x, y int) (*Location, error) {
-	pth, remain, err := tree.Dag.Resolve(strings.Split(fmt.Sprintf("tree/data/jasons-game/%d/%d", x, y), "/"))
+func locationFromTree(tree *consensus.SignedChainTree, x, y int) (*Location, error) {
+	pth, remain, err := tree.ChainTree.Dag.Resolve(strings.Split(fmt.Sprintf("tree/data/jasons-game/%d/%d", x, y), "/"))
 	if err != nil {
 		return nil, fmt.Errorf("error resolving: %v", err)
 	}

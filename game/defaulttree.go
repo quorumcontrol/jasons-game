@@ -4,14 +4,13 @@ import (
 	"fmt"
 
 	"github.com/ethereum/go-ethereum/crypto"
-	"github.com/quorumcontrol/chaintree/chaintree"
 	"github.com/quorumcontrol/chaintree/nodestore"
 	"github.com/quorumcontrol/jasons-game/navigator"
 	"github.com/quorumcontrol/storage"
 	"github.com/quorumcontrol/tupelo-go-client/consensus"
 )
 
-var DefaultTree *chaintree.ChainTree
+var DefaultTree *consensus.SignedChainTree
 
 func init() {
 	store := nodestore.NewStorageBasedStore(storage.NewMemStorage())
@@ -34,5 +33,5 @@ func init() {
 		panic(fmt.Errorf("error updating dag: %v", err))
 	}
 	tree.ChainTree.Dag = updated
-	DefaultTree = tree.ChainTree
+	DefaultTree = tree
 }

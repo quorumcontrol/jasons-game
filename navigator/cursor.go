@@ -1,11 +1,11 @@
 package navigator
 
 import (
-	"github.com/quorumcontrol/chaintree/chaintree"
+	"github.com/quorumcontrol/tupelo-go-client/consensus"
 )
 
 type Cursor struct {
-	tree *chaintree.ChainTree
+	tree *consensus.SignedChainTree
 	locX int
 	locY int
 }
@@ -30,7 +30,7 @@ func (c *Cursor) West() *Cursor {
 	return c
 }
 
-func (c *Cursor) SetChainTree(tree *chaintree.ChainTree) *Cursor {
+func (c *Cursor) SetChainTree(tree *consensus.SignedChainTree) *Cursor {
 	c.tree = tree
 	return c
 }

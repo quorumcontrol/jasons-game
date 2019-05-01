@@ -4,18 +4,18 @@ import (
 	"fmt"
 
 	"github.com/AsynkronIT/protoactor-go/actor"
-	"github.com/quorumcontrol/chaintree/chaintree"
 	"github.com/quorumcontrol/jasons-game/navigator"
 	"github.com/quorumcontrol/jasons-game/ui"
+	"github.com/quorumcontrol/tupelo-go-client/consensus"
 )
 
 type Game struct {
 	ui          *actor.PID
-	initialTree *chaintree.ChainTree
+	initialTree *consensus.SignedChainTree
 	cursor      *navigator.Cursor
 }
 
-func NewGameProps(ui *actor.PID, initialTree *chaintree.ChainTree) *actor.Props {
+func NewGameProps(ui *actor.PID, initialTree *consensus.SignedChainTree) *actor.Props {
 	return actor.PropsFromProducer(func() actor.Actor {
 		return &Game{
 			ui:          ui,

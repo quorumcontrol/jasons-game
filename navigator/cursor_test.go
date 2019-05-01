@@ -25,7 +25,7 @@ func TestCursor(t *testing.T) {
 	tree.ChainTree.Dag = updated
 
 	cursor := new(Cursor)
-	output, err := cursor.SetLocation(0, 0).SetChainTree(tree.ChainTree).GetLocation()
+	output, err := cursor.SetLocation(0, 0).SetChainTree(tree).GetLocation()
 	require.Nil(t, err)
 	require.Equal(t, &Location{Description: "hi"}, output)
 }
