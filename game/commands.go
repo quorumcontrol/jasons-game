@@ -18,6 +18,7 @@ var defaultCommandList = commandList{
 	newCommand("east", "east"),
 	newCommand("west", "west"),
 	newCommand("name", "call me <name:string>"),
+	newCommand("exit", "exit"),
 }
 
 func newCommand(name, parse string) *command {

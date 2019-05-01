@@ -67,7 +67,7 @@ func setupNotaryGroup(ctx context.Context) (*types.NotaryGroup, error) {
 }
 
 func main() {
-	err := logging.SetLogLevel("*", "CRITICAL")
+	err := logging.SetLogLevel("*", "INFO")
 	if err != nil {
 		panic(errors.Wrap(err, "error setting loglevel"))
 	}

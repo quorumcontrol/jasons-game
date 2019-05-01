@@ -84,7 +84,7 @@ func (g *Game) initialize(actorCtx actor.Context) {
 	actorCtx.Request(g.ui, &ui.Subscribe{})
 
 	actorCtx.Send(g.ui, &ui.MessageToUser{
-		Message: fmt.Sprintf("Created Player %s (%s)\nHome: %s (%s)", playerTree.MustId(), playerTree.Tip().String(), homeTree.MustId(), homeTree.Tip().String()),
+		Message: fmt.Sprintf("Created Player %s \n(%s)\nHome: %s \n(%s)", playerTree.MustId(), playerTree.Tip().String(), homeTree.MustId(), homeTree.Tip().String()),
 	})
 
 	l, err := g.cursor.GetLocation()

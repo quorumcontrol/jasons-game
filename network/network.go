@@ -7,13 +7,14 @@ import (
 	"time"
 
 	"github.com/ethereum/go-ethereum/crypto"
-	ipfslite "github.com/hsanjuan/ipfs-lite"
 	cid "github.com/ipfs/go-cid"
 	"github.com/ipfs/go-datastore"
+	badger "github.com/ipfs/go-ds-badger"
 	logging "github.com/ipfs/go-log"
 	"github.com/pkg/errors"
 	"github.com/quorumcontrol/chaintree/chaintree"
 	"github.com/quorumcontrol/chaintree/dag"
+	ipfslite "github.com/quorumcontrol/jasons-game/ipfslite"
 	"github.com/quorumcontrol/tupelo-go-client/consensus"
 	"github.com/quorumcontrol/tupelo-go-client/gossip3/remote"
 	"github.com/quorumcontrol/tupelo-go-client/gossip3/types"
@@ -40,7 +41,7 @@ type RemoteNetwork struct {
 func NewRemoteNetwork(ctx context.Context, group *types.NotaryGroup, path string) (Network, error) {
 	remote.Start()
 
-	ds, err := ipfslite.BadgerDatastore(path)
+	ds, err := badger.NewDatastore(path, &badger.DefaultOptions)
 	if err != nil {
 		return nil, errors.Wrap(err, "error creating store")
 	}
