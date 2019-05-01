@@ -10,6 +10,8 @@ import (
 	ipfslite "github.com/hsanjuan/ipfs-lite"
 	"github.com/ipfs/go-datastore"
 	"github.com/pkg/errors"
+	"github.com/quorumcontrol/chaintree/chaintree"
+	"github.com/quorumcontrol/chaintree/dag"
 	"github.com/quorumcontrol/tupelo-go-client/consensus"
 	"github.com/quorumcontrol/tupelo-go-client/gossip3/remote"
 	"github.com/quorumcontrol/tupelo-go-client/gossip3/types"
@@ -124,4 +126,23 @@ func (n *Network) GetChainTreeByName(name string) (*consensus.SignedChainTree, e
 		return nil, errors.Wrap(err, "error getting tree")
 	}
 	return n.TreeStore.GetTree(string(did))
+}
+
+func (n *Network) GetRemoteTree(did string) (*consensus.SignedChainTree, error) {
+	tip, err := n.Tupelo.GetTip(did)
+	if err != nil {
+		return nil, errors.Wrap(err, "error getting tip")
+	}
+
+	storedTree := dag.NewDag(tip, n.TreeStore)
+
+	tree, err := chaintree.NewChainTree(storedTree, nil, consensus.DefaultTransactors)
+	if err != nil {
+		return nil, errors.Wrap(err, "error creating chaintree")
+	}
+
+	return &consensus.SignedChainTree{
+		ChainTree:  tree,
+		Signatures: make(consensus.SignatureMap), // for now just ignore them
+	}, nil
 }

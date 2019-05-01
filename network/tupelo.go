@@ -5,6 +5,8 @@ import (
 	"fmt"
 
 	"github.com/ethereum/go-ethereum/crypto"
+	cid "github.com/ipfs/go-cid"
+	"github.com/pkg/errors"
 	"github.com/quorumcontrol/chaintree/nodestore"
 	"github.com/quorumcontrol/tupelo-go-client/client"
 
@@ -19,6 +21,23 @@ type Tupelo struct {
 	Store        nodestore.NodeStore
 	NotaryGroup  *types.NotaryGroup
 	PubSubSystem remote.PubSub
+}
+
+func (t *Tupelo) GetTip(did string) (cid.Cid, error) {
+	cli := client.New(t.NotaryGroup, did, t.PubSubSystem)
+	cli.Listen()
+	defer cli.Stop()
+
+	currState, err := cli.TipRequest()
+	if err != nil {
+		return cid.Undef, errors.Wrap(err, "error getting tip")
+	}
+
+	tip, err := cid.Cast(currState.Signature.NewTip)
+	if err != nil {
+		return cid.Undef, errors.Wrap(err, "error casting tip")
+	}
+	return tip, nil
 }
 
 func (t *Tupelo) CreateChainTree() (*consensus.SignedChainTree, error) {

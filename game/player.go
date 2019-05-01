@@ -6,8 +6,8 @@ import (
 
 	cbor "github.com/ipfs/go-ipld-cbor"
 
-	"github.com/quorumcontrol/chaintree/chaintree"
 	"github.com/quorumcontrol/chaintree/typecaster"
+	"github.com/quorumcontrol/tupelo-go-client/consensus"
 )
 
 func init() {
@@ -16,7 +16,7 @@ func init() {
 }
 
 type Player struct {
-	tree *chaintree.ChainTree
+	tree *consensus.SignedChainTree
 }
 
 type PlayerInfo struct {
@@ -24,7 +24,7 @@ type PlayerInfo struct {
 }
 
 func (p *Player) GetInfo() (*PlayerInfo, error) {
-	pth, remain, err := p.tree.Dag.Resolve(strings.Split("tree/data/jasons-game/player", "/"))
+	pth, remain, err := p.tree.ChainTree.Dag.Resolve(strings.Split("tree/data/jasons-game/player", "/"))
 	if err != nil {
 		return nil, fmt.Errorf("error resolving: %v", err)
 	}

@@ -112,6 +112,35 @@ func TestCreateChainTree(t *testing.T) {
 
 	_,err = tup.CreateChainTree()
 	require.Nil(t,err)
+}
 
+func TestGetTip(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
 
+	group, err := setupNotaryGroup(ctx)
+	require.Nil(t, err)
+
+	node, err := setupRemote(ctx, group)
+	require.Nil(t, err)
+
+	key, err := crypto.GenerateKey()
+	require.Nil(t, err)
+
+	ps := remote.NewNetworkPubSub(node)
+	
+	tup := &Tupelo{
+		key:   key,
+		Store: nodestore.NewStorageBasedStore(storage.NewMemStorage()),
+		NotaryGroup: group,
+		PubSubSystem: ps,
+	}
+
+	tree,err := tup.CreateChainTree()
+	require.Nil(t,err)
+
+	tip,err := tup.GetTip(tree.MustId())
+	require.Nil(t,err)
+
+	require.Equal(t, tree.Tip(), tip)
 }

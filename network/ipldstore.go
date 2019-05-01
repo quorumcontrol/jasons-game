@@ -45,6 +45,9 @@ func NewIPLDTreeStore(blockApi blockstore.Blockstore, keyValueApi datastore.Batc
 
 func (ts *IPLDTreeStore) GetTree(did string) (*consensus.SignedChainTree, error) {
 	tip, err := ts.getTip(did)
+	if err != nil {
+		return nil, errors.Wrap(err, "error getting tip")
+	}
 	storedTree := dag.NewDag(tip, ts)
 
 	tree, err := chaintree.NewChainTree(storedTree, nil, consensus.DefaultTransactors)
