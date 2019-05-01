@@ -8,27 +8,30 @@ require (
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc
 	github.com/ethereum/go-ethereum v1.8.27
 	github.com/gdamore/tcell v1.1.1
-	github.com/hsanjuan/ipfs-lite v0.0.3
+	github.com/ipfs/go-bitswap v0.0.4
 	github.com/ipfs/go-block-format v0.0.2
 	github.com/ipfs/go-blockservice v0.0.3
 	github.com/ipfs/go-cid v0.0.1
 	github.com/ipfs/go-datastore v0.0.4
+	github.com/ipfs/go-ds-badger v0.0.3
 	github.com/ipfs/go-ipfs-blockstore v0.0.1
+	github.com/ipfs/go-ipfs-config v0.0.2
 	github.com/ipfs/go-ipfs-exchange-offline v0.0.1
 	github.com/ipfs/go-ipfs-http-client v0.0.1 // indirect
 	github.com/ipfs/go-ipld-cbor v1.5.1-0.20190302174746-59d816225550
 	github.com/ipfs/go-ipld-format v0.0.1
 	github.com/ipfs/go-log v0.0.1
 	github.com/ipfs/go-merkledag v0.0.3
-	github.com/libp2p/go-libp2p v0.0.14
+	github.com/libp2p/go-libp2p v0.0.21
 	github.com/libp2p/go-libp2p-circuit v0.0.4
 	github.com/libp2p/go-libp2p-crypto v0.0.1
 	github.com/libp2p/go-libp2p-discovery v0.0.2
 	github.com/libp2p/go-libp2p-host v0.0.2
 	github.com/libp2p/go-libp2p-interface-pnet v0.0.1
-	github.com/libp2p/go-libp2p-kad-dht v0.0.8
+	github.com/libp2p/go-libp2p-kad-dht v0.0.10
 	github.com/libp2p/go-libp2p-net v0.0.2
-	github.com/libp2p/go-libp2p-peerstore v0.0.2
+	github.com/libp2p/go-libp2p-peer v0.1.0
+	github.com/libp2p/go-libp2p-peerstore v0.0.5
 	github.com/libp2p/go-libp2p-pnet v0.0.1
 	github.com/lucasb-eyer/go-colorful v1.0.2 // indirect
 	github.com/multiformats/go-multiaddr v0.0.2
