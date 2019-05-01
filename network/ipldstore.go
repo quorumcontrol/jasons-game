@@ -1,12 +1,13 @@
 package network
 
 import (
+	"context"
 	"fmt"
+	"time"
 
 	blocks "github.com/ipfs/go-block-format"
 	cid "github.com/ipfs/go-cid"
 	"github.com/ipfs/go-datastore"
-	blockstore "github.com/ipfs/go-ipfs-blockstore"
 	cbornode "github.com/ipfs/go-ipld-cbor"
 	format "github.com/ipfs/go-ipld-format"
 
@@ -22,6 +23,8 @@ import (
 // block service on its own and also provide a TreeService to make
 // getting/setting trees easier
 
+const defaultTimeout = 30 * time.Second
+
 type TreeStore interface {
 	nodestore.NodeStore
 
@@ -32,11 +35,11 @@ type TreeStore interface {
 type IPLDTreeStore struct {
 	TreeStore
 
-	blockApi    blockstore.Blockstore
+	blockApi    format.DAGService
 	keyValueApi datastore.Batching
 }
 
-func NewIPLDTreeStore(blockApi blockstore.Blockstore, keyValueApi datastore.Batching) *IPLDTreeStore {
+func NewIPLDTreeStore(blockApi format.DAGService, keyValueApi datastore.Batching) *IPLDTreeStore {
 	return &IPLDTreeStore{
 		blockApi:    blockApi,
 		keyValueApi: keyValueApi,
@@ -80,12 +83,14 @@ func (ts *IPLDTreeStore) SaveTreeMetadata(tree *consensus.SignedChainTree) error
 }
 
 func (ts *IPLDTreeStore) GetNode(nodeCid cid.Cid) (*cbornode.Node, error) {
-	blk, err := ts.blockApi.Get(nodeCid)
+	ctx, cancel := context.WithTimeout(context.Background(), defaultTimeout)
+	defer cancel()
+	blk, err := ts.blockApi.Get(ctx, nodeCid)
 	if err == nil {
 		return blockToCborNode(blk)
 	}
 
-	if err == blockstore.ErrNotFound {
+	if err == format.ErrNotFound {
 		return nil, nil
 	}
 	return nil, errors.Wrap(err, "error getting node")
@@ -96,7 +101,9 @@ func (ts *IPLDTreeStore) CreateNode(obj interface{}) (*cbornode.Node, error) {
 	if err != nil {
 		return nil, errors.Wrap(err, "error converting to CBOR")
 	}
-	return n, ts.blockApi.Put(n)
+	ctx, cancel := context.WithTimeout(context.Background(), defaultTimeout)
+	defer cancel()
+	return n, ts.blockApi.Add(ctx, n)
 }
 
 func (ts *IPLDTreeStore) CreateNodeFromBytes(nodeBytes []byte) (*cbornode.Node, error) {
@@ -105,15 +112,21 @@ func (ts *IPLDTreeStore) CreateNodeFromBytes(nodeBytes []byte) (*cbornode.Node, 
 	if sw.Err != nil {
 		return nil, errors.Wrap(sw.Err, "error decoding")
 	}
-	return n, ts.blockApi.Put(n)
+	ctx, cancel := context.WithTimeout(context.Background(), defaultTimeout)
+	defer cancel()
+	return n, ts.blockApi.Add(ctx, n)
 }
 
 func (ts *IPLDTreeStore) StoreNode(node *cbornode.Node) error {
-	return ts.blockApi.Put(node)
+	ctx, cancel := context.WithTimeout(context.Background(), defaultTimeout)
+	defer cancel()
+	return ts.blockApi.Add(ctx, node)
 }
 
 func (ts *IPLDTreeStore) DeleteNode(nodeCid cid.Cid) error {
-	return ts.blockApi.DeleteBlock(nodeCid)
+	ctx, cancel := context.WithTimeout(context.Background(), defaultTimeout)
+	defer cancel()
+	return ts.blockApi.Remove(ctx, nodeCid)
 }
 
 func (ts *IPLDTreeStore) DeleteTree(tip cid.Cid) error {

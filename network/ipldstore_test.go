@@ -4,10 +4,13 @@ import (
 	"testing"
 
 	"github.com/ethereum/go-ethereum/crypto"
+	blockservice "github.com/ipfs/go-blockservice"
 	"github.com/ipfs/go-cid"
 	"github.com/ipfs/go-datastore"
 	blockstore "github.com/ipfs/go-ipfs-blockstore"
+	offline "github.com/ipfs/go-ipfs-exchange-offline"
 	cbornode "github.com/ipfs/go-ipld-cbor"
+	"github.com/ipfs/go-merkledag"
 	"github.com/quorumcontrol/chaintree/nodestore"
 	"github.com/quorumcontrol/chaintree/safewrap"
 	"github.com/quorumcontrol/jasons-game/navigator"
@@ -19,7 +22,10 @@ import (
 func TestPublicTreeStore(t *testing.T) {
 	keystore := datastore.NewMapDatastore()
 	bstore := blockstore.NewBlockstore(keystore)
-	ipldstore := NewIPLDTreeStore(bstore, keystore)
+	bserv := blockservice.New(bstore, offline.Exchange(bstore))
+	dag := merkledag.NewDAGService(bserv)
+
+	ipldstore := NewIPLDTreeStore(dag, keystore)
 	SubtestAll(t, ipldstore)
 	SubtestTreeStore(t, ipldstore)
 }

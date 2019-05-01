@@ -9,12 +9,15 @@ require (
 	github.com/gdamore/tcell v1.1.1
 	github.com/hsanjuan/ipfs-lite v0.0.3
 	github.com/ipfs/go-block-format v0.0.2
+	github.com/ipfs/go-blockservice v0.0.3
 	github.com/ipfs/go-cid v0.0.1
 	github.com/ipfs/go-datastore v0.0.4
 	github.com/ipfs/go-ipfs-blockstore v0.0.1
+	github.com/ipfs/go-ipfs-exchange-offline v0.0.1
 	github.com/ipfs/go-ipfs-http-client v0.0.1 // indirect
 	github.com/ipfs/go-ipld-cbor v1.5.1-0.20190302174746-59d816225550
 	github.com/ipfs/go-ipld-format v0.0.1
+	github.com/ipfs/go-merkledag v0.0.3
 	github.com/libp2p/go-libp2p-crypto v0.0.1
 	github.com/libp2p/go-libp2p-discovery v0.0.2
 	github.com/libp2p/go-libp2p-host v0.0.2

@@ -62,7 +62,7 @@ func NewRemoteNetwork(ctx context.Context, group *types.NotaryGroup, path string
 	remote.NewRouter(p2pHost)
 	group.SetupAllRemoteActors(&key.PublicKey)
 
-	store := NewIPLDTreeStore(lite.BlockStore(), ds)
+	store := NewIPLDTreeStore(lite, ds)
 	net.TreeStore = store
 
 	pubsub := remote.NewNetworkPubSub(p2pHost)
