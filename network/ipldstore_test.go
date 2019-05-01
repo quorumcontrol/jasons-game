@@ -21,6 +21,7 @@ import (
 
 func TestPublicTreeStore(t *testing.T) {
 	keystore := datastore.NewMapDatastore()
+
 	bstore := blockstore.NewBlockstore(keystore)
 	bserv := blockservice.New(bstore, offline.Exchange(bstore))
 	dag := merkledag.NewDAGService(bserv)
@@ -72,6 +73,7 @@ func createTree(t *testing.T, ts TreeStore) *consensus.SignedChainTree {
 	return tree
 }
 
+// This is just copypasta from the chaintree repo
 func SubtestAll(t *testing.T, ns nodestore.NodeStore) {
 	t.Run("CreateNode", func(t *testing.T) { SubtestInterfaceCreateNode(t, ns) })
 	t.Run("GetNode", func(t *testing.T) { SubtestInterfaceGetNode(t, ns) })

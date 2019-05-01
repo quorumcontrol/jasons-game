@@ -4,22 +4,29 @@ import (
 	"fmt"
 
 	"github.com/AsynkronIT/protoactor-go/actor"
+	logging "github.com/ipfs/go-log"
 	"github.com/quorumcontrol/jasons-game/navigator"
+	"github.com/quorumcontrol/jasons-game/network"
 	"github.com/quorumcontrol/jasons-game/ui"
 	"github.com/quorumcontrol/tupelo-go-client/consensus"
 )
 
+var log = logging.Logger("game")
+
+type ping struct{}
+
 type Game struct {
-	ui          *actor.PID
-	initialTree *consensus.SignedChainTree
-	cursor      *navigator.Cursor
+	ui      *actor.PID
+	network network.Network
+	player  *Player
+	cursor  *navigator.Cursor
 }
 
-func NewGameProps(ui *actor.PID, initialTree *consensus.SignedChainTree) *actor.Props {
+func NewGameProps(ui *actor.PID, network network.Network) *actor.Props {
 	return actor.PropsFromProducer(func() actor.Actor {
 		return &Game{
-			ui:          ui,
-			initialTree: initialTree,
+			ui:      ui,
+			network: network,
 		}
 	})
 }
@@ -30,11 +37,46 @@ func (g *Game) Receive(actorCtx actor.Context) {
 		g.initialize(actorCtx)
 	case *ui.UserInput:
 		g.handleUserInput(actorCtx, msg)
+	case *ping:
+		actorCtx.Respond(true)
 	}
 }
 
 func (g *Game) initialize(actorCtx actor.Context) {
-	cursor := new(navigator.Cursor).SetChainTree(g.initialTree)
+	var playerTree *consensus.SignedChainTree
+	var homeTree *consensus.SignedChainTree
+
+	log.Debug("get player", homeTree)
+	playerTree, err := g.network.GetChainTreeByName("player")
+	if err != nil {
+		log.Error("error getting player: %v", err)
+		panic(err)
+	}
+	if playerTree == nil {
+		log.Debug("create player", homeTree)
+		playerTree, err = g.network.CreateNamedChainTree("player")
+		if err != nil {
+			log.Error("error creating player: %v", err)
+			panic(err)
+		}
+	}
+	g.player = NewPlayer(playerTree)
+
+	homeTree, err = g.network.GetChainTreeByName("home")
+	log.Debug("get home", homeTree)
+	if err != nil {
+		panic(err)
+	}
+	if homeTree == nil {
+		log.Debug("create home")
+		homeTree, err = createHome(g.network)
+		if err != nil {
+			log.Error("error creating home", err)
+			panic(err)
+		}
+	}
+
+	cursor := new(navigator.Cursor).SetChainTree(homeTree)
 	g.cursor = cursor
 	actorCtx.Request(g.ui, &ui.Subscribe{})
 

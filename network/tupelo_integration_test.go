@@ -139,6 +139,7 @@ func TestGetTip(t *testing.T) {
 	tree,err := tup.CreateChainTree()
 	require.Nil(t,err)
 
+	time.Sleep(100 * time.Millisecond)
 	tip,err := tup.GetTip(tree.MustId())
 	require.Nil(t,err)
 

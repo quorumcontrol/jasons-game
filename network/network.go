@@ -9,6 +9,7 @@ import (
 	"github.com/ethereum/go-ethereum/crypto"
 	ipfslite "github.com/hsanjuan/ipfs-lite"
 	"github.com/ipfs/go-datastore"
+	logging "github.com/ipfs/go-log"
 	"github.com/pkg/errors"
 	"github.com/quorumcontrol/chaintree/chaintree"
 	"github.com/quorumcontrol/chaintree/dag"
@@ -18,21 +19,30 @@ import (
 	"github.com/quorumcontrol/tupelo-go-client/p2p"
 )
 
-type Network struct {
+var log = logging.Logger("gamenetwork")
+
+type Network interface {
+	CreateNamedChainTree(name string) (*consensus.SignedChainTree, error)
+	GetChainTreeByName(name string) (*consensus.SignedChainTree, error)
+	GetRemoteTree(did string) (*consensus.SignedChainTree, error)
+	UpdateChainTree(tree *consensus.SignedChainTree, path string, value interface{}) (*consensus.SignedChainTree, error)
+}
+
+type RemoteNetwork struct {
 	Tupelo        *Tupelo
 	Ipld          *ipfslite.Peer
 	KeyValueStore datastore.Batching
 	TreeStore     TreeStore
 }
 
-func NewRemoteNetwork(ctx context.Context, group *types.NotaryGroup, path string) (*Network, error) {
+func NewRemoteNetwork(ctx context.Context, group *types.NotaryGroup, path string) (Network, error) {
 	remote.Start()
 
 	ds, err := ipfslite.BadgerDatastore(path)
 	if err != nil {
 		return nil, errors.Wrap(err, "error creating store")
 	}
-	net := &Network{
+	net := &RemoteNetwork{
 		KeyValueStore: ds,
 	}
 
@@ -78,7 +88,7 @@ func NewRemoteNetwork(ctx context.Context, group *types.NotaryGroup, path string
 	return net, nil
 }
 
-func (n *Network) getOrCreatePrivateKey() (*ecdsa.PrivateKey, error) {
+func (n *RemoteNetwork) getOrCreatePrivateKey() (*ecdsa.PrivateKey, error) {
 	var key *ecdsa.PrivateKey
 
 	storeKey := datastore.NewKey("privateKey")
@@ -108,27 +118,36 @@ func (n *Network) getOrCreatePrivateKey() (*ecdsa.PrivateKey, error) {
 	return key, nil
 }
 
-func (n *Network) CreateNamedChainTree(name string) (*consensus.SignedChainTree, error) {
+func (n *RemoteNetwork) CreateNamedChainTree(name string) (*consensus.SignedChainTree, error) {
+	log.Debug("CreateNamedChainTree", name)
 	tree, err := n.Tupelo.CreateChainTree()
 	if err != nil {
 		return nil, errors.Wrap(err, "error creating tree")
 	}
+	log.Debug("CreateNamedChainTree - created", name)
+
 	err = n.TreeStore.SaveTreeMetadata(tree)
 	if err != nil {
 		return nil, errors.Wrap(err, "error saving tree")
 	}
+	log.Debug("CreateNamedChainTree - saved", name)
+
 	return tree, n.KeyValueStore.Put(datastore.NewKey("-n-"+name), []byte(tree.MustId()))
 }
 
-func (n *Network) GetChainTreeByName(name string) (*consensus.SignedChainTree, error) {
+func (n *RemoteNetwork) GetChainTreeByName(name string) (*consensus.SignedChainTree, error) {
 	did, err := n.KeyValueStore.Get(datastore.NewKey("-n-" + name))
-	if err != nil {
-		return nil, errors.Wrap(err, "error getting tree")
+	if err == nil {
+		return n.TreeStore.GetTree(string(did))
 	}
-	return n.TreeStore.GetTree(string(did))
+
+	if len(did) == 0 || err == datastore.ErrNotFound {
+		return nil, nil
+	}
+	return nil, errors.Wrap(err, "error getting tree")
 }
 
-func (n *Network) GetRemoteTree(did string) (*consensus.SignedChainTree, error) {
+func (n *RemoteNetwork) GetRemoteTree(did string) (*consensus.SignedChainTree, error) {
 	tip, err := n.Tupelo.GetTip(did)
 	if err != nil {
 		return nil, errors.Wrap(err, "error getting tip")
@@ -145,4 +164,13 @@ func (n *Network) GetRemoteTree(did string) (*consensus.SignedChainTree, error) 
 		ChainTree:  tree,
 		Signatures: make(consensus.SignatureMap), // for now just ignore them
 	}, nil
+}
+
+func (n *RemoteNetwork) UpdateChainTree(tree *consensus.SignedChainTree, path string, value interface{}) (*consensus.SignedChainTree, error) {
+	log.Debug("updateTree", tree.MustId(), path, value)
+	err := n.Tupelo.UpdateChainTree(tree, path, value)
+	if err != nil {
+		return nil, errors.Wrap(err, "error updating chaintree")
+	}
+	return tree, n.TreeStore.SaveTreeMetadata(tree)
 }

@@ -9,7 +9,7 @@ import(
 	"context"
 )
 
-func newRemoteNetwork(t *testing.T, ctx context.Context, path string) *Network {
+func newRemoteNetwork(t *testing.T, ctx context.Context, path string) Network {
 	group,err := setupNotaryGroup(ctx)
 	require.Nil(t,err)
 

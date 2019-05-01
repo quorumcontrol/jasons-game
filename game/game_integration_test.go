@@ -1,4 +1,6 @@
-package main
+// +build integration
+
+package game
 
 import (
 	"context"
@@ -6,21 +8,22 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
-	"os/signal"
 	"path"
 	"runtime"
-	"syscall"
+	"testing"
+
+	"time"
 
 	"github.com/AsynkronIT/protoactor-go/actor"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/crypto"
-	logging "github.com/ipfs/go-log"
-	"github.com/pkg/errors"
-	"github.com/quorumcontrol/jasons-game/game"
+	"github.com/quorumcontrol/jasons-game/navigator"
 	"github.com/quorumcontrol/jasons-game/network"
 	"github.com/quorumcontrol/jasons-game/ui"
 	"github.com/quorumcontrol/tupelo-go-client/bls"
 	"github.com/quorumcontrol/tupelo-go-client/gossip3/types"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 type publicKeySet struct {
@@ -34,7 +37,7 @@ func loadSignerKeys() ([]*publicKeySet, error) {
 	if !ok {
 		return nil, fmt.Errorf("No caller information")
 	}
-	jsonBytes, err := ioutil.ReadFile(path.Join(path.Dir(filename), "network/test-signer-keys/public-keys.json"))
+	jsonBytes, err := ioutil.ReadFile(path.Join(path.Dir(filename), "../network/test-signer-keys/public-keys.json"))
 	if err != nil {
 		return nil, err
 	}
@@ -51,7 +54,7 @@ func setupNotaryGroup(ctx context.Context) (*types.NotaryGroup, error) {
 	if err != nil {
 		return nil, err
 	}
-	group := types.NewNotaryGroup("tupelo-in-local-docker")
+	group := types.NewNotaryGroup("hardcodedprivatekeysareunsafe")
 	for _, keySet := range keys {
 		ecdsaBytes := hexutil.MustDecode(keySet.EcdsaHexPublicKey)
 		verKeyBytes := hexutil.MustDecode(keySet.BlsHexPublicKey)
@@ -66,58 +69,46 @@ func setupNotaryGroup(ctx context.Context) (*types.NotaryGroup, error) {
 	return group, nil
 }
 
-func main() {
-	err := logging.SetLogLevel("*", "CRITICAL")
-	if err != nil {
-		panic(errors.Wrap(err, "error setting loglevel"))
-	}
-	err = logging.SetLogLevel("game-network", "DEBUG")
-	if err != nil {
-		panic(errors.Wrap(err, "error setting loglevel"))
-	}
-	err = logging.SetLogLevel("game", "DEBUG")
-	if err != nil {
-		panic(errors.Wrap(err, "error setting loglevel"))
-	}
-
+func TestFullIntegration(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
 	group, err := setupNotaryGroup(ctx)
-	if err != nil {
-		panic(errors.Wrap(err, "setting up notary group"))
-	}
+	require.Nil(t, err)
 
-	path := "/tmp/localplay"
+	path := "/tmp/test-full-game"
 
 	os.RemoveAll(path)
 	os.MkdirAll(path, 0755)
 	defer os.RemoveAll(path)
 
 	net, err := network.NewRemoteNetwork(ctx, group, path)
-	if err != nil {
-		panic(errors.Wrap(err, "setting up notary group"))
-	}
+	require.Nil(t, err)
 
 	rootCtx := actor.EmptyRootContext
-	ui, err := rootCtx.SpawnNamed(ui.NewUIProps(), "ui")
-	if err != nil {
-		panic(fmt.Errorf("error running UI: %v", err))
-	}
 
-	gameActor, err := rootCtx.SpawnNamed(game.NewGameProps(ui, net), "game")
-	if err != nil {
-		panic(fmt.Errorf("error running UI: %v", err))
-	}
+	simulatedUI, err := rootCtx.SpawnNamed(ui.NewSimulatedUIProps(), "ui")
+	require.Nil(t, err)
+	defer simulatedUI.Stop()
 
-	sigs := make(chan os.Signal, 1)
-	done := make(chan bool, 1)
-	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM)
-	go func() {
-		<-sigs
-		done <- true
-	}()
-	fmt.Println("hit ctrl-C one more time to exit")
-	<-done
-	gameActor.Stop()
+	gameActor, err := rootCtx.SpawnNamed(NewGameProps(simulatedUI, net), "game")
+	require.Nil(t, err)
+	defer gameActor.Stop()
+
+	readyFut := rootCtx.RequestFuture(gameActor, &ping{}, 15 * time.Second)
+	// wait on the game actor being ready
+	_,err = readyFut.Result()
+	require.Nil(t,err)
+
+	rootCtx.Send(gameActor, &ui.UserInput{Message: "north"})
+
+	time.Sleep(200 * time.Millisecond)
+
+	fut := rootCtx.RequestFuture(simulatedUI, &ui.GetEventsFromSimulator{}, 40*time.Second)
+	evts, err := fut.Result()
+	require.Nil(t, err)
+
+	require.Len(t, evts.([]interface{}), 2)
+	assert.IsType(t, &navigator.Location{}, evts.([]interface{})[0])
+	assert.IsType(t, &navigator.Location{}, evts.([]interface{})[1])
 }

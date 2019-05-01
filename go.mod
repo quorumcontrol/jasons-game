@@ -5,6 +5,7 @@ go 1.12
 require (
 	github.com/AsynkronIT/protoactor-go v0.0.0-20190318154652-aa1aa20c2fa0
 	github.com/btcsuite/btcd v0.0.0-20190427004231-96897255fd17 // indirect
+	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc
 	github.com/ethereum/go-ethereum v1.8.27
 	github.com/gdamore/tcell v1.1.1
 	github.com/hsanjuan/ipfs-lite v0.0.3
@@ -17,6 +18,7 @@ require (
 	github.com/ipfs/go-ipfs-http-client v0.0.1 // indirect
 	github.com/ipfs/go-ipld-cbor v1.5.1-0.20190302174746-59d816225550
 	github.com/ipfs/go-ipld-format v0.0.1
+	github.com/ipfs/go-log v0.0.1
 	github.com/ipfs/go-merkledag v0.0.3
 	github.com/libp2p/go-libp2p-crypto v0.0.1
 	github.com/libp2p/go-libp2p-discovery v0.0.2

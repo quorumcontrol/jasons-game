@@ -19,6 +19,12 @@ type Player struct {
 	tree *consensus.SignedChainTree
 }
 
+func NewPlayer(tree *consensus.SignedChainTree) *Player {
+	return &Player{
+		tree: tree,
+	}
+}
+
 type PlayerInfo struct {
 	Name string
 }
