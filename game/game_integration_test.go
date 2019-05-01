@@ -108,7 +108,7 @@ func TestFullIntegration(t *testing.T) {
 	evts, err := fut.Result()
 	require.Nil(t, err)
 
-	require.Len(t, evts.([]interface{}), 2)
-	assert.IsType(t, &navigator.Location{}, evts.([]interface{})[0])
+	require.Len(t, evts.([]interface{}), 3)
 	assert.IsType(t, &navigator.Location{}, evts.([]interface{})[1])
+	assert.IsType(t, &navigator.Location{}, evts.([]interface{})[2])
 }

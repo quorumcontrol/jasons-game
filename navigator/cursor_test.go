@@ -22,10 +22,38 @@ func TestCursor(t *testing.T) {
 	updated, err := tree.ChainTree.Dag.SetAsLink([]string{"tree", "data", "jasons-game", "0", "0"}, &Location{Description: "hi"})
 	require.Nil(t, err)
 	require.NotNil(t, updated)
+
+	updated, err = updated.SetAsLink([]string{"tree", "data", "jasons-game", "0", "1"}, &Location{Description: "north"})
+	require.Nil(t, err)
+	require.NotNil(t, updated)
 	tree.ChainTree.Dag = updated
 
 	cursor := new(Cursor)
 	output, err := cursor.SetLocation(0, 0).SetChainTree(tree).GetLocation()
+	require.Nil(t, err)
+	require.Equal(t,
+		&Location{
+			Description: "hi",
+			Did:         tree.MustId(),
+			X:           0,
+			Y:           0,
+		},
+		output)
+
+	cursor.North()
+	output, err = cursor.GetLocation()
+	require.Nil(t, err)
+	require.Equal(t,
+		&Location{
+			Description: "north",
+			Did:         tree.MustId(),
+			X:           0,
+			Y:           1,
+		},
+		output)
+
+	cursor.South()
+	output, err = cursor.GetLocation()
 	require.Nil(t, err)
 	require.Equal(t,
 		&Location{

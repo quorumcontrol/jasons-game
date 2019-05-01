@@ -14,14 +14,6 @@ import (
 
 var log = logging.Logger("game")
 
-var defaultCommandList = commandList{
-	{name: "north", parse: "north"},
-	{name: "south", parse: "south"},
-	{name: "west", parse: "west"},
-	{name: "east", parse: "east"},
-	{name: "name", parse: "call me <name:string>"},
-}
-
 type ping struct{}
 
 type Game struct {
@@ -91,6 +83,10 @@ func (g *Game) initialize(actorCtx actor.Context) {
 	g.cursor = cursor
 	actorCtx.Request(g.ui, &ui.Subscribe{})
 
+	actorCtx.Send(g.ui, &ui.MessageToUser{
+		Message: fmt.Sprintf("Created Player %s (%s)\nHome: %s (%s)", playerTree.MustId(), playerTree.Tip().String(), homeTree.MustId(), homeTree.Tip().String()),
+	})
+
 	l, err := g.cursor.GetLocation()
 	if err != nil {
 		panic(fmt.Errorf("error getting initial location: %v", err))
@@ -127,7 +123,7 @@ func (g *Game) handleLocationInput(actorCtx actor.Context, cmd *command, matches
 	}
 	l, err := g.cursor.GetLocation()
 	if err != nil {
-		actorCtx.Send(g.ui, &ui.MessageToUser{Message: fmt.Sprintf("some sort of error happened: %v", err)})
+		actorCtx.Send(g.ui, &ui.MessageToUser{Message: fmt.Sprintf("%s some sort of error happened: %v", cmd.name, err)})
 	}
 	actorCtx.Send(g.ui, l)
 }

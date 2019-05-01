@@ -12,6 +12,14 @@ type command struct {
 	allot allot.Command
 }
 
+var defaultCommandList = commandList{
+	newCommand("north", "north"),
+	newCommand("south", "south"),
+	newCommand("east", "east"),
+	newCommand("west", "west"),
+	newCommand("name", "call me <name:string>"),
+}
+
 func newCommand(name, parse string) *command {
 	return &command{
 		name:  name,
@@ -22,7 +30,7 @@ func newCommand(name, parse string) *command {
 
 func (cl commandList) findCommand(req string) (*command, allot.MatchInterface) {
 	for _, comm := range cl {
-		if match, err := comm.allot.Match(req); err != nil {
+		if match, err := comm.allot.Match(req); err == nil {
 			return comm, match
 		}
 	}

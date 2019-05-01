@@ -29,7 +29,7 @@ func locationFromTree(tree *consensus.SignedChainTree, x, y int) (*Location, err
 		return nil, fmt.Errorf("error resolving: %v", err)
 	}
 	if len(remain) > 0 {
-		return nil, fmt.Errorf("error, path remaining: %v", remain)
+		return nil, fmt.Errorf("error, path remaining (%d,%d): %v", x, y, remain)
 	}
 
 	l := new(Location)
