@@ -44,4 +44,5 @@ require (
 	github.com/rivo/uniseg v0.0.0-20190313204849-f699dde9c340 // indirect
 	github.com/sbstjn/allot v0.0.0-20161025071122-1f2349a
 	github.com/stretchr/testify v1.3.0
+	google.golang.org/appengine v1.5.0
 )

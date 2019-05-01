@@ -15,7 +15,7 @@ func NewIPLDClient(ctx context.Context, ds datastore.Batching) (*ipfslite.Peer, 
 		panic(err)
 	}
 
-	listen, _ := multiaddr.NewMultiaddr("/ip4/0.0.0.0/tcp/4005")
+	listen, _ := multiaddr.NewMultiaddr("/ip4/0.0.0.0/tcp/0")
 
 	h, dht, err := ipfslite.SetupLibp2p(
 		ctx,
@@ -33,7 +33,8 @@ func NewIPLDClient(ctx context.Context, ds datastore.Batching) (*ipfslite.Peer, 
 		panic(err)
 	}
 
-	go lite.Bootstrap(ipfslite.DefaultBootstrapPeers())
+	log.Info("bootstraping")
+	lite.Bootstrap(ipfslite.DefaultBootstrapPeers())
 
 	disoverer := newJasonsDiscoverer(h, dht)
 	go disoverer.doDiscovery(ctx)

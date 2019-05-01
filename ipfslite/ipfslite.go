@@ -5,6 +5,7 @@ package ipfslite
 import (
 	"context"
 	"sync"
+	"time"
 
 	"github.com/ipfs/go-bitswap"
 	"github.com/ipfs/go-bitswap/network"
@@ -23,11 +24,9 @@ import (
 	circuit "github.com/libp2p/go-libp2p-circuit"
 	crypto "github.com/libp2p/go-libp2p-crypto"
 	host "github.com/libp2p/go-libp2p-host"
-	ipnet "github.com/libp2p/go-libp2p-interface-pnet"
 	dht "github.com/libp2p/go-libp2p-kad-dht"
 	peer "github.com/libp2p/go-libp2p-peer"
 	peerstore "github.com/libp2p/go-libp2p-peerstore"
-	pnet "github.com/libp2p/go-libp2p-pnet"
 	routedhost "github.com/libp2p/go-libp2p/p2p/host/routed"
 	"github.com/multiformats/go-multiaddr"
 )
@@ -173,24 +172,12 @@ func SetupLibp2p(
 	listenAddrs []multiaddr.Multiaddr,
 ) (host.Host, *dht.IpfsDHT, error) {
 
-	var prot ipnet.Protector
 	var err error
-
-	// Create protector if we have a secret.
-	if secret != nil && len(secret) > 0 {
-		var key [32]byte
-		copy(key[:], secret)
-		prot, err = pnet.NewV1ProtectorFromBytes(&key)
-		if err != nil {
-			return nil, nil, err
-		}
-	}
 
 	h, err := libp2p.New(
 		ctx,
 		libp2p.Identity(hostKey),
 		libp2p.ListenAddrs(listenAddrs...),
-		libp2p.PrivateNetwork(prot),
 		libp2p.NATPortMap(),
 		libp2p.EnableRelay(circuit.OptDiscovery),
 	)
@@ -205,6 +192,14 @@ func SetupLibp2p(
 	}
 
 	rHost := routedhost.Wrap(h, idht)
+
+	go func() {
+		tick := time.NewTicker(1 * time.Second)
+		for {
+			<-tick.C
+			logger.Infof("connected to %d peers", len(rHost.Peerstore().Peers()))
+		}
+	}()
 	return rHost, idht, nil
 }
 
