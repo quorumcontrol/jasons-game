@@ -13,20 +13,30 @@ import (
 
 var log = logging.Logger("game")
 
+var defaultCommandList = commandList{
+	{name: "north", parse: "north"},
+	{name: "south", parse: "south"},
+	{name: "west", parse: "west"},
+	{name: "east", parse: "east"},
+	{name: "name", parse: "call me <name:string>"},
+}
+
 type ping struct{}
 
 type Game struct {
-	ui      *actor.PID
-	network network.Network
-	player  *Player
-	cursor  *navigator.Cursor
+	ui       *actor.PID
+	network  network.Network
+	player   *Player
+	cursor   *navigator.Cursor
+	commands commandList
 }
 
 func NewGameProps(ui *actor.PID, network network.Network) *actor.Props {
 	return actor.PropsFromProducer(func() actor.Actor {
 		return &Game{
-			ui:      ui,
-			network: network,
+			ui:       ui,
+			network:  network,
+			commands: defaultCommandList,
 		}
 	})
 }
@@ -88,25 +98,30 @@ func (g *Game) initialize(actorCtx actor.Context) {
 }
 
 func (g *Game) handleUserInput(actorCtx actor.Context, input *ui.UserInput) {
-	switch input.Message {
-	case "exit":
-		actorCtx.Send(g.ui, &ui.Exit{})
-		return
-	case "north":
-		g.cursor.North()
-	case "east":
-		g.cursor.East()
-	case "south":
-		g.cursor.South()
-	case "west":
-		g.cursor.West()
-	default:
-		actorCtx.Send(g.ui, &ui.MessageToUser{Message: "I'm sorry I don't understand."})
+	cmd, _ := g.commands.findCommand(input.Message)
+	if cmd != nil {
+		switch cmd.name {
+		case "exit":
+			actorCtx.Send(g.ui, &ui.Exit{})
+			return
+		case "north":
+			g.cursor.North()
+		case "east":
+			g.cursor.East()
+		case "south":
+			g.cursor.South()
+		case "west":
+			g.cursor.West()
+		default:
+			actorCtx.Send(g.ui, &ui.MessageToUser{Message: "I'm sorry I don't understand."})
+			return
+		}
+		l, err := g.cursor.GetLocation()
+		if err != nil {
+			actorCtx.Send(g.ui, &ui.MessageToUser{Message: fmt.Sprintf("some sort of error happened: %v", err)})
+		}
+		actorCtx.Send(g.ui, l)
 		return
 	}
-	l, err := g.cursor.GetLocation()
-	if err != nil {
-		actorCtx.Send(g.ui, &ui.MessageToUser{Message: fmt.Sprintf("some sort of error happened: %v", err)})
-	}
-	actorCtx.Send(g.ui, l)
+	actorCtx.Send(g.ui, &ui.MessageToUser{Message: "I'm sorry I don't understand."})
 }

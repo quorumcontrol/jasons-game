@@ -5,7 +5,6 @@ go 1.12
 require (
 	github.com/AsynkronIT/protoactor-go v0.0.0-20190318154652-aa1aa20c2fa0
 	github.com/btcsuite/btcd v0.0.0-20190427004231-96897255fd17 // indirect
-	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc
 	github.com/ethereum/go-ethereum v1.8.27
 	github.com/gdamore/tcell v1.1.1
 	github.com/hsanjuan/ipfs-lite v0.0.3
@@ -35,5 +34,6 @@ require (
 	github.com/quorumcontrol/tupelo-go-client v0.1.2-0.20190419170055-79e4695834aa42c9ca41f38fb6e28b9522fa14eb
 	github.com/rivo/tview v0.0.0-20190406182340-90b4da1bd64c
 	github.com/rivo/uniseg v0.0.0-20190313204849-f699dde9c340 // indirect
+	github.com/sbstjn/allot v0.0.0-20161025071122-1f2349a
 	github.com/stretchr/testify v1.3.0
 )

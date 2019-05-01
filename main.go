@@ -71,14 +71,6 @@ func main() {
 	if err != nil {
 		panic(errors.Wrap(err, "error setting loglevel"))
 	}
-	err = logging.SetLogLevel("game-network", "DEBUG")
-	if err != nil {
-		panic(errors.Wrap(err, "error setting loglevel"))
-	}
-	err = logging.SetLogLevel("game", "DEBUG")
-	if err != nil {
-		panic(errors.Wrap(err, "error setting loglevel"))
-	}
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
