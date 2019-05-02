@@ -67,7 +67,7 @@ type BootstrapConfig struct {
 
 // DefaultBootstrapConfig specifies default sane parameters for bootstrapping.
 var DefaultBootstrapConfig = BootstrapConfig{
-	MinPeerThreshold:  10,
+	MinPeerThreshold:  4,
 	Period:            2 * time.Second,
 	ConnectionTimeout: (30 * time.Second) / 3,
 }
