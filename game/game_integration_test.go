@@ -20,8 +20,8 @@ import (
 	"github.com/quorumcontrol/jasons-game/navigator"
 	"github.com/quorumcontrol/jasons-game/network"
 	"github.com/quorumcontrol/jasons-game/ui"
-	"github.com/quorumcontrol/tupelo-go-client/bls"
-	"github.com/quorumcontrol/tupelo-go-client/gossip3/types"
+	"github.com/quorumcontrol/tupelo-go-sdk/bls"
+	"github.com/quorumcontrol/tupelo-go-sdk/gossip3/types"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )

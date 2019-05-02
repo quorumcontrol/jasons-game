@@ -13,7 +13,7 @@ import (
 	offline "github.com/ipfs/go-ipfs-exchange-offline"
 	"github.com/ipfs/go-merkledag"
 	"github.com/pkg/errors"
-	"github.com/quorumcontrol/tupelo-go-client/consensus"
+	"github.com/quorumcontrol/tupelo-go-sdk/consensus"
 )
 
 // LocalNetwork implements the Network interface but doesn't require

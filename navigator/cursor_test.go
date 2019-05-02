@@ -6,7 +6,7 @@ import (
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/quorumcontrol/chaintree/nodestore"
 	"github.com/quorumcontrol/storage"
-	"github.com/quorumcontrol/tupelo-go-client/consensus"
+	"github.com/quorumcontrol/tupelo-go-sdk/consensus"
 	"github.com/stretchr/testify/require"
 )
 

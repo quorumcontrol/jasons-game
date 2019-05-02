@@ -8,7 +8,7 @@ import (
 	"github.com/quorumcontrol/jasons-game/navigator"
 	"github.com/quorumcontrol/jasons-game/network"
 	"github.com/quorumcontrol/jasons-game/ui"
-	"github.com/quorumcontrol/tupelo-go-client/consensus"
+	"github.com/quorumcontrol/tupelo-go-sdk/consensus"
 	"github.com/sbstjn/allot"
 )
 

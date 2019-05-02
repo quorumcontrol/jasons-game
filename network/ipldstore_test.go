@@ -14,7 +14,7 @@ import (
 	"github.com/quorumcontrol/chaintree/nodestore"
 	"github.com/quorumcontrol/chaintree/safewrap"
 	"github.com/quorumcontrol/jasons-game/navigator"
-	"github.com/quorumcontrol/tupelo-go-client/consensus"
+	"github.com/quorumcontrol/tupelo-go-sdk/consensus"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )

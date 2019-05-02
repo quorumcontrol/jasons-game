@@ -5,7 +5,7 @@ import (
 	"strings"
 
 	cbor "github.com/ipfs/go-ipld-cbor"
-	"github.com/quorumcontrol/tupelo-go-client/consensus"
+	"github.com/quorumcontrol/tupelo-go-sdk/consensus"
 
 	"github.com/quorumcontrol/chaintree/typecaster"
 )

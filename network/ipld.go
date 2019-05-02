@@ -33,9 +33,6 @@ func NewIPLDClient(ctx context.Context, ds datastore.Batching) (*ipfslite.Peer, 
 		panic(err)
 	}
 
-	log.Info("bootstraping")
-	lite.Bootstrap(ipfslite.DefaultBootstrapPeers())
-
 	disoverer := newJasonsDiscoverer(h, dht)
 	go disoverer.doDiscovery(ctx)
 

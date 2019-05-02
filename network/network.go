@@ -15,10 +15,10 @@ import (
 	"github.com/quorumcontrol/chaintree/chaintree"
 	"github.com/quorumcontrol/chaintree/dag"
 	ipfslite "github.com/quorumcontrol/jasons-game/ipfslite"
-	"github.com/quorumcontrol/tupelo-go-client/consensus"
-	"github.com/quorumcontrol/tupelo-go-client/gossip3/remote"
-	"github.com/quorumcontrol/tupelo-go-client/gossip3/types"
-	"github.com/quorumcontrol/tupelo-go-client/p2p"
+	"github.com/quorumcontrol/tupelo-go-sdk/consensus"
+	"github.com/quorumcontrol/tupelo-go-sdk/gossip3/remote"
+	"github.com/quorumcontrol/tupelo-go-sdk/gossip3/types"
+	"github.com/quorumcontrol/tupelo-go-sdk/p2p"
 )
 
 var log = logging.Logger("gamenetwork")

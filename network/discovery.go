@@ -10,11 +10,28 @@ import (
 	dht "github.com/libp2p/go-libp2p-kad-dht"
 	inet "github.com/libp2p/go-libp2p-net"
 	pstore "github.com/libp2p/go-libp2p-peerstore"
+	"github.com/quorumcontrol/jasons-game/stats"
 )
 
 const nameSpace = "jasons-game-tupelo"
 
 const maxConnected = 300
+
+type jasonState struct {
+	connected int
+}
+
+type jasonError struct {
+	msg string
+}
+
+func (js *jasonState) Humanize() string {
+	return fmt.Sprintf("%d connected", js.connected)
+}
+
+func (je *jasonError) Humanize() string {
+	return fmt.Sprintf(je.msg)
+}
 
 type jasonsDiscoverer struct {
 	host       host.Host
@@ -45,19 +62,18 @@ func (td *jasonsDiscoverer) findPeers(ctx context.Context) error {
 	}
 
 	go func() {
-		for {
-			select {
-			case <-ctx.Done():
-				return
-			case peerInfo := <-peerChan:
-				td.handleNewPeerInfo(ctx, peerInfo)
-			}
+		for peerInfo := range peerChan {
+			td.handleNewPeerInfo(ctx, peerInfo)
 		}
 	}()
 	return nil
 }
 
 func (td *jasonsDiscoverer) handleNewPeerInfo(ctx context.Context, p pstore.PeerInfo) {
+	if p.ID == "" {
+		return // empty id
+	}
+
 	host := td.host
 	if host.Network().Connectedness(p.ID) == inet.Connected {
 		return // we are already connected
@@ -68,10 +84,6 @@ func (td *jasonsDiscoverer) handleNewPeerInfo(ctx context.Context, p pstore.Peer
 		return // we already are connected to more than we need
 	}
 
-	if p.ID == "" {
-		return // empty id
-	}
-
 	// log.Debugf("new peer: %s", p.ID)
 
 	// do the connection async because connect can hang
@@ -79,8 +91,15 @@ func (td *jasonsDiscoverer) handleNewPeerInfo(ctx context.Context, p pstore.Peer
 		// not actually positive that TTL is correct, but it seemed the most appropriate
 		host.Peerstore().AddAddrs(p.ID, p.Addrs, pstore.ProviderAddrTTL)
 		if err := host.Connect(ctx, p); err != nil {
+			stats.Stream.Publish(&jasonError{
+				msg: fmt.Sprintf("error connecting to jason peer (%s): %s (addrs: %v)", p.ID, err.Error(), p.Addrs),
+			})
+			return
 			// log.Errorf("error connecting to  %s %v: %v", p.ID, p, err)
 		}
+		stats.Stream.Publish(&jasonState{
+			connected: len(connected) + 1,
+		})
 	}()
 }
 

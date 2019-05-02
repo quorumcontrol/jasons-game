@@ -14,12 +14,12 @@ import (
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/crypto"
-	"github.com/quorumcontrol/tupelo-go-client/bls"
+	"github.com/quorumcontrol/tupelo-go-sdk/bls"
 	"github.com/quorumcontrol/chaintree/nodestore"
 	"github.com/quorumcontrol/storage"
-	"github.com/quorumcontrol/tupelo-go-client/gossip3/remote"
-	"github.com/quorumcontrol/tupelo-go-client/gossip3/types"
-	"github.com/quorumcontrol/tupelo-go-client/p2p"
+	"github.com/quorumcontrol/tupelo-go-sdk/gossip3/remote"
+	"github.com/quorumcontrol/tupelo-go-sdk/gossip3/types"
+	"github.com/quorumcontrol/tupelo-go-sdk/p2p"
 	"github.com/stretchr/testify/require"
 )
 

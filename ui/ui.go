@@ -4,14 +4,17 @@ import (
 	"fmt"
 
 	"github.com/AsynkronIT/protoactor-go/actor"
+	"github.com/AsynkronIT/protoactor-go/eventstream"
 	"github.com/gdamore/tcell"
 	"github.com/quorumcontrol/jasons-game/navigator"
+	"github.com/quorumcontrol/jasons-game/stats"
 	"github.com/rivo/tview"
 )
 
 const (
 	gameOutputLabel   = "locationOutput"
 	commandInputField = "commandInputField"
+	gameStatsOut      = "gameStatsOut"
 )
 
 type Exit struct{}
@@ -33,9 +36,10 @@ type Subscribe struct{}
 type elementMap map[string]tview.Primitive
 
 type jasonsGameUI struct {
-	app        *tview.Application
-	elements   elementMap
-	subscriber *actor.PID
+	app               *tview.Application
+	elements          elementMap
+	subscriber        *actor.PID
+	statsSubscription *eventstream.Subscription
 }
 
 // NewUIProps returns the actor props necessary to spin up a new UI
@@ -50,10 +54,11 @@ func NewUIProps() *actor.Props {
 func (jsgui *jasonsGameUI) Receive(actorCtx actor.Context) {
 	switch msg := actorCtx.Message().(type) {
 	case *actor.Started:
-		if err := jsgui.initialize(); err != nil {
+		if err := jsgui.initialize(actorCtx); err != nil {
 			panic(fmt.Errorf("error initializing: %v", err))
 		}
 	case *actor.Stopping:
+		stats.Stream.Unsubscribe(jsgui.statsSubscription)
 		jsgui.app.Stop()
 	case *Exit:
 		actorCtx.Self().Poison()
@@ -63,7 +68,13 @@ func (jsgui *jasonsGameUI) Receive(actorCtx actor.Context) {
 		jsgui.handleLocation(msg)
 	case *MessageToUser:
 		jsgui.handleMessageToUser(msg)
+	case stats.UserMessage:
+		jsgui.handleStatsMessage(msg)
 	}
+}
+
+func (jsgui *jasonsGameUI) handleStatsMessage(msg stats.UserMessage) {
+	jsgui.elements[gameStatsOut].(*tview.TextView).Write([]byte(msg.Humanize() + "\n"))
 }
 
 func (jsgui *jasonsGameUI) handleLocation(loc *navigator.Location) {
@@ -75,11 +86,10 @@ func (jsgui *jasonsGameUI) handleMessageToUser(msg *MessageToUser) {
 }
 
 // run the UI
-func (jsgui *jasonsGameUI) initialize() error {
+func (jsgui *jasonsGameUI) initialize(actorCtx actor.Context) error {
 	app := tview.NewApplication()
 
 	mainFlex := tview.NewFlex()
-	todoReplaceBox := tview.NewBox().SetBorder(true).SetTitle("Your Stuff").SetBorderPadding(10, 5, 5, 5)
 
 	txtFlex := tview.NewFlex()
 	txtFlex.SetDirection(tview.FlexRow)
@@ -105,12 +115,30 @@ func (jsgui *jasonsGameUI) initialize() error {
 	txtFlex.AddItem(inputField, 10, 10, true)
 
 	mainFlex.AddItem(txtFlex, 0, 75, true)
-	mainFlex.AddItem(todoReplaceBox, 0, 25, false)
+
+	statTxt := tview.NewTextView()
+	statTxt.SetChangedFunc(func() {
+		statTxt.ScrollToEnd()
+		app.Draw()
+	})
+	statTxt.SetBorder(true).SetTitle("Stats")
+
+	mainFlex.AddItem(statTxt, 0, 25, false)
 	app.SetRoot(mainFlex, true)
 	jsgui.app = app
 
 	jsgui.elements[commandInputField] = inputField
 	jsgui.elements[gameOutputLabel] = txt
+	jsgui.elements[gameStatsOut] = statTxt
+
+	self := actorCtx.Self()
+	jsgui.statsSubscription = stats.Stream.Subscribe(func(evt interface{}) {
+		msg, ok := evt.(stats.UserMessage)
+		if ok {
+			actor.EmptyRootContext.Send(self, msg)
+		}
+	})
+
 	go app.Run()
 	return nil
 }

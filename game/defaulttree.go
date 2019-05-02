@@ -4,7 +4,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/quorumcontrol/jasons-game/navigator"
 	"github.com/quorumcontrol/jasons-game/network"
-	"github.com/quorumcontrol/tupelo-go-client/consensus"
+	"github.com/quorumcontrol/tupelo-go-sdk/consensus"
 )
 
 func createHome(n network.Network) (*consensus.SignedChainTree, error) {

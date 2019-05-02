@@ -7,12 +7,12 @@ import (
 	cid "github.com/ipfs/go-cid"
 	"github.com/pkg/errors"
 	"github.com/quorumcontrol/chaintree/nodestore"
-	"github.com/quorumcontrol/tupelo-go-client/client"
+	"github.com/quorumcontrol/tupelo-go-sdk/client"
 
 	"github.com/quorumcontrol/chaintree/chaintree"
-	"github.com/quorumcontrol/tupelo-go-client/consensus"
-	"github.com/quorumcontrol/tupelo-go-client/gossip3/remote"
-	"github.com/quorumcontrol/tupelo-go-client/gossip3/types"
+	"github.com/quorumcontrol/tupelo-go-sdk/consensus"
+	"github.com/quorumcontrol/tupelo-go-sdk/gossip3/remote"
+	"github.com/quorumcontrol/tupelo-go-sdk/gossip3/types"
 )
 
 type Tupelo struct {

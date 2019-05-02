@@ -1,7 +1,7 @@
 package navigator
 
 import (
-	"github.com/quorumcontrol/tupelo-go-client/consensus"
+	"github.com/quorumcontrol/tupelo-go-sdk/consensus"
 )
 
 type Cursor struct {

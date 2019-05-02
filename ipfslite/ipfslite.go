@@ -4,9 +4,10 @@ package ipfslite
 
 import (
 	"context"
-	"sync"
+	"fmt"
 	"time"
 
+	ipfslite "github.com/hsanjuan/ipfs-lite"
 	"github.com/ipfs/go-bitswap"
 	"github.com/ipfs/go-bitswap/network"
 	blockservice "github.com/ipfs/go-blockservice"
@@ -21,14 +22,16 @@ import (
 	"github.com/ipfs/go-merkledag"
 	dag "github.com/ipfs/go-merkledag"
 	"github.com/libp2p/go-libp2p"
-	circuit "github.com/libp2p/go-libp2p-circuit"
 	crypto "github.com/libp2p/go-libp2p-crypto"
 	host "github.com/libp2p/go-libp2p-host"
 	dht "github.com/libp2p/go-libp2p-kad-dht"
 	peer "github.com/libp2p/go-libp2p-peer"
 	peerstore "github.com/libp2p/go-libp2p-peerstore"
+	routing "github.com/libp2p/go-libp2p-routing"
 	routedhost "github.com/libp2p/go-libp2p/p2p/host/routed"
 	"github.com/multiformats/go-multiaddr"
+	"github.com/pkg/errors"
+	"github.com/quorumcontrol/jasons-game/stats"
 )
 
 func init() {
@@ -38,6 +41,17 @@ func init() {
 }
 
 var logger = logging.Logger("ipfslite")
+
+type ipfsLiteStat struct {
+	peers     int
+	connected int
+	id        peer.ID
+	addrs     []multiaddr.Multiaddr
+}
+
+func (ils *ipfsLiteStat) Humanize() string {
+	return fmt.Sprintf("%d known peers to (%s) / %d connected / addrs: %v", ils.peers, ils.id, ils.connected, ils.addrs)
+}
 
 // Config wraps configuration options for the Peer.
 type Config struct {
@@ -101,49 +115,49 @@ func New(
 	}, nil
 }
 
-// Bootstrap is an optional helper to connect to the given peers and bootstrap
-// the Peer DHT (and Bitswap). This is a best-effort function. Errors are only
-// logged and a warning is printed when less than half of the given peers
-// could be contacted. It is fine to pass a list where some peers will not be
-// reachable.
-func (p *Peer) Bootstrap(peers []peerstore.PeerInfo) {
-	connected := make(chan struct{})
+// // Bootstrap is an optional helper to connect to the given peers and bootstrap
+// // the Peer DHT (and Bitswap). This is a best-effort function. Errors are only
+// // logged and a warning is printed when less than half of the given peers
+// // could be contacted. It is fine to pass a list where some peers will not be
+// // reachable.
+// func (p *Peer) Bootstrap(peers []peerstore.PeerInfo) {
+// 	connected := make(chan struct{})
 
-	var wg sync.WaitGroup
-	for _, pinfo := range peers {
-		//h.Peerstore().AddAddrs(pinfo.ID, pinfo.Addrs, peerstore.PermanentAddrTTL)
-		wg.Add(1)
-		go func(pinfo peerstore.PeerInfo) {
-			defer wg.Done()
-			err := p.host.Connect(p.ctx, pinfo)
-			if err != nil {
-				logger.Error(err)
-				return
-			}
-			logger.Info("Connected to", pinfo.ID)
-			connected <- struct{}{}
-		}(pinfo)
-	}
+// 	var wg sync.WaitGroup
+// 	for _, pinfo := range peers {
+// 		//h.Peerstore().AddAddrs(pinfo.ID, pinfo.Addrs, peerstore.PermanentAddrTTL)
+// 		wg.Add(1)
+// 		go func(pinfo peerstore.PeerInfo) {
+// 			defer wg.Done()
+// 			err := p.host.Connect(p.ctx, pinfo)
+// 			if err != nil {
+// 				logger.Error(err)
+// 				return
+// 			}
+// 			logger.Info("Connected to", pinfo.ID)
+// 			connected <- struct{}{}
+// 		}(pinfo)
+// 	}
 
-	go func() {
-		wg.Wait()
-		close(connected)
-	}()
+// 	go func() {
+// 		wg.Wait()
+// 		close(connected)
+// 	}()
 
-	i := 0
-	for range connected {
-		i++
-	}
-	if nPeers := len(peers); i < nPeers/2 {
-		logger.Warning("only connected to %d bootstrap peers out of %d", i, nPeers)
-	}
+// 	i := 0
+// 	for range connected {
+// 		i++
+// 	}
+// 	if nPeers := len(peers); i < nPeers/2 {
+// 		logger.Warning("only connected to %d bootstrap peers out of %d", i, nPeers)
+// 	}
 
-	err := p.dht.Bootstrap(p.ctx)
-	if err != nil {
-		logger.Error(err)
-		return
-	}
-}
+// 	err := p.dht.Bootstrap(p.ctx)
+// 	if err != nil {
+// 		logger.Error(err)
+// 		return
+// 	}
+// }
 
 // Session returns a session-based NodeGetter.
 func (p *Peer) Session(ctx context.Context) ipld.NodeGetter {
@@ -172,31 +186,43 @@ func SetupLibp2p(
 	listenAddrs []multiaddr.Multiaddr,
 ) (host.Host, *dht.IpfsDHT, error) {
 
-	var err error
+	var idht *dht.IpfsDHT
 
-	h, err := libp2p.New(
+	rHost, err := libp2p.New(
 		ctx,
 		libp2p.Identity(hostKey),
 		libp2p.ListenAddrs(listenAddrs...),
 		libp2p.NATPortMap(),
-		libp2p.EnableRelay(circuit.OptDiscovery),
+		libp2p.EnableAutoRelay(),
+		// This weird construct is needed to enable AutoRelay
+		// https://github.com/libp2p/go-libp2p/issues/487
+		libp2p.Routing(func(h host.Host) (routing.PeerRouting, error) {
+			// make the DHT with the given Host
+			rting, err := dht.New(ctx, h)
+			if err == nil {
+				idht = rting
+			}
+			return rting, err
+		}),
 	)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, errors.Wrap(err, "error creating libp2p")
 	}
 
-	idht, err := dht.New(ctx, h)
-	if err != nil {
-		h.Close()
-		return nil, nil, err
-	}
+	logger.Info("bootstraping")
 
-	rHost := routedhost.Wrap(h, idht)
+	Bootstrap(rHost.(*routedhost.RoutedHost), idht, BootstrapConfigWithPeers(ipfslite.DefaultBootstrapPeers()))
 
 	go func() {
-		tick := time.NewTicker(1 * time.Second)
+		tick := time.NewTicker(30 * time.Second)
 		for {
 			<-tick.C
+			stats.Stream.Publish(&ipfsLiteStat{
+				peers:     len(rHost.Peerstore().Peers()),
+				connected: len(rHost.Network().Peers()),
+				addrs:     rHost.Addrs(),
+				id:        rHost.ID(),
+			})
 			logger.Infof("connected to %d peers", len(rHost.Peerstore().Peers()))
 		}
 	}()
