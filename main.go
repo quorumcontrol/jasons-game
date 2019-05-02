@@ -10,6 +10,7 @@ import (
 	"path"
 	"runtime"
 	"syscall"
+	"time"
 
 	"github.com/AsynkronIT/protoactor-go/actor"
 	"github.com/ethereum/go-ethereum/common/hexutil"
@@ -21,6 +22,7 @@ import (
 	"github.com/quorumcontrol/jasons-game/ui"
 	"github.com/quorumcontrol/tupelo-go-sdk/bls"
 	"github.com/quorumcontrol/tupelo-go-sdk/gossip3/types"
+	deeplogging "github.com/whyrusleeping/go-logging"
 )
 
 type publicKeySet struct {
@@ -67,7 +69,15 @@ func setupNotaryGroup(ctx context.Context) (*types.NotaryGroup, error) {
 }
 
 func main() {
-	err := logging.SetLogLevel("*", "CRITICAL")
+	f, _ := os.Create(fmt.Sprintf("jasons-%d.log", time.Now().Unix()))
+	lgbe := deeplogging.NewLogBackend(f, "", 0)
+	deeplogging.SetBackend(lgbe)
+
+	err := logging.SetLogLevel("*", "INFO")
+	if err != nil {
+		panic(errors.Wrap(err, "error setting loglevel"))
+	}
+	err = logging.SetLogLevel("swarm2", "error")
 	if err != nil {
 		panic(errors.Wrap(err, "error setting loglevel"))
 	}

@@ -45,6 +45,7 @@ require (
 	github.com/rivo/uniseg v0.0.0-20190313204849-f699dde9c340 // indirect
 	github.com/sbstjn/allot v0.0.0-20161025071122-1f2349a
 	github.com/stretchr/testify v1.3.0
+	github.com/whyrusleeping/go-logging v0.0.0-20170515211332-0457bb6b88fc
 	golang.org/x/sync v0.0.0-20190423024810-112230192c58 // indirect
 )
 
