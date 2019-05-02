@@ -4,12 +4,13 @@ import (
 	"fmt"
 
 	"github.com/AsynkronIT/protoactor-go/actor"
+	"github.com/ipfs/go-cid"
 	logging "github.com/ipfs/go-log"
+	"github.com/pkg/errors"
 	"github.com/quorumcontrol/jasons-game/navigator"
 	"github.com/quorumcontrol/jasons-game/network"
 	"github.com/quorumcontrol/jasons-game/ui"
 	"github.com/quorumcontrol/tupelo-go-sdk/consensus"
-	"github.com/sbstjn/allot"
 )
 
 var log = logging.Logger("game")
@@ -84,7 +85,7 @@ func (g *Game) initialize(actorCtx actor.Context) {
 	actorCtx.Request(g.ui, &ui.Subscribe{})
 
 	actorCtx.Send(g.ui, &ui.MessageToUser{
-		Message: fmt.Sprintf("Created Player %s \n(%s)\nHome: %s \n(%s)", playerTree.MustId(), playerTree.Tip().String(), homeTree.MustId(), homeTree.Tip().String()),
+		Message: fmt.Sprintf("Created Player %s \n( %s )\nHome: %s \n( %s )", playerTree.MustId(), playerTree.Tip().String(), homeTree.MustId(), homeTree.Tip().String()),
 	})
 
 	l, err := g.cursor.GetLocation()
@@ -95,13 +96,20 @@ func (g *Game) initialize(actorCtx actor.Context) {
 }
 
 func (g *Game) handleUserInput(actorCtx actor.Context, input *ui.UserInput) {
-	cmd, matches := g.commands.findCommand(input.Message)
+	cmd, args := g.commands.findCommand(input.Message)
 	if cmd != nil {
 		switch cmd.name {
 		case "exit":
 			actorCtx.Send(g.ui, &ui.Exit{})
 		case "north", "east", "south", "west":
-			g.handleLocationInput(actorCtx, cmd, matches)
+			g.handleLocationInput(actorCtx, cmd, args)
+		case "set-description":
+			err := g.handleSetDescription(actorCtx, args)
+			if err != nil {
+				actorCtx.Send(g.ui, &ui.MessageToUser{Message: fmt.Sprintf("error setting description: %v", err)})
+			}
+		case "tip-zoom":
+			g.handleTipZoom(actorCtx, args)
 		default:
 			log.Error("unhandled but matched command", cmd.name)
 		}
@@ -110,7 +118,58 @@ func (g *Game) handleUserInput(actorCtx actor.Context, input *ui.UserInput) {
 	actorCtx.Send(g.ui, &ui.MessageToUser{Message: "I'm sorry I don't understand."})
 }
 
-func (g *Game) handleLocationInput(actorCtx actor.Context, cmd *command, matches allot.MatchInterface) {
+func (g *Game) handleTipZoom(actorCtx actor.Context, tip string) {
+	tipCid, err := cid.Parse(tip)
+	if err != nil {
+		actorCtx.Send(g.ui, &ui.MessageToUser{Message: fmt.Sprintf("error parsing tip (%s): %v", tip, err)})
+		return
+	}
+	tree, err := g.network.GetTreeByTip(tipCid)
+	if err != nil {
+		actorCtx.Send(g.ui, &ui.MessageToUser{Message: fmt.Sprintf("error getting tip: %v", err)})
+		return
+	}
+
+	g.cursor.SetChainTree(tree).SetLocation(0, 0)
+
+	l, err := g.cursor.GetLocation()
+	if err != nil {
+		actorCtx.Send(g.ui, &ui.MessageToUser{Message: fmt.Sprintf("%s some sort of error happened: %v", "set-description", err)})
+	}
+	actorCtx.Send(g.ui, l)
+}
+
+func (g *Game) handleSetDescription(actorCtx actor.Context, desc string) error {
+	log.Info("set description")
+
+	tree, err := g.network.GetChainTreeByName("home")
+	if err != nil {
+		return errors.Wrap(err, "error getting tree by name")
+	}
+
+	log.Infof("updating chain %d,%d to %s", g.cursor.X(), g.cursor.Y(), desc)
+
+	updated, err := g.network.UpdateChainTree(tree, fmt.Sprintf("jasons-game/%d/%d", g.cursor.X(), g.cursor.Y()), &navigator.Location{
+		Description: desc,
+	})
+	if err != nil {
+		actorCtx.Send(g.ui, &ui.MessageToUser{Message: fmt.Sprintf("%s some sort of error happened: %v", "set-description", err)})
+	}
+
+	if g.cursor.Did() == tree.MustId() {
+		g.cursor.SetChainTree(updated)
+	}
+
+	l, err := g.cursor.GetLocation()
+	if err != nil {
+		actorCtx.Send(g.ui, &ui.MessageToUser{Message: fmt.Sprintf("%s some sort of error happened: %v", "set-description", err)})
+	}
+	actorCtx.Send(g.ui, l)
+
+	return err
+}
+
+func (g *Game) handleLocationInput(actorCtx actor.Context, cmd *command, args string) {
 	switch cmd.name {
 	case "north":
 		g.cursor.North()

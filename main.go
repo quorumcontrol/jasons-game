@@ -8,6 +8,7 @@ import (
 	"os"
 	"os/signal"
 	"path"
+	"path/filepath"
 	"runtime"
 	"syscall"
 	"time"
@@ -69,7 +70,8 @@ func setupNotaryGroup(ctx context.Context) (*types.NotaryGroup, error) {
 }
 
 func main() {
-	f, _ := os.Create(fmt.Sprintf("jasons-%d.log", time.Now().Unix()))
+	os.Mkdir("log", 0755)
+	f, _ := os.Create(filepath.Join("log", fmt.Sprintf("jasons-%d.log", time.Now().Unix())))
 	lgbe := deeplogging.NewLogBackend(f, "", 0)
 	deeplogging.SetBackend(lgbe)
 

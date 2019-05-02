@@ -6,8 +6,17 @@ import (
 
 type Cursor struct {
 	tree *consensus.SignedChainTree
+	did  string
 	locX int
 	locY int
+}
+
+func (c *Cursor) X() int {
+	return c.locX
+}
+
+func (c *Cursor) Y() int {
+	return c.locY
 }
 
 func (c *Cursor) North() *Cursor {
@@ -32,7 +41,12 @@ func (c *Cursor) West() *Cursor {
 
 func (c *Cursor) SetChainTree(tree *consensus.SignedChainTree) *Cursor {
 	c.tree = tree
+	c.did = tree.MustId()
 	return c
+}
+
+func (c *Cursor) Did() string {
+	return c.did
 }
 
 func (c *Cursor) GetLocation() (*Location, error) {

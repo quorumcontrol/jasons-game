@@ -1,8 +1,12 @@
 package network
 
 import (
+	"bytes"
 	"context"
 	"fmt"
+	"io"
+	"mime/multipart"
+	"net/http"
 	"time"
 
 	blocks "github.com/ipfs/go-block-format"
@@ -101,9 +105,7 @@ func (ts *IPLDTreeStore) CreateNode(obj interface{}) (*cbornode.Node, error) {
 	if err != nil {
 		return nil, errors.Wrap(err, "error converting to CBOR")
 	}
-	ctx, cancel := context.WithTimeout(context.Background(), defaultTimeout)
-	defer cancel()
-	return n, ts.blockApi.Add(ctx, n)
+	return n, ts.StoreNode(n)
 }
 
 func (ts *IPLDTreeStore) CreateNodeFromBytes(nodeBytes []byte) (*cbornode.Node, error) {
@@ -112,15 +114,24 @@ func (ts *IPLDTreeStore) CreateNodeFromBytes(nodeBytes []byte) (*cbornode.Node, 
 	if sw.Err != nil {
 		return nil, errors.Wrap(sw.Err, "error decoding")
 	}
-	ctx, cancel := context.WithTimeout(context.Background(), defaultTimeout)
-	defer cancel()
-	return n, ts.blockApi.Add(ctx, n)
+	return n, ts.StoreNode(n)
 }
 
 func (ts *IPLDTreeStore) StoreNode(node *cbornode.Node) error {
 	ctx, cancel := context.WithTimeout(context.Background(), defaultTimeout)
 	defer cancel()
-	return ts.blockApi.Add(ctx, node)
+	err := ts.blockApi.Add(ctx, node)
+	if err != nil {
+		return errors.Wrap(err, "error adding blocks")
+	}
+
+	reader := bytes.NewReader(node.RawData())
+
+	resp, err := newfileUploadRequest(
+		"https://ipfs.infura.io:5001/api/v0/dag/put?format=cbor&input-enc=raw",
+		nil, "file", reader)
+	log.Infof("infura: %v", resp)
+	return err
 }
 
 func (ts *IPLDTreeStore) DeleteNode(nodeCid cid.Cid) error {
@@ -252,4 +263,34 @@ func didStoreKey(did string) datastore.Key {
 
 func didSignatureKey(did string) datastore.Key {
 	return datastore.NewKey("-s-" + did)
+}
+
+// Creates a new file upload http request with optional extra params
+func newfileUploadRequest(uri string, params map[string]string, paramName string, file io.Reader) (*http.Response, error) {
+	body := &bytes.Buffer{}
+	writer := multipart.NewWriter(body)
+	part, err := writer.CreateFormFile(paramName, "memory.cbor")
+	if err != nil {
+		return nil, err
+	}
+	_, err = io.Copy(part, file)
+
+	for key, val := range params {
+		_ = writer.WriteField(key, val)
+	}
+	err = writer.Close()
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest("POST", uri, body)
+	req.Header.Set("Content-Type", writer.FormDataContentType())
+
+	if err != nil {
+		return nil, errors.Wrap(err, "error making request")
+	}
+
+	client := &http.Client{}
+	resp, err := client.Do(req)
+	return resp, err
 }

@@ -36,7 +36,7 @@ require (
 	github.com/libp2p/go-libp2p-routing v0.0.1
 	github.com/lucasb-eyer/go-colorful v1.0.2 // indirect
 	github.com/multiformats/go-multiaddr v0.0.2
-	github.com/multiformats/go-multihash v0.0.5 // indirect
+	github.com/multiformats/go-multihash v0.0.5
 	github.com/pkg/errors v0.8.1
 	github.com/quorumcontrol/chaintree v0.0.0-20190426130059-dda329e6bd87
 	github.com/quorumcontrol/storage v1.1.2

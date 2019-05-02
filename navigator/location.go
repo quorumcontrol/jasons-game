@@ -15,6 +15,8 @@ func init() {
 	typecaster.AddType(Location{})
 }
 
+const defaultDescription = "You are in a baron wasteland type set description <desc> to call this land something"
+
 // Location is the representation of a grid element
 type Location struct {
 	Did         string
@@ -28,8 +30,18 @@ func locationFromTree(tree *consensus.SignedChainTree, x, y int) (*Location, err
 	if err != nil {
 		return nil, fmt.Errorf("error resolving: %v", err)
 	}
+
 	if len(remain) > 0 {
-		return nil, fmt.Errorf("error, path remaining (%d,%d): %v", x, y, remain)
+		if len(remain) < 2 {
+			return &Location{
+				Did:         tree.MustId(),
+				X:           x,
+				Y:           y,
+				Description: defaultDescription,
+			}, nil
+		}
+
+		return nil, fmt.Errorf("error, maybe this isn't a land? path remaining (%d,%d): %v", x, y, remain)
 	}
 
 	l := new(Location)

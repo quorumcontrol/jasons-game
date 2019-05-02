@@ -1,6 +1,8 @@
 package game
 
 import (
+	"strings"
+
 	"github.com/sbstjn/allot"
 )
 
@@ -12,12 +14,15 @@ type command struct {
 	allot allot.Command
 }
 
+// for now the string parsing is not working
 var defaultCommandList = commandList{
 	newCommand("north", "north"),
 	newCommand("south", "south"),
 	newCommand("east", "east"),
 	newCommand("west", "west"),
-	newCommand("name", "call me <name:string>"),
+	newCommand("name", "call me"),
+	newCommand("set-description", "set description"),
+	newCommand("tip-zoom", "go to tip"),
 	newCommand("exit", "exit"),
 }
 
@@ -25,15 +30,14 @@ func newCommand(name, parse string) *command {
 	return &command{
 		name:  name,
 		parse: parse,
-		allot: allot.New(parse),
 	}
 }
 
-func (cl commandList) findCommand(req string) (*command, allot.MatchInterface) {
+func (cl commandList) findCommand(req string) (*command, string) {
 	for _, comm := range cl {
-		if match, err := comm.allot.Match(req); err == nil {
-			return comm, match
+		if strings.HasPrefix(req, comm.parse) {
+			return comm, strings.TrimSpace(strings.TrimPrefix(req, comm.parse))
 		}
 	}
-	return nil, nil
+	return nil, ""
 }
