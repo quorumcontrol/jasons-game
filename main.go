@@ -79,6 +79,14 @@ func main() {
 	if err != nil {
 		panic(errors.Wrap(err, "error setting loglevel"))
 	}
+	err = logging.SetLogLevel("ui", "DEBUG")
+	if err != nil {
+		panic(errors.Wrap(err, "error setting loglevel"))
+	}
+	err = logging.SetLogLevel("game", "DEBUG")
+	if err != nil {
+		panic(errors.Wrap(err, "error setting loglevel"))
+	}
 	err = logging.SetLogLevel("swarm2", "error")
 	if err != nil {
 		panic(errors.Wrap(err, "error setting loglevel"))

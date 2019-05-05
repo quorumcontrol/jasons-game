@@ -158,12 +158,16 @@ func (g *Game) handleSetDescription(actorCtx actor.Context, desc string) error {
 
 	if g.cursor.Did() == tree.MustId() {
 		g.cursor.SetChainTree(updated)
+	} else {
+		log.Errorf("chain did was not the same %s %s", g.cursor.Did(), tree.MustId())
 	}
 
+	log.Info("getting cursor location")
 	l, err := g.cursor.GetLocation()
 	if err != nil {
 		actorCtx.Send(g.ui, &ui.MessageToUser{Message: fmt.Sprintf("%s some sort of error happened: %v", "set-description", err)})
 	}
+	log.Infof("sending location %v", l)
 	actorCtx.Send(g.ui, l)
 
 	return err

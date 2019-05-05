@@ -125,12 +125,8 @@ func (ts *IPLDTreeStore) StoreNode(node *cbornode.Node) error {
 		return errors.Wrap(err, "error adding blocks")
 	}
 
-	reader := bytes.NewReader(node.RawData())
+	go publishNode(node)
 
-	resp, err := newfileUploadRequest(
-		"https://ipfs.infura.io:5001/api/v0/dag/put?format=cbor&input-enc=raw",
-		nil, "file", reader)
-	log.Infof("infura: %v", resp)
 	return err
 }
 
@@ -263,6 +259,15 @@ func didStoreKey(did string) datastore.Key {
 
 func didSignatureKey(did string) datastore.Key {
 	return datastore.NewKey("-s-" + did)
+}
+
+func publishNode(node *cbornode.Node) {
+	reader := bytes.NewReader(node.RawData())
+
+	resp, err := newfileUploadRequest(
+		"https://ipfs.infura.io:5001/api/v0/dag/put?format=cbor&input-enc=raw",
+		nil, "file", reader)
+	log.Infof("infura: (err: %v) %v", err, resp)
 }
 
 // Creates a new file upload http request with optional extra params

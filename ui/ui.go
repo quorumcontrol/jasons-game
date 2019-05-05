@@ -6,15 +6,18 @@ import (
 	"github.com/AsynkronIT/protoactor-go/actor"
 	"github.com/AsynkronIT/protoactor-go/eventstream"
 	"github.com/gdamore/tcell"
+	logging "github.com/ipfs/go-log"
 	"github.com/quorumcontrol/jasons-game/navigator"
 	"github.com/quorumcontrol/jasons-game/stats"
 	"github.com/rivo/tview"
 )
 
+var log = logging.Logger("ui")
+
 const (
-	gameOutputLabel   = "locationOutput"
 	commandInputField = "commandInputField"
 	gameStatsOut      = "gameStatsOut"
+	gameOutputLabel   = "gameoutputLabel"
 )
 
 type Exit struct{}
@@ -78,6 +81,7 @@ func (jsgui *jasonsGameUI) handleStatsMessage(msg stats.UserMessage) {
 }
 
 func (jsgui *jasonsGameUI) handleLocation(loc *navigator.Location) {
+	log.Debugf("handle location")
 	jsgui.elements[gameOutputLabel].(*tview.TextView).Write([]byte(loc.Did + fmt.Sprintf(" (%d,%d)\n", loc.X, loc.Y) + loc.Description + "\n"))
 }
 
