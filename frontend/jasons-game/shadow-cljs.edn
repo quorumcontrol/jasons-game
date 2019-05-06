@@ -2,7 +2,8 @@
 {:source-paths
  ["src/dev"
   "src/main"
-  "src/test"]
+  "src/test"
+  "src/js"]
 
  :dependencies
  [[cider/cider-nrepl "0.21.1"]

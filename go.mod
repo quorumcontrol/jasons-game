@@ -8,6 +8,7 @@ require (
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc
 	github.com/ethereum/go-ethereum v1.8.27
 	github.com/gdamore/tcell v1.1.1
+	github.com/golang/protobuf v1.3.1
 	github.com/hsanjuan/ipfs-lite v0.0.3
 	github.com/ipfs/go-bitswap v0.0.4
 	github.com/ipfs/go-block-format v0.0.2
@@ -46,7 +47,9 @@ require (
 	github.com/sbstjn/allot v0.0.0-20161025071122-1f2349a
 	github.com/stretchr/testify v1.3.0
 	github.com/whyrusleeping/go-logging v0.0.0-20170515211332-0457bb6b88fc
+	golang.org/x/net v0.0.0-20190415214537-1da14a5a36f2
 	golang.org/x/sync v0.0.0-20190423024810-112230192c58 // indirect
+	google.golang.org/grpc v1.20.0
 )
 
 replace github.com/quorumcontrol/tupelo-go-sdk v0.2.1-0.20190501192947-deae39695b92 => ../tupelo-go-client
