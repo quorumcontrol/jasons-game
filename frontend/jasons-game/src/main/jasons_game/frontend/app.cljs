@@ -2,8 +2,7 @@
  (:require [reagent.core :as reagent]
            [re-frame.core :as re-frame]
            [jasons-game.frontend.views :as views]
-           [jasons-game.frontend.events :as events]
-           [jasons-game.frontend.service :as service]))
+           [jasons-game.frontend.events :as events]))
 
 (defn mount-root []
   (re-frame/clear-subscription-cache!)

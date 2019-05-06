@@ -10,6 +10,7 @@ require (
 	github.com/gdamore/tcell v1.1.1
 	github.com/golang/protobuf v1.3.1
 	github.com/hsanjuan/ipfs-lite v0.0.3
+	github.com/improbable-eng/grpc-web v0.9.2
 	github.com/ipfs/go-bitswap v0.0.4
 	github.com/ipfs/go-block-format v0.0.2
 	github.com/ipfs/go-blockservice v0.0.3

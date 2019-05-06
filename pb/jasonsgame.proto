@@ -1,0 +1,63 @@
+
+// purely DEMO purposes - can be removed
+syntax = "proto3";
+
+package jasonsgame;
+
+
+message UserInput {
+    string message = 1;
+    Session session =2; 
+}
+
+message MessageToUser {
+	string message = 1;
+}
+
+message Stats {
+    string message = 1;
+}
+
+message Location {
+    string did = 1;
+    bytes tip = 2;
+    int64 x = 3;
+    int64 y = 4;
+    string description = 5;
+}
+
+message CommandReceived {
+    string uuid = 1;
+    bool error = 2;
+    string error_message = 3;
+}
+
+message Session {
+    string uuid = 1;
+}
+
+service GameService {
+    rpc SendCommand(UserInput) returns (CommandReceived) {}
+    rpc ReceiveUserMessages(Session) returns (stream MessageToUser) {}
+    rpc ReceiveStatMessages(Session) returns (stream Stats) {}
+}
+
+
+// message Book {
+//   int64 isbn = 1;
+//   string title = 2;
+//   string author = 3;
+// }
+
+// message GetBookRequest {
+//   int64 isbn = 1;
+// }
+
+// message QueryBooksRequest {
+//   string author_prefix = 1;
+// }
+
+// service BookService {
+//   rpc GetBook(GetBookRequest) returns (Book) {}
+//   rpc QueryBooks(QueryBooksRequest) returns (stream Book) {}
+// }
