@@ -19,6 +19,8 @@ message Stats {
     string message = 1;
 }
 
+message Exit {};
+
 message Location {
     string did = 1;
     bytes tip = 2;

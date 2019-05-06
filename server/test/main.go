@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"net/http"
@@ -17,6 +18,9 @@ func main() {
 	port := 8080
 	grpcServer := grpc.NewServer()
 	fmt.Println("Starting Tupelo RPC server")
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
 
 	// // By providing port 0 to net.Listen, we get a randomized one
 	// if port <= 0 {
@@ -36,7 +40,7 @@ func main() {
 	// 	}
 	// }
 
-	s := &server.GameServer{}
+	s := server.NewGameServer(ctx)
 
 	jasonsgame.RegisterGameServiceServer(grpcServer, s)
 	reflection.Register(grpcServer)

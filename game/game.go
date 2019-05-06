@@ -9,7 +9,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/quorumcontrol/jasons-game/navigator"
 	"github.com/quorumcontrol/jasons-game/network"
-	"github.com/quorumcontrol/jasons-game/ui"
+	"github.com/quorumcontrol/jasons-game/pb/jasonsgame"
 	"github.com/quorumcontrol/tupelo-go-sdk/consensus"
 )
 
@@ -39,7 +39,7 @@ func (g *Game) Receive(actorCtx actor.Context) {
 	switch msg := actorCtx.Message().(type) {
 	case *actor.Started:
 		g.initialize(actorCtx)
-	case *ui.UserInput:
+	case *jasonsgame.UserInput:
 		g.handleUserInput(actorCtx, msg)
 	case *ping:
 		actorCtx.Respond(true)
@@ -82,9 +82,8 @@ func (g *Game) initialize(actorCtx actor.Context) {
 
 	cursor := new(navigator.Cursor).SetChainTree(homeTree)
 	g.cursor = cursor
-	actorCtx.Request(g.ui, &ui.Subscribe{})
 
-	actorCtx.Send(g.ui, &ui.MessageToUser{
+	actorCtx.Send(g.ui, &jasonsgame.MessageToUser{
 		Message: fmt.Sprintf("Created Player %s \n( %s )\nHome: %s \n( %s )", playerTree.MustId(), playerTree.Tip().String(), homeTree.MustId(), homeTree.Tip().String()),
 	})
 
@@ -95,18 +94,18 @@ func (g *Game) initialize(actorCtx actor.Context) {
 	actorCtx.Send(g.ui, l)
 }
 
-func (g *Game) handleUserInput(actorCtx actor.Context, input *ui.UserInput) {
+func (g *Game) handleUserInput(actorCtx actor.Context, input *jasonsgame.UserInput) {
 	cmd, args := g.commands.findCommand(input.Message)
 	if cmd != nil {
 		switch cmd.name {
 		case "exit":
-			actorCtx.Send(g.ui, &ui.Exit{})
+			actorCtx.Send(g.ui, &jasonsgame.Exit{})
 		case "north", "east", "south", "west":
 			g.handleLocationInput(actorCtx, cmd, args)
 		case "set-description":
 			err := g.handleSetDescription(actorCtx, args)
 			if err != nil {
-				actorCtx.Send(g.ui, &ui.MessageToUser{Message: fmt.Sprintf("error setting description: %v", err)})
+				actorCtx.Send(g.ui, &jasonsgame.MessageToUser{Message: fmt.Sprintf("error setting description: %v", err)})
 			}
 		case "tip-zoom":
 			g.handleTipZoom(actorCtx, args)
@@ -115,18 +114,18 @@ func (g *Game) handleUserInput(actorCtx actor.Context, input *ui.UserInput) {
 		}
 		return
 	}
-	actorCtx.Send(g.ui, &ui.MessageToUser{Message: "I'm sorry I don't understand."})
+	actorCtx.Send(g.ui, &jasonsgame.MessageToUser{Message: "I'm sorry I don't understand."})
 }
 
 func (g *Game) handleTipZoom(actorCtx actor.Context, tip string) {
 	tipCid, err := cid.Parse(tip)
 	if err != nil {
-		actorCtx.Send(g.ui, &ui.MessageToUser{Message: fmt.Sprintf("error parsing tip (%s): %v", tip, err)})
+		actorCtx.Send(g.ui, &jasonsgame.MessageToUser{Message: fmt.Sprintf("error parsing tip (%s): %v", tip, err)})
 		return
 	}
 	tree, err := g.network.GetTreeByTip(tipCid)
 	if err != nil {
-		actorCtx.Send(g.ui, &ui.MessageToUser{Message: fmt.Sprintf("error getting tip: %v", err)})
+		actorCtx.Send(g.ui, &jasonsgame.MessageToUser{Message: fmt.Sprintf("error getting tip: %v", err)})
 		return
 	}
 
@@ -134,7 +133,7 @@ func (g *Game) handleTipZoom(actorCtx actor.Context, tip string) {
 
 	l, err := g.cursor.GetLocation()
 	if err != nil {
-		actorCtx.Send(g.ui, &ui.MessageToUser{Message: fmt.Sprintf("%s some sort of error happened: %v", "set-description", err)})
+		actorCtx.Send(g.ui, &jasonsgame.MessageToUser{Message: fmt.Sprintf("%s some sort of error happened: %v", "set-description", err)})
 	}
 	actorCtx.Send(g.ui, l)
 }
@@ -153,7 +152,7 @@ func (g *Game) handleSetDescription(actorCtx actor.Context, desc string) error {
 		Description: desc,
 	})
 	if err != nil {
-		actorCtx.Send(g.ui, &ui.MessageToUser{Message: fmt.Sprintf("%s some sort of error happened: %v", "set-description", err)})
+		actorCtx.Send(g.ui, &jasonsgame.MessageToUser{Message: fmt.Sprintf("%s some sort of error happened: %v", "set-description", err)})
 	}
 
 	if g.cursor.Did() == tree.MustId() {
@@ -165,7 +164,7 @@ func (g *Game) handleSetDescription(actorCtx actor.Context, desc string) error {
 	log.Info("getting cursor location")
 	l, err := g.cursor.GetLocation()
 	if err != nil {
-		actorCtx.Send(g.ui, &ui.MessageToUser{Message: fmt.Sprintf("%s some sort of error happened: %v", "set-description", err)})
+		actorCtx.Send(g.ui, &jasonsgame.MessageToUser{Message: fmt.Sprintf("%s some sort of error happened: %v", "set-description", err)})
 	}
 	log.Infof("sending location %v", l)
 	actorCtx.Send(g.ui, l)
@@ -186,7 +185,7 @@ func (g *Game) handleLocationInput(actorCtx actor.Context, cmd *command, args st
 	}
 	l, err := g.cursor.GetLocation()
 	if err != nil {
-		actorCtx.Send(g.ui, &ui.MessageToUser{Message: fmt.Sprintf("%s some sort of error happened: %v", cmd.name, err)})
+		actorCtx.Send(g.ui, &jasonsgame.MessageToUser{Message: fmt.Sprintf("%s some sort of error happened: %v", cmd.name, err)})
 	}
 	actorCtx.Send(g.ui, l)
 }

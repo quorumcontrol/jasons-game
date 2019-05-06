@@ -33,6 +33,11 @@ export class MessageToUser extends jspb.Message {
   getMessage(): string;
   setMessage(value: string): void;
 
+  hasLocation(): boolean;
+  clearLocation(): void;
+  getLocation(): Location | undefined;
+  setLocation(value?: Location): void;
+
   serializeBinary(): Uint8Array;
   toObject(includeInstance?: boolean): MessageToUser.AsObject;
   static toObject(includeInstance: boolean, msg: MessageToUser): MessageToUser.AsObject;
@@ -46,6 +51,7 @@ export class MessageToUser extends jspb.Message {
 export namespace MessageToUser {
   export type AsObject = {
     message: string,
+    location?: Location.AsObject,
   }
 }
 
@@ -66,6 +72,22 @@ export class Stats extends jspb.Message {
 export namespace Stats {
   export type AsObject = {
     message: string,
+  }
+}
+
+export class Exit extends jspb.Message {
+  serializeBinary(): Uint8Array;
+  toObject(includeInstance?: boolean): Exit.AsObject;
+  static toObject(includeInstance: boolean, msg: Exit): Exit.AsObject;
+  static extensions: {[key: number]: jspb.ExtensionFieldInfo<jspb.Message>};
+  static extensionsBinary: {[key: number]: jspb.ExtensionFieldBinaryInfo<jspb.Message>};
+  static serializeBinaryToWriter(message: Exit, writer: jspb.BinaryWriter): void;
+  static deserializeBinary(bytes: Uint8Array): Exit;
+  static deserializeBinaryFromReader(message: Exit, reader: jspb.BinaryReader): Exit;
+}
+
+export namespace Exit {
+  export type AsObject = {
   }
 }
 
