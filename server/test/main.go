@@ -7,7 +7,7 @@ import (
 	"time"
 
 	"github.com/improbable-eng/grpc-web/go/grpcweb"
-	"github.com/quorumcontrol/jasons-game/pb/books"
+	"github.com/quorumcontrol/jasons-game/pb/jasonsgame"
 	"github.com/quorumcontrol/jasons-game/server"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/reflection"
@@ -36,9 +36,9 @@ func main() {
 	// 	}
 	// }
 
-	s := &server.BookServer{}
+	s := &server.GameServer{}
 
-	books.RegisterBookServiceServer(grpcServer, s)
+	jasonsgame.RegisterGameServiceServer(grpcServer, s)
 	reflection.Register(grpcServer)
 
 	fmt.Println("Listening on port", port)

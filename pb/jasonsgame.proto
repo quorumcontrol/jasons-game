@@ -11,7 +11,8 @@ message UserInput {
 }
 
 message MessageToUser {
-	string message = 1;
+    string message = 1;
+    Location location = 2;
 }
 
 message Stats {

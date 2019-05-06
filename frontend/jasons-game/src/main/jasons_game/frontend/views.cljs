@@ -8,7 +8,7 @@
    ["semantic-ui-react" :refer [Container Input Button]]))
 
 (defn user-message [msg]
-  [:p msg])
+  [:p {:key msg} msg])
 
 (defn app-root []
   [:> Container {:text true}

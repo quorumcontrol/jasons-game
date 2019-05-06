@@ -1,5 +1,6 @@
 (ns jasons-game.frontend.events
   (:require [re-frame.core :as re-frame]
+            [jasons-game.frontend.remote.game :as game]
             [day8.re-frame.tracing :refer-macros [fn-traced]]))
 
 
@@ -18,6 +19,7 @@
               :nav/page :home}))
 
 (defn handle-user-input [{:keys [db]} [_ item]]
+  (game/send-user-input "http://localhost:8080" item (fn [resp] (.log js/console resp)))
   {:db (update db :game/messages #(conj % item))})
 
 (re-frame.core/reg-event-fx   ;; a part of the re-frame API
