@@ -267,7 +267,7 @@ func publishNode(node *cbornode.Node) {
 	resp, err := newfileUploadRequest(
 		"https://ipfs.infura.io:5001/api/v0/dag/put?format=cbor&input-enc=raw",
 		nil, "file", reader)
-	log.Infof("infura: (err: %v) %v", err, resp)
+	log.Debugf("infura: (err: %v) %v", err, resp)
 }
 
 // Creates a new file upload http request with optional extra params

@@ -253,7 +253,8 @@ proto.jasonsgame.MessageToUser.toObject = function(includeInstance, msg) {
   var f, obj = {
     message: jspb.Message.getFieldWithDefault(msg, 1, ""),
     location: (f = msg.getLocation()) && proto.jasonsgame.Location.toObject(includeInstance, f),
-    sequence: jspb.Message.getFieldWithDefault(msg, 3, 0)
+    sequence: jspb.Message.getFieldWithDefault(msg, 3, 0),
+    heartbeat: jspb.Message.getFieldWithDefault(msg, 4, false)
   };
 
   if (includeInstance) {
@@ -303,6 +304,10 @@ proto.jasonsgame.MessageToUser.deserializeBinaryFromReader = function(msg, reade
       var value = /** @type {number} */ (reader.readUint64());
       msg.setSequence(value);
       break;
+    case 4:
+      var value = /** @type {boolean} */ (reader.readBool());
+      msg.setHeartbeat(value);
+      break;
     default:
       reader.skipField();
       break;
@@ -351,6 +356,13 @@ proto.jasonsgame.MessageToUser.serializeBinaryToWriter = function(message, write
   if (f !== 0) {
     writer.writeUint64(
       3,
+      f
+    );
+  }
+  f = message.getHeartbeat();
+  if (f) {
+    writer.writeBool(
+      4,
       f
     );
   }
@@ -414,6 +426,23 @@ proto.jasonsgame.MessageToUser.prototype.getSequence = function() {
 /** @param {number} value */
 proto.jasonsgame.MessageToUser.prototype.setSequence = function(value) {
   jspb.Message.setProto3IntField(this, 3, value);
+};
+
+
+/**
+ * optional bool heartbeat = 4;
+ * Note that Boolean fields may be set to 0/1 when serialized from a Java server.
+ * You should avoid comparisons like {@code val === true/false} in those cases.
+ * @return {boolean}
+ */
+proto.jasonsgame.MessageToUser.prototype.getHeartbeat = function() {
+  return /** @type {boolean} */ (jspb.Message.getFieldWithDefault(this, 4, false));
+};
+
+
+/** @param {boolean} value */
+proto.jasonsgame.MessageToUser.prototype.setHeartbeat = function(value) {
+  jspb.Message.setProto3BooleanField(this, 4, value);
 };
 
 
@@ -996,7 +1025,7 @@ proto.jasonsgame.CommandReceived.prototype.toObject = function(opt_includeInstan
  */
 proto.jasonsgame.CommandReceived.toObject = function(includeInstance, msg) {
   var f, obj = {
-    uuid: jspb.Message.getFieldWithDefault(msg, 1, ""),
+    sequence: jspb.Message.getFieldWithDefault(msg, 1, 0),
     error: jspb.Message.getFieldWithDefault(msg, 2, false),
     errorMessage: jspb.Message.getFieldWithDefault(msg, 3, "")
   };
@@ -1036,8 +1065,8 @@ proto.jasonsgame.CommandReceived.deserializeBinaryFromReader = function(msg, rea
     var field = reader.getFieldNumber();
     switch (field) {
     case 1:
-      var value = /** @type {string} */ (reader.readString());
-      msg.setUuid(value);
+      var value = /** @type {number} */ (reader.readUint64());
+      msg.setSequence(value);
       break;
     case 2:
       var value = /** @type {boolean} */ (reader.readBool());
@@ -1076,9 +1105,9 @@ proto.jasonsgame.CommandReceived.prototype.serializeBinary = function() {
  */
 proto.jasonsgame.CommandReceived.serializeBinaryToWriter = function(message, writer) {
   var f = undefined;
-  f = message.getUuid();
-  if (f.length > 0) {
-    writer.writeString(
+  f = message.getSequence();
+  if (f !== 0) {
+    writer.writeUint64(
       1,
       f
     );
@@ -1101,17 +1130,17 @@ proto.jasonsgame.CommandReceived.serializeBinaryToWriter = function(message, wri
 
 
 /**
- * optional string uuid = 1;
- * @return {string}
+ * optional uint64 sequence = 1;
+ * @return {number}
  */
-proto.jasonsgame.CommandReceived.prototype.getUuid = function() {
-  return /** @type {string} */ (jspb.Message.getFieldWithDefault(this, 1, ""));
+proto.jasonsgame.CommandReceived.prototype.getSequence = function() {
+  return /** @type {number} */ (jspb.Message.getFieldWithDefault(this, 1, 0));
 };
 
 
-/** @param {string} value */
-proto.jasonsgame.CommandReceived.prototype.setUuid = function(value) {
-  jspb.Message.setProto3StringField(this, 1, value);
+/** @param {number} value */
+proto.jasonsgame.CommandReceived.prototype.setSequence = function(value) {
+  jspb.Message.setProto3IntField(this, 1, value);
 };
 
 

@@ -41,6 +41,9 @@ export class MessageToUser extends jspb.Message {
   getSequence(): number;
   setSequence(value: number): void;
 
+  getHeartbeat(): boolean;
+  setHeartbeat(value: boolean): void;
+
   serializeBinary(): Uint8Array;
   toObject(includeInstance?: boolean): MessageToUser.AsObject;
   static toObject(includeInstance: boolean, msg: MessageToUser): MessageToUser.AsObject;
@@ -56,6 +59,7 @@ export namespace MessageToUser {
     message: string,
     location?: Location.AsObject,
     sequence: number,
+    heartbeat: boolean,
   }
 }
 
@@ -134,8 +138,8 @@ export namespace Location {
 }
 
 export class CommandReceived extends jspb.Message {
-  getUuid(): string;
-  setUuid(value: string): void;
+  getSequence(): number;
+  setSequence(value: number): void;
 
   getError(): boolean;
   setError(value: boolean): void;
@@ -155,7 +159,7 @@ export class CommandReceived extends jspb.Message {
 
 export namespace CommandReceived {
   export type AsObject = {
-    uuid: string,
+    sequence: number,
     error: boolean,
     errorMessage: string,
   }

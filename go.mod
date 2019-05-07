@@ -3,12 +3,12 @@ module github.com/quorumcontrol/jasons-game
 go 1.12
 
 require (
-	github.com/AsynkronIT/protoactor-go v0.0.0-20190318154652-aa1aa20c2fa0
+	github.com/AsynkronIT/protoactor-go v0.0.0-20190429152931-21e2d03dcae5
 	github.com/btcsuite/btcd v0.0.0-20190427004231-96897255fd17 // indirect
 	github.com/ethereum/go-ethereum v1.8.27
 	github.com/gogo/protobuf v1.2.1
 	github.com/hsanjuan/ipfs-lite v0.0.3
-	github.com/improbable-eng/grpc-web v0.9.2
+	github.com/improbable-eng/grpc-web v0.9.5
 	github.com/ipfs/go-bitswap v0.0.4
 	github.com/ipfs/go-block-format v0.0.2
 	github.com/ipfs/go-blockservice v0.0.3

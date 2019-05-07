@@ -5,7 +5,8 @@ import (
 	"fmt"
 	"log"
 	"net/http"
-	"time"
+
+	logging "github.com/ipfs/go-log"
 
 	"github.com/improbable-eng/grpc-web/go/grpcweb"
 	"github.com/quorumcontrol/jasons-game/pb/jasonsgame"
@@ -15,30 +16,20 @@ import (
 )
 
 func main() {
+	logging.SetLogLevel("*", "INFO")
+	logging.SetLogLevel("swarm2", "error")
+	logging.SetLogLevel("relay", "error")
+	logging.SetLogLevel("autonat", "error")
+	logging.SetLogLevel("uiserver", "debug")
+	logging.SetLogLevel("game", "debug")
+	logging.SetLogLevel("gameserver", "debug")
+
 	port := 8080
 	grpcServer := grpc.NewServer()
-	fmt.Println("Starting Tupelo RPC server")
+	fmt.Println("Starting Jasons Game server")
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
-
-	// // By providing port 0 to net.Listen, we get a randomized one
-	// if port <= 0 {
-	// 	port = 0
-	// }
-	// listener, err := net.Listen("tcp", fmt.Sprintf(":%d", port))
-	// if err != nil {
-	// 	log.Printf("Failed to open listener: %s", err)
-	// 	panic(err)
-	// }
-
-	// if port == 0 {
-	// 	comps := strings.Split(listener.Addr().String(), ":")
-	// 	port, err = strconv.Atoi(comps[len(comps)-1])
-	// 	if err != nil {
-	// 		panic(err)
-	// 	}
-	// }
 
 	s := server.NewGameServer(ctx)
 
@@ -51,8 +42,6 @@ func main() {
 
 	serv := &http.Server{
 		Addr:           fmt.Sprintf(":%d", port),
-		ReadTimeout:    10 * time.Second,
-		WriteTimeout:   10 * time.Second,
 		MaxHeaderBytes: 1 << 20,
 	}
 
@@ -79,6 +68,4 @@ func main() {
 	})
 
 	log.Fatal(serv.ListenAndServe())
-
-	// err = grpcServer.Serve(listener)
 }

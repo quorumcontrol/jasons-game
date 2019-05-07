@@ -33,6 +33,9 @@ integration-test: $(gosources) $(generated) go.mod go.sum
 docker-image: vendor $(gosources) $(generated) Dockerfile .dockerignore
 	docker build -t quorumcontrol/jasons-game:$(TAG) .
 
+game-server: $(gosources) $(generated) go.mod go.sum
+	docker-compose run --rm --service-ports game
+
 $(FIRSTGOPATH)/bin/golangci-lint:
 	./scripts/download-golangci-lint.sh
 

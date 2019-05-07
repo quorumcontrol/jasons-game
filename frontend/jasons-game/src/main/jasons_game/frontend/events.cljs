@@ -21,10 +21,14 @@
    {}))
 
 (defn handle-game-message [resp]
-  (.log js/console resp))
+  (if (not (.getHeartbeat resp))
+    (do
+      (.log js/console "game message" resp)
+      (dispatch [:game-message (.getMessage resp)]))))
 
 (defn handle-game-end [resp]
-  (.log js/console resp))
+  (.log js/console "game end, redoing" resp)
+  (dispatch [:initialize-game-listener]))
 
 (re-frame.core/reg-event-fx   ;; a part of the re-frame API
  :initialize-game-listener                ;; the kind of event
@@ -47,8 +51,7 @@
  :user-input                ;; the kind of event
  handle-user-input)
 
-; (re-frame/reg-event-db
-;  :routes/home
-;  (fn-traced  [db _]
-;              (-> db
-;                  (assoc :page :home))))
+(re-frame.core/reg-event-fx   ;; a part of the re-frame API
+ :game-message                ;; the kind of event
+ (fn [{:keys [db]} [_ message-to-user]]
+   {:db (update db :game/messages #(conj % message-to-user))}))

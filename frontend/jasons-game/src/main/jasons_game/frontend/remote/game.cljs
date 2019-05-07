@@ -24,10 +24,10 @@
                                        :onEnd callback}))))
 
 (defn start-game-listener [host session on-message on-end]
-    (invoke game-receive-usermessages (clj->js {:request session
-                                                :host host
-                                                :onMessage on-message
-                                                :onEnd on-end})))
+  (invoke game-receive-usermessages (clj->js {:request session
+                                              :host host
+                                              :onMessage on-message
+                                              :onEnd on-end})))
 
 
 

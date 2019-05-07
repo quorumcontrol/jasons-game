@@ -173,13 +173,14 @@ func SetupLibp2p(
 		tick := time.NewTicker(30 * time.Second)
 		for {
 			<-tick.C
-			stats.Stream.Publish(&ipfsLiteStat{
+			currentStats := &ipfsLiteStat{
 				peers:     len(rHost.Peerstore().Peers()),
 				connected: len(rHost.Network().Peers()),
 				addrs:     rHost.Addrs(),
 				id:        rHost.ID(),
-			})
-			logger.Infof("connected to %d peers", len(rHost.Peerstore().Peers()))
+			}
+			stats.Stream.Publish(currentStats)
+			logger.Infof("know about %d peers, connected to %d", currentStats.peers, currentStats.connected)
 		}
 	}()
 	return rHost, idht, nil

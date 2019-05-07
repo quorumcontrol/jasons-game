@@ -1,12 +1,16 @@
 package ui
 
 import (
-	"log"
+	"reflect"
+	"time"
 
 	"github.com/AsynkronIT/protoactor-go/actor"
+	logging "github.com/ipfs/go-log"
 	"github.com/quorumcontrol/jasons-game/network"
 	"github.com/quorumcontrol/jasons-game/pb/jasonsgame"
 )
+
+var log = logging.Logger("uiserver")
 
 type remoteStream interface {
 	Send(*jasonsgame.MessageToUser) error
@@ -29,10 +33,13 @@ func (ts *TestStream) GetMessages() []*jasonsgame.MessageToUser {
 	return ts.messages
 }
 
+type doneChan chan struct{}
+
 type UIServer struct {
-	game    *actor.PID
-	network network.Network
-	stream  remoteStream
+	game     *actor.PID
+	network  network.Network
+	stream   remoteStream
+	doneChan doneChan
 }
 
 func NewUIProps(stream remoteStream, net network.Network) *actor.Props {
@@ -48,23 +55,73 @@ type SetGame struct {
 	Game *actor.PID
 }
 
+type SetStream struct {
+	Stream   remoteStream
+	DoneChan doneChan
+}
+
 func (us *UIServer) Receive(actorCtx actor.Context) {
 	switch msg := actorCtx.Message().(type) {
 	case *actor.Stopping:
 		if us.game != nil {
 			us.game.Poison()
 		}
+		if us.doneChan != nil {
+			us.doneChan <- struct{}{}
+		}
+	case *actor.ReceiveTimeout:
+		actorCtx.Send(actorCtx.Self(), &jasonsgame.MessageToUser{Heartbeat: true})
 	case *SetGame:
 		us.game = msg.Game
+	case *SetStream:
+		// free up the previous stream
+		us.sendDone()
+
+		us.stream = msg.Stream
+		us.doneChan = msg.DoneChan
+		actorCtx.Send(actorCtx.Self(), &jasonsgame.MessageToUser{Message: "missed you while you were gone"})
 	case *jasonsgame.MessageToUser:
-		log.Printf("message to user: %s", msg.Message)
-		us.stream.Send(msg)
-	case *jasonsgame.UserInput:
-		log.Printf("user input %s", msg.Message)
-		if us.game != nil {
-			actorCtx.Send(us.game, msg)
+		actorCtx.SetReceiveTimeout(5 * time.Second)
+		log.Debugf("message to user: %s", msg.Message)
+		if us.stream == nil {
+			log.Errorf("no valid stream for %v", msg.Message)
 			return
 		}
-		log.Printf("user input has no game to go to %v", msg)
+		err := us.stream.Send(msg)
+		if err != nil {
+			us.stream = nil
+			us.sendDone()
+			log.Errorf("error sending message to stream: %v", err)
+		}
+
+	case *jasonsgame.UserInput:
+		actorCtx.SetReceiveTimeout(5 * time.Second)
+		log.Debugf("user input %s", msg.Message)
+		if us.game != nil {
+			fut := actorCtx.RequestFuture(us.game, msg, 5*time.Second)
+			res, err := fut.Result()
+			if err != nil {
+				log.Errorf("error waiting for future: %v", err)
+			}
+			log.Debugf("received response from game")
+			if parent := actorCtx.Parent(); parent != nil {
+				actorCtx.Respond(res)
+			}
+			return
+		}
+		log.Debugf("user input has no game to go to %v", msg)
+	default:
+		log.Debugf("received unknown message: %v (%s)", msg, reflect.TypeOf(msg).String())
+	}
+}
+
+func (us *UIServer) sendDone() {
+	if us.doneChan != nil {
+		select {
+		case us.doneChan <- struct{}{}:
+			log.Debugf("sent done")
+		default:
+			log.Warningf("nothing listening on done channel")
+		}
 	}
 }

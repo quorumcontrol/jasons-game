@@ -7,16 +7,16 @@
    ["react-dom" :as ReactDOM]
    ["semantic-ui-react" :refer [Container Input Button]]))
 
-(defn user-message [msg]
-  [:p {:key msg} msg])
+(defn user-message [idx msg]
+  [:p {:key idx} msg])
 
 (defn app-root []
   [:> Container {:text true}
    [:> Container {:text true}
     (let [messages (subscribe [:game-messages])]
-      (map user-message @messages))]
+      (map-indexed user-message @messages))]
     ;; TODO: put the text here]
    (let [input-state (r/atom "")]
      [:div
-       [:> Input {:onChange (fn [evt] (reset! input-state (-> evt .-target .-value))) :placeholder "What do you want to do?"}]
-       [:> Button {:onClick #(dispatch [:user-input @input-state])} "Send"]])])
+      [:> Input {:onChange (fn [evt] (reset! input-state (-> evt .-target .-value))) :placeholder "What do you want to do?"}]
+      [:> Button {:onClick #(dispatch [:user-input @input-state])} "Send"]])])
