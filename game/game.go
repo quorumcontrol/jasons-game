@@ -104,13 +104,12 @@ func (g *Game) initialize(actorCtx actor.Context) {
 }
 
 func (g *Game) handleUserInput(actorCtx actor.Context, input *jasonsgame.UserInput) {
-	if parent := actorCtx.Parent(); parent != nil {
+	if sender := actorCtx.Sender(); sender != nil {
 		log.Debugf("responding to parent with CommandReceived")
 		actorCtx.Respond(&jasonsgame.CommandReceived{Sequence: g.messageSequence})
 		g.messageSequence++
-	} else {
-		log.Debugf("no parent for request: %v", input)
 	}
+
 	cmd, args := g.commands.findCommand(input.Message)
 	if cmd != nil {
 		log.Debugf("received command %v", cmd.name)

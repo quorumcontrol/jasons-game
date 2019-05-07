@@ -104,7 +104,7 @@ func (us *UIServer) Receive(actorCtx actor.Context) {
 				log.Errorf("error waiting for future: %v", err)
 			}
 			log.Debugf("received response from game")
-			if parent := actorCtx.Parent(); parent != nil {
+			if sender := actorCtx.Sender(); sender != nil {
 				actorCtx.Respond(res)
 			}
 			return
