@@ -24,7 +24,7 @@
   (if (not (.getHeartbeat resp))
     (do
       (.log js/console "game message" resp)
-      (dispatch [:game-message (.getMessage resp)]))))
+      (dispatch [:game-message (str ">>>> " (.getMessage resp))]))))
 
 (defn handle-game-end [resp]
   (.log js/console "game end, redoing" resp)
@@ -45,7 +45,7 @@
 
 (defn handle-user-input [{:keys [db]} [_ item]]
   (game/send-user-input host (:game/session db) item (fn [resp] (.log js/console resp)))
-  {:db (update db :game/messages #(conj % item))})
+  {:db (update db :game/messages #(conj % (str "<<<< " item)))})
 
 (re-frame.core/reg-event-fx   ;; a part of the re-frame API
  :user-input                ;; the kind of event

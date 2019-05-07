@@ -5,18 +5,27 @@
    [jasons-game.frontend.components.terminal :as terminal]
    ["react"]
    ["react-dom" :as ReactDOM]
-   ["semantic-ui-react" :refer [Container Input Button]]))
+   ["semantic-ui-react" :refer [Container Input Button Menu Form]]))
 
 (defn user-message [idx msg]
   [:p {:key idx} msg])
 
 (defn app-root []
-  [:> Container {:text true}
-   [:> Container {:text true}
+  [:div
+   [:> Menu {:fixed "bottom"}
+    (let [input-state (r/atom "")]
+      [:> Form {:onSubmit (fn [evt]
+                            (.log js/console "submission" evt)
+                            (dispatch [:user-input @input-state])
+                            (reset! input-state ""))}
+       [:> Input {:onChange (fn [evt] (reset! input-state (-> evt .-target .-value)))
+                  :action {:labelPosition "right"
+                           :content "Send"
+                           :type "submit"}
+                  :actionPosition "right"
+                  :size "big"
+                  :placeholder "What do you want to do?"}]])]
+   [:> Container
     (let [messages (subscribe [:game-messages])]
-      (map-indexed user-message @messages))]
-    ;; TODO: put the text here]
-   (let [input-state (r/atom "")]
-     [:div
-      [:> Input {:onChange (fn [evt] (reset! input-state (-> evt .-target .-value))) :placeholder "What do you want to do?"}]
-      [:> Button {:onClick #(dispatch [:user-input @input-state])} "Send"]])])
+      (map-indexed user-message @messages))]])
+
