@@ -17,13 +17,14 @@ import (
 	"github.com/AsynkronIT/protoactor-go/actor"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/crypto"
-	"github.com/quorumcontrol/jasons-game/navigator"
 	"github.com/quorumcontrol/jasons-game/network"
 	"github.com/quorumcontrol/jasons-game/ui"
 	"github.com/quorumcontrol/tupelo-go-sdk/bls"
 	"github.com/quorumcontrol/tupelo-go-sdk/gossip3/types"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"github.com/quorumcontrol/jasons-game/pb/jasonsgame"
+
 )
 
 type publicKeySet struct {
@@ -87,11 +88,13 @@ func TestFullIntegration(t *testing.T) {
 
 	rootCtx := actor.EmptyRootContext
 
-	simulatedUI, err := rootCtx.SpawnNamed(ui.NewSimulatedUIProps(), "ui")
-	require.Nil(t, err)
-	defer simulatedUI.Stop()
+	stream := ui.NewTestStream()
 
-	gameActor, err := rootCtx.SpawnNamed(NewGameProps(simulatedUI, net), "game")
+	uiActor, err := rootCtx.SpawnNamed(ui.NewUIProps(stream, net), "test-navigation-ui")
+	require.Nil(t, err)
+	defer uiActor.Stop()
+
+	gameActor, err := rootCtx.SpawnNamed(NewGameProps(uiActor, net), "test-navigation-game")
 	require.Nil(t, err)
 	defer gameActor.Stop()
 
@@ -100,15 +103,13 @@ func TestFullIntegration(t *testing.T) {
 	_,err = readyFut.Result()
 	require.Nil(t,err)
 
-	rootCtx.Send(gameActor, &ui.UserInput{Message: "north"})
+	rootCtx.Send(gameActor, &jasonsgame.UserInput{Message: "north"})
 
 	time.Sleep(200 * time.Millisecond)
 
-	fut := rootCtx.RequestFuture(simulatedUI, &ui.GetEventsFromSimulator{}, 40*time.Second)
-	evts, err := fut.Result()
-	require.Nil(t, err)
+	msgs := stream.GetMessages()
 
-	require.Len(t, evts.([]interface{}), 3)
-	assert.IsType(t, &navigator.Location{}, evts.([]interface{})[1])
-	assert.IsType(t, &navigator.Location{}, evts.([]interface{})[2])
+	require.Len(t, msgs, 3)
+	assert.NotNil(t, msgs[1].Location)
+	assert.NotNil(t, msgs[2].Location)
 }

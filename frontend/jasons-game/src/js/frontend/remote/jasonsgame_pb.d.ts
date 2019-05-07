@@ -2,6 +2,7 @@
 // file: jasonsgame.proto
 
 import * as jspb from "google-protobuf";
+import * as github_com_gogo_protobuf_gogoproto_gogo_pb from "./github.com/gogo/protobuf/gogoproto/gogo_pb";
 
 export class UserInput extends jspb.Message {
   getMessage(): string;
@@ -38,6 +39,9 @@ export class MessageToUser extends jspb.Message {
   getLocation(): Location | undefined;
   setLocation(value?: Location): void;
 
+  getSequence(): number;
+  setSequence(value: number): void;
+
   serializeBinary(): Uint8Array;
   toObject(includeInstance?: boolean): MessageToUser.AsObject;
   static toObject(includeInstance: boolean, msg: MessageToUser): MessageToUser.AsObject;
@@ -52,6 +56,7 @@ export namespace MessageToUser {
   export type AsObject = {
     message: string,
     location?: Location.AsObject,
+    sequence: number,
   }
 }
 

@@ -1,18 +1,19 @@
 
-// purely DEMO purposes - can be removed
 syntax = "proto3";
 
 package jasonsgame;
 
+import "github.com/gogo/protobuf/gogoproto/gogo.proto";
 
 message UserInput {
     string message = 1;
-    Session session =2; 
+    Session session = 2; 
 }
 
 message MessageToUser {
     string message = 1;
     Location location = 2;
+    uint64 sequence = 3;
 }
 
 message Stats {
@@ -44,23 +45,3 @@ service GameService {
     rpc ReceiveUserMessages(Session) returns (stream MessageToUser) {}
     rpc ReceiveStatMessages(Session) returns (stream Stats) {}
 }
-
-
-// message Book {
-//   int64 isbn = 1;
-//   string title = 2;
-//   string author = 3;
-// }
-
-// message GetBookRequest {
-//   int64 isbn = 1;
-// }
-
-// message QueryBooksRequest {
-//   string author_prefix = 1;
-// }
-
-// service BookService {
-//   rpc GetBook(GetBookRequest) returns (Book) {}
-//   rpc QueryBooks(QueryBooksRequest) returns (stream Book) {}
-// }

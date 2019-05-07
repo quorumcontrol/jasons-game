@@ -11,6 +11,8 @@
 const grpc = {};
 grpc.web = require('grpc-web');
 
+
+var github_com_gogo_protobuf_gogoproto_gogo_pb = require('./github.com/gogo/protobuf/gogoproto/gogo_pb.js')
 const proto = {};
 proto.jasonsgame = require('./jasonsgame_pb.js');
 

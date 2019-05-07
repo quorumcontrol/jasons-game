@@ -13,7 +13,7 @@ import (
 	"github.com/ipfs/go-merkledag"
 	"github.com/quorumcontrol/chaintree/nodestore"
 	"github.com/quorumcontrol/chaintree/safewrap"
-	"github.com/quorumcontrol/jasons-game/navigator"
+	"github.com/quorumcontrol/jasons-game/pb/jasonsgame"
 	"github.com/quorumcontrol/tupelo-go-sdk/consensus"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -64,10 +64,10 @@ func createTree(t *testing.T, ts TreeStore) *consensus.SignedChainTree {
 	tree, err := consensus.NewSignedChainTree(key.PublicKey, ts)
 	require.Nil(t, err)
 
-	updated, err := tree.ChainTree.Dag.SetAsLink([]string{"tree", "data", "jasons-game", "0", "0"}, &navigator.Location{Description: "hi, welcome"})
+	updated, err := tree.ChainTree.Dag.SetAsLink([]string{"tree", "data", "jasons-game", "0", "0"}, &jasonsgame.Location{Description: "hi, welcome"})
 	require.Nil(t, err)
 
-	updated, err = updated.SetAsLink([]string{"tree", "data", "jasons-game", "0", "1"}, &navigator.Location{Description: "you are north of the welcome"})
+	updated, err = updated.SetAsLink([]string{"tree", "data", "jasons-game", "0", "1"}, &jasonsgame.Location{Description: "you are north of the welcome"})
 	require.Nil(t, err)
 	tree.ChainTree.Dag = updated
 	return tree

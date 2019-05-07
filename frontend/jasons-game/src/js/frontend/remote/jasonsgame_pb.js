@@ -11,6 +11,7 @@ var jspb = require('google-protobuf');
 var goog = jspb;
 var global = Function('return this')();
 
+var github_com_gogo_protobuf_gogoproto_gogo_pb = require('./github.com/gogo/protobuf/gogoproto/gogo_pb.js');
 goog.exportSymbol('proto.jasonsgame.CommandReceived', null, global);
 goog.exportSymbol('proto.jasonsgame.Exit', null, global);
 goog.exportSymbol('proto.jasonsgame.Location', null, global);
@@ -252,7 +253,8 @@ proto.jasonsgame.MessageToUser.prototype.toObject = function(opt_includeInstance
 proto.jasonsgame.MessageToUser.toObject = function(includeInstance, msg) {
   var f, obj = {
     message: jspb.Message.getFieldWithDefault(msg, 1, ""),
-    location: (f = msg.getLocation()) && proto.jasonsgame.Location.toObject(includeInstance, f)
+    location: (f = msg.getLocation()) && proto.jasonsgame.Location.toObject(includeInstance, f),
+    sequence: jspb.Message.getFieldWithDefault(msg, 3, 0)
   };
 
   if (includeInstance) {
@@ -298,6 +300,10 @@ proto.jasonsgame.MessageToUser.deserializeBinaryFromReader = function(msg, reade
       reader.readMessage(value,proto.jasonsgame.Location.deserializeBinaryFromReader);
       msg.setLocation(value);
       break;
+    case 3:
+      var value = /** @type {number} */ (reader.readUint64());
+      msg.setSequence(value);
+      break;
     default:
       reader.skipField();
       break;
@@ -340,6 +346,13 @@ proto.jasonsgame.MessageToUser.serializeBinaryToWriter = function(message, write
       2,
       f,
       proto.jasonsgame.Location.serializeBinaryToWriter
+    );
+  }
+  f = message.getSequence();
+  if (f !== 0) {
+    writer.writeUint64(
+      3,
+      f
     );
   }
 };
@@ -387,6 +400,21 @@ proto.jasonsgame.MessageToUser.prototype.clearLocation = function() {
  */
 proto.jasonsgame.MessageToUser.prototype.hasLocation = function() {
   return jspb.Message.getField(this, 2) != null;
+};
+
+
+/**
+ * optional uint64 sequence = 3;
+ * @return {number}
+ */
+proto.jasonsgame.MessageToUser.prototype.getSequence = function() {
+  return /** @type {number} */ (jspb.Message.getFieldWithDefault(this, 3, 0));
+};
+
+
+/** @param {number} value */
+proto.jasonsgame.MessageToUser.prototype.setSequence = function(value) {
+  jspb.Message.setProto3IntField(this, 3, value);
 };
 
 

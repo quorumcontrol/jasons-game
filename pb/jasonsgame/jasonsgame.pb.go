@@ -6,7 +6,8 @@ package jasonsgame
 import (
 	context "context"
 	fmt "fmt"
-	proto "github.com/golang/protobuf/proto"
+	_ "github.com/gogo/protobuf/gogoproto"
+	proto "github.com/gogo/protobuf/proto"
 	grpc "google.golang.org/grpc"
 	io "io"
 	math "math"
@@ -21,14 +22,11 @@ var _ = math.Inf
 // is compatible with the proto package it is being compiled against.
 // A compilation error at this line likely means your copy of the
 // proto package needs to be updated.
-const _ = proto.ProtoPackageIsVersion2 // please upgrade the proto package
+const _ = proto.GoGoProtoPackageIsVersion2 // please upgrade the proto package
 
 type UserInput struct {
-	Message              string   `protobuf:"bytes,1,opt,name=message,proto3" json:"message,omitempty"`
-	Session              *Session `protobuf:"bytes,2,opt,name=session,proto3" json:"session,omitempty"`
-	XXX_NoUnkeyedLiteral struct{} `json:"-"`
-	XXX_unrecognized     []byte   `json:"-"`
-	XXX_sizecache        int32    `json:"-"`
+	Message string   `protobuf:"bytes,1,opt,name=message,proto3" json:"message,omitempty"`
+	Session *Session `protobuf:"bytes,2,opt,name=session,proto3" json:"session,omitempty"`
 }
 
 func (m *UserInput) Reset()         { *m = UserInput{} }
@@ -79,11 +77,9 @@ func (m *UserInput) GetSession() *Session {
 }
 
 type MessageToUser struct {
-	Message              string    `protobuf:"bytes,1,opt,name=message,proto3" json:"message,omitempty"`
-	Location             *Location `protobuf:"bytes,2,opt,name=location,proto3" json:"location,omitempty"`
-	XXX_NoUnkeyedLiteral struct{}  `json:"-"`
-	XXX_unrecognized     []byte    `json:"-"`
-	XXX_sizecache        int32     `json:"-"`
+	Message  string    `protobuf:"bytes,1,opt,name=message,proto3" json:"message,omitempty"`
+	Location *Location `protobuf:"bytes,2,opt,name=location,proto3" json:"location,omitempty"`
+	Sequence uint64    `protobuf:"varint,3,opt,name=sequence,proto3" json:"sequence,omitempty"`
 }
 
 func (m *MessageToUser) Reset()         { *m = MessageToUser{} }
@@ -133,11 +129,15 @@ func (m *MessageToUser) GetLocation() *Location {
 	return nil
 }
 
+func (m *MessageToUser) GetSequence() uint64 {
+	if m != nil {
+		return m.Sequence
+	}
+	return 0
+}
+
 type Stats struct {
-	Message              string   `protobuf:"bytes,1,opt,name=message,proto3" json:"message,omitempty"`
-	XXX_NoUnkeyedLiteral struct{} `json:"-"`
-	XXX_unrecognized     []byte   `json:"-"`
-	XXX_sizecache        int32    `json:"-"`
+	Message string `protobuf:"bytes,1,opt,name=message,proto3" json:"message,omitempty"`
 }
 
 func (m *Stats) Reset()         { *m = Stats{} }
@@ -181,9 +181,6 @@ func (m *Stats) GetMessage() string {
 }
 
 type Exit struct {
-	XXX_NoUnkeyedLiteral struct{} `json:"-"`
-	XXX_unrecognized     []byte   `json:"-"`
-	XXX_sizecache        int32    `json:"-"`
 }
 
 func (m *Exit) Reset()         { *m = Exit{} }
@@ -220,14 +217,11 @@ func (m *Exit) XXX_DiscardUnknown() {
 var xxx_messageInfo_Exit proto.InternalMessageInfo
 
 type Location struct {
-	Did                  string   `protobuf:"bytes,1,opt,name=did,proto3" json:"did,omitempty"`
-	Tip                  []byte   `protobuf:"bytes,2,opt,name=tip,proto3" json:"tip,omitempty"`
-	X                    int64    `protobuf:"varint,3,opt,name=x,proto3" json:"x,omitempty"`
-	Y                    int64    `protobuf:"varint,4,opt,name=y,proto3" json:"y,omitempty"`
-	Description          string   `protobuf:"bytes,5,opt,name=description,proto3" json:"description,omitempty"`
-	XXX_NoUnkeyedLiteral struct{} `json:"-"`
-	XXX_unrecognized     []byte   `json:"-"`
-	XXX_sizecache        int32    `json:"-"`
+	Did         string `protobuf:"bytes,1,opt,name=did,proto3" json:"did,omitempty"`
+	Tip         []byte `protobuf:"bytes,2,opt,name=tip,proto3" json:"tip,omitempty"`
+	X           int64  `protobuf:"varint,3,opt,name=x,proto3" json:"x,omitempty"`
+	Y           int64  `protobuf:"varint,4,opt,name=y,proto3" json:"y,omitempty"`
+	Description string `protobuf:"bytes,5,opt,name=description,proto3" json:"description,omitempty"`
 }
 
 func (m *Location) Reset()         { *m = Location{} }
@@ -299,12 +293,9 @@ func (m *Location) GetDescription() string {
 }
 
 type CommandReceived struct {
-	Uuid                 string   `protobuf:"bytes,1,opt,name=uuid,proto3" json:"uuid,omitempty"`
-	Error                bool     `protobuf:"varint,2,opt,name=error,proto3" json:"error,omitempty"`
-	ErrorMessage         string   `protobuf:"bytes,3,opt,name=error_message,json=errorMessage,proto3" json:"error_message,omitempty"`
-	XXX_NoUnkeyedLiteral struct{} `json:"-"`
-	XXX_unrecognized     []byte   `json:"-"`
-	XXX_sizecache        int32    `json:"-"`
+	Uuid         string `protobuf:"bytes,1,opt,name=uuid,proto3" json:"uuid,omitempty"`
+	Error        bool   `protobuf:"varint,2,opt,name=error,proto3" json:"error,omitempty"`
+	ErrorMessage string `protobuf:"bytes,3,opt,name=error_message,json=errorMessage,proto3" json:"error_message,omitempty"`
 }
 
 func (m *CommandReceived) Reset()         { *m = CommandReceived{} }
@@ -362,10 +353,7 @@ func (m *CommandReceived) GetErrorMessage() string {
 }
 
 type Session struct {
-	Uuid                 string   `protobuf:"bytes,1,opt,name=uuid,proto3" json:"uuid,omitempty"`
-	XXX_NoUnkeyedLiteral struct{} `json:"-"`
-	XXX_unrecognized     []byte   `json:"-"`
-	XXX_sizecache        int32    `json:"-"`
+	Uuid string `protobuf:"bytes,1,opt,name=uuid,proto3" json:"uuid,omitempty"`
 }
 
 func (m *Session) Reset()         { *m = Session{} }
@@ -421,32 +409,35 @@ func init() {
 func init() { proto.RegisterFile("jasonsgame.proto", fileDescriptor_724d7a67f452c51a) }
 
 var fileDescriptor_724d7a67f452c51a = []byte{
-	// 387 bytes of a gzipped FileDescriptorProto
-	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0x7c, 0x92, 0xdd, 0x4e, 0xea, 0x40,
-	0x10, 0xc7, 0xd9, 0x53, 0x3e, 0xa7, 0x90, 0xc3, 0x59, 0x38, 0x49, 0xc5, 0xd8, 0xd4, 0xf5, 0x86,
-	0x1b, 0x09, 0xc1, 0x27, 0x50, 0x62, 0x0c, 0x89, 0xde, 0xb4, 0x78, 0xe5, 0x85, 0xd6, 0x76, 0x43,
-	0x6a, 0x68, 0xb7, 0xe9, 0x16, 0x02, 0x6f, 0xe2, 0x23, 0x79, 0xe9, 0x23, 0x10, 0x7c, 0x11, 0xb3,
-	0xdb, 0x0f, 0x8a, 0x41, 0xee, 0x66, 0xfe, 0x3b, 0xf3, 0x9b, 0xd9, 0x99, 0x81, 0xf6, 0x9b, 0xcd,
-	0x59, 0xc0, 0x67, 0xb6, 0x4f, 0x07, 0x61, 0xc4, 0x62, 0x86, 0x61, 0xa7, 0x90, 0x29, 0x34, 0x1e,
-	0x39, 0x8d, 0x26, 0x41, 0xb8, 0x88, 0xb1, 0x06, 0x35, 0x9f, 0x72, 0x6e, 0xcf, 0xa8, 0x86, 0x0c,
-	0xd4, 0x6f, 0x98, 0x99, 0x8b, 0x2f, 0xa1, 0xc6, 0x29, 0xe7, 0x1e, 0x0b, 0xb4, 0x3f, 0x06, 0xea,
-	0xab, 0xa3, 0xce, 0xa0, 0x80, 0xb5, 0x92, 0x27, 0x33, 0x8b, 0x21, 0x4f, 0xd0, 0x7a, 0x48, 0x32,
-	0xa7, 0x4c, 0xe0, 0x8f, 0x90, 0x87, 0x50, 0x9f, 0x33, 0xc7, 0x8e, 0x77, 0xe8, 0x6e, 0x11, 0x7d,
-	0x9f, 0xbe, 0x99, 0x79, 0x14, 0x39, 0x87, 0x8a, 0x15, 0xdb, 0x31, 0xff, 0x1d, 0x4a, 0xaa, 0x50,
-	0xbe, 0x5d, 0x79, 0x31, 0x99, 0x43, 0x3d, 0x03, 0xe0, 0x36, 0x28, 0xae, 0xe7, 0xa6, 0x91, 0xc2,
-	0x14, 0x4a, 0xec, 0x85, 0xb2, 0x6a, 0xd3, 0x14, 0x26, 0x6e, 0x02, 0x5a, 0x69, 0x8a, 0x81, 0xfa,
-	0x8a, 0x89, 0x56, 0xc2, 0x5b, 0x6b, 0xe5, 0xc4, 0x5b, 0x63, 0x03, 0x54, 0x97, 0x72, 0x27, 0xf2,
-	0x42, 0xd9, 0x6b, 0x45, 0x72, 0x8a, 0x12, 0x79, 0x81, 0xbf, 0x63, 0xe6, 0xfb, 0x76, 0xe0, 0x9a,
-	0xd4, 0xa1, 0xde, 0x92, 0xba, 0x18, 0x43, 0x79, 0xb1, 0xc8, 0xab, 0x4a, 0x1b, 0x77, 0xa1, 0x42,
-	0xa3, 0x88, 0x45, 0xb2, 0x70, 0xdd, 0x4c, 0x1c, 0x7c, 0x01, 0x2d, 0x69, 0x3c, 0x67, 0x5f, 0x52,
-	0x64, 0x4a, 0x53, 0x8a, 0xe9, 0x30, 0xc9, 0x19, 0xd4, 0xd2, 0x59, 0x1f, 0x22, 0x8f, 0x36, 0x08,
-	0xd4, 0x3b, 0xdb, 0xa7, 0x16, 0x8d, 0x96, 0x9e, 0x43, 0xf1, 0x18, 0x54, 0x8b, 0x06, 0x6e, 0xda,
-	0x14, 0xfe, 0x5f, 0x1c, 0x6c, 0xbe, 0xf5, 0xde, 0x69, 0x51, 0xfe, 0xf1, 0x01, 0x52, 0xc2, 0x13,
-	0xe8, 0xa4, 0x9e, 0x48, 0x49, 0x3b, 0xe1, 0xf8, 0xd0, 0x01, 0xf4, 0x4e, 0x8a, 0xe2, 0xde, 0x05,
-	0x90, 0xd2, 0x10, 0xe1, 0xeb, 0x1c, 0x25, 0x16, 0x78, 0x1c, 0xf5, 0x6f, 0x4f, 0x14, 0xfb, 0x16,
-	0x88, 0x9b, 0xf6, 0xc7, 0x56, 0x47, 0x9f, 0x5b, 0x1d, 0x6d, 0xb6, 0x3a, 0x7a, 0xff, 0xd2, 0x4b,
-	0xaf, 0x55, 0x79, 0xd4, 0x57, 0xdf, 0x01, 0x00, 0x00, 0xff, 0xff, 0x32, 0xf2, 0x91, 0x08, 0xe8,
-	0x02, 0x00, 0x00,
+	// 435 bytes of a gzipped FileDescriptorProto
+	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0x7c, 0x52, 0xcd, 0x6e, 0xd3, 0x40,
+	0x10, 0xf6, 0x92, 0xa4, 0x49, 0x27, 0xa9, 0x28, 0xd3, 0x22, 0x99, 0x20, 0xac, 0xb0, 0x5c, 0x72,
+	0x69, 0x5a, 0x95, 0x27, 0x80, 0x0a, 0xa1, 0x4a, 0x70, 0xd9, 0x94, 0x33, 0x38, 0xf6, 0x60, 0x16,
+	0xd5, 0xde, 0xe0, 0x5d, 0x97, 0xf4, 0x2d, 0x78, 0x2c, 0x8e, 0x3d, 0x72, 0xac, 0x92, 0x17, 0x41,
+	0xbb, 0xfe, 0xa9, 0x8b, 0x4a, 0x6e, 0xdf, 0xf7, 0xed, 0xcc, 0x37, 0x33, 0x3b, 0x03, 0xfb, 0xdf,
+	0x43, 0xad, 0x32, 0x9d, 0x84, 0x29, 0xcd, 0x96, 0xb9, 0x32, 0x0a, 0xe1, 0x4e, 0x19, 0x1f, 0x25,
+	0xd2, 0x7c, 0x2b, 0x16, 0xb3, 0x48, 0xa5, 0xc7, 0x89, 0x4a, 0xd4, 0xb1, 0x0b, 0x59, 0x14, 0x5f,
+	0x1d, 0x73, 0xc4, 0xa1, 0x32, 0x95, 0x5f, 0xc0, 0xee, 0x27, 0x4d, 0xf9, 0x79, 0xb6, 0x2c, 0x0c,
+	0xfa, 0xd0, 0x4f, 0x49, 0xeb, 0x30, 0x21, 0x9f, 0x4d, 0xd8, 0x74, 0x57, 0xd4, 0x14, 0x8f, 0xa0,
+	0xaf, 0x49, 0x6b, 0xa9, 0x32, 0xff, 0xd1, 0x84, 0x4d, 0x87, 0xa7, 0x07, 0xb3, 0x56, 0x17, 0xf3,
+	0xf2, 0x49, 0xd4, 0x31, 0xfc, 0x27, 0xec, 0x7d, 0x2c, 0x33, 0x2f, 0x94, 0xb5, 0xdf, 0xe2, 0x7c,
+	0x02, 0x83, 0x4b, 0x15, 0x85, 0xe6, 0xce, 0xfa, 0xb0, 0x6d, 0xfd, 0xa1, 0x7a, 0x13, 0x4d, 0x14,
+	0x8e, 0x61, 0xa0, 0xe9, 0x47, 0x41, 0x59, 0x44, 0x7e, 0x67, 0xc2, 0xa6, 0x5d, 0xd1, 0x70, 0xfe,
+	0x12, 0x7a, 0x73, 0x13, 0x1a, 0xfd, 0xff, 0x82, 0x7c, 0x07, 0xba, 0xef, 0x56, 0xd2, 0xf0, 0x4b,
+	0x18, 0xd4, 0xe6, 0xb8, 0x0f, 0x9d, 0x58, 0xc6, 0x55, 0xa4, 0x85, 0x56, 0x31, 0x72, 0xe9, 0x3a,
+	0x1a, 0x09, 0x0b, 0x71, 0x04, 0x6c, 0xe5, 0xea, 0x75, 0x04, 0x5b, 0x59, 0x76, 0xed, 0x77, 0x4b,
+	0x76, 0x8d, 0x13, 0x18, 0xc6, 0xa4, 0xa3, 0x5c, 0x2e, 0xdd, 0x1c, 0x3d, 0xe7, 0xd3, 0x96, 0xf8,
+	0x17, 0x78, 0x7c, 0xa6, 0xd2, 0x34, 0xcc, 0x62, 0x41, 0x11, 0xc9, 0x2b, 0x8a, 0x11, 0xa1, 0x5b,
+	0x14, 0x4d, 0x55, 0x87, 0xf1, 0x10, 0x7a, 0x94, 0xe7, 0x2a, 0x77, 0x85, 0x07, 0xa2, 0x24, 0xf8,
+	0x0a, 0xf6, 0x1c, 0xf8, 0x5c, 0x8f, 0xd4, 0x71, 0x29, 0x23, 0x27, 0x56, 0x1f, 0xcd, 0x5f, 0x40,
+	0xbf, 0xda, 0xc3, 0x43, 0xce, 0xa7, 0xb7, 0x0c, 0x86, 0xef, 0xc3, 0x94, 0xe6, 0x94, 0x5f, 0xc9,
+	0x88, 0xf0, 0x0c, 0x86, 0x73, 0xca, 0xe2, 0xaa, 0x29, 0x7c, 0xda, 0xfe, 0xf4, 0xe6, 0x22, 0xc6,
+	0xcf, 0xdb, 0xf2, 0x3f, 0x03, 0x70, 0x0f, 0xcf, 0xe1, 0xa0, 0x62, 0x36, 0xa5, 0xea, 0x44, 0xe3,
+	0x43, 0xc7, 0x31, 0x7e, 0xd6, 0x16, 0xef, 0x5d, 0x07, 0xf7, 0x4e, 0x18, 0xbe, 0x69, 0xac, 0xec,
+	0x02, 0xb7, 0x5b, 0x3d, 0xb9, 0x27, 0xda, 0x7d, 0x5b, 0x8b, 0xb7, 0xfe, 0xef, 0x75, 0xc0, 0x6e,
+	0xd6, 0x01, 0xbb, 0x5d, 0x07, 0xec, 0xd7, 0x26, 0xf0, 0x6e, 0x36, 0x81, 0xf7, 0x67, 0x13, 0x78,
+	0x8b, 0x1d, 0x77, 0xec, 0xaf, 0xff, 0x06, 0x00, 0x00, 0xff, 0xff, 0x26, 0x87, 0xf2, 0x30, 0x3b,
+	0x03, 0x00, 0x00,
 }
 
 // Reference imports to suppress errors if they are not otherwise used.
@@ -673,9 +664,6 @@ func (m *UserInput) MarshalTo(dAtA []byte) (int, error) {
 		}
 		i += n1
 	}
-	if m.XXX_unrecognized != nil {
-		i += copy(dAtA[i:], m.XXX_unrecognized)
-	}
 	return i, nil
 }
 
@@ -710,8 +698,10 @@ func (m *MessageToUser) MarshalTo(dAtA []byte) (int, error) {
 		}
 		i += n2
 	}
-	if m.XXX_unrecognized != nil {
-		i += copy(dAtA[i:], m.XXX_unrecognized)
+	if m.Sequence != 0 {
+		dAtA[i] = 0x18
+		i++
+		i = encodeVarintJasonsgame(dAtA, i, uint64(m.Sequence))
 	}
 	return i, nil
 }
@@ -737,9 +727,6 @@ func (m *Stats) MarshalTo(dAtA []byte) (int, error) {
 		i = encodeVarintJasonsgame(dAtA, i, uint64(len(m.Message)))
 		i += copy(dAtA[i:], m.Message)
 	}
-	if m.XXX_unrecognized != nil {
-		i += copy(dAtA[i:], m.XXX_unrecognized)
-	}
 	return i, nil
 }
 
@@ -758,9 +745,6 @@ func (m *Exit) MarshalTo(dAtA []byte) (int, error) {
 	_ = i
 	var l int
 	_ = l
-	if m.XXX_unrecognized != nil {
-		i += copy(dAtA[i:], m.XXX_unrecognized)
-	}
 	return i, nil
 }
 
@@ -807,9 +791,6 @@ func (m *Location) MarshalTo(dAtA []byte) (int, error) {
 		i = encodeVarintJasonsgame(dAtA, i, uint64(len(m.Description)))
 		i += copy(dAtA[i:], m.Description)
 	}
-	if m.XXX_unrecognized != nil {
-		i += copy(dAtA[i:], m.XXX_unrecognized)
-	}
 	return i, nil
 }
 
@@ -850,9 +831,6 @@ func (m *CommandReceived) MarshalTo(dAtA []byte) (int, error) {
 		i = encodeVarintJasonsgame(dAtA, i, uint64(len(m.ErrorMessage)))
 		i += copy(dAtA[i:], m.ErrorMessage)
 	}
-	if m.XXX_unrecognized != nil {
-		i += copy(dAtA[i:], m.XXX_unrecognized)
-	}
 	return i, nil
 }
 
@@ -876,9 +854,6 @@ func (m *Session) MarshalTo(dAtA []byte) (int, error) {
 		i++
 		i = encodeVarintJasonsgame(dAtA, i, uint64(len(m.Uuid)))
 		i += copy(dAtA[i:], m.Uuid)
-	}
-	if m.XXX_unrecognized != nil {
-		i += copy(dAtA[i:], m.XXX_unrecognized)
 	}
 	return i, nil
 }
@@ -906,9 +881,6 @@ func (m *UserInput) Size() (n int) {
 		l = m.Session.Size()
 		n += 1 + l + sovJasonsgame(uint64(l))
 	}
-	if m.XXX_unrecognized != nil {
-		n += len(m.XXX_unrecognized)
-	}
 	return n
 }
 
@@ -926,8 +898,8 @@ func (m *MessageToUser) Size() (n int) {
 		l = m.Location.Size()
 		n += 1 + l + sovJasonsgame(uint64(l))
 	}
-	if m.XXX_unrecognized != nil {
-		n += len(m.XXX_unrecognized)
+	if m.Sequence != 0 {
+		n += 1 + sovJasonsgame(uint64(m.Sequence))
 	}
 	return n
 }
@@ -942,9 +914,6 @@ func (m *Stats) Size() (n int) {
 	if l > 0 {
 		n += 1 + l + sovJasonsgame(uint64(l))
 	}
-	if m.XXX_unrecognized != nil {
-		n += len(m.XXX_unrecognized)
-	}
 	return n
 }
 
@@ -954,9 +923,6 @@ func (m *Exit) Size() (n int) {
 	}
 	var l int
 	_ = l
-	if m.XXX_unrecognized != nil {
-		n += len(m.XXX_unrecognized)
-	}
 	return n
 }
 
@@ -984,9 +950,6 @@ func (m *Location) Size() (n int) {
 	if l > 0 {
 		n += 1 + l + sovJasonsgame(uint64(l))
 	}
-	if m.XXX_unrecognized != nil {
-		n += len(m.XXX_unrecognized)
-	}
 	return n
 }
 
@@ -1007,9 +970,6 @@ func (m *CommandReceived) Size() (n int) {
 	if l > 0 {
 		n += 1 + l + sovJasonsgame(uint64(l))
 	}
-	if m.XXX_unrecognized != nil {
-		n += len(m.XXX_unrecognized)
-	}
 	return n
 }
 
@@ -1022,9 +982,6 @@ func (m *Session) Size() (n int) {
 	l = len(m.Uuid)
 	if l > 0 {
 		n += 1 + l + sovJasonsgame(uint64(l))
-	}
-	if m.XXX_unrecognized != nil {
-		n += len(m.XXX_unrecognized)
 	}
 	return n
 }
@@ -1154,7 +1111,6 @@ func (m *UserInput) Unmarshal(dAtA []byte) error {
 			if (iNdEx + skippy) > l {
 				return io.ErrUnexpectedEOF
 			}
-			m.XXX_unrecognized = append(m.XXX_unrecognized, dAtA[iNdEx:iNdEx+skippy]...)
 			iNdEx += skippy
 		}
 	}
@@ -1261,6 +1217,25 @@ func (m *MessageToUser) Unmarshal(dAtA []byte) error {
 				return err
 			}
 			iNdEx = postIndex
+		case 3:
+			if wireType != 0 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Sequence", wireType)
+			}
+			m.Sequence = 0
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowJasonsgame
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				m.Sequence |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
 		default:
 			iNdEx = preIndex
 			skippy, err := skipJasonsgame(dAtA[iNdEx:])
@@ -1276,7 +1251,6 @@ func (m *MessageToUser) Unmarshal(dAtA []byte) error {
 			if (iNdEx + skippy) > l {
 				return io.ErrUnexpectedEOF
 			}
-			m.XXX_unrecognized = append(m.XXX_unrecognized, dAtA[iNdEx:iNdEx+skippy]...)
 			iNdEx += skippy
 		}
 	}
@@ -1362,7 +1336,6 @@ func (m *Stats) Unmarshal(dAtA []byte) error {
 			if (iNdEx + skippy) > l {
 				return io.ErrUnexpectedEOF
 			}
-			m.XXX_unrecognized = append(m.XXX_unrecognized, dAtA[iNdEx:iNdEx+skippy]...)
 			iNdEx += skippy
 		}
 	}
@@ -1416,7 +1389,6 @@ func (m *Exit) Unmarshal(dAtA []byte) error {
 			if (iNdEx + skippy) > l {
 				return io.ErrUnexpectedEOF
 			}
-			m.XXX_unrecognized = append(m.XXX_unrecognized, dAtA[iNdEx:iNdEx+skippy]...)
 			iNdEx += skippy
 		}
 	}
@@ -1606,7 +1578,6 @@ func (m *Location) Unmarshal(dAtA []byte) error {
 			if (iNdEx + skippy) > l {
 				return io.ErrUnexpectedEOF
 			}
-			m.XXX_unrecognized = append(m.XXX_unrecognized, dAtA[iNdEx:iNdEx+skippy]...)
 			iNdEx += skippy
 		}
 	}
@@ -1744,7 +1715,6 @@ func (m *CommandReceived) Unmarshal(dAtA []byte) error {
 			if (iNdEx + skippy) > l {
 				return io.ErrUnexpectedEOF
 			}
-			m.XXX_unrecognized = append(m.XXX_unrecognized, dAtA[iNdEx:iNdEx+skippy]...)
 			iNdEx += skippy
 		}
 	}
@@ -1830,7 +1800,6 @@ func (m *Session) Unmarshal(dAtA []byte) error {
 			if (iNdEx + skippy) > l {
 				return io.ErrUnexpectedEOF
 			}
-			m.XXX_unrecognized = append(m.XXX_unrecognized, dAtA[iNdEx:iNdEx+skippy]...)
 			iNdEx += skippy
 		}
 	}

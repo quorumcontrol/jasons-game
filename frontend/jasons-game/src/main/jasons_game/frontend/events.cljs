@@ -32,7 +32,6 @@
    (game/start-game-listener host (:game/session db) handle-game-message handle-game-end)
    {}))
 
-
 (re-frame/reg-event-db
  :initialize-db
  (fn-traced  [_ _]
