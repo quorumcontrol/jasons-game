@@ -11,21 +11,23 @@
   [:p {:key idx} msg])
 
 (defn app-root []
-  [:div
-   [:> Menu {:fixed "bottom"}
-    (let [input-state (r/atom "")]
-      [:> Form {:onSubmit (fn [evt]
-                            (.log js/console "submission" evt)
-                            (dispatch [:user-input @input-state])
-                            (reset! input-state ""))}
-       [:> Input {:onChange (fn [evt] (reset! input-state (-> evt .-target .-value)))
-                  :action {:labelPosition "right"
-                           :content "Send"
-                           :type "submit"}
-                  :actionPosition "right"
-                  :size "big"
-                  :placeholder "What do you want to do?"}]])]
-   [:> Container
-    (let [messages (subscribe [:game-messages])]
-      (map-indexed user-message @messages))]])
+  (let [input-state (r/atom "")]
+    (fn []
+      [:div
+       [:> Menu {:fixed "bottom"}
+        [:> Form {:onSubmit (fn [evt]
+                              (.log js/console "submission" evt)
+                              (dispatch [:user-input @input-state])
+                              (reset! input-state ""))}
+         [:> Input {:onChange (fn [evt] (reset! input-state (-> evt .-target .-value)))
+                    :action {:labelPosition "right"
+                             :content "Send"
+                             :type "submit"}
+                    :actionPosition "right"
+                    :size "big"
+                    :value @input-state
+                    :placeholder "What do you want to do?"}]]]
+       [:> Container
+        (let [messages (subscribe [:game-messages])]
+          (map-indexed user-message @messages))]])))
 
