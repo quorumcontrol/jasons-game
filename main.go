@@ -51,9 +51,11 @@ func main() {
 	mustSetLogLevel("swarm2", "error")
 	mustSetLogLevel("relay", "error")
 	mustSetLogLevel("autonat", "error")
+	mustSetLogLevel("dht", "error")
 	mustSetLogLevel("uiserver", "debug")
 	mustSetLogLevel("game", "debug")
 	mustSetLogLevel("gameserver", "debug")
+	mustSetLogLevel("network", "debug")
 
 	port := 8080
 	grpcServer := grpc.NewServer()

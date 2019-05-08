@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/AsynkronIT/protoactor-go/actor"
 	"github.com/ethereum/go-ethereum/crypto"
 	cid "github.com/ipfs/go-cid"
 	"github.com/ipfs/go-datastore"
@@ -16,6 +17,7 @@ import (
 	"github.com/quorumcontrol/chaintree/dag"
 	ipfslite "github.com/quorumcontrol/jasons-game/ipfslite"
 	"github.com/quorumcontrol/tupelo-go-sdk/consensus"
+	"github.com/quorumcontrol/tupelo-go-sdk/gossip3/messages"
 	"github.com/quorumcontrol/tupelo-go-sdk/gossip3/remote"
 	"github.com/quorumcontrol/tupelo-go-sdk/gossip3/types"
 	"github.com/quorumcontrol/tupelo-go-sdk/p2p"
@@ -23,12 +25,15 @@ import (
 
 var log = logging.Logger("gamenetwork")
 
+const KnownTopic = "brandon-topper-tupelo-game"
+
 type Network interface {
 	CreateNamedChainTree(name string) (*consensus.SignedChainTree, error)
 	GetChainTreeByName(name string) (*consensus.SignedChainTree, error)
 	GetRemoteTree(did string) (*consensus.SignedChainTree, error)
 	GetTreeByTip(tip cid.Cid) (*consensus.SignedChainTree, error)
 	UpdateChainTree(tree *consensus.SignedChainTree, path string, value interface{}) (*consensus.SignedChainTree, error)
+	Publish(msg string)
 }
 
 type RemoteNetwork struct {
@@ -36,6 +41,7 @@ type RemoteNetwork struct {
 	Ipld          *ipfslite.Peer
 	KeyValueStore datastore.Batching
 	TreeStore     TreeStore
+	PubSubSystem  remote.PubSub
 }
 
 func NewRemoteNetwork(ctx context.Context, group *types.NotaryGroup, path string) (Network, error) {
@@ -79,6 +85,18 @@ func NewRemoteNetwork(ctx context.Context, group *types.NotaryGroup, path string
 	net.TreeStore = store
 
 	pubsub := remote.NewNetworkPubSub(p2pHost)
+	net.PubSubSystem = pubsub
+
+	subscriberFunc := func(aCtx actor.Context) {
+		switch msg := aCtx.Message().(type) {
+		case *messages.Ping:
+			log.Infof("topic subscriber received ping: %s", msg.Msg)
+		default:
+			log.Debugf("received other message %v", msg)
+		}
+	}
+	subscriber := actor.EmptyRootContext.Spawn(actor.PropsFromFunc(subscriberFunc))
+	pubsub.Subscribe(actor.EmptyRootContext, KnownTopic, subscriber)
 
 	tup := &Tupelo{
 		key:          key,
@@ -89,6 +107,10 @@ func NewRemoteNetwork(ctx context.Context, group *types.NotaryGroup, path string
 	net.Tupelo = tup
 
 	return net, nil
+}
+
+func (n *RemoteNetwork) Publish(msg string) {
+	n.PubSubSystem.Broadcast(KnownTopic, &messages.Ping{Msg: msg})
 }
 
 func (n *RemoteNetwork) getOrCreatePrivateKey() (*ecdsa.PrivateKey, error) {

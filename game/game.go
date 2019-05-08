@@ -125,6 +125,8 @@ func (g *Game) handleUserInput(actorCtx actor.Context, input *jasonsgame.UserInp
 			}
 		case "tip-zoom":
 			g.handleTipZoom(actorCtx, args)
+		case "say":
+			g.network.Publish(args)
 		default:
 			log.Error("unhandled but matched command", cmd.name)
 		}

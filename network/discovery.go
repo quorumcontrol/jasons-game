@@ -100,6 +100,7 @@ func (td *jasonsDiscoverer) handleNewPeerInfo(ctx context.Context, p pstore.Peer
 		stats.Stream.Publish(&jasonState{
 			connected: len(connected) + 1,
 		})
+		log.Debugf("connected to new jasons game peer - %s", p.ID)
 	}()
 }
 

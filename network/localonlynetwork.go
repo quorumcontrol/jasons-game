@@ -45,6 +45,10 @@ func NewLocalNetwork() Network {
 	}
 }
 
+func (ln *LocalNetwork) Publish(msg string) {
+	panic("Publish() is unsupported in local network")
+}
+
 func (ln *LocalNetwork) CreateNamedChainTree(name string) (*consensus.SignedChainTree, error) {
 	ephemeralPrivate, err := crypto.GenerateKey()
 	if err != nil {
