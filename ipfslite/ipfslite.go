@@ -115,6 +115,10 @@ func New(
 	}, nil
 }
 
+func (p *Peer) Host() host.Host {
+	return p.host
+}
+
 // Session returns a session-based NodeGetter.
 func (p *Peer) Session(ctx context.Context) ipld.NodeGetter {
 	ng := merkledag.NewSession(ctx, p.DAGService)
