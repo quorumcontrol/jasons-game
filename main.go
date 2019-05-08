@@ -22,7 +22,7 @@ import (
 func mustSetLogLevel(name, level string) {
 	err := logging.SetLogLevel(name, level)
 	if err != nil {
-		panic(errors.Wrap(err, fmt.Sprintf("error setting log level (%s %s)", name, level))
+		panic(errors.Wrap(err, fmt.Sprintf("error setting log level (%s %s)", name, level)))
 	}
 }
 
