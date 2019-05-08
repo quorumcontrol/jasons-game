@@ -22,7 +22,7 @@ import (
 func mustSetLogLevel(name, level string) {
 	err := logging.SetLogLevel(name, level)
 	if err != nil {
-		panic(errors.Wrap(err, "error setting log level"))
+		panic(errors.Wrap(err, fmt.Sprintf("error setting log level (%s %s)", name, level))
 	}
 }
 
@@ -55,7 +55,7 @@ func main() {
 	mustSetLogLevel("uiserver", "debug")
 	mustSetLogLevel("game", "debug")
 	mustSetLogLevel("gameserver", "debug")
-	mustSetLogLevel("network", "debug")
+	mustSetLogLevel("gamenetwork", "debug")
 
 	port := 8080
 	grpcServer := grpc.NewServer()
