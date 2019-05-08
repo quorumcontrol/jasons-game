@@ -7,10 +7,10 @@ endif
 
 FIRSTGOPATH = $(firstword $(subst :, ,$(GOPATH)))
 
-jssources = $(shell find . -path "./frontend/jasons-game/node_modules" -prune -o -type f -name ".js" -print)
+jsmodules = ./frontend/jasons-game/node_modules
 generated = pb/jasonsgame/jasonsgame.pb.go frontend/jasons-game/src/js/frontend/remote/*_pb.*
 
-all: build jssources
+all: build jsmodules
 
 $(FIRSTGOPATH)/src/github.com/gogo/protobuf/proto:
 	go get github.com/gogo/protobuf/proto
@@ -21,10 +21,10 @@ $(FIRSTGOPATH)/src/github.com/gogo/protobuf/gogoproto:
 $(FIRSTGOPATH)/bin/protoc-gen-gogofaster: $(FIRSTGOPATH)/src/github.com/gogo/protobuf/proto $(FIRSTGOPATH)/src/github.com/gogo/protobuf/gogoproto
 	go get -u github.com/gogo/protobuf/protoc-gen-gogofaster
 
-$(generated): $(FIRSTGOPATH)/bin/protoc-gen-gogofaster $(jssources)
+$(generated): $(FIRSTGOPATH)/bin/protoc-gen-gogofaster $(jsmodules)
 	scripts/protogen.sh
 
-$(jssources):
+$(jsmodules):
 	cd frontend/jasons-game && npm install
 
 $(FIRSTGOPATH)/bin/golangci-lint:
@@ -55,7 +55,7 @@ localnet: $(generated) go.mod go.sum
 game-server: $(generated) go.mod go.sum
 	docker-compose -f docker-compose-dev.yml run --rm --service-ports game
 
-frontend-dev: $(generated) $(jssources)
+frontend-dev: $(generated) $(jsmodules)
 	cd frontend/jasons-game && shadow-cljs watch app
 
 clean:
