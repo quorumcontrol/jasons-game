@@ -22,6 +22,7 @@ func locationFromTree(tree *consensus.SignedChainTree, x, y int64) (*jasonsgame.
 		if len(remain) < 2 {
 			return &jasonsgame.Location{
 				Did:         tree.MustId(),
+				Tip:         tree.Tip().String(),
 				X:           x,
 				Y:           y,
 				Description: defaultDescription,
@@ -37,6 +38,7 @@ func locationFromTree(tree *consensus.SignedChainTree, x, y int64) (*jasonsgame.
 		return nil, fmt.Errorf("error casting: %v", err)
 	}
 	l.Did = tree.MustId()
+	l.Tip = tree.Tip().String()
 	l.X = x
 	l.Y = y
 	return l, nil

@@ -42,6 +42,9 @@ lint: $(FIRSTGOPATH)/bin/golangci-lint $(generated)
 test: $(generated) go.mod go.sum $(FIRSTGOPATH)/bin/gotestsum
 	gotestsum
 
+generate: $(FIRSTGOPATH)/bin/protoc-gen-gogofaster
+	scripts/protogen.sh
+
 integration-test: $(generated) go.mod go.sum
 ifdef testpackage
 	TEST_PACKAGE=${testpackage} docker-compose -f docker-compose-dev.yml run --rm integration

@@ -1,7 +1,8 @@
 (ns jasons-game.frontend.events
   (:require [re-frame.core :as re-frame :refer [dispatch dispatch-sync]]
             [jasons-game.frontend.remote.game :as game]
-            [day8.re-frame.tracing :refer-macros [fn-traced]]))
+            [day8.re-frame.tracing :refer-macros [fn-traced]]
+            [clojure.walk :refer [keywordize-keys]]))
 
 
 (def host "http://localhost:8080")
@@ -23,8 +24,9 @@
 (defn handle-game-message [resp]
   (if (not (.getHeartbeat resp))
     (do
-      (.log js/console "game message" resp)
-      (dispatch [:game-message {:user false :message (.getMessage resp) :game resp}]))))
+      (.log js/console "game message" (.toObject resp))
+      (let [clj-msg (keywordize-keys (js->clj (.toObject resp)))]
+        (dispatch [:game-message (conj {:user false} clj-msg)])))))
 
 (defn handle-game-end [resp]
   (.log js/console "game end, redoing" resp)

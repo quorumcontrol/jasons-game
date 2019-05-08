@@ -752,7 +752,7 @@ proto.jasonsgame.Location.prototype.toObject = function(opt_includeInstance) {
 proto.jasonsgame.Location.toObject = function(includeInstance, msg) {
   var f, obj = {
     did: jspb.Message.getFieldWithDefault(msg, 1, ""),
-    tip: msg.getTip_asB64(),
+    tip: jspb.Message.getFieldWithDefault(msg, 2, ""),
     x: jspb.Message.getFieldWithDefault(msg, 3, 0),
     y: jspb.Message.getFieldWithDefault(msg, 4, 0),
     description: jspb.Message.getFieldWithDefault(msg, 5, "")
@@ -797,7 +797,7 @@ proto.jasonsgame.Location.deserializeBinaryFromReader = function(msg, reader) {
       msg.setDid(value);
       break;
     case 2:
-      var value = /** @type {!Uint8Array} */ (reader.readBytes());
+      var value = /** @type {string} */ (reader.readString());
       msg.setTip(value);
       break;
     case 3:
@@ -848,9 +848,9 @@ proto.jasonsgame.Location.serializeBinaryToWriter = function(message, writer) {
       f
     );
   }
-  f = message.getTip_asU8();
+  f = message.getTip();
   if (f.length > 0) {
-    writer.writeBytes(
+    writer.writeString(
       2,
       f
     );
@@ -895,41 +895,17 @@ proto.jasonsgame.Location.prototype.setDid = function(value) {
 
 
 /**
- * optional bytes tip = 2;
- * @return {!(string|Uint8Array)}
- */
-proto.jasonsgame.Location.prototype.getTip = function() {
-  return /** @type {!(string|Uint8Array)} */ (jspb.Message.getFieldWithDefault(this, 2, ""));
-};
-
-
-/**
- * optional bytes tip = 2;
- * This is a type-conversion wrapper around `getTip()`
+ * optional string tip = 2;
  * @return {string}
  */
-proto.jasonsgame.Location.prototype.getTip_asB64 = function() {
-  return /** @type {string} */ (jspb.Message.bytesAsB64(
-      this.getTip()));
+proto.jasonsgame.Location.prototype.getTip = function() {
+  return /** @type {string} */ (jspb.Message.getFieldWithDefault(this, 2, ""));
 };
 
 
-/**
- * optional bytes tip = 2;
- * Note that Uint8Array is not supported on all browsers.
- * @see http://caniuse.com/Uint8Array
- * This is a type-conversion wrapper around `getTip()`
- * @return {!Uint8Array}
- */
-proto.jasonsgame.Location.prototype.getTip_asU8 = function() {
-  return /** @type {!Uint8Array} */ (jspb.Message.bytesAsU8(
-      this.getTip()));
-};
-
-
-/** @param {!(string|Uint8Array)} value */
+/** @param {string} value */
 proto.jasonsgame.Location.prototype.setTip = function(value) {
-  jspb.Message.setProto3BytesField(this, 2, value);
+  jspb.Message.setProto3StringField(this, 2, value);
 };
 
 

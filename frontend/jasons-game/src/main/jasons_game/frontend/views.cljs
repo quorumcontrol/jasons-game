@@ -8,8 +8,13 @@
    ["semantic-ui-react" :refer [Container Input Button Menu Form]]))
 
 (defn user-message [idx msg]
-  (let [prefix (if (:user msg) "$ " ">>> ")]
-    [:p {:key idx} (str prefix (:message msg))]))
+  (let [prefix (if (:user msg) "$ " ">>> ")
+        loc (:location msg)]
+    [:div {:key idx}
+     (if loc
+       [:p
+        (str "[" (:did loc) ", (" (:x loc) "," (:y loc) ")" " tip: " (:tip loc) "] ")])
+     [:p (str prefix (:message msg))]]))
 
 (defn app-root []
   (let [input-state (r/atom "")]
@@ -24,7 +29,6 @@
                     :action {:labelPosition "right"
                              :content "Send"
                              :type "submit"}
-                    :actionPosition "right"
                     :size "big"
                     :value @input-state
                     :placeholder "What do you want to do?"}]]]

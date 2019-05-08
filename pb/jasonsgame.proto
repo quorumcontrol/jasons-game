@@ -23,7 +23,7 @@ message Exit {};
 
 message Location {
     string did = 1;
-    bytes tip = 2;
+    string tip = 2;
     int64 x = 3;
     int64 y = 4;
     string description = 5;

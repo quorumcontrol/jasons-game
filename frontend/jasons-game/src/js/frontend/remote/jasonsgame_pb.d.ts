@@ -103,10 +103,8 @@ export class Location extends jspb.Message {
   getDid(): string;
   setDid(value: string): void;
 
-  getTip(): Uint8Array | string;
-  getTip_asU8(): Uint8Array;
-  getTip_asB64(): string;
-  setTip(value: Uint8Array | string): void;
+  getTip(): string;
+  setTip(value: string): void;
 
   getX(): number;
   setX(value: number): void;
@@ -130,7 +128,7 @@ export class Location extends jspb.Message {
 export namespace Location {
   export type AsObject = {
     did: string,
-    tip: Uint8Array | string,
+    tip: string,
     x: number,
     y: number,
     description: string,
