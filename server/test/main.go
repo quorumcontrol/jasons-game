@@ -5,9 +5,12 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"net/http/pprof"
+	"os"
 
-	"github.com/pkg/errors"
+	"github.com/gorilla/mux"
 	logging "github.com/ipfs/go-log"
+	"github.com/pkg/errors"
 
 	"github.com/improbable-eng/grpc-web/go/grpcweb"
 	"github.com/quorumcontrol/jasons-game/pb/jasonsgame"
@@ -24,6 +27,25 @@ func mustSetLogLevel(name, level string) {
 }
 
 func main() {
+
+	if os.Getenv("PPROF_ENABLED") == "true" {
+		go func() {
+			debugR := mux.NewRouter()
+			debugR.HandleFunc("/debug/pprof/", pprof.Index)
+			debugR.HandleFunc("/debug/pprof/cmdline", pprof.Cmdline)
+			debugR.HandleFunc("/debug/pprof/profile", pprof.Profile)
+			debugR.HandleFunc("/debug/pprof/symbol", pprof.Symbol)
+			debugR.Handle("/debug/pprof/heap", pprof.Handler("heap"))
+			debugR.Handle("/debug/pprof/goroutine", pprof.Handler("goroutine"))
+			debugR.Handle("/debug/pprof/block", pprof.Handler("block"))
+			debugR.Handle("/debug/pprof/threadcreate", pprof.Handler("threadcreate"))
+			err := http.ListenAndServe(":8081", debugR)
+			if err != nil {
+				fmt.Println(err.Error())
+			}
+		}()
+	}
+
 	mustSetLogLevel("*", "INFO")
 	mustSetLogLevel("swarm2", "error")
 	mustSetLogLevel("relay", "error")
