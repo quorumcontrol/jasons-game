@@ -3,7 +3,7 @@ version: "3"
 services:
   game:
     build: ./devdocker
-    command: ["go", "run", "-mod=vendor", "server/test/main.go"]
+    command: ["go", "run", "server/test/main.go"]
     volumes:
       - .:/app:delegated
       - ./devdocker/.tmp:/root/.cache:delegated
