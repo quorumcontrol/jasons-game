@@ -30,6 +30,7 @@ These are written as short hand notes and will get fleshed out.
 * Many things are in the Make file - explore there first :)
 * A complete local env: `make localnet` `make game-server` `make frontend-dev`
   * Now you can see http://localhost:8280/ in your browser
+  * this will actually send nodes to IPLD still
 * There are some "hacks" to make the docker dev run faster, you can see them in the docker-compose-dev.yml where we use the go pkg cache from your local box, and also cache go builds to your local box (rather than having to recreate all that every time in the container). This makes `make integration-test` not take a decade to startup.
 * frontend uses re-frame and shadow-cljs with all the fixins (hot reload, reframe-10x, etc)
 * the IPFS libp2p node has autorelay turned on (as it is in IPFS 0.4.20+ now), it also tries to discover other open games and directly connect to them. (network/discovery.go)
