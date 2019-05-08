@@ -1,14 +1,11 @@
 package network
 
 import (
-	"bytes"
 	"context"
 	"fmt"
-	"io"
-	"mime/multipart"
-	"net/http"
 	"time"
 
+	"github.com/AsynkronIT/protoactor-go/actor"
 	blocks "github.com/ipfs/go-block-format"
 	cid "github.com/ipfs/go-cid"
 	"github.com/ipfs/go-datastore"
@@ -38,7 +35,7 @@ type TreeStore interface {
 
 type IPLDTreeStore struct {
 	TreeStore
-
+	publisher   *actor.PID
 	blockApi    format.DAGService
 	keyValueApi datastore.Batching
 }
@@ -47,6 +44,7 @@ func NewIPLDTreeStore(blockApi format.DAGService, keyValueApi datastore.Batching
 	return &IPLDTreeStore{
 		blockApi:    blockApi,
 		keyValueApi: keyValueApi,
+		publisher:   actor.EmptyRootContext.Spawn(newPublisherProps()),
 	}
 }
 
@@ -125,7 +123,7 @@ func (ts *IPLDTreeStore) StoreNode(node *cbornode.Node) error {
 		return errors.Wrap(err, "error adding blocks")
 	}
 
-	go publishNode(node)
+	actor.EmptyRootContext.Send(ts.publisher, node)
 
 	return err
 }
@@ -259,46 +257,4 @@ func didStoreKey(did string) datastore.Key {
 
 func didSignatureKey(did string) datastore.Key {
 	return datastore.NewKey("-s-" + did)
-}
-
-func publishNode(node *cbornode.Node) {
-	reader := bytes.NewReader(node.RawData())
-
-	resp, err := newfileUploadRequest(
-		"https://ipfs.infura.io:5001/api/v0/dag/put?format=cbor&input-enc=raw",
-		nil, "file", reader)
-	log.Debugf("infura: (err: %v) %v", err, resp)
-}
-
-// Creates a new file upload http request with optional extra params
-func newfileUploadRequest(uri string, params map[string]string, paramName string, file io.Reader) (*http.Response, error) {
-	body := &bytes.Buffer{}
-	writer := multipart.NewWriter(body)
-	part, err := writer.CreateFormFile(paramName, "memory.cbor")
-	if err != nil {
-		return nil, err
-	}
-	_, err = io.Copy(part, file)
-	if err != nil {
-		return nil, err
-	}
-
-	for key, val := range params {
-		_ = writer.WriteField(key, val)
-	}
-	err = writer.Close()
-	if err != nil {
-		return nil, err
-	}
-
-	req, err := http.NewRequest("POST", uri, body)
-	req.Header.Set("Content-Type", writer.FormDataContentType())
-
-	if err != nil {
-		return nil, errors.Wrap(err, "error making request")
-	}
-
-	client := &http.Client{}
-	resp, err := client.Do(req)
-	return resp, err
 }
