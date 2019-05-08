@@ -8,7 +8,8 @@
    ["semantic-ui-react" :refer [Container Input Button Menu Form]]))
 
 (defn user-message [idx msg]
-  [:p {:key idx} msg])
+  (let [prefix (if (:user msg) "$ " ">>> ")]
+    [:p {:key idx} (str prefix (:message msg))]))
 
 (defn app-root []
   (let [input-state (r/atom "")]
