@@ -7,13 +7,14 @@ require (
 	github.com/btcsuite/btcd v0.0.0-20190427004231-96897255fd17 // indirect
 	github.com/ethereum/go-ethereum v1.8.27
 	github.com/gogo/protobuf v1.2.1
+	github.com/gorilla/mux v1.7.1
 	github.com/hsanjuan/ipfs-lite v0.0.3
 	github.com/improbable-eng/grpc-web v0.9.5
 	github.com/ipfs/go-bitswap v0.0.4
 	github.com/ipfs/go-block-format v0.0.2
 	github.com/ipfs/go-blockservice v0.0.3
 	github.com/ipfs/go-cid v0.0.1
-	github.com/ipfs/go-datastore v0.0.4
+	github.com/ipfs/go-datastore v0.0.5
 	github.com/ipfs/go-ds-badger v0.0.3
 	github.com/ipfs/go-ipfs-blockstore v0.0.1
 	github.com/ipfs/go-ipfs-config v0.0.2
@@ -39,8 +40,7 @@ require (
 	github.com/pkg/errors v0.8.1
 	github.com/quorumcontrol/chaintree v0.0.0-20190426130059-dda329e6bd87
 	github.com/quorumcontrol/storage v1.1.2
-	github.com/quorumcontrol/tupelo-go-sdk v0.2.1-0.20190501192947-deae39695b92
-	github.com/sbstjn/allot v0.0.0-20161025071122-1f2349a
+	github.com/quorumcontrol/tupelo-go-sdk v0.2.1-0.20190501192947-49d54068a17c1b5b3bd55027a37b1444ac1c5779
 	github.com/stretchr/testify v1.3.0
 	golang.org/x/sync v0.0.0-20190423024810-112230192c58 // indirect
 	google.golang.org/grpc v1.20.0
