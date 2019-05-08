@@ -28,5 +28,7 @@ All of the network (Tupelo and IPFS) is in the "network" package. This is where 
 These are written as short hand notes and will get fleshed out.
 
 * Many things are in the Make file - explore there first :)
-* 
+* A complete local env: `make localnet` `make game-server` `make frontend-dev`
+  * Now you can see http://localhost:8280/ in your browser
+
 
