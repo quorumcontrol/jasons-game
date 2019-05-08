@@ -46,11 +46,11 @@ func TestSetDescription(t *testing.T) {
 	net := network.NewLocalNetwork()
 	stream := ui.NewTestStream()
 
-	simulatedUI, err := rootCtx.SpawnNamed(ui.NewUIProps(stream, net), "test-navigation-ui")
+	simulatedUI, err := rootCtx.SpawnNamed(ui.NewUIProps(stream, net), "test-set-description-ui")
 	require.Nil(t, err)
 	defer simulatedUI.Stop()
 
-	game, err := rootCtx.SpawnNamed(NewGameProps(simulatedUI, net), "test-navigation-game")
+	game, err := rootCtx.SpawnNamed(NewGameProps(simulatedUI, net), "test-set-description-game")
 	require.Nil(t, err)
 	defer game.Stop()
 

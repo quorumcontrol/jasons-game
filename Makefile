@@ -28,7 +28,14 @@ test: $(gosources) $(generated) go.mod go.sum $(FIRSTGOPATH)/bin/gotestsum
 	gotestsum
 
 integration-test: $(gosources) $(generated) go.mod go.sum
-	docker-compose run --rm integration
+ifdef testpackage
+	TEST_PACKAGE=${testpackage} docker-compose -f docker-compose-dev.yml run --rm integration
+else
+	docker-compose -f docker-compose-dev.yml run --rm integration
+endif
+
+localnet: $(gosources) $(generated) go.mod go.sum
+	docker-compose -f docker-compose-localnet.yml up --force-recreate
 
 docker-image: vendor $(gosources) $(generated) Dockerfile .dockerignore
 	docker build -t quorumcontrol/jasons-game:$(TAG) .
@@ -46,4 +53,4 @@ clean:
 	go clean ./...
 	rm -rf vendor
 
-.PHONY: all build test integration-test docker-image clean
+.PHONY: all build test integration-test localnet docker-image clean

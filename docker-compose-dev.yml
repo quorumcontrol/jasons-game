@@ -1,5 +1,5 @@
+# This file relies on a running localnet - `make localnet` will run the correct docker-compose for you.
 version: "3"
-# TODO: this should actually launch a whole tupelo signer network using the canned docker images
 services:
   game:
     build: ./devdocker
@@ -12,20 +12,26 @@ services:
       - 8080:8080
     environment:
       GOPATH: /go
-      TUPELO_BOOTSTRAP_NODES: /ip4/172.16.238.10/tcp/34001/ipfs/16Uiu2HAm3TGSEKEjagcCojSJeaT5rypaeJMKejijvYSnAjviWwV5
+      TUPELO_BOOTSTRAP_NODES: /ip4/172.16.239.10/tcp/34001/ipfs/16Uiu2HAm3TGSEKEjagcCojSJeaT5rypaeJMKejijvYSnAjviWwV5
 
   integration:
     build: ./devdocker
-    command: ["go", "test", "-v", "-tags=integration", "-timeout=2m", "./..."]
+    command:
+      - go
+      - test
+      - -v
+      - -tags=integration
+      - -timeout=2m
+      - ${TEST_PACKAGE-./...}
     volumes:
       - .:/app:delegated
       - ./devdocker/.tmp:/root/.cache:delegated
       - $GOPATH/pkg/mod:/go/pkg/mod:delegated
     environment:
       GOPATH: /go
-      TUPELO_BOOTSTRAP_NODES: /ip4/172.16.238.10/tcp/34001/ipfs/16Uiu2HAm3TGSEKEjagcCojSJeaT5rypaeJMKejijvYSnAjviWwV5
+      TUPELO_BOOTSTRAP_NODES: /ip4/172.16.239.10/tcp/34001/ipfs/16Uiu2HAm3TGSEKEjagcCojSJeaT5rypaeJMKejijvYSnAjviWwV5
 
 networks:
   default:
     external:
-      name: tupelo_default
+      name: jasons-game_default

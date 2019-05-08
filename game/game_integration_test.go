@@ -13,6 +13,7 @@ import (
 	"testing"
 
 	"time"
+	logging "github.com/ipfs/go-log"
 
 	"github.com/AsynkronIT/protoactor-go/actor"
 	"github.com/ethereum/go-ethereum/common/hexutil"
@@ -38,7 +39,7 @@ func loadSignerKeys() ([]*publicKeySet, error) {
 	if !ok {
 		return nil, fmt.Errorf("No caller information")
 	}
-	jsonBytes, err := ioutil.ReadFile(path.Join(path.Dir(filename), "../network/test-signer-keys/public-keys.json"))
+	jsonBytes, err := ioutil.ReadFile(path.Join(path.Dir(filename), "../devdocker/localkeys/public-keys.json"))
 	if err != nil {
 		return nil, err
 	}
@@ -71,6 +72,10 @@ func setupNotaryGroup(ctx context.Context) (*types.NotaryGroup, error) {
 }
 
 func TestFullIntegration(t *testing.T) {
+	logging.SetLogLevel("uiserver", "debug")
+	logging.SetLogLevel("game", "debug")
+	logging.SetLogLevel("gameserver", "debug")
+
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
@@ -90,11 +95,11 @@ func TestFullIntegration(t *testing.T) {
 
 	stream := ui.NewTestStream()
 
-	uiActor, err := rootCtx.SpawnNamed(ui.NewUIProps(stream, net), "test-navigation-ui")
+	uiActor, err := rootCtx.SpawnNamed(ui.NewUIProps(stream, net), "test-integration-ui")
 	require.Nil(t, err)
 	defer uiActor.Stop()
 
-	gameActor, err := rootCtx.SpawnNamed(NewGameProps(uiActor, net), "test-navigation-game")
+	gameActor, err := rootCtx.SpawnNamed(NewGameProps(uiActor, net), "test-integration-game")
 	require.Nil(t, err)
 	defer gameActor.Stop()
 

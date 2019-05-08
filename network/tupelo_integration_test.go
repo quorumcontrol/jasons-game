@@ -34,7 +34,7 @@ func loadSignerKeys() ([]*publicKeySet, error) {
 	if !ok {
 		return nil, fmt.Errorf("No caller information")
 	}
-	jsonBytes, err := ioutil.ReadFile(path.Join(path.Dir(filename), "test-signer-keys/public-keys.json"))
+	jsonBytes, err := ioutil.ReadFile(path.Join(path.Dir(filename), "../devdocker/localkeys/public-keys.json"))
 	if err != nil {
 		return nil, err
 	}
