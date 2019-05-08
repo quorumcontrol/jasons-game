@@ -279,6 +279,9 @@ func newfileUploadRequest(uri string, params map[string]string, paramName string
 		return nil, err
 	}
 	_, err = io.Copy(part, file)
+	if err != nil {
+		return nil, err
+	}
 
 	for key, val := range params {
 		_ = writer.WriteField(key, val)

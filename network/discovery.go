@@ -115,7 +115,7 @@ func (td *jasonsDiscoverer) constantlyAdvertise(ctx context.Context) error {
 			return
 		case <-after:
 			if err := td.constantlyAdvertise(ctx); err != nil {
-				// log.Errorf("error constantly advertising: %v", err)
+				log.Errorf("error constantly advertising: %v", err)
 			}
 		}
 	}()

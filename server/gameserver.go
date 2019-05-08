@@ -2,6 +2,7 @@ package server
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"time"
 
@@ -30,7 +31,10 @@ func NewGameServer(ctx context.Context) *GameServer {
 	}
 
 	os.RemoveAll(statePath)
-	os.MkdirAll(statePath, 0755)
+	err = os.MkdirAll(statePath, 0755)
+	if err != nil {
+		panic(errors.Wrap(err, fmt.Sprintf("error creating state path %s", statePath)))
+	}
 	defer os.RemoveAll(statePath)
 
 	net, err := network.NewRemoteNetwork(ctx, group, statePath)

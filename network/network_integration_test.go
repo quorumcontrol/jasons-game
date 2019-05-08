@@ -23,7 +23,8 @@ func TestNewNetwork(t *testing.T) {
 	defer cancel()
 
 	testPath := "/tmp/test-new-network"
-	os.MkdirAll(testPath, 0755)
+	err := os.MkdirAll(testPath, 0755)
+	require.Nil(t,err)
 	defer os.RemoveAll(testPath)
 
 	// just to test it doesn't error here
@@ -34,12 +35,13 @@ func TestCreateNamedChainTree(t *testing.T) {
 	defer cancel()
 
 	testPath := "/tmp/test-create-named-tree"
-	os.MkdirAll(testPath, 0755)
-	defer os.RemoveAll(testPath)
+	err := os.MkdirAll(testPath, 0755)
+	require.Nil(t,err)
+		defer os.RemoveAll(testPath)
 
 	// just to test it doesn't error here
 	net := newRemoteNetwork(t, ctx, testPath)
-	_,err := net.CreateNamedChainTree("test-create-named-tree")
+	_,err = net.CreateNamedChainTree("test-create-named-tree")
 	require.Nil(t,err)
 }
 func TestGetChainTreeByName(t *testing.T) {
@@ -47,8 +49,9 @@ func TestGetChainTreeByName(t *testing.T) {
 	defer cancel()
 
 	testPath := "/tmp/test-get-named-tree"
-	os.MkdirAll(testPath, 0755)
-	defer os.RemoveAll(testPath)
+	err := os.MkdirAll(testPath, 0755)
+	require.Nil(t,err)
+		defer os.RemoveAll(testPath)
 
 	// just to test it doesn't error here
 	net := newRemoteNetwork(t, ctx, testPath)

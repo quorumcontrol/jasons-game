@@ -6,6 +6,7 @@ import (
 	"log"
 	"net/http"
 
+	"github.com/pkg/errors"
 	logging "github.com/ipfs/go-log"
 
 	"github.com/improbable-eng/grpc-web/go/grpcweb"
@@ -15,14 +16,21 @@ import (
 	"google.golang.org/grpc/reflection"
 )
 
+func mustSetLogLevel(name, level string) {
+	err := logging.SetLogLevel(name, level)
+	if err != nil {
+		panic(errors.Wrap(err, "error setting log level"))
+	}
+}
+
 func main() {
-	logging.SetLogLevel("*", "INFO")
-	logging.SetLogLevel("swarm2", "error")
-	logging.SetLogLevel("relay", "error")
-	logging.SetLogLevel("autonat", "error")
-	logging.SetLogLevel("uiserver", "debug")
-	logging.SetLogLevel("game", "debug")
-	logging.SetLogLevel("gameserver", "debug")
+	mustSetLogLevel("*", "INFO")
+	mustSetLogLevel("swarm2", "error")
+	mustSetLogLevel("relay", "error")
+	mustSetLogLevel("autonat", "error")
+	mustSetLogLevel("uiserver", "debug")
+	mustSetLogLevel("game", "debug")
+	mustSetLogLevel("gameserver", "debug")
 
 	port := 8080
 	grpcServer := grpc.NewServer()

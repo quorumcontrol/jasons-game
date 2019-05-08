@@ -20,11 +20,11 @@ func TestNavigation(t *testing.T) {
 
 	simulatedUI, err := rootCtx.SpawnNamed(ui.NewUIProps(stream, net), "test-navigation-ui")
 	require.Nil(t, err)
-	defer simulatedUI.Stop()
+	defer rootCtx.Stop(simulatedUI)
 
 	game, err := rootCtx.SpawnNamed(NewGameProps(simulatedUI, net), "test-navigation-game")
 	require.Nil(t, err)
-	defer game.Stop()
+	defer rootCtx.Stop(game)
 
 	rootCtx.Send(game, &jasonsgame.UserInput{Message: "north"})
 	time.Sleep(100 * time.Millisecond)
@@ -48,11 +48,11 @@ func TestSetDescription(t *testing.T) {
 
 	simulatedUI, err := rootCtx.SpawnNamed(ui.NewUIProps(stream, net), "test-set-description-ui")
 	require.Nil(t, err)
-	defer simulatedUI.Stop()
+	defer rootCtx.Stop(simulatedUI)
 
 	game, err := rootCtx.SpawnNamed(NewGameProps(simulatedUI, net), "test-set-description-game")
 	require.Nil(t, err)
-	defer game.Stop()
+	defer rootCtx.Stop(game)
 
 	newDescription := "multi word"
 

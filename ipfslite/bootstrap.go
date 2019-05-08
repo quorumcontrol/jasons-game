@@ -18,21 +18,7 @@ import (
 	inet "github.com/libp2p/go-libp2p-net"
 	pstore "github.com/libp2p/go-libp2p-peerstore"
 	rhost "github.com/libp2p/go-libp2p/p2p/host/routed"
-	ma "github.com/multiformats/go-multiaddr"
 )
-
-func convertPeers(peers []string) []pstore.PeerInfo {
-	pinfos := make([]pstore.PeerInfo, len(peers))
-	for i, peer := range peers {
-		maddr := ma.StringCast(peer)
-		p, err := pstore.InfoFromP2pAddr(maddr)
-		if err != nil {
-			logger.Fatal(err)
-		}
-		pinfos[i] = *p
-	}
-	return pinfos
-}
 
 // ErrNotEnoughBootstrapPeers signals that we do not have enough bootstrap
 // peers to bootstrap correctly.

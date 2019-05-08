@@ -56,6 +56,9 @@ func (t *Tupelo) CreateChainTree() (*consensus.SignedChainTree, error) {
 		},
 	}
 	tree, err := consensus.NewSignedChainTree(ephemeralPrivate.PublicKey, t.Store)
+	if err != nil {
+		return nil, errors.Wrap(err, "error creating new signed chaintree")
+	}
 
 	c := client.New(t.NotaryGroup, tree.MustId(), t.PubSubSystem)
 	c.Listen()

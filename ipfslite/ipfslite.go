@@ -167,7 +167,10 @@ func SetupLibp2p(
 
 	logger.Info("bootstraping")
 
-	Bootstrap(rHost.(*routedhost.RoutedHost), idht, BootstrapConfigWithPeers(ipfslite.DefaultBootstrapPeers()))
+	_, err = Bootstrap(rHost.(*routedhost.RoutedHost), idht, BootstrapConfigWithPeers(ipfslite.DefaultBootstrapPeers()))
+	if err != nil {
+		return nil, nil, errors.Wrap(err, "error bootstrapping")
+	}
 
 	go func() {
 		tick := time.NewTicker(30 * time.Second)

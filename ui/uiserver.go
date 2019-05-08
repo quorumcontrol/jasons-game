@@ -64,7 +64,7 @@ func (us *UIServer) Receive(actorCtx actor.Context) {
 	switch msg := actorCtx.Message().(type) {
 	case *actor.Stopping:
 		if us.game != nil {
-			us.game.Poison()
+			actorCtx.Poison(us.game)
 		}
 		if us.doneChan != nil {
 			us.doneChan <- struct{}{}

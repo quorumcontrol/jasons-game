@@ -34,7 +34,12 @@ func NewIPLDClient(ctx context.Context, ds datastore.Batching) (*ipfslite.Peer, 
 	}
 
 	disoverer := newJasonsDiscoverer(h, dht)
-	go disoverer.doDiscovery(ctx)
+	go func() {
+		err := disoverer.doDiscovery(ctx)
+		if err != nil {
+			log.Errorf("error doing discovery: %v", err)
+		}
+	}()
 
 	return lite, nil
 }

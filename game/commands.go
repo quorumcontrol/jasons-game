@@ -2,8 +2,6 @@ package game
 
 import (
 	"strings"
-
-	"github.com/sbstjn/allot"
 )
 
 type commandList []*command
@@ -11,7 +9,6 @@ type commandList []*command
 type command struct {
 	name  string
 	parse string
-	allot allot.Command
 }
 
 // for now the string parsing is not working

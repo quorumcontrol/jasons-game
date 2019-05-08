@@ -13,7 +13,6 @@ import (
 	"testing"
 
 	"time"
-	logging "github.com/ipfs/go-log"
 
 	"github.com/AsynkronIT/protoactor-go/actor"
 	"github.com/ethereum/go-ethereum/common/hexutil"
@@ -72,10 +71,6 @@ func setupNotaryGroup(ctx context.Context) (*types.NotaryGroup, error) {
 }
 
 func TestFullIntegration(t *testing.T) {
-	logging.SetLogLevel("uiserver", "debug")
-	logging.SetLogLevel("game", "debug")
-	logging.SetLogLevel("gameserver", "debug")
-
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
@@ -84,8 +79,12 @@ func TestFullIntegration(t *testing.T) {
 
 	path := "/tmp/test-full-game"
 
-	os.RemoveAll(path)
-	os.MkdirAll(path, 0755)
+	err = os.RemoveAll(path)
+	require.Nil(t,err)
+
+	err = os.MkdirAll(path, 0755)
+	require.Nil(t,err)
+
 	defer os.RemoveAll(path)
 
 	net, err := network.NewRemoteNetwork(ctx, group, path)
@@ -97,11 +96,11 @@ func TestFullIntegration(t *testing.T) {
 
 	uiActor, err := rootCtx.SpawnNamed(ui.NewUIProps(stream, net), "test-integration-ui")
 	require.Nil(t, err)
-	defer uiActor.Stop()
+	defer rootCtx.Stop(uiActor)
 
 	gameActor, err := rootCtx.SpawnNamed(NewGameProps(uiActor, net), "test-integration-game")
 	require.Nil(t, err)
-	defer gameActor.Stop()
+	defer rootCtx.Stop(gameActor)
 
 	readyFut := rootCtx.RequestFuture(gameActor, &ping{}, 15 * time.Second)
 	// wait on the game actor being ready
