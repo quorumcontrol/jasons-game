@@ -36,6 +36,7 @@ func TestCursor(t *testing.T) {
 		&jasonsgame.Location{
 			Description: "hi",
 			Did:         tree.MustId(),
+			Tip:         tree.Tip().String(),
 			X:           0,
 			Y:           0,
 		},
@@ -48,6 +49,7 @@ func TestCursor(t *testing.T) {
 		&jasonsgame.Location{
 			Description: "north",
 			Did:         tree.MustId(),
+			Tip:         tree.Tip.String(),
 			X:           0,
 			Y:           1,
 		},
