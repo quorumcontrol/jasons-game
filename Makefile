@@ -59,7 +59,11 @@ localnet: $(generated) go.mod go.sum
 	docker-compose -f docker-compose-localnet.yml up --force-recreate
 
 game-server: $(generated) go.mod go.sum
+ifdef testnet
+	docker-compose -f docker-compose-dev.yml run --rm --service-ports game-testnet
+else
 	docker-compose -f docker-compose-dev.yml run --rm --service-ports game
+endif
 
 frontend-dev: $(generated) $(jsmodules)
 	cd frontend/jasons-game && shadow-cljs watch app
