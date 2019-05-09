@@ -11,7 +11,6 @@ import (
 	"github.com/ipfs/go-datastore"
 	badger "github.com/ipfs/go-ds-badger"
 	logging "github.com/ipfs/go-log"
-	routedhost "github.com/libp2p/go-libp2p/p2p/host/routed"
 	"github.com/pkg/errors"
 	"github.com/quorumcontrol/chaintree/chaintree"
 	"github.com/quorumcontrol/chaintree/dag"
@@ -83,14 +82,7 @@ func NewRemoteNetwork(ctx context.Context, group *types.NotaryGroup, path string
 
 	tupeloPubSub := remote.NewNetworkPubSub(tupeloP2PHost)
 
-	// setup the ipf2 pubsub
-	ipfsP2P, err := p2p.Wrap(ctx, lite.Host().(*routedhost.RoutedHost), lite.DHT())
-	if err != nil {
-		return nil, errors.Wrap(err, "error wrapping IPLDhost")
-	}
-
-	netPubsub := remote.NewNetworkPubSub(ipfsP2P)
-	net.pubSubSystem = netPubsub
+	net.pubSubSystem = tupeloPubSub
 
 	tup := &Tupelo{
 		key:          key,
