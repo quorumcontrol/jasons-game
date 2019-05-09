@@ -16,6 +16,26 @@
         (str "[" (:did loc) ", (" (:x loc) "," (:y loc) ")" " tip: " (:tip loc) "] ")])
      [:p (str prefix (:message msg))]]))
 
+(defn scrolling-container [messages]
+  (let [bottom-el (atom nil)]
+    (r/create-class
+     {:display-name "scrolling-container"
+
+      :component-did-mount
+      (fn [_]
+        (.scrollIntoView @bottom-el (clj->js {:behavior "smooth"})))
+
+      :component-did-update
+      (fn [_]
+        (.scrollIntoView @bottom-el (clj->js {:behavior "smooth"})))
+
+      :reagent-render
+      (fn [messages]
+        [:> Container {:style {:overflow "auto" :maxHeight "50vh"}}
+         (map-indexed user-message messages)
+         [:div {:ref (fn [el] (reset! bottom-el el))}]])})))
+
+
 (defn app-root []
   (let [input-state (r/atom "")]
     (fn []
@@ -32,7 +52,6 @@
                     :size "big"
                     :value @input-state
                     :placeholder "What do you want to do?"}]]]
-       [:> Container
-        (let [messages (subscribe [:game-messages])]
-          (map-indexed user-message @messages))]])))
+       (let [messages (subscribe [:game-messages])]
+         [scrolling-container @messages])])))
 
