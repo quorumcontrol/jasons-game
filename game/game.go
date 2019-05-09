@@ -16,6 +16,8 @@ import (
 
 var log = logging.Logger("game")
 
+const shoutChannel = "jasons-game-shouting-players"
+
 type ping struct{}
 
 type Game struct {
@@ -26,6 +28,7 @@ type Game struct {
 	commands        commandList
 	messageSequence uint64
 	chatSubscriber  *actor.PID
+	shoutSubscriber *actor.PID
 }
 
 func NewGameProps(ui *actor.PID, network network.Network) *actor.Props {
@@ -44,7 +47,7 @@ func (g *Game) Receive(actorCtx actor.Context) {
 		g.initialize(actorCtx)
 	case *jasonsgame.UserInput:
 		g.handleUserInput(actorCtx, msg)
-	case *ChatMessage:
+	case *ChatMessage, *ShoutMessage:
 		g.sendUIMessage(actorCtx, msg)
 	case *ping:
 		actorCtx.Respond(true)
@@ -53,6 +56,7 @@ func (g *Game) Receive(actorCtx actor.Context) {
 
 func (g *Game) initialize(actorCtx actor.Context) {
 	actorCtx.Send(g.ui, &ui.SetGame{Game: actorCtx.Self()})
+	g.shoutSubscriber = actorCtx.Spawn(g.network.PubSubSystem().NewSubscriberProps(shoutChannel))
 
 	var playerTree *consensus.SignedChainTree
 	var homeTree *consensus.SignedChainTree
@@ -135,6 +139,8 @@ func (g *Game) handleUserInput(actorCtx actor.Context, input *jasonsgame.UserInp
 			}
 			log.Debugf("publishing chat message")
 			g.network.PubSubSystem().Broadcast(topicFromLocation(l), &ChatMessage{Message: args})
+		case "shout":
+			g.network.PubSubSystem().Broadcast(shoutChannel, &ShoutMessage{Message: args})
 		default:
 			log.Error("unhandled but matched command", cmd.name)
 		}
@@ -239,6 +245,8 @@ func (g *Game) sendUIMessage(actorCtx actor.Context, mesgInter interface{}) {
 		msgToUser.Message = msg.Description
 	case *ChatMessage:
 		msgToUser.Message = fmt.Sprintf("Someone here says: %s", msg.Message)
+	case *ShoutMessage:
+		msgToUser.Message = fmt.Sprintf("Someone SHOUTED: %s", msg.Message)
 	default:
 		log.Errorf("error, unknown message type: %v", msg)
 	}

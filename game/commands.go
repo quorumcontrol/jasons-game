@@ -22,6 +22,7 @@ var defaultCommandList = commandList{
 	newCommand("tip-zoom", "go to tip"),
 	newCommand("exit", "exit"),
 	newCommand("say", "say"),
+	newCommand("shout", "shout"),
 }
 
 func newCommand(name, parse string) *command {
