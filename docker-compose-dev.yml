@@ -3,7 +3,7 @@ version: "3"
 services:
   game:
     build: ./devdocker
-    command: ["go", "run", "-mod=vendor", "main.go"]
+    command: ["go", "run", "main.go"]
     volumes:
       - .:/app:delegated
       - ./devdocker/.tmp:/root/.cache:delegated
@@ -37,7 +37,6 @@ services:
     command:
       - go
       - test
-      - "-mod=vendor"
       - -v
       - -tags=integration
       - -timeout=2m
