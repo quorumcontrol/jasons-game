@@ -16,6 +16,22 @@ services:
       GOPATH: /go
       TUPELO_BOOTSTRAP_NODES: /ip4/172.16.239.10/tcp/34001/ipfs/16Uiu2HAm3TGSEKEjagcCojSJeaT5rypaeJMKejijvYSnAjviWwV5
 
+  game-testnet:
+    build: ./devdocker
+    command: ["go", "run", "main.go"]
+    volumes:
+      - .:/app:delegated
+      - ./devdocker/.tmp:/root/.cache:delegated
+      - ./devdocker/testnetkeys:/app/devdocker/localkeys:delegated
+      - $GOPATH/pkg/mod:/go/pkg/mod:delegated
+    ports:
+      - 8080:8080
+      - 8081:8081
+    environment:
+      PPROF_ENABLED: "true"
+      GOPATH: /go
+      TUPELO_BOOTSTRAP_NODES: /ip4/18.196.112.81/tcp/34001/ipfs/16Uiu2HAmJGZXyrrQ9CcAJWh5Q8rNsoi9yK1VT2HANhH2NcqkRmaZ,/ip4/34.231.17.217/tcp/34001/ipfs/16Uiu2HAkxNHzLn5cTpGs7RuTQSTKjtxtT9jGcYa6PousihVzEPc6
+
   integration:
     build: ./devdocker
     command:
