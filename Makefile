@@ -10,7 +10,7 @@ FIRSTGOPATH = $(firstword $(subst :, ,$(GOPATH)))
 jsmodules = ./frontend/jasons-game/node_modules
 generated = pb/jasonsgame/jasonsgame.pb.go frontend/jasons-game/src/js/frontend/remote/*_pb.*
 
-all: build jsmodules
+all: build $(jsmodules) $(generated)
 
 $(FIRSTGOPATH)/src/github.com/gogo/protobuf/proto:
 	go get github.com/gogo/protobuf/proto
@@ -34,7 +34,7 @@ $(FIRSTGOPATH)/bin/gotestsum:
 	go get gotest.tools/gotestsum
 
 build: $(generated) go.mod go.sum
-	go build ./...
+	mkdir -p bin && go build -o bin/jasons-game
 
 lint: $(FIRSTGOPATH)/bin/golangci-lint $(generated)
 	$(FIRSTGOPATH)/bin/golangci-lint run --build-tags integration
