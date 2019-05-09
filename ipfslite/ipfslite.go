@@ -34,8 +34,9 @@ import (
 
 const scalewayPeer = "/ip4/51.158.189.66/tcp/4001/ipfs/QmSWp7tT6hBPAEvDEoz76axX3HHT87vyYN2vEMyiwmcFZk"
 
-// var DefaultBootstrappers = append(config.DefaultBootstrapAddresses, scalewayPeer)
-var DefaultBootstrappers = []string{scalewayPeer}
+var DefaultBootstrappers = append(config.DefaultBootstrapAddresses, scalewayPeer)
+
+// var DefaultBootstrappers = []string{scalewayPeer}
 
 func init() {
 	ipld.Register(cid.DagProtobuf, dag.DecodeProtobufBlock)
