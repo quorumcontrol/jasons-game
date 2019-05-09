@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"time"
 
-	ipfslite "github.com/hsanjuan/ipfs-lite"
 	"github.com/ipfs/go-bitswap"
 	"github.com/ipfs/go-bitswap/network"
 	blockservice "github.com/ipfs/go-blockservice"
@@ -159,7 +158,7 @@ func SetupLibp2p(
 	}
 
 	if len(bootstrapPeers) == 0 {
-		bootstrapPeers = ipfslite.DefaultBootstrapPeers()
+		bootstrapPeers = DefaultBootstrapPeers()
 	}
 
 	logger.Info("bootstraping")
