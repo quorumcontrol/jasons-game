@@ -42,6 +42,10 @@ require (
 	github.com/quorumcontrol/storage v1.1.2
 	github.com/quorumcontrol/tupelo-go-sdk v0.2.1-0.20190501192947-49d54068a17c1b5b3bd55027a37b1444ac1c5779
 	github.com/stretchr/testify v1.3.0
+	github.com/tinylib/msgp v1.1.0
+	github.com/ttacon/chalk v0.0.0-20160626202418-22c06c80ed31 // indirect
 	golang.org/x/sync v0.0.0-20190423024810-112230192c58 // indirect
 	google.golang.org/grpc v1.20.0
 )
+
+replace github.com/quorumcontrol/tupelo-go-sdk v0.2.1-0.20190501192947-49d54068a17c1b5b3bd55027a37b1444ac1c5779 => ../tupelo-go-sdk

@@ -14,6 +14,7 @@ import (
 	"github.com/ipfs/go-merkledag"
 	"github.com/pkg/errors"
 	"github.com/quorumcontrol/tupelo-go-sdk/consensus"
+	"github.com/quorumcontrol/tupelo-go-sdk/gossip3/remote"
 )
 
 // LocalNetwork implements the Network interface but doesn't require
@@ -22,6 +23,7 @@ type LocalNetwork struct {
 	key           *ecdsa.PrivateKey
 	KeyValueStore datastore.Batching
 	TreeStore     TreeStore
+	pubSubSystem  remote.PubSub
 }
 
 func NewLocalNetwork() Network {
@@ -38,15 +40,18 @@ func NewLocalNetwork() Network {
 		panic(errors.Wrap(err, "error generating key"))
 	}
 
+	pubsub := remote.NewSimulatedPubSub()
+
 	return &LocalNetwork{
 		key:           key,
 		KeyValueStore: keystore,
 		TreeStore:     ipldstore,
+		pubSubSystem:  pubsub,
 	}
 }
 
-func (ln *LocalNetwork) Publish(msg string) {
-	panic("Publish() is unsupported in local network")
+func (ln *LocalNetwork) PubSubSystem() remote.PubSub {
+	return ln.pubSubSystem
 }
 
 func (ln *LocalNetwork) CreateNamedChainTree(name string) (*consensus.SignedChainTree, error) {

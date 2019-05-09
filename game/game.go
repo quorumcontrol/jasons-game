@@ -25,6 +25,7 @@ type Game struct {
 	cursor          *navigator.Cursor
 	commands        commandList
 	messageSequence uint64
+	chatSubscriber  *actor.PID
 }
 
 func NewGameProps(ui *actor.PID, network network.Network) *actor.Props {
@@ -43,6 +44,8 @@ func (g *Game) Receive(actorCtx actor.Context) {
 		g.initialize(actorCtx)
 	case *jasonsgame.UserInput:
 		g.handleUserInput(actorCtx, msg)
+	case *ChatMessage:
+		g.sendUIMessage(actorCtx, msg)
 	case *ping:
 		actorCtx.Respond(true)
 	}
@@ -126,7 +129,12 @@ func (g *Game) handleUserInput(actorCtx actor.Context, input *jasonsgame.UserInp
 		case "tip-zoom":
 			g.handleTipZoom(actorCtx, args)
 		case "say":
-			g.network.Publish(args)
+			l, err := g.cursor.GetLocation()
+			if err != nil {
+				panic(errors.Wrap(err, "error getting current location"))
+			}
+			log.Debugf("publishing chat message")
+			g.network.PubSubSystem().Broadcast(topicFromLocation(l), &ChatMessage{Message: args})
 		default:
 			log.Error("unhandled but matched command", cmd.name)
 		}
@@ -206,7 +214,17 @@ func (g *Game) handleLocationInput(actorCtx actor.Context, cmd *command, args st
 	if err != nil {
 		g.sendUIMessage(actorCtx, fmt.Sprintf("%s some sort of error happened: %v", cmd.name, err))
 	}
+
+	if g.chatSubscriber != nil {
+		actorCtx.Stop(g.chatSubscriber)
+	}
+	g.chatSubscriber = actorCtx.Spawn(g.network.PubSubSystem().NewSubscriberProps(topicFromLocation(l)))
+
 	g.sendUIMessage(actorCtx, l)
+}
+
+func topicFromLocation(l *jasonsgame.Location) string {
+	return fmt.Sprintf("%s-(%d,%d)", l.Did, l.X, l.Y)
 }
 
 func (g *Game) sendUIMessage(actorCtx actor.Context, mesgInter interface{}) {
@@ -219,6 +237,8 @@ func (g *Game) sendUIMessage(actorCtx actor.Context, mesgInter interface{}) {
 	case *jasonsgame.Location:
 		msgToUser.Location = msg
 		msgToUser.Message = msg.Description
+	case *ChatMessage:
+		msgToUser.Message = fmt.Sprintf("Someone here says: %s", msg.Message)
 	default:
 		log.Errorf("error, unknown message type: %v", msg)
 	}

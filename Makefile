@@ -21,9 +21,9 @@ $(FIRSTGOPATH)/src/github.com/gogo/protobuf/gogoproto:
 $(FIRSTGOPATH)/bin/protoc-gen-gogofaster: $(FIRSTGOPATH)/src/github.com/gogo/protobuf/proto $(FIRSTGOPATH)/src/github.com/gogo/protobuf/gogoproto
 	go get -u github.com/gogo/protobuf/protoc-gen-gogofaster
 
-$(generated): $(FIRSTGOPATH)/bin/protoc-gen-gogofaster $(jsmodules)
-	scripts/protogen.sh
-
+$(generated): $(FIRSTGOPATH)/bin/protoc-gen-gogofaster $(jsmodules) game/messages_gen.go
+	scripts/protogen.sh && cd game && go generate
+	
 $(jsmodules):
 	cd frontend/jasons-game && npm install
 
@@ -32,6 +32,9 @@ $(FIRSTGOPATH)/bin/golangci-lint:
 
 $(FIRSTGOPATH)/bin/gotestsum:
 	go get gotest.tools/gotestsum
+
+$(FIRSTGOPATH)/bin/msgp:
+	go get github.com/tinylib/msgp
 
 build: $(generated) go.mod go.sum
 	mkdir -p bin && go build -o bin/jasons-game
@@ -42,8 +45,8 @@ lint: $(FIRSTGOPATH)/bin/golangci-lint $(generated)
 test: $(generated) go.mod go.sum $(FIRSTGOPATH)/bin/gotestsum
 	gotestsum
 
-generate: $(FIRSTGOPATH)/bin/protoc-gen-gogofaster
-	scripts/protogen.sh
+generate: game/messages.go $(FIRSTGOPATH)/bin/protoc-gen-gogofaster $(FIRSTGOPATH)/bin/msgp
+	scripts/protogen.sh && cd game && go generate
 
 integration-test: $(generated) go.mod go.sum
 ifdef testpackage
@@ -60,6 +63,13 @@ game-server: $(generated) go.mod go.sum
 
 frontend-dev: $(generated) $(jsmodules)
 	cd frontend/jasons-game && shadow-cljs watch app
+
+$(FIRSTGOPATH)/bin/modvendor:
+	go get -u github.com/goware/modvendor
+
+vendor: go.mod go.sum $(FIRSTGOPATH)/bin/modvendor
+	go mod vendor
+	modvendor -copy="**/*.c **/*.h"
 
 clean:
 	go clean ./...

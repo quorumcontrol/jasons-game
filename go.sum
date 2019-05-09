@@ -691,9 +691,6 @@ github.com/quorumcontrol/namedlocker v0.0.0-20180808140020-3f797c8b12b1 h1:FglNF
 github.com/quorumcontrol/namedlocker v0.0.0-20180808140020-3f797c8b12b1/go.mod h1:7JSFW45PpKoXFaUpaJ8YtCNIwQWut0+Huo9ugBnKVe4=
 github.com/quorumcontrol/storage v1.1.2 h1:F6qRGnWx2GzO5fitMh8axvT9NjHUHnGp3n2MYwnjKP4=
 github.com/quorumcontrol/storage v1.1.2/go.mod h1:QGtqgqqMaULflN8Jcctj3zdzMFoyE/RxP0uTd15EKtY=
-github.com/quorumcontrol/tupelo-go-sdk v0.2.0 h1:/7R/Xhue1Eu9QoAfEmAqVbhOc999edo1VSaW3d9RxFk=
-github.com/quorumcontrol/tupelo-go-sdk v0.2.1-0.20190501192947-49d54068a17c1b5b3bd55027a37b1444ac1c5779 h1:rqoixtqvXKLT4Prn60OwZQJkPVyDU3+xVS0Cuyn8pRY=
-github.com/quorumcontrol/tupelo-go-sdk v0.2.1-0.20190501192947-49d54068a17c1b5b3bd55027a37b1444ac1c5779/go.mod h1:a8CvD4PYyS7QyXTdy1tsPyomrPeuqmKSRBtmbRAeLG8=
 github.com/rcrowley/go-metrics v0.0.0-20181016184325-3113b8401b8a/go.mod h1:bCqnVzQkZxMG4s8nGwiZ5l3QUCyqpo9Y+/ZMZ9VjZe4=
 github.com/rs/cors v1.6.0 h1:G9tHG9lebljV9mfp9SNPDL36nCDxmo3zTlAf1YgvzmI=
 github.com/rs/cors v1.6.0/go.mod h1:gFx+x8UowdsKA9AchylcLynDq+nNFfI8FkUZdN/jGCU=
@@ -733,6 +730,8 @@ github.com/syndtr/goleveldb v1.0.0/go.mod h1:ZVVdQEZoIme9iO1Ch2Jdy24qqXrMMOU6lpP
 github.com/texttheater/golang-levenshtein v0.0.0-20180516184445-d188e65d659e/go.mod h1:XDKHRm5ThF8YJjx001LtgelzsoaEcvnA7lVWz9EeX3g=
 github.com/tinylib/msgp v1.1.0 h1:9fQd+ICuRIu/ue4vxJZu6/LzxN0HwMds2nq/0cFvxHU=
 github.com/tinylib/msgp v1.1.0/go.mod h1:+d+yLhGm8mzTaHzB+wgMYrodPfmZrzkirds8fDWklFE=
+github.com/ttacon/chalk v0.0.0-20160626202418-22c06c80ed31 h1:OXcKh35JaYsGMRzpvFkLv/MEyPuL49CThT1pZ8aSml4=
+github.com/ttacon/chalk v0.0.0-20160626202418-22c06c80ed31/go.mod h1:onvgF043R+lC5RZ8IT9rBXDaEDnpnw/Cl+HFiw+v/7Q=
 github.com/uber-go/atomic v1.3.2 h1:Azu9lPBWRNKzYXSIwRfgRuDuS0YKsK4NFhiQv98gkxo=
 github.com/uber-go/atomic v1.3.2/go.mod h1:/Ct5t2lcmbJ4OSe/waGBoaVvVqtO0bmtfVNex1PFV8g=
 github.com/uber/jaeger-client-go v2.15.0+incompatible h1:NP3qsSqNxh8VYr956ur1N/1C1PjvOJnJykCzcD5QHbk=
@@ -907,6 +906,7 @@ golang.org/x/tools v0.0.0-20190311212946-11955173bddd/go.mod h1:LCzVGOaR6xXOjkQ3
 golang.org/x/tools v0.0.0-20190312151545-0bb0c0a6e846/go.mod h1:LCzVGOaR6xXOjkQ3onu1FJEFr0SW1gC7cKk1uF8kGRs=
 golang.org/x/tools v0.0.0-20190312170243-e65039ee4138/go.mod h1:LCzVGOaR6xXOjkQ3onu1FJEFr0SW1gC7cKk1uF8kGRs=
 golang.org/x/tools v0.0.0-20190328211700-ab21143f2384/go.mod h1:LCzVGOaR6xXOjkQ3onu1FJEFr0SW1gC7cKk1uF8kGRs=
+golang.org/x/tools v0.0.0-20190418152851-6732636ccdfd h1:xDnl4DRcQ4FyjjmlpchohoK4Tl5GeV1JhqzFNp9OFhI=
 golang.org/x/tools v0.0.0-20190418152851-6732636ccdfd/go.mod h1:LCzVGOaR6xXOjkQ3onu1FJEFr0SW1gC7cKk1uF8kGRs=
 golang.org/x/xerrors v0.0.0-20190212162355-a5947ffaace3/go.mod h1:I/5z698sn9Ka8TeJc9MKroUUfqBBauWjQqLJ2OPfmY0=
 golang.org/x/xerrors v0.0.0-20190410155217-1f06c39b4373 h1:PPwnA7z1Pjf7XYaBP9GL1VAMZmcIWyFz7QCMSIIa3Bg=

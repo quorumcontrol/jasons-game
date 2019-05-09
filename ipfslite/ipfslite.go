@@ -15,7 +15,6 @@ import (
 	"github.com/ipfs/go-datastore"
 	blockstore "github.com/ipfs/go-ipfs-blockstore"
 	config "github.com/ipfs/go-ipfs-config"
-	offline "github.com/ipfs/go-ipfs-exchange-offline"
 	cbor "github.com/ipfs/go-ipld-cbor"
 	ipld "github.com/ipfs/go-ipld-format"
 	logging "github.com/ipfs/go-log"
@@ -33,6 +32,11 @@ import (
 	"github.com/pkg/errors"
 	"github.com/quorumcontrol/jasons-game/stats"
 )
+
+const scalewayPeer = "/ip4/51.158.189.66/tcp/4001/ipfs/QmSWp7tT6hBPAEvDEoz76axX3HHT87vyYN2vEMyiwmcFZk"
+
+// var DefaultBootstrappers = append(config.DefaultBootstrapAddresses, scalewayPeer)
+var DefaultBootstrappers = []string{scalewayPeer}
 
 func init() {
 	ipld.Register(cid.DagProtobuf, dag.DecodeProtobufBlock)
@@ -53,18 +57,10 @@ func (ils *ipfsLiteStat) Humanize() string {
 	return fmt.Sprintf("%d known peers to (%s) / %d connected / addrs: %v", ils.peers, ils.id, ils.connected, ils.addrs)
 }
 
-// Config wraps configuration options for the Peer.
-type Config struct {
-	// The DAGService will not announce or retrieve blocks from the network
-	Offline bool
-}
-
 // Peer is an IPFS-Lite peer. It provides a DAG service that can fetch and put
 // blocks from/to the IPFS network.
 type Peer struct {
 	ctx context.Context
-
-	cfg *Config
 
 	ipld.DAGService
 	bstore blockstore.Blockstore
@@ -81,13 +77,7 @@ func New(
 	store datastore.Batching,
 	host host.Host,
 	dht *dht.IpfsDHT,
-	cfg *Config,
 ) (*Peer, error) {
-
-	if cfg == nil {
-		cfg = &Config{}
-	}
-
 	bs := blockstore.NewBlockstore(store)
 	bs = blockstore.NewIdStore(bs)
 	cachedbs, err := blockstore.CachedBlockstore(ctx, bs, blockstore.DefaultCacheOpts())
@@ -95,20 +85,14 @@ func New(
 		return nil, err
 	}
 
-	var bserv blockservice.BlockService
-	if cfg.Offline {
-		bserv = blockservice.New(cachedbs, offline.Exchange(cachedbs))
-	} else {
-		bswapnet := network.NewFromIpfsHost(host, dht)
-		bswap := bitswap.New(ctx, bswapnet, cachedbs)
-		bserv = blockservice.New(cachedbs, bswap)
-	}
+	bswapnet := network.NewFromIpfsHost(host, dht)
+	bswap := bitswap.New(ctx, bswapnet, cachedbs)
+	bserv := blockservice.New(cachedbs, bswap)
 
 	dags := merkledag.NewDAGService(bserv)
 	return &Peer{
 		ctx:        ctx,
 		DAGService: dags,
-		cfg:        cfg,
 		bstore:     cachedbs,
 		host:       host,
 		dht:        dht,
@@ -117,6 +101,10 @@ func New(
 
 func (p *Peer) Host() host.Host {
 	return p.host
+}
+
+func (p *Peer) DHT() *dht.IpfsDHT {
+	return p.dht
 }
 
 // Session returns a session-based NodeGetter.
@@ -142,8 +130,8 @@ func (p *Peer) HasBlock(c cid.Cid) (bool, error) {
 func SetupLibp2p(
 	ctx context.Context,
 	hostKey crypto.PrivKey,
-	secret []byte,
 	listenAddrs []multiaddr.Multiaddr,
+	bootstrapPeers []peerstore.PeerInfo,
 ) (host.Host, *dht.IpfsDHT, error) {
 
 	var idht *dht.IpfsDHT
@@ -154,6 +142,7 @@ func SetupLibp2p(
 		libp2p.ListenAddrs(listenAddrs...),
 		libp2p.NATPortMap(),
 		libp2p.EnableAutoRelay(),
+		libp2p.FilterAddresses(addrFilterIPs...),
 		// This weird construct is needed to enable AutoRelay
 		// https://github.com/libp2p/go-libp2p/issues/487
 		libp2p.Routing(func(h host.Host) (routing.PeerRouting, error) {
@@ -169,9 +158,13 @@ func SetupLibp2p(
 		return nil, nil, errors.Wrap(err, "error creating libp2p")
 	}
 
+	if len(bootstrapPeers) == 0 {
+		bootstrapPeers = ipfslite.DefaultBootstrapPeers()
+	}
+
 	logger.Info("bootstraping")
 
-	_, err = Bootstrap(rHost.(*routedhost.RoutedHost), idht, BootstrapConfigWithPeers(ipfslite.DefaultBootstrapPeers()))
+	_, err = Bootstrap(rHost.(*routedhost.RoutedHost), idht, BootstrapConfigWithPeers(bootstrapPeers))
 	if err != nil {
 		return nil, nil, errors.Wrap(err, "error bootstrapping")
 	}
@@ -197,7 +190,9 @@ func SetupLibp2p(
 // with NewLibp2pHost.
 func DefaultBootstrapPeers() []peerstore.PeerInfo {
 	// conversion copied from go-ipfs
-	defaults, _ := config.DefaultBootstrapPeers()
+
+	defaults, _ := config.ParseBootstrapPeers(DefaultBootstrappers)
+
 	pinfos := make(map[peer.ID]*peerstore.PeerInfo)
 	for _, bootstrap := range defaults {
 		pinfo, ok := pinfos[bootstrap.ID()]
