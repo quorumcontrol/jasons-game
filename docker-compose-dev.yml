@@ -15,6 +15,21 @@ services:
       PPROF_ENABLED: "true"
       GOPATH: /go
       TUPELO_BOOTSTRAP_NODES: /ip4/172.16.239.10/tcp/34001/ipfs/16Uiu2HAm3TGSEKEjagcCojSJeaT5rypaeJMKejijvYSnAjviWwV5
+  
+  game2:
+    build: ./devdocker
+    command: ["go", "run", "main.go"]
+    volumes:
+      - .:/app:delegated
+      - ./devdocker/.tmp:/root/.cache:delegated
+      - $GOPATH/pkg/mod:/go/pkg/mod:delegated
+    ports:
+      - 8090:8080
+      - 8091:8081
+    environment:
+      PPROF_ENABLED: "true"
+      GOPATH: /go
+      TUPELO_BOOTSTRAP_NODES: /ip4/172.16.239.10/tcp/34001/ipfs/16Uiu2HAm3TGSEKEjagcCojSJeaT5rypaeJMKejijvYSnAjviWwV5
 
   game-testnet:
     build: ./devdocker
@@ -39,7 +54,8 @@ services:
       - test
       - -v
       - -tags=integration
-      - -timeout=2m
+      - -timeout=5m
+      # - -run=^TestGetChainTreeByName$$
       - ${TEST_PACKAGE-./...}
     volumes:
       - .:/app:delegated

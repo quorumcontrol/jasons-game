@@ -49,6 +49,7 @@ func main() {
 
 	mustSetLogLevel("*", "INFO")
 	mustSetLogLevel("swarm2", "error")
+	mustSetLogLevel("pubsub", "error")
 	mustSetLogLevel("relay", "error")
 	mustSetLogLevel("autonat", "error")
 	mustSetLogLevel("dht", "error")

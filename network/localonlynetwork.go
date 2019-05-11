@@ -54,6 +54,15 @@ func (ln *LocalNetwork) PubSubSystem() remote.PubSub {
 	return ln.pubSubSystem
 }
 
+func (ln *LocalNetwork) StartDiscovery(_ string) error {
+	//noop
+	return nil
+}
+
+func (ln *LocalNetwork) StopDiscovery(_ string) {
+	//noop
+}
+
 func (ln *LocalNetwork) CreateNamedChainTree(name string) (*consensus.SignedChainTree, error) {
 	ephemeralPrivate, err := crypto.GenerateKey()
 	if err != nil {

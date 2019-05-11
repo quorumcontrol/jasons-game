@@ -35,7 +35,7 @@ func publishNode(node *cbornode.Node) {
 		nil, "file", reader)
 	log.Debugf("infura: (err: %v) %v", err, resp)
 
-	if resp.StatusCode == 429 {
+	if err != nil || resp.StatusCode == 429 {
 		time.Sleep(500 * time.Millisecond)
 		publishNode(node)
 	}

@@ -49,16 +49,21 @@ func NewIPLDTreeStore(blockApi format.DAGService, keyValueApi datastore.Batching
 }
 
 func (ts *IPLDTreeStore) GetTree(did string) (*consensus.SignedChainTree, error) {
+	log.Debugf("get tip")
 	tip, err := ts.getTip(did)
 	if err != nil {
 		return nil, errors.Wrap(err, "error getting tip")
 	}
+	log.Debugf("new dag")
+
 	storedTree := dag.NewDag(tip, ts)
+	log.Debugf("new tree")
 
 	tree, err := chaintree.NewChainTree(storedTree, nil, consensus.DefaultTransactors)
 	if err != nil {
 		return nil, errors.Wrap(err, "error creating chaintree")
 	}
+	log.Debugf("get sigs")
 
 	sigs, err := ts.getSignatures(did)
 	if err != nil {
@@ -186,7 +191,7 @@ func (ts *IPLDTreeStore) Resolve(tip cid.Cid, path []string) (val interface{}, r
 	case *format.Link:
 		linkNode, err := ts.GetNode(val.Cid)
 		if err != nil {
-			return nil, nil, errors.Wrap(err, fmt.Sprintf("error getting linked node (%s)", linkNode.Cid().String()))
+			return nil, nil, errors.Wrap(err, fmt.Sprintf("error getting linked node (%s)", val.Cid.String()))
 		}
 		if linkNode != nil {
 			return ts.Resolve(linkNode.Cid(), remaining)

@@ -7,6 +7,7 @@ import "github.com/quorumcontrol/tupelo-go-sdk/gossip3/messages"
 func init() {
 	messages.RegisterMessage(&ChatMessage{})
 	messages.RegisterMessage(&ShoutMessage{})
+	messages.RegisterMessage(&JoinMessage{})
 }
 
 type ChatMessage struct {
@@ -25,4 +26,12 @@ type ShoutMessage struct {
 
 func (cm *ShoutMessage) TypeCode() int8 {
 	return -101
+}
+
+type JoinMessage struct {
+	From string
+}
+
+func (cm *JoinMessage) TypeCode() int8 {
+	return -102
 }

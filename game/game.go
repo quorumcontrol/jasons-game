@@ -47,7 +47,7 @@ func (g *Game) Receive(actorCtx actor.Context) {
 		g.initialize(actorCtx)
 	case *jasonsgame.UserInput:
 		g.handleUserInput(actorCtx, msg)
-	case *ChatMessage, *ShoutMessage:
+	case *ChatMessage, *ShoutMessage, *JoinMessage:
 		g.sendUIMessage(actorCtx, msg)
 	case *ping:
 		actorCtx.Respond(true)
@@ -76,6 +76,7 @@ func (g *Game) initialize(actorCtx actor.Context) {
 		}
 	}
 	g.player = NewPlayer(playerTree)
+	g.network.PubSubSystem().Broadcast(shoutChannel, &JoinMessage{From: g.player.tree.MustId()})
 
 	homeTree, err = g.network.GetChainTreeByName("home")
 	log.Debug("get home", homeTree)
@@ -138,7 +139,7 @@ func (g *Game) handleUserInput(actorCtx actor.Context, input *jasonsgame.UserInp
 				panic(errors.Wrap(err, "error getting current location"))
 			}
 			log.Debugf("publishing chat message")
-			g.network.PubSubSystem().Broadcast(topicFromLocation(l), &ChatMessage{Message: args})
+			g.network.PubSubSystem().Broadcast(topicFromDid(l.Did), &ChatMessage{Message: args})
 		case "shout":
 			g.network.PubSubSystem().Broadcast(shoutChannel, &ShoutMessage{Message: args})
 		default:
@@ -206,6 +207,7 @@ func (g *Game) handleSetDescription(actorCtx actor.Context, desc string) error {
 }
 
 func (g *Game) handleLocationInput(actorCtx actor.Context, cmd *command, args string) {
+	oldDid := g.cursor.Did()
 	switch cmd.name {
 	case "north":
 		g.cursor.North()
@@ -220,17 +222,20 @@ func (g *Game) handleLocationInput(actorCtx actor.Context, cmd *command, args st
 	if err != nil {
 		g.sendUIMessage(actorCtx, fmt.Sprintf("%s some sort of error happened: %v", cmd.name, err))
 	}
-
-	if g.chatSubscriber != nil {
-		actorCtx.Stop(g.chatSubscriber)
+	if newDid := g.cursor.Did(); newDid != oldDid {
+		g.network.StopDiscovery(oldDid)
+		g.network.StartDiscovery(newDid)
+		if g.chatSubscriber != nil {
+			actorCtx.Stop(g.chatSubscriber)
+		}
+		g.chatSubscriber = actorCtx.Spawn(g.network.PubSubSystem().NewSubscriberProps(topicFromDid(newDid)))
 	}
-	g.chatSubscriber = actorCtx.Spawn(g.network.PubSubSystem().NewSubscriberProps(topicFromLocation(l)))
 
 	g.sendUIMessage(actorCtx, l)
 }
 
-func topicFromLocation(l *jasonsgame.Location) string {
-	return fmt.Sprintf("%s-(%d,%d)", l.Did, l.X, l.Y)
+func topicFromDid(did string) string {
+	return fmt.Sprintf("jasons-game-%s", did)
 }
 
 func (g *Game) sendUIMessage(actorCtx actor.Context, mesgInter interface{}) {
@@ -247,6 +252,8 @@ func (g *Game) sendUIMessage(actorCtx actor.Context, mesgInter interface{}) {
 		msgToUser.Message = fmt.Sprintf("Someone here says: %s", msg.Message)
 	case *ShoutMessage:
 		msgToUser.Message = fmt.Sprintf("Someone SHOUTED: %s", msg.Message)
+	case *JoinMessage:
+		msgToUser.Message = fmt.Sprintf("a new player joined: %s", msg.From)
 	default:
 		log.Errorf("error, unknown message type: %v", msg)
 	}

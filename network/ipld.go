@@ -3,65 +3,63 @@ package network
 import (
 	"context"
 	"crypto/ecdsa"
+	"encoding/base64"
 	"fmt"
 
-	libp2pcrypto "github.com/libp2p/go-libp2p-crypto"
+	"github.com/quorumcontrol/tupelo-go-sdk/p2p"
 
+	cid "github.com/ipfs/go-cid"
 	"github.com/ipfs/go-datastore"
-	"github.com/multiformats/go-multiaddr"
-	"github.com/pkg/errors"
-	ipfslite "github.com/quorumcontrol/jasons-game/ipfslite"
+	mh "github.com/multiformats/go-multihash"
 )
 
-func NewIPLDClient(ctx context.Context, key *ecdsa.PrivateKey, ds datastore.Batching) (*ipfslite.Peer, error) {
-
-	priv, err := p2pPrivateFromEcdsaPrivate(key)
-	if err != nil {
-		return nil, errors.Wrap(err, "error getting private key from key")
-	}
-
-	listen, _ := multiaddr.NewMultiaddr("/ip4/0.0.0.0/tcp/0")
-
-	h, dht, err := ipfslite.SetupLibp2p(
-		ctx,
-		priv,
-		[]multiaddr.Multiaddr{listen},
-		nil, // no bootstrap
-	)
-
-	if err != nil {
-		panic(err)
-	}
-
-	lite, err := ipfslite.New(ctx, ds, h, dht)
-	if err != nil {
-		panic(err)
-	}
-
-	disoverer := newJasonsDiscoverer(h, dht)
-	go func() {
-		err := disoverer.doDiscovery(ctx)
-		if err != nil {
-			log.Errorf("error doing discovery: %v", err)
-		}
-	}()
-
-	return lite, nil
+var addrFilters = []string{
+	"10.0.0.0/8",
+	"100.64.0.0/10",
+	"169.254.0.0/16",
+	"172.16.0.0/12",
+	"192.0.0.0/24",
+	"192.0.0.0/29",
+	"192.0.0.8/32",
+	"192.0.0.170/32",
+	"192.0.0.171/32",
+	"192.0.2.0/24",
+	"192.168.0.0/16",
+	"198.18.0.0/15",
+	"198.51.100.0/24",
+	"203.0.113.0/24",
+	"240.0.0.0/4",
 }
 
-const expectedKeySize = 32
+const scalewayPeer = "/ip4/51.158.189.66/tcp/4001/ipfs/QmSWp7tT6hBPAEvDEoz76axX3HHT87vyYN2vEMyiwmcFZk"
 
-func p2pPrivateFromEcdsaPrivate(key *ecdsa.PrivateKey) (libp2pcrypto.PrivKey, error) {
-	// private keys can be 31 or 32 bytes for ecdsa.PrivateKey, but must be 32 Bytes for libp2pcrypto,
-	// so we zero pad the slice if it is 31 bytes.
-	keyBytes := key.D.Bytes()
-	if (len(keyBytes) != expectedKeySize) && (len(keyBytes) != (expectedKeySize - 1)) {
-		return nil, fmt.Errorf("error: length of private key must be 31 or 32 bytes")
-	}
-	keyBytes = append(make([]byte, expectedKeySize-len(keyBytes)), keyBytes...)
-	libp2pKey, err := libp2pcrypto.UnmarshalSecp256k1PrivateKey(keyBytes)
+// var DefaultBootstrappers = append(ipfsconfig.DefaultBootstrapAddresses, scalewayPeer)
+var DefaultBootstrappers = []string{scalewayPeer}
+
+func NewIPLDClient(ctx context.Context, key *ecdsa.PrivateKey, ds datastore.Batching) (*p2p.LibP2PHost, *p2p.BitswapPeer, error) {
+	cid, _ := nsToCid("jasons-game-tupelo")
+	log.Infof("namespace CID: %s: base64: %s", cid.String(), base64.StdEncoding.EncodeToString([]byte("jasons-game-tupelo")))
+	h, bitPeer, err := p2p.NewHostAndBitSwapPeer(
+		ctx,
+		p2p.WithListenIP("0.0.0.0", 0),
+		p2p.WithKey(key),
+		p2p.WithDatastore(ds),
+		p2p.WithAutoRelay(true),
+		p2p.WithDiscoveryNamespaces("jasons-game-tupelo"),
+		p2p.WithAddrFilters(addrFilters),
+	)
 	if err != nil {
-		return libp2pKey, fmt.Errorf("error unmarshaling: %v", err)
+		return nil, nil, fmt.Errorf("error creating hosts: %v", err)
 	}
-	return libp2pKey, err
+	h.Bootstrap(DefaultBootstrappers)
+	return h, bitPeer, err
+}
+
+func nsToCid(ns string) (cid.Cid, error) {
+	h, err := mh.Sum([]byte(ns), mh.SHA2_256, -1)
+	if err != nil {
+		return cid.Undef, err
+	}
+
+	return cid.NewCidV1(cid.Raw, h), nil
 }
