@@ -686,8 +686,8 @@ github.com/quorumcontrol/namedlocker v0.0.0-20180808140020-3f797c8b12b1 h1:FglNF
 github.com/quorumcontrol/namedlocker v0.0.0-20180808140020-3f797c8b12b1/go.mod h1:7JSFW45PpKoXFaUpaJ8YtCNIwQWut0+Huo9ugBnKVe4=
 github.com/quorumcontrol/storage v1.1.2 h1:F6qRGnWx2GzO5fitMh8axvT9NjHUHnGp3n2MYwnjKP4=
 github.com/quorumcontrol/storage v1.1.2/go.mod h1:QGtqgqqMaULflN8Jcctj3zdzMFoyE/RxP0uTd15EKtY=
-github.com/quorumcontrol/tupelo-go-sdk v0.2.1-0.20190501192947-49d54068a17c1b5b3bd55027a37b1444ac1c5779 h1:rqoixtqvXKLT4Prn60OwZQJkPVyDU3+xVS0Cuyn8pRY=
-github.com/quorumcontrol/tupelo-go-sdk v0.2.1-0.20190501192947-49d54068a17c1b5b3bd55027a37b1444ac1c5779/go.mod h1:a8CvD4PYyS7QyXTdy1tsPyomrPeuqmKSRBtmbRAeLG8=
+github.com/quorumcontrol/tupelo-go-sdk v0.2.1-0.20190501192947-09b928523e2a7451c93ca835f5f8e3a7e44ef912 h1:aTHzWVfJYmskJvRs2FztAErnM8Io8rTa64XKoGUF3Lc=
+github.com/quorumcontrol/tupelo-go-sdk v0.2.1-0.20190501192947-09b928523e2a7451c93ca835f5f8e3a7e44ef912/go.mod h1:4aeUUwVzAtdzpGDoX1qeFUGracofvqPHGFLfpTPA5CU=
 github.com/rcrowley/go-metrics v0.0.0-20181016184325-3113b8401b8a/go.mod h1:bCqnVzQkZxMG4s8nGwiZ5l3QUCyqpo9Y+/ZMZ9VjZe4=
 github.com/rs/cors v1.6.0 h1:G9tHG9lebljV9mfp9SNPDL36nCDxmo3zTlAf1YgvzmI=
 github.com/rs/cors v1.6.0/go.mod h1:gFx+x8UowdsKA9AchylcLynDq+nNFfI8FkUZdN/jGCU=
