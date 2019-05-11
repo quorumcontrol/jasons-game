@@ -2,6 +2,7 @@ package game
 
 import (
 	"fmt"
+	"time"
 
 	"github.com/AsynkronIT/protoactor-go/actor"
 	"github.com/ipfs/go-cid"
@@ -76,7 +77,10 @@ func (g *Game) initialize(actorCtx actor.Context) {
 		}
 	}
 	g.player = NewPlayer(playerTree)
-	g.network.PubSubSystem().Broadcast(shoutChannel, &JoinMessage{From: g.player.tree.MustId()})
+
+	time.AfterFunc(2*time.Second, func() {
+		g.network.PubSubSystem().Broadcast(shoutChannel, &JoinMessage{From: g.player.tree.MustId()})
+	})
 
 	homeTree, err = g.network.GetChainTreeByName("home")
 	log.Debug("get home", homeTree)
