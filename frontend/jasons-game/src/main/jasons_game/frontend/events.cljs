@@ -4,20 +4,23 @@
             [day8.re-frame.tracing :refer-macros [fn-traced]]
             [clojure.walk :refer [keywordize-keys]]))
 
+(goog-define dev-host false)
+  
+(defonce default-host (if dev-host dev-host (-> js/window (.-location) (.-origin))))
 
-(def host "http://localhost:8080")
+(re-frame.core/reg-sub  
+ :game-messages        
+ (fn game-messages-sub [db _]
+  (:game/messages db)))
 
-(defn game-messages-query
-  [db v]         ;; db is current app state, v the query vector
-  (:game/messages db))
-
-(re-frame.core/reg-sub  ;; part of the re-frame API
- :game-messages         ;; query id  
- game-messages-query)            ;; query fn
+(re-frame.core/reg-sub  
+ :remote/host         
+ (fn set-remote-host [db _]
+   (:remote/host db)))
 
 (re-frame.core/reg-event-fx   ;; a part of the re-frame API
  :initialize                ;; the kind of event
- (fn [coffects _]
+ (fn initialize [_ _]
    (dispatch [:initialize-game-listener])
    {}))
 
@@ -34,19 +37,26 @@
 
 (re-frame.core/reg-event-fx   ;; a part of the re-frame API
  :initialize-game-listener                ;; the kind of event
- (fn [{:keys [db]} _]
-   (game/start-game-listener host (:game/session db) handle-game-message handle-game-end)
-   {}))
+ (fn initialize-game-listener [{:keys [db]} _]
+   (let [req (game/start-game-listener (:remote/host db) (:game/session db) handle-game-message handle-game-end)]
+     {:db (conj db {:remote/current-listener req})})))
 
 (re-frame/reg-event-db
  :initialize-db
  (fn-traced  [_ _]
              {:game/messages []
               :game/session (game/new-session "12345")
+              :remote/host default-host
               :nav/page :home}))
 
+(re-frame/reg-event-db
+ :new-host
+ (fn-traced  [db host]
+   (conj db {:remote/host host})))
+ 
+
 (defn handle-user-input [{:keys [db]} [_ user-command]]
-  (game/send-user-input host (:game/session db) user-command (fn [resp] (.log js/console resp)))
+  (game/send-user-input (:remote/host db) (:game/session db) user-command (fn [resp] (.log js/console resp)))
   {:db (update db :game/messages #(conj % {:user true :message user-command}))})
 
 (re-frame.core/reg-event-fx   ;; a part of the re-frame API

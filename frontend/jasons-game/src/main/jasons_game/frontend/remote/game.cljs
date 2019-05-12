@@ -28,27 +28,3 @@
                                               :host host
                                               :onMessage on-message
                                               :onEnd on-end})))
-
-
-
-; var client = grpc.invoke(GameService.ReceiveUserMessages, {
-;     request: requestMessage,
-;     host: this.serviceHost,
-;     metadata: metadata,
-;     transport: this.options.transport,
-;     debug: this.options.debug,
-;     onMessage: function (responseMessage) {
-;       listeners.data.forEach(function (handler) {
-;         handler(responseMessage);
-;       });
-;     },
-;     onEnd: function (status, statusMessage, trailers) {
-;       listeners.end.forEach(function (handler) {
-;         handler();
-;       });
-;       listeners.status.forEach(function (handler) {
-;         handler({ code: status, details: statusMessage, metadata: trailers });
-;       });
-;       listeners = null;
-;     }
-;   });
