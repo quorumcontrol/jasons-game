@@ -22,11 +22,12 @@ require (
 	github.com/ipfs/go-ipld-format v0.0.1
 	github.com/ipfs/go-log v0.0.1
 	github.com/ipfs/go-merkledag v0.0.3
-	github.com/multiformats/go-multihash v0.0.5
+	github.com/libp2p/go-libp2p-circuit v0.0.4
+	github.com/multiformats/go-multihash v0.0.5 // indirect
 	github.com/pkg/errors v0.8.1
 	github.com/quorumcontrol/chaintree v0.0.0-20190426130059-dda329e6bd87
 	github.com/quorumcontrol/storage v1.1.2
-	github.com/quorumcontrol/tupelo-go-sdk v0.2.1-0.20190501192947-09b928523e2a7451c93ca835f5f8e3a7e44ef912
+	github.com/quorumcontrol/tupelo-go-sdk v0.2.1-0.20190501192947-b790bec3ce07098ce4fbe7648982dd283b89000c
 	github.com/stretchr/testify v1.3.0
 	github.com/tinylib/msgp v1.1.0
 	golang.org/x/sync v0.0.0-20190423024810-112230192c58 // indirect
