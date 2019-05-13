@@ -22,7 +22,7 @@ type distributer struct {
 func (d *distributer) Receive(aCtx actor.Context) {
 	switch aCtx.Message().(type) {
 	case *actor.Started:
-		aCtx.Spawn(d.provider.pubsubSystem.NewSubscriberProps(BlockTopic))
+		aCtx.Spawn(d.provider.pubsubSystem.NewSubscriberProps(network.BlockTopic))
 		d.pool = aCtx.Spawn(router.NewRoundRobinPool(getterConcurrency).WithProducer(func() actor.Actor {
 			return &getter{
 				provider: d.provider,

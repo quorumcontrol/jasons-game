@@ -24,6 +24,9 @@ import (
 
 var log = logging.Logger("gamenetwork")
 
+const BlockTopic = "jasons-game-tupelo-world-blocks"
+const ShoutTopic = "jasons-game-shouting-players"
+
 var GameBootstrappers = []string{
 	"/ip4/51.158.189.66/tcp/4001/ipfs/QmSWp7tT6hBPAEvDEoz76axX3HHT87vyYN2vEMyiwmcFZk",
 }
@@ -107,7 +110,7 @@ func NewRemoteNetwork(ctx context.Context, group *types.NotaryGroup, path string
 	remote.NewRouter(tupeloP2PHost)
 	group.SetupAllRemoteActors(&key.PublicKey)
 
-	store := NewIPLDTreeStore(lite, ds)
+	store := NewIPLDTreeStore(lite, ds, net.pubSubSystem)
 	net.TreeStore = store
 
 	tupeloPubSub := remote.NewNetworkPubSub(tupeloP2PHost)

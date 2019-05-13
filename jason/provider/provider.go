@@ -16,12 +16,9 @@ import (
 
 var log = logging.Logger("jasonblocks")
 
-const BlockTopic = "jasons-game-tupelo-world-blocks"
-const ShoutTopic = "jasons-game-shouting-players"
-
 var topics = []string{
-	BlockTopic,
-	ShoutTopic,
+	network.BlockTopic,
+	network.ShoutTopic,
 }
 
 // Provider is a service that replaces an IPFS node as a bootstrapper
@@ -67,7 +64,7 @@ func (p *Provider) Start() error {
 	// }
 
 	// subscribe with a noop to shouting - so that we forward it through
-	sub, err := p.p2pHost.GetPubSub().Subscribe(ShoutTopic)
+	sub, err := p.p2pHost.GetPubSub().Subscribe(network.ShoutTopic)
 	if err != nil {
 		return errors.Wrap(err, "error subscriging to ShoutTopic")
 	}

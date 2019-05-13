@@ -18,6 +18,7 @@ import (
 	"github.com/quorumcontrol/chaintree/nodestore"
 	"github.com/quorumcontrol/chaintree/safewrap"
 	"github.com/quorumcontrol/tupelo-go-sdk/consensus"
+	"github.com/quorumcontrol/tupelo-go-sdk/gossip3/remote"
 )
 
 // This file is an experiment to see if we can use the IPLD
@@ -40,11 +41,11 @@ type IPLDTreeStore struct {
 	keyValueApi datastore.Batching
 }
 
-func NewIPLDTreeStore(blockApi format.DAGService, keyValueApi datastore.Batching) *IPLDTreeStore {
+func NewIPLDTreeStore(blockApi format.DAGService, keyValueApi datastore.Batching, pubsubSystem remote.PubSub) *IPLDTreeStore {
 	return &IPLDTreeStore{
 		blockApi:    blockApi,
 		keyValueApi: keyValueApi,
-		publisher:   actor.EmptyRootContext.Spawn(newPublisherProps()),
+		publisher:   actor.EmptyRootContext.Spawn(newPublisherProps(pubsubSystem)),
 	}
 }
 
@@ -128,7 +129,7 @@ func (ts *IPLDTreeStore) StoreNode(node *cbornode.Node) error {
 		return errors.Wrap(err, "error adding blocks")
 	}
 
-	// actor.EmptyRootContext.Send(ts.publisher, node)
+	actor.EmptyRootContext.Send(ts.publisher, node)
 
 	return err
 }

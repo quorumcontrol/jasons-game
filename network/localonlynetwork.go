@@ -33,15 +33,14 @@ func NewLocalNetwork() Network {
 	bstore := blockstore.NewBlockstore(keystore)
 	bserv := blockservice.New(bstore, offline.Exchange(bstore))
 	dag := merkledag.NewDAGService(bserv)
+	pubsub := remote.NewSimulatedPubSub()
 
-	ipldstore := NewIPLDTreeStore(dag, keystore)
+	ipldstore := NewIPLDTreeStore(dag, keystore, pubsub)
 
 	key, err := crypto.GenerateKey()
 	if err != nil {
 		panic(errors.Wrap(err, "error generating key"))
 	}
-
-	pubsub := remote.NewSimulatedPubSub()
 
 	return &LocalNetwork{
 		key:           key,
