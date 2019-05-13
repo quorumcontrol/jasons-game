@@ -4,6 +4,7 @@ import (
 	"crypto/ecdsa"
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ipfs/go-blockservice"
@@ -61,6 +62,11 @@ func (ln *LocalNetwork) StartDiscovery(_ string) error {
 
 func (ln *LocalNetwork) StopDiscovery(_ string) {
 	//noop
+}
+
+func (ln *LocalNetwork) WaitForDiscovery(ns string, num int, dur time.Duration) error {
+	//noop
+	return nil
 }
 
 func (ln *LocalNetwork) CreateNamedChainTree(name string) (*consensus.SignedChainTree, error) {

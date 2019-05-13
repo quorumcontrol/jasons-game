@@ -22,6 +22,10 @@ import (
 
 var log = logging.Logger("gamenetwork")
 
+var GameBootstrappers = []string{
+	"/ip4/51.158.189.66/tcp/4001/ipfs/QmSWp7tT6hBPAEvDEoz76axX3HHT87vyYN2vEMyiwmcFZk",
+}
+
 type Network interface {
 	CreateNamedChainTree(name string) (*consensus.SignedChainTree, error)
 	GetChainTreeByName(name string) (*consensus.SignedChainTree, error)
@@ -31,6 +35,7 @@ type Network interface {
 	PubSubSystem() remote.PubSub
 	StartDiscovery(string) error
 	StopDiscovery(string)
+	WaitForDiscovery(ns string, num int, dur time.Duration) error
 }
 
 type RemoteNetwork struct {
@@ -67,6 +72,17 @@ func NewRemoteNetwork(ctx context.Context, group *types.NotaryGroup, path string
 	net.ipldp2pHost = ipldNetHost
 	net.pubSubSystem = remote.NewNetworkPubSub(ipldNetHost)
 
+	go func() {
+		_, err := ipldNetHost.Bootstrap(GameBootstrappers)
+		if err != nil {
+			log.Errorf("error bootstrapping ipld host: %v", err)
+		}
+		// _, err = ipldNetHost.Bootstrap(IpfsBootstrappers)
+		// if err != nil {
+		// 	log.Errorf("error bootstrapping ipld host: %v", err)
+		// }
+	}()
+
 	tupeloP2PHost, err := p2p.NewLibP2PHost(ctx, key, 0)
 	if err != nil {
 		return nil, fmt.Errorf("error setting up p2p host: %s", err)
@@ -77,12 +93,8 @@ func NewRemoteNetwork(ctx context.Context, group *types.NotaryGroup, path string
 	if err = tupeloP2PHost.WaitForBootstrap(len(group.Signers), 15*time.Second); err != nil {
 		return nil, err
 	}
-	go func() {
-		_, err := ipldNetHost.Bootstrap(DefaultBootstrappers)
-		if err != nil {
-			log.Errorf("error bootstrapping ipld host: %v", err)
-		}
-	}()
+
+	log.Infof("started tupelo host %s", tupeloP2PHost.Identity())
 
 	remote.NewRouter(tupeloP2PHost)
 	group.SetupAllRemoteActors(&key.PublicKey)
@@ -113,6 +125,10 @@ func (rn *RemoteNetwork) StartDiscovery(ns string) error {
 
 func (rn *RemoteNetwork) StopDiscovery(ns string) {
 	rn.ipldp2pHost.StopDiscovery(ns)
+}
+
+func (rn *RemoteNetwork) WaitForDiscovery(ns string, num int, dur time.Duration) error {
+	return rn.ipldp2pHost.WaitForDiscovery(ns, num, dur)
 }
 
 func (n *RemoteNetwork) getOrCreatePrivateKey() (*ecdsa.PrivateKey, error) {

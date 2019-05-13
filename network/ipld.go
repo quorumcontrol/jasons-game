@@ -3,14 +3,13 @@ package network
 import (
 	"context"
 	"crypto/ecdsa"
-	"encoding/base64"
 	"fmt"
 
+	ipfsconfig "github.com/ipfs/go-ipfs-config"
+	circuit "github.com/libp2p/go-libp2p-circuit"
 	"github.com/quorumcontrol/tupelo-go-sdk/p2p"
 
-	cid "github.com/ipfs/go-cid"
 	"github.com/ipfs/go-datastore"
-	mh "github.com/multiformats/go-multihash"
 )
 
 var addrFilters = []string{
@@ -31,34 +30,24 @@ var addrFilters = []string{
 	"240.0.0.0/4",
 }
 
-const scalewayPeer = "/ip4/51.158.189.66/tcp/4001/ipfs/QmSWp7tT6hBPAEvDEoz76axX3HHT87vyYN2vEMyiwmcFZk"
+var IpfsBootstrappers = append(ipfsconfig.DefaultBootstrapAddresses)
 
-// var DefaultBootstrappers = append(ipfsconfig.DefaultBootstrapAddresses, scalewayPeer)
-var DefaultBootstrappers = []string{scalewayPeer}
+// var DefaultBootstrappers = []string{scalewayPeer}
 
 func NewIPLDClient(ctx context.Context, key *ecdsa.PrivateKey, ds datastore.Batching) (*p2p.LibP2PHost, *p2p.BitswapPeer, error) {
-	cid, _ := nsToCid("jasons-game-tupelo")
-	log.Infof("namespace CID: %s: base64: %s", cid.String(), base64.StdEncoding.EncodeToString([]byte("jasons-game-tupelo")))
 	h, bitPeer, err := p2p.NewHostAndBitSwapPeer(
 		ctx,
 		p2p.WithListenIP("0.0.0.0", 0),
 		p2p.WithKey(key),
 		p2p.WithDatastore(ds),
 		p2p.WithAutoRelay(true),
+		p2p.WithRelayOpts(circuit.OptHop),
 		p2p.WithDiscoveryNamespaces("jasons-game-tupelo"),
 		p2p.WithAddrFilters(addrFilters),
 	)
+	log.Infof("started bitswapper %s", h.Identity())
 	if err != nil {
 		return nil, nil, fmt.Errorf("error creating hosts: %v", err)
 	}
 	return h, bitPeer, err
-}
-
-func nsToCid(ns string) (cid.Cid, error) {
-	h, err := mh.Sum([]byte(ns), mh.SHA2_256, -1)
-	if err != nil {
-		return cid.Undef, err
-	}
-
-	return cid.NewCidV1(cid.Raw, h), nil
 }
