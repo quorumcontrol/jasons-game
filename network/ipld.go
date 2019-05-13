@@ -51,7 +51,6 @@ func NewIPLDClient(ctx context.Context, key *ecdsa.PrivateKey, ds datastore.Batc
 	if err != nil {
 		return nil, nil, fmt.Errorf("error creating hosts: %v", err)
 	}
-	h.Bootstrap(DefaultBootstrappers)
 	return h, bitPeer, err
 }
 

@@ -77,6 +77,12 @@ func NewRemoteNetwork(ctx context.Context, group *types.NotaryGroup, path string
 	if err = tupeloP2PHost.WaitForBootstrap(len(group.Signers), 15*time.Second); err != nil {
 		return nil, err
 	}
+	go func() {
+		_, err := ipldNetHost.Bootstrap(DefaultBootstrappers)
+		if err != nil {
+			log.Errorf("error bootstrapping ipld host: %v", err)
+		}
+	}()
 
 	remote.NewRouter(tupeloP2PHost)
 	group.SetupAllRemoteActors(&key.PublicKey)
