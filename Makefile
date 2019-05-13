@@ -65,8 +65,11 @@ else
 	docker-compose -f docker-compose-dev.yml run --rm --service-ports game
 endif
 
+frontend-build: $(generated) $(jsmodules)
+	cd frontend/jasons-game && ./node_modules/.bin/shadow-cljs release app
+
 frontend-dev: $(generated) $(jsmodules)
-	cd frontend/jasons-game && shadow-cljs watch app
+	cd frontend/jasons-game && ./node_modules/.bin/shadow-clj watch app
 
 $(FIRSTGOPATH)/bin/modvendor:
 	go get -u github.com/goware/modvendor
