@@ -7,7 +7,7 @@ import(
 	"testing"
 	"os"
 	logging "github.com/ipfs/go-log"
-
+	"github.com/quorumcontrol/jasons-game/pb/jasonsgame"
 	"context"
 )
 
@@ -44,6 +44,23 @@ func TestCreateNamedChainTree(t *testing.T) {
 	// just to test it doesn't error here
 	net := newRemoteNetwork(t, ctx, testPath)
 	_,err = net.CreateNamedChainTree("test-create-named-tree")
+	require.Nil(t,err)
+}
+func TestUpdateChainTree(t *testing.T) {
+	ctx,cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	testPath := "/tmp/test-create-named-tree"
+	err := os.MkdirAll(testPath, 0755)
+	require.Nil(t,err)
+		defer os.RemoveAll(testPath)
+
+	// just to test it doesn't error here
+	net := newRemoteNetwork(t, ctx, testPath)
+	tree,err := net.CreateNamedChainTree("test-create-named-tree")
+	require.Nil(t,err)
+
+	_,err = net.UpdateChainTree(tree, "jasons-game/0/0", &jasonsgame.Location{Description: "a new one"})
 	require.Nil(t,err)
 }
 func TestGetChainTreeByName(t *testing.T) {

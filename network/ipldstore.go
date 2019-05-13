@@ -128,7 +128,7 @@ func (ts *IPLDTreeStore) StoreNode(node *cbornode.Node) error {
 		return errors.Wrap(err, "error adding blocks")
 	}
 
-	actor.EmptyRootContext.Send(ts.publisher, node)
+	// actor.EmptyRootContext.Send(ts.publisher, node)
 
 	return err
 }

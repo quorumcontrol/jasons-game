@@ -4,6 +4,8 @@ import (
 	"context"
 	"crypto/ecdsa"
 	"fmt"
+	"os"
+	"strings"
 	"time"
 
 	"github.com/ethereum/go-ethereum/crypto"
@@ -24,6 +26,12 @@ var log = logging.Logger("gamenetwork")
 
 var GameBootstrappers = []string{
 	"/ip4/51.158.189.66/tcp/4001/ipfs/QmSWp7tT6hBPAEvDEoz76axX3HHT87vyYN2vEMyiwmcFZk",
+}
+
+func init() {
+	if nodes, ok := os.LookupEnv("JASON_BOOTSTRAP_NODES"); ok {
+		GameBootstrappers = strings.Split(nodes, ",")
+	}
 }
 
 type Network interface {
