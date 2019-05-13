@@ -76,7 +76,7 @@ func (t *Tupelo) UpdateChainTree(tree *consensus.SignedChainTree, path string, v
 	c.Listen()
 	defer c.Stop()
 
-	log.Debug("UpdateChainTree", "path", path, "value", value)
+	log.Debug("UpdateChainTree", "did", tree.MustId(), "path", path, "value", value)
 
 	transactions := []*chaintree.Transaction{
 		{

@@ -3,6 +3,7 @@ package provider
 import (
 	"context"
 	"crypto/ecdsa"
+	"fmt"
 
 	"github.com/AsynkronIT/protoactor-go/actor"
 	"github.com/ipfs/go-datastore"
@@ -35,8 +36,8 @@ type Provider struct {
 	parentCtx    context.Context
 }
 
-func New(ctx context.Context, key *ecdsa.PrivateKey, ds datastore.Batching) (*Provider, error) {
-	host, peer, err := network.NewIPLDClient(ctx, key, ds)
+func New(ctx context.Context, key *ecdsa.PrivateKey, ds datastore.Batching, opts ...p2p.Option) (*Provider, error) {
+	host, peer, err := network.NewIPLDClient(ctx, key, ds, opts...)
 	if err != nil {
 		return nil, errors.Wrap(err, "error creating ipld client")
 	}
@@ -52,6 +53,8 @@ func New(ctx context.Context, key *ecdsa.PrivateKey, ds datastore.Batching) (*Pr
 }
 
 func (p *Provider) Start() error {
+	fmt.Printf("starting %s\naddresseses:%v\n", p.p2pHost.Identity(), p.p2pHost.Addresses())
+
 	_, err := p.p2pHost.Bootstrap(network.IpfsBootstrappers)
 	if err != nil {
 		log.Errorf("error bootstrapping ipld host: %v", err)
@@ -82,6 +85,7 @@ func (p *Provider) Start() error {
 		sub.Cancel()
 		act.Stop()
 	}()
+	log.Infof("serving a provider now")
 
 	return nil
 

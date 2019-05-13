@@ -3,6 +3,8 @@ version: "3"
 services:
   game:
     build: ./devdocker
+    depends_on:
+      - jason
     command: ["go", "run", "main.go"]
     volumes:
       - .:/app:delegated
@@ -15,10 +17,13 @@ services:
       PPROF_ENABLED: "true"
       GOPATH: /go
       TUPELO_BOOTSTRAP_NODES: /ip4/172.16.239.10/tcp/34001/ipfs/16Uiu2HAm3TGSEKEjagcCojSJeaT5rypaeJMKejijvYSnAjviWwV5
-  
+      JASON_BOOTSTRAP_NODES: /ip4/172.16.239.100/tcp/34001/ipfs/16Uiu2HAmBL6Xz9ichyunCexiqomcHyzVpKKmxAMgUusksBZzzM3K
+
   game2:
     build: ./devdocker
     command: ["go", "run", "main.go"]
+    depends_on:
+      - jason
     volumes:
       - .:/app:delegated
       - ./devdocker/.tmp:/root/.cache:delegated
@@ -30,6 +35,23 @@ services:
       PPROF_ENABLED: "true"
       GOPATH: /go
       TUPELO_BOOTSTRAP_NODES: /ip4/172.16.239.10/tcp/34001/ipfs/16Uiu2HAm3TGSEKEjagcCojSJeaT5rypaeJMKejijvYSnAjviWwV5
+      JASON_BOOTSTRAP_NODES: /ip4/172.16.239.100/tcp/34001/ipfs/16Uiu2HAmBL6Xz9ichyunCexiqomcHyzVpKKmxAMgUusksBZzzM3K
+
+  jason:
+    build: ./devdocker
+    command: ["go", "run", "jason/main.go", "-port=34001"]
+    volumes:
+      - .:/app:delegated
+      - ./devdocker/.tmp:/root/.cache:delegated
+      - ./devdocker/testnetkeys:/app/devdocker/localkeys:delegated
+      - $GOPATH/pkg/mod:/go/pkg/mod:delegated
+      - ./devdocker/jason/private.key:/root/.config/tupelo/jasons-game/private.key
+    environment:
+      PPROF_ENABLED: "true"
+      GOPATH: /go
+    networks:
+      default:
+        ipv4_address: 172.16.239.100
 
   game-testnet:
     build: ./devdocker
@@ -47,15 +69,17 @@ services:
       GOPATH: /go
       TUPELO_BOOTSTRAP_NODES: /ip4/18.196.112.81/tcp/34001/ipfs/16Uiu2HAmJGZXyrrQ9CcAJWh5Q8rNsoi9yK1VT2HANhH2NcqkRmaZ,/ip4/34.231.17.217/tcp/34001/ipfs/16Uiu2HAkxNHzLn5cTpGs7RuTQSTKjtxtT9jGcYa6PousihVzEPc6
 
+
   integration:
     build: ./devdocker
+    depends_on:
+      - jason
     command:
       - go
       - test
       - -v
       - -tags=integration
       - -timeout=5m
-      # - -run=^TestGetChainTreeByName$$
       - ${TEST_PACKAGE-./...}
     volumes:
       - .:/app:delegated
@@ -64,6 +88,7 @@ services:
     environment:
       GOPATH: /go
       TUPELO_BOOTSTRAP_NODES: /ip4/172.16.239.10/tcp/34001/ipfs/16Uiu2HAm3TGSEKEjagcCojSJeaT5rypaeJMKejijvYSnAjviWwV5
+      JASON_BOOTSTRAP_NODES: /ip4/172.16.239.100/tcp/34001/ipfs/16Uiu2HAmBL6Xz9ichyunCexiqomcHyzVpKKmxAMgUusksBZzzM3K
 
 networks:
   default:

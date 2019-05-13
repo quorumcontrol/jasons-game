@@ -57,11 +57,20 @@ func TestUpdateChainTree(t *testing.T) {
 
 	// just to test it doesn't error here
 	net := newRemoteNetwork(t, ctx, testPath)
-	tree,err := net.CreateNamedChainTree("test-create-named-tree")
+
+	tree, err := net.CreateNamedChainTree("home")
+	require.Nil(t,err)
+	tree, err = net.UpdateChainTree(tree, "jasons-game/0/0", &jasonsgame.Location{Description: "hi, welcome"})
+	require.Nil(t,err)
+	tree,err = net.UpdateChainTree(tree, "jasons-game/0/1", &jasonsgame.Location{Description: "north of welcome"})
 	require.Nil(t,err)
 
-	_,err = net.UpdateChainTree(tree, "jasons-game/0/0", &jasonsgame.Location{Description: "a new one"})
+	newTree,err := net.GetChainTreeByName("home")
 	require.Nil(t,err)
+
+	tree, err = net.UpdateChainTree(newTree, "jasons-game/0/0", &jasonsgame.Location{Description: "new"})
+	require.Nil(t,err)
+
 }
 func TestGetChainTreeByName(t *testing.T) {
 	logging.SetLogLevel("gamenetwork", "debug")

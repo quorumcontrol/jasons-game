@@ -108,6 +108,8 @@ func (g *Game) initialize(actorCtx actor.Context) {
 			homeTree.Tip().String()),
 	)
 
+	// g.sendUIMessage(actorCtx, "waiting to join the game!")
+
 	l, err := g.cursor.GetLocation()
 	if err != nil {
 		panic(fmt.Errorf("error getting initial location: %v", err))
