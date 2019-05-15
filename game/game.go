@@ -96,6 +96,8 @@ func (g *Game) initialize(actorCtx actor.Context) {
 		}
 	}
 
+	g.chatSubscriber = actorCtx.Spawn(g.network.PubSubSystem().NewSubscriberProps(topicFromDid(homeTree.MustId())))
+
 	cursor := new(navigator.Cursor).SetChainTree(homeTree)
 	g.cursor = cursor
 
@@ -144,7 +146,7 @@ func (g *Game) handleUserInput(actorCtx actor.Context, input *jasonsgame.UserInp
 			if err != nil {
 				panic(errors.Wrap(err, "error getting current location"))
 			}
-			log.Debugf("publishing chat message")
+			log.Debugf("publishing chat message (topic %s)", topicFromDid(l.Did))
 			g.network.PubSubSystem().Broadcast(topicFromDid(l.Did), &ChatMessage{Message: args})
 		case "shout":
 			g.network.PubSubSystem().Broadcast(shoutChannel, &ShoutMessage{Message: args})
@@ -166,6 +168,19 @@ func (g *Game) handleTipZoom(actorCtx actor.Context, tip string) {
 	if err != nil {
 		g.sendUIMessage(actorCtx, fmt.Sprintf("error getting tip: %v", err))
 		return
+	}
+
+	oldDid := g.cursor.Did()
+
+	if newDid := tree.MustId(); newDid != oldDid {
+		log.Debugf("moving to a new did %s", newDid)
+		g.network.StopDiscovery(oldDid)
+		g.network.StartDiscovery(newDid)
+		if g.chatSubscriber != nil {
+			actorCtx.Stop(g.chatSubscriber)
+		}
+		log.Debugf("subscribing to %s", topicFromDid(newDid))
+		g.chatSubscriber = actorCtx.Spawn(g.network.PubSubSystem().NewSubscriberProps(topicFromDid(newDid)))
 	}
 
 	g.cursor.SetChainTree(tree).SetLocation(0, 0)
@@ -213,7 +228,6 @@ func (g *Game) handleSetDescription(actorCtx actor.Context, desc string) error {
 }
 
 func (g *Game) handleLocationInput(actorCtx actor.Context, cmd *command, args string) {
-	oldDid := g.cursor.Did()
 	switch cmd.name {
 	case "north":
 		g.cursor.North()
@@ -227,14 +241,6 @@ func (g *Game) handleLocationInput(actorCtx actor.Context, cmd *command, args st
 	l, err := g.cursor.GetLocation()
 	if err != nil {
 		g.sendUIMessage(actorCtx, fmt.Sprintf("%s some sort of error happened: %v", cmd.name, err))
-	}
-	if newDid := g.cursor.Did(); newDid != oldDid {
-		g.network.StopDiscovery(oldDid)
-		g.network.StartDiscovery(newDid)
-		if g.chatSubscriber != nil {
-			actorCtx.Stop(g.chatSubscriber)
-		}
-		g.chatSubscriber = actorCtx.Spawn(g.network.PubSubSystem().NewSubscriberProps(topicFromDid(newDid)))
 	}
 
 	g.sendUIMessage(actorCtx, l)
