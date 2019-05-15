@@ -65,6 +65,12 @@ else
 	docker-compose -f docker-compose-dev.yml run --rm --service-ports game
 endif
 
+game2: $(generated) go.mod go.sum
+	docker-compose -f docker-compose-dev.yml run --rm --service-ports game2
+
+jason: $(generated) go.mod go.sum
+	docker-compose -f docker-compose-dev.yml up --force-recreate jason
+
 frontend-build: $(generated) $(jsmodules)
 	cd frontend/jasons-game && ./node_modules/.bin/shadow-cljs release app
 
