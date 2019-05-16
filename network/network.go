@@ -28,7 +28,8 @@ const BlockTopic = "jasons-game-tupelo-world-blocks"
 const ShoutTopic = "jasons-game-shouting-players"
 
 var GameBootstrappers = []string{
-	"/ip4/51.158.189.66/tcp/4001/ipfs/QmSWp7tT6hBPAEvDEoz76axX3HHT87vyYN2vEMyiwmcFZk",
+	"/ip4/18.217.223.67/tcp/34001/ipfs/16Uiu2HAm8KLsnWiMjE2zqwgWqeZEwfJn5U7Qkp36prgoWM3jHqsp",
+	"/ip4/18.221.60.150/tcp/34001/ipfs/16Uiu2HAmBRmhZ3WLyGKAZy843Zk2MQRBKqPVeXpHu8FyEWumGPBN",
 }
 
 func init() {
