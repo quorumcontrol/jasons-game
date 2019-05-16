@@ -195,6 +195,10 @@ func (g *Game) handleUserInput(actorCtx actor.Context, input *jasonsgame.UserInp
 		}
 	case "shout":
 		err = g.network.PubSubSystem().Broadcast(shoutChannel, &ShoutMessage{Message: args})
+	case "open-portal":
+		if err := g.handleOpenPortal(actorCtx, cmd, args); err != nil {
+			g.sendUIMessage(actorCtx, err)
+		}
 	case "create-object":
 		err = g.handleCreateObject(actorCtx, args)
 	case "help":
@@ -367,6 +371,20 @@ func (g *Game) handleLocationInput(actorCtx actor.Context, cmd *command, args st
 	}
 
 	g.sendUIMessage(actorCtx, l)
+}
+
+func (g *Game) handleOpenPortal(actorCtx actor.Context, cmd *command, args string) error {
+	l, err := g.cursor.GetLocation()
+	if err != nil {
+		g.sendUIMessage(actorCtx, err)
+	}
+
+	log.Debugf("Requesting to open portal in location %q", l.String())
+	// Find out whose land we're on
+
+	g.sendUIMessage(actorCtx, l)
+
+	return nil
 }
 
 func (g *Game) handleOpenPortal(actorCtx actor.Context, cmd *command, args string) error {
