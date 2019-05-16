@@ -127,49 +127,92 @@ func (g *Game) handleUserInput(actorCtx actor.Context, input *jasonsgame.UserInp
 	}
 
 	cmd, args := g.commands.findCommand(input.Message)
-	if cmd != nil {
-		log.Debugf("received command %v", cmd.name)
-		switch cmd.name {
-		case "exit":
-			g.sendUIMessage(actorCtx, "exit is unsupported in the browser")
-		case "north", "east", "south", "west":
-			g.handleLocationInput(actorCtx, cmd, args)
-		case "set-description":
-			err := g.handleSetDescription(actorCtx, args)
-			if err != nil {
-				g.sendUIMessage(actorCtx, fmt.Sprintf("error setting description: %v", err))
-			}
-		case "tip-zoom":
-			g.handleTipZoom(actorCtx, args)
-		case "say":
-			l, err := g.cursor.GetLocation()
-			if err != nil {
-				panic(errors.Wrap(err, "error getting current location"))
-			}
-			log.Debugf("publishing chat message (topic %s)", topicFromDid(l.Did))
-			g.network.PubSubSystem().Broadcast(topicFromDid(l.Did), &ChatMessage{Message: args})
-		case "shout":
-			g.network.PubSubSystem().Broadcast(shoutChannel, &ShoutMessage{Message: args})
-		default:
-			log.Error("unhandled but matched command", cmd.name)
-		}
+	if cmd == nil {
+		g.sendUIMessage(actorCtx, "I'm sorry I don't understand.")
 		return
 	}
-	g.sendUIMessage(actorCtx, "I'm sorry I don't understand.")
+
+	var err error
+	log.Debugf("received command %v", cmd.name)
+	switch cmd.name {
+	case "exit":
+		g.sendUIMessage(actorCtx, "exit is unsupported in the browser")
+	case "north", "east", "south", "west":
+		g.handleLocationInput(actorCtx, cmd, args)
+	case "set-description":
+		err = g.handleSetDescription(actorCtx, args)
+	case "tip-zoom":
+		err = g.handleTipZoom(actorCtx, args)
+	case "go-portal":
+		err = g.handleGoThroughPortal(actorCtx)
+	case "build-portal":
+		err = g.handleBuildPortal(actorCtx, args)
+	case "say":
+		l, err := g.cursor.GetLocation()
+		if err == nil {
+			log.Debugf("publishing chat message (topic %s)", topicFromDid(l.Did))
+			g.network.PubSubSystem().Broadcast(topicFromDid(l.Did), &ChatMessage{Message: args})
+		}
+	case "shout":
+		g.network.PubSubSystem().Broadcast(shoutChannel, &ShoutMessage{Message: args})
+	default:
+		log.Error("unhandled but matched command", cmd.name)
+	}
+	if err != nil {
+		g.sendUIMessage(actorCtx, fmt.Sprintf("error with your command: %v", err))
+	}
 }
 
-func (g *Game) handleTipZoom(actorCtx actor.Context, tip string) {
+func (g *Game) handleBuildPortal(actorCtx actor.Context, did string) error {
+	tree := g.cursor.Tree()
+	loc, err := g.cursor.GetLocation()
+	if err != nil {
+		return errors.Wrap(err, "error getting location")
+	}
+	loc.Portal = &jasonsgame.Portal{
+		To: did,
+	}
+
+	err = g.updateLocation(actorCtx, tree, loc)
+	if err != nil {
+		return errors.Wrap(err, "error updating location")
+	}
+
+	g.sendUIMessage(actorCtx, fmt.Sprintf("successfully built a portal to %s", did))
+	return nil
+}
+
+func (g *Game) handleTipZoom(actorCtx actor.Context, tip string) error {
 	tipCid, err := cid.Parse(tip)
 	if err != nil {
 		g.sendUIMessage(actorCtx, fmt.Sprintf("error parsing tip (%s): %v", tip, err))
-		return
+		return errors.Wrap(err, fmt.Sprintf("error parsing tip (%s)", tip))
 	}
 	tree, err := g.network.GetTreeByTip(tipCid)
 	if err != nil {
-		g.sendUIMessage(actorCtx, fmt.Sprintf("error getting tip: %v", err))
-		return
+		return errors.Wrap(err, fmt.Sprintf("error getting tip (%s)", tip))
 	}
 
+	return g.goToTree(actorCtx, tree)
+}
+
+func (g *Game) handleGoThroughPortal(actorCtx actor.Context) error {
+	log.Info("go through portal")
+	l, err := g.cursor.GetLocation()
+	if err != nil {
+		return errors.Wrap(err, "error getting location")
+	}
+	if l.Portal == nil {
+		return fmt.Errorf("there is no portal where you are")
+	}
+	tree, err := g.network.GetTree(l.Portal.To)
+	if err != nil {
+		return errors.Wrap(err, "error getting remote tree")
+	}
+	return g.goToTree(actorCtx, tree)
+}
+
+func (g *Game) goToTree(actorCtx actor.Context, tree *consensus.SignedChainTree) error {
 	oldDid := g.cursor.Did()
 
 	if newDid := tree.MustId(); newDid != oldDid {
@@ -187,44 +230,48 @@ func (g *Game) handleTipZoom(actorCtx actor.Context, tip string) {
 
 	l, err := g.cursor.GetLocation()
 	if err != nil {
-		g.sendUIMessage(actorCtx, fmt.Sprintf("%s some sort of error happened: %v", "set-description", err))
+		return errors.Wrap(err, fmt.Sprintf("error getting location (%s)", tree.MustId()))
 	}
 	g.sendUIMessage(actorCtx, l)
+	return nil
 }
 
 func (g *Game) handleSetDescription(actorCtx actor.Context, desc string) error {
 	log.Info("set description")
 
-	tree, err := g.network.GetChainTreeByName("home")
+	tree := g.cursor.Tree()
+	loc, err := g.cursor.GetLocation()
 	if err != nil {
-		return errors.Wrap(err, "error getting tree by name")
+		return errors.Wrap(err, "error getting location")
 	}
+
+	loc.Description = desc
 
 	log.Infof("updating chain %d,%d to %s", g.cursor.X(), g.cursor.Y(), desc)
 
-	updated, err := g.network.UpdateChainTree(tree, fmt.Sprintf("jasons-game/%d/%d", g.cursor.X(), g.cursor.Y()), &jasonsgame.Location{
-		Description: desc,
-	})
-
+	err = g.updateLocation(actorCtx, tree, loc)
 	if err != nil {
-		g.sendUIMessage(actorCtx, fmt.Sprintf("%s some sort of error happened: %v", "set-description", err))
+		return errors.Wrap(err, "error updating location")
 	}
 
-	if g.cursor.Did() == tree.MustId() {
-		g.cursor.SetChainTree(updated)
-	} else {
-		log.Errorf("chain did was not the same %s %s", g.cursor.Did(), tree.MustId())
-	}
-
-	log.Info("getting cursor location")
 	l, err := g.cursor.GetLocation()
 	if err != nil {
-		g.sendUIMessage(actorCtx, fmt.Sprintf("%s some sort of error happened: %v", "set-description", err))
+		return errors.Wrap(err, "error getting location")
 	}
-	log.Infof("sending location %v", l)
 	g.sendUIMessage(actorCtx, l)
+	return nil
+}
 
-	return err
+func (g *Game) updateLocation(actorCtx actor.Context, tree *consensus.SignedChainTree, location *jasonsgame.Location) error {
+	updated, err := g.network.UpdateChainTree(tree, fmt.Sprintf("jasons-game/%d/%d", g.cursor.X(), g.cursor.Y()), location)
+	if err != nil {
+		return errors.Wrap(err, "error updating chaintree")
+	}
+
+	g.cursor.SetChainTree(updated)
+
+	log.Debug("getting cursor location")
+	return nil
 }
 
 func (g *Game) handleLocationInput(actorCtx actor.Context, cmd *command, args string) {
