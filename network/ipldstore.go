@@ -34,23 +34,34 @@ type TreeStore interface {
 	SaveTreeMetadata(*consensus.SignedChainTree) error
 }
 
+type tipGetter interface {
+	GetTip(did string) (cid.Cid, error)
+}
+
 type IPLDTreeStore struct {
 	TreeStore
 	publisher   *actor.PID
 	blockApi    format.DAGService
 	keyValueApi datastore.Batching
+	tipGetter   tipGetter
 }
 
-func NewIPLDTreeStore(blockApi format.DAGService, keyValueApi datastore.Batching, pubsubSystem remote.PubSub) *IPLDTreeStore {
+func NewIPLDTreeStore(
+	blockApi format.DAGService,
+	keyValueApi datastore.Batching,
+	pubsubSystem remote.PubSub,
+	tipGetter tipGetter,
+) *IPLDTreeStore {
 	return &IPLDTreeStore{
 		blockApi:    blockApi,
 		keyValueApi: keyValueApi,
 		publisher:   actor.EmptyRootContext.Spawn(newPublisherProps(pubsubSystem)),
+		tipGetter:   tipGetter,
 	}
 }
 
 func (ts *IPLDTreeStore) GetTree(did string) (*consensus.SignedChainTree, error) {
-	log.Debugf("get tip")
+	log.Debugf("get local tip")
 	tip, err := ts.getTip(did)
 	if err != nil {
 		return nil, errors.Wrap(err, "error getting tip")
@@ -221,11 +232,19 @@ func objToCbor(obj interface{}) (node *cbornode.Node, err error) {
 }
 
 func (ts *IPLDTreeStore) getTip(did string) (cid.Cid, error) {
-	tip, err := ts.keyValueApi.Get(didStoreKey(did))
+	tipBytes, err := ts.keyValueApi.Get(didStoreKey(did))
 	if err != nil {
+		if err == datastore.ErrNotFound {
+			// if we didn't find it locally, let's go out and find it from the tipGetter (Tupelo)
+			tipCid, err := ts.tipGetter.GetTip(did)
+			if err != nil {
+				return cid.Undef, errors.Wrap(err, "error getting remote tip")
+			}
+			return tipCid, nil
+		}
 		return cid.Undef, errors.Wrap(err, "error getting key")
 	}
-	tipCid, err := cid.Cast(tip)
+	tipCid, err := cid.Cast(tipBytes)
 	if err != nil {
 		return cid.Undef, errors.Wrap(err, "error casting tip")
 	}

@@ -22,6 +22,7 @@ require (
 	github.com/ipfs/go-ipld-format v0.0.1
 	github.com/ipfs/go-log v0.0.1
 	github.com/ipfs/go-merkledag v0.0.3
+	github.com/libp2p/go-libp2p-pubsub v0.0.3
 	github.com/multiformats/go-multihash v0.0.5 // indirect
 	github.com/pkg/errors v0.8.1
 	github.com/quorumcontrol/chaintree v0.0.0-20190426130059-dda329e6bd87
