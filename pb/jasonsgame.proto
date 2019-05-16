@@ -27,6 +27,11 @@ message Location {
     int64 x = 3;
     int64 y = 4;
     string description = 5;
+    Portal portal = 6;
+}
+
+message Portal {
+    string to = 1; // A did
 }
 
 message CommandReceived {
