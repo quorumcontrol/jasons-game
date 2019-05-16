@@ -10,6 +10,7 @@ import (
 	"github.com/ipfs/go-blockservice"
 	cid "github.com/ipfs/go-cid"
 	"github.com/ipfs/go-datastore"
+	dssync "github.com/ipfs/go-datastore/sync"
 	blockstore "github.com/ipfs/go-ipfs-blockstore"
 	offline "github.com/ipfs/go-ipfs-exchange-offline"
 	"github.com/ipfs/go-merkledag"
@@ -34,7 +35,7 @@ type LocalNetwork struct {
 }
 
 func NewLocalNetwork() Network {
-	keystore := datastore.NewMapDatastore()
+	keystore := dssync.MutexWrap(datastore.NewMapDatastore())
 
 	bstore := blockstore.NewBlockstore(keystore)
 	bserv := blockservice.New(bstore, offline.Exchange(bstore))
