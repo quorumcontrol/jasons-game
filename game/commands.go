@@ -20,6 +20,8 @@ var defaultCommandList = commandList{
 	newCommand("name", "call me"),
 	newCommand("set-description", "set description"),
 	newCommand("tip-zoom", "go to tip"),
+	newCommand("go-portal", "go through portal"),
+	newCommand("build-portal", "build portal to"),
 	newCommand("exit", "exit"),
 	newCommand("say", "say"),
 	newCommand("shout", "shout"),
