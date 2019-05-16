@@ -66,7 +66,7 @@ func (p *Provider) Start() error {
 	// subscribe with a noop to shouting - so that we forward it through
 	sub, err := p.p2pHost.GetPubSub().Subscribe(network.ShoutTopic)
 	if err != nil {
-		return errors.Wrap(err, "error subscriging to ShoutTopic")
+		return errors.Wrap(err, "error subscribing to ShoutTopic")
 	}
 
 	// subscribe with the block getter

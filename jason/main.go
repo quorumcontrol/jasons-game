@@ -70,7 +70,7 @@ func main() {
 	}
 	err = p.Start()
 	if err != nil {
-		panic(errors.Wrap(err, "error startingprovider"))
+		panic(errors.Wrap(err, "error starting provider"))
 	}
 
 	<-make(chan struct{})
