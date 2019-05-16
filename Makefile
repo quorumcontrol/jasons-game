@@ -69,7 +69,7 @@ frontend-build: $(generated) $(jsmodules)
 	cd frontend/jasons-game && ./node_modules/.bin/shadow-cljs release app
 
 frontend-dev: $(generated) $(jsmodules)
-	cd frontend/jasons-game && ./node_modules/.bin/shadow-clj watch app
+	cd frontend/jasons-game && ./node_modules/.bin/shadow-cljs watch app
 
 $(FIRSTGOPATH)/bin/modvendor:
 	go get -u github.com/goware/modvendor
