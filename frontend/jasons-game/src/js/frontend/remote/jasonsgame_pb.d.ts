@@ -115,6 +115,11 @@ export class Location extends jspb.Message {
   getDescription(): string;
   setDescription(value: string): void;
 
+  hasPortal(): boolean;
+  clearPortal(): void;
+  getPortal(): Portal | undefined;
+  setPortal(value?: Portal): void;
+
   serializeBinary(): Uint8Array;
   toObject(includeInstance?: boolean): Location.AsObject;
   static toObject(includeInstance: boolean, msg: Location): Location.AsObject;
@@ -132,6 +137,27 @@ export namespace Location {
     x: number,
     y: number,
     description: string,
+    portal?: Portal.AsObject,
+  }
+}
+
+export class Portal extends jspb.Message {
+  getTo(): string;
+  setTo(value: string): void;
+
+  serializeBinary(): Uint8Array;
+  toObject(includeInstance?: boolean): Portal.AsObject;
+  static toObject(includeInstance: boolean, msg: Portal): Portal.AsObject;
+  static extensions: {[key: number]: jspb.ExtensionFieldInfo<jspb.Message>};
+  static extensionsBinary: {[key: number]: jspb.ExtensionFieldBinaryInfo<jspb.Message>};
+  static serializeBinaryToWriter(message: Portal, writer: jspb.BinaryWriter): void;
+  static deserializeBinary(bytes: Uint8Array): Portal;
+  static deserializeBinaryFromReader(message: Portal, reader: jspb.BinaryReader): Portal;
+}
+
+export namespace Portal {
+  export type AsObject = {
+    to: string,
   }
 }
 

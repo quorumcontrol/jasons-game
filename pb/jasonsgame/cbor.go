@@ -8,4 +8,6 @@ import (
 func init() {
 	cbor.RegisterCborType(Location{})
 	typecaster.AddType(Location{})
+	cbor.RegisterCborType(Portal{})
+	typecaster.AddType(Portal{})
 }
