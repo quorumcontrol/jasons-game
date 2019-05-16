@@ -6,9 +6,11 @@ import (
 	"fmt"
 	"io/ioutil"
 	"path/filepath"
+	"strings"
 
 	logging "github.com/ipfs/go-log"
 
+	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/crypto"
 	badger "github.com/ipfs/go-ds-badger"
 	"github.com/pkg/errors"
@@ -42,14 +44,14 @@ func main() {
 		if err != nil {
 			panic(errors.Wrap(err, "error generating key"))
 		}
-		ioutil.WriteFile(fullPath, crypto.FromECDSA(key), 0600)
+		ioutil.WriteFile(fullPath, []byte(hexutil.Encode(crypto.FromECDSA(key))), 0600)
 	}
 	folder = configDirs.QueryFolderContainsFile("private.key")
-	bits, err := folder.ReadFile("private.key")
+	keyHexBytes, err := folder.ReadFile("private.key")
 	if err != nil {
 		panic(errors.Wrap(err, "error reading key"))
 	}
-	key, err := crypto.ToECDSA(bits)
+	key, err := crypto.ToECDSA(hexutil.MustDecode(strings.TrimSpace(string(keyHexBytes))))
 	if err != nil {
 		panic(errors.Wrap(err, "error unmarshaling key"))
 	}
