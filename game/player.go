@@ -4,44 +4,88 @@ import (
 	"fmt"
 	"strings"
 
-	cbor "github.com/ipfs/go-ipld-cbor"
-
+	"github.com/ipfs/go-cid"
+	"github.com/pkg/errors"
 	"github.com/quorumcontrol/chaintree/typecaster"
+	"github.com/quorumcontrol/jasons-game/network"
+	"github.com/quorumcontrol/jasons-game/pb/jasonsgame"
 	"github.com/quorumcontrol/tupelo-go-sdk/consensus"
 )
 
-func init() {
-	cbor.RegisterCborType(PlayerInfo{})
-	typecaster.AddType(PlayerInfo{})
+var playerTreePath = "jasons-game/player"
+
+type PlayerTree struct {
+	tree    *consensus.SignedChainTree
+	player  *jasonsgame.Player
+	network network.Network
+	did     string
+	tip     cid.Cid
 }
 
-type Player struct {
-	tree *consensus.SignedChainTree
-}
-
-func NewPlayer(tree *consensus.SignedChainTree) *Player {
-	return &Player{
-		tree: tree,
+func NewPlayerTree(net network.Network, tree *consensus.SignedChainTree) *PlayerTree {
+	pt := &PlayerTree{
+		network: net,
 	}
+	pt.setTree(tree)
+	return pt
 }
 
-type PlayerInfo struct {
-	Name string
+func (pt *PlayerTree) Did() string {
+	return pt.did
 }
 
-func (p *Player) GetInfo() (*PlayerInfo, error) {
-	pth, remain, err := p.tree.ChainTree.Dag.Resolve(strings.Split("tree/data/jasons-game/player", "/"))
+func (pt *PlayerTree) Tip() cid.Cid {
+	return pt.tree.Tip()
+}
+
+func (pt *PlayerTree) Player() (*jasonsgame.Player, error) {
+	if pt.player == nil {
+		err := pt.refresh()
+		if err != nil {
+			return nil, errors.Wrap(err, "error refreshing from tree")
+		}
+	}
+	return pt.player, nil
+}
+
+func (pt *PlayerTree) SetPlayer(p *jasonsgame.Player) error {
+	tree, err := pt.network.UpdateChainTree(pt.tree, playerTreePath, p)
 	if err != nil {
-		return nil, fmt.Errorf("error resolving: %v", err)
+		return errors.Wrap(err, "error updating tree")
+	}
+	pt.setTree(tree)
+	pt.player = p
+	return nil
+}
+
+func (pt *PlayerTree) SetName(name string) error {
+	p, err := pt.Player()
+	if err != nil {
+		return errors.Wrap(err, "error getting player")
+	}
+	p.Name = name
+	return pt.SetPlayer(p)
+}
+
+func (pt *PlayerTree) setTree(tree *consensus.SignedChainTree) {
+	pt.tree = tree
+	pt.did = tree.MustId()
+}
+
+func (pt *PlayerTree) refresh() error {
+	ret, remain, err := pt.tree.ChainTree.Dag.Resolve(strings.Split("tree/data/"+playerTreePath, "/"))
+	if err != nil {
+		return errors.Wrap(err, "error resolving")
 	}
 	if len(remain) > 0 {
-		return nil, fmt.Errorf("error, path remaining: %v", remain)
+		return fmt.Errorf("error, path remaining: %v", remain)
 	}
 
-	pi := new(PlayerInfo)
-	err = typecaster.ToType(pth, pi)
+	p := new(jasonsgame.Player)
+	err = typecaster.ToType(ret, p)
 	if err != nil {
-		return nil, fmt.Errorf("error casting: %v", err)
+		return errors.Wrap(err, "error casting")
 	}
-	return pi, nil
+	pt.player = p
+	return nil
 }
