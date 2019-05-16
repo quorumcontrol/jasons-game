@@ -24,7 +24,7 @@ type ping struct{}
 type Game struct {
 	ui              *actor.PID
 	network         network.Network
-	player          *Player
+	playerTree      *PlayerTree
 	cursor          *navigator.Cursor
 	commands        commandList
 	messageSequence uint64
@@ -59,27 +59,33 @@ func (g *Game) initialize(actorCtx actor.Context) {
 	actorCtx.Send(g.ui, &ui.SetGame{Game: actorCtx.Self()})
 	g.shoutSubscriber = actorCtx.Spawn(g.network.PubSubSystem().NewSubscriberProps(shoutChannel))
 
-	var playerTree *consensus.SignedChainTree
+	var playerChain *consensus.SignedChainTree
 	var homeTree *consensus.SignedChainTree
 
 	log.Debug("get player", homeTree)
-	playerTree, err := g.network.GetChainTreeByName("player")
+	playerChain, err := g.network.GetChainTreeByName("player")
 	if err != nil {
 		log.Error("error getting player: %v", err)
 		panic(err)
 	}
-	if playerTree == nil {
+	if playerChain == nil {
 		log.Debug("create player", homeTree)
-		playerTree, err = g.network.CreateNamedChainTree("player")
+		playerChain, err = g.network.CreateNamedChainTree("player")
 		if err != nil {
 			log.Error("error creating player: %v", err)
 			panic(err)
 		}
+		g.playerTree = NewPlayerTree(g.network, playerChain)
+
+		g.playerTree.SetPlayer(&jasonsgame.Player{
+			Name: fmt.Sprintf("newb (%s)", playerChain.MustId()),
+		})
+	} else {
+		g.playerTree = NewPlayerTree(g.network, playerChain)
 	}
-	g.player = NewPlayer(playerTree)
 
 	time.AfterFunc(2*time.Second, func() {
-		g.network.PubSubSystem().Broadcast(shoutChannel, &JoinMessage{From: g.player.tree.MustId()})
+		g.network.PubSubSystem().Broadcast(shoutChannel, &JoinMessage{From: g.playerTree.Did()})
 	})
 
 	homeTree, err = g.network.GetChainTreeByName("home")
@@ -104,8 +110,8 @@ func (g *Game) initialize(actorCtx actor.Context) {
 	g.sendUIMessage(
 		actorCtx,
 		fmt.Sprintf("Created Player %s \n( %s )\nHome: %s \n( %s )",
-			playerTree.MustId(),
-			playerTree.Tip().String(),
+			g.playerTree.Did(),
+			g.playerTree.Tip().String(),
 			homeTree.MustId(),
 			homeTree.Tip().String()),
 	)
@@ -155,12 +161,19 @@ func (g *Game) handleUserInput(actorCtx actor.Context, input *jasonsgame.UserInp
 		}
 	case "shout":
 		g.network.PubSubSystem().Broadcast(shoutChannel, &ShoutMessage{Message: args})
+	case "name":
+		err = g.handleName(args)
 	default:
 		log.Error("unhandled but matched command", cmd.name)
 	}
 	if err != nil {
 		g.sendUIMessage(actorCtx, fmt.Sprintf("error with your command: %v", err))
 	}
+}
+
+func (g *Game) handleName(name string) error {
+	log.Debugf("handling set name to %s", name)
+	return g.playerTree.SetName(name)
 }
 
 func (g *Game) handleBuildPortal(actorCtx actor.Context, did string) error {

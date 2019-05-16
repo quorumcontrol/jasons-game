@@ -141,6 +141,26 @@ export namespace Location {
   }
 }
 
+export class Player extends jspb.Message {
+  getName(): string;
+  setName(value: string): void;
+
+  serializeBinary(): Uint8Array;
+  toObject(includeInstance?: boolean): Player.AsObject;
+  static toObject(includeInstance: boolean, msg: Player): Player.AsObject;
+  static extensions: {[key: number]: jspb.ExtensionFieldInfo<jspb.Message>};
+  static extensionsBinary: {[key: number]: jspb.ExtensionFieldBinaryInfo<jspb.Message>};
+  static serializeBinaryToWriter(message: Player, writer: jspb.BinaryWriter): void;
+  static deserializeBinary(bytes: Uint8Array): Player;
+  static deserializeBinaryFromReader(message: Player, reader: jspb.BinaryReader): Player;
+}
+
+export namespace Player {
+  export type AsObject = {
+    name: string,
+  }
+}
+
 export class Portal extends jspb.Message {
   getTo(): string;
   setTo(value: string): void;

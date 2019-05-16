@@ -118,6 +118,7 @@ func (ln *LocalNetwork) GetTreeByTip(tip cid.Cid) (*consensus.SignedChainTree, e
 }
 
 func (ln *LocalNetwork) UpdateChainTree(tree *consensus.SignedChainTree, path string, value interface{}) (*consensus.SignedChainTree, error) {
+	log.Debugf("updating tree %s path: %s value: %v", tree.MustId(), path, value)
 	updated, err := tree.ChainTree.Dag.SetAsLink(append([]string{"tree", "data"}, strings.Split(path, "/")...), value)
 	if err != nil {
 		return nil, errors.Wrap(err, "error setting data")
