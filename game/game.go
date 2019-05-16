@@ -210,11 +210,11 @@ func (g *Game) handleSetDescription(actorCtx actor.Context, desc string) error {
 		g.sendUIMessage(actorCtx, fmt.Sprintf("%s some sort of error happened: %v", "set-description", err))
 	}
 
-	if g.cursor.Did() == tree.MustId() {
-		g.cursor.SetChainTree(updated)
-	} else {
-		log.Errorf("chain did was not the same %s %s", g.cursor.Did(), tree.MustId())
+	if g.cursor.Did() != tree.MustId() {
+		return fmt.Errorf("chain did was not the same %s %s", g.cursor.Did(), tree.MustId())
 	}
+
+	g.cursor.SetChainTree(updated)
 
 	log.Info("getting cursor location")
 	l, err := g.cursor.GetLocation()
@@ -224,7 +224,7 @@ func (g *Game) handleSetDescription(actorCtx actor.Context, desc string) error {
 	log.Infof("sending location %v", l)
 	g.sendUIMessage(actorCtx, l)
 
-	return err
+	return nil
 }
 
 func (g *Game) handleLocationInput(actorCtx actor.Context, cmd *command, args string) {
