@@ -41,8 +41,8 @@ func init() {
 type Network interface {
 	CreateNamedChainTree(name string) (*consensus.SignedChainTree, error)
 	GetChainTreeByName(name string) (*consensus.SignedChainTree, error)
-	GetRemoteTree(did string) (*consensus.SignedChainTree, error)
 	GetTreeByTip(tip cid.Cid) (*consensus.SignedChainTree, error)
+	GetTree(did string) (*consensus.SignedChainTree, error)
 	UpdateChainTree(tree *consensus.SignedChainTree, path string, value interface{}) (*consensus.SignedChainTree, error)
 	PubSubSystem() remote.PubSub
 	StartDiscovery(string) error
@@ -111,18 +111,18 @@ func NewRemoteNetwork(ctx context.Context, group *types.NotaryGroup, path string
 	remote.NewRouter(tupeloP2PHost)
 	group.SetupAllRemoteActors(&key.PublicKey)
 
-	store := NewIPLDTreeStore(lite, ds, net.pubSubSystem)
-	net.TreeStore = store
-
 	tupeloPubSub := remote.NewNetworkPubSub(tupeloP2PHost)
 
 	tup := &Tupelo{
 		key:          key,
-		Store:        store,
 		NotaryGroup:  group,
 		PubSubSystem: tupeloPubSub,
 	}
 	net.Tupelo = tup
+
+	store := NewIPLDTreeStore(lite, ds, net.pubSubSystem, tup)
+	net.TreeStore = store
+	tup.Store = store
 
 	return net, nil
 }
@@ -203,12 +203,8 @@ func (n *RemoteNetwork) GetChainTreeByName(name string) (*consensus.SignedChainT
 	return nil, errors.Wrap(err, "error getting tree")
 }
 
-func (n *RemoteNetwork) GetRemoteTree(did string) (*consensus.SignedChainTree, error) {
-	tip, err := n.Tupelo.GetTip(did)
-	if err != nil {
-		return nil, errors.Wrap(err, "error getting tip")
-	}
-	return n.GetTreeByTip(tip)
+func (n *RemoteNetwork) GetTree(did string) (*consensus.SignedChainTree, error) {
+	return n.TreeStore.GetTree(did)
 }
 
 func (n *RemoteNetwork) GetTreeByTip(tip cid.Cid) (*consensus.SignedChainTree, error) {

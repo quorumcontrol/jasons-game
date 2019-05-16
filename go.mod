@@ -24,6 +24,7 @@ require (
 	github.com/ipfs/go-merkledag v0.0.3
 	github.com/libp2p/go-libp2p v0.0.21
 	github.com/libp2p/go-libp2p-connmgr v0.0.3
+	github.com/libp2p/go-libp2p-pubsub v0.0.3
 	github.com/multiformats/go-multihash v0.0.5 // indirect
 	github.com/pkg/errors v0.8.1
 	github.com/quorumcontrol/chaintree v0.0.0-20190515172607-6a3407e067bd
