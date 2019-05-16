@@ -62,9 +62,19 @@ func NewIPLDTreeStore(
 
 func (ts *IPLDTreeStore) GetTree(did string) (*consensus.SignedChainTree, error) {
 	log.Debugf("get local tip")
-	tip, err := ts.getTip(did)
+	var remote bool
+	tip, err := ts.getLocalTip(did)
 	if err != nil {
-		return nil, errors.Wrap(err, "error getting tip")
+		return nil, errors.Wrap(err, "error getting local tip")
+	}
+
+	if tip.Equals(cid.Undef) {
+		remote = true
+		// if we didn't find it locally, let's go out and find it from the tipGetter (Tupelo)
+		tip, err = ts.getRemoteTip(did)
+		if err != nil {
+			return nil, errors.Wrap(err, "error getting remote tip")
+		}
 	}
 	log.Debugf("new dag")
 
@@ -77,15 +87,20 @@ func (ts *IPLDTreeStore) GetTree(did string) (*consensus.SignedChainTree, error)
 	}
 	log.Debugf("get sigs")
 
-	sigs, err := ts.getSignatures(did)
-	if err != nil {
-		return nil, errors.Wrap(err, "error getting signatures")
+	signedTree := &consensus.SignedChainTree{
+		ChainTree: tree,
 	}
 
-	return &consensus.SignedChainTree{
-		ChainTree:  tree,
-		Signatures: sigs,
-	}, nil
+	// TODO: support marshaling the remote signatures here
+	if !remote {
+		sigs, err := ts.getSignatures(did)
+		if err != nil {
+			return nil, errors.Wrap(err, "error getting signatures")
+		}
+		signedTree.Signatures = sigs
+	}
+
+	return signedTree, nil
 }
 
 func (ts *IPLDTreeStore) SaveTreeMetadata(tree *consensus.SignedChainTree) error {
@@ -231,22 +246,25 @@ func objToCbor(obj interface{}) (node *cbornode.Node, err error) {
 	return
 }
 
-func (ts *IPLDTreeStore) getTip(did string) (cid.Cid, error) {
+func (ts *IPLDTreeStore) getLocalTip(did string) (cid.Cid, error) {
 	tipBytes, err := ts.keyValueApi.Get(didStoreKey(did))
 	if err != nil {
 		if err == datastore.ErrNotFound {
-			// if we didn't find it locally, let's go out and find it from the tipGetter (Tupelo)
-			tipCid, err := ts.tipGetter.GetTip(did)
-			if err != nil {
-				return cid.Undef, errors.Wrap(err, "error getting remote tip")
-			}
-			return tipCid, nil
+			return cid.Undef, nil
 		}
 		return cid.Undef, errors.Wrap(err, "error getting key")
 	}
 	tipCid, err := cid.Cast(tipBytes)
 	if err != nil {
 		return cid.Undef, errors.Wrap(err, "error casting tip")
+	}
+	return tipCid, nil
+}
+
+func (ts *IPLDTreeStore) getRemoteTip(did string) (cid.Cid, error) {
+	tipCid, err := ts.tipGetter.GetTip(did)
+	if err != nil {
+		return cid.Undef, errors.Wrap(err, "error getting remote tip")
 	}
 	return tipCid, nil
 }
