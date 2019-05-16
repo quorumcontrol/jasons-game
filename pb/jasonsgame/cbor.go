@@ -10,4 +10,6 @@ func init() {
 	typecaster.AddType(Location{})
 	cbor.RegisterCborType(Portal{})
 	typecaster.AddType(Portal{})
+	cbor.RegisterCborType(Player{})
+	typecaster.AddType(Player{})
 }
