@@ -22,7 +22,7 @@ import (
 func mustSetLogLevel(name, level string) {
 	err := logging.SetLogLevel(name, level)
 	if err != nil {
-		panic(errors.Wrap(err, "error setting log level"))
+		panic(errors.Wrap(err, fmt.Sprintf("error setting log level (%s %s)", name, level)))
 	}
 }
 
@@ -49,11 +49,14 @@ func main() {
 
 	mustSetLogLevel("*", "INFO")
 	mustSetLogLevel("swarm2", "error")
+	mustSetLogLevel("pubsub", "error")
 	mustSetLogLevel("relay", "error")
-	mustSetLogLevel("autonat", "error")
+	mustSetLogLevel("autonat", "info")
+	mustSetLogLevel("dht", "error")
 	mustSetLogLevel("uiserver", "debug")
 	mustSetLogLevel("game", "debug")
 	mustSetLogLevel("gameserver", "debug")
+	mustSetLogLevel("gamenetwork", "debug")
 
 	port := 8080
 	grpcServer := grpc.NewServer()
@@ -76,6 +79,8 @@ func main() {
 		MaxHeaderBytes: 1 << 20,
 	}
 
+	fs := http.FileServer(http.Dir("frontend/jasons-game/public"))
+
 	serv.Handler = http.HandlerFunc(func(resp http.ResponseWriter, req *http.Request) {
 		if wrappedGrpc.IsGrpcWebRequest(req) {
 			log.Printf("grpc request")
@@ -93,8 +98,7 @@ func main() {
 			return
 		}
 
-		//TODO: this is a good place to stick in the UI
-		log.Printf("unkown route: %v", req)
+		fs.ServeHTTP(resp, req)
 
 	})
 

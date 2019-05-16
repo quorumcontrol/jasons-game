@@ -4,6 +4,8 @@ import (
 	"context"
 	"crypto/ecdsa"
 	"fmt"
+	"os"
+	"strings"
 	"time"
 
 	"github.com/ethereum/go-ethereum/crypto"
@@ -14,7 +16,6 @@ import (
 	"github.com/pkg/errors"
 	"github.com/quorumcontrol/chaintree/chaintree"
 	"github.com/quorumcontrol/chaintree/dag"
-	ipfslite "github.com/quorumcontrol/jasons-game/ipfslite"
 	"github.com/quorumcontrol/tupelo-go-sdk/consensus"
 	"github.com/quorumcontrol/tupelo-go-sdk/gossip3/remote"
 	"github.com/quorumcontrol/tupelo-go-sdk/gossip3/types"
@@ -23,19 +24,38 @@ import (
 
 var log = logging.Logger("gamenetwork")
 
+const BlockTopic = "jasons-game-tupelo-world-blocks"
+const ShoutTopic = "jasons-game-shouting-players"
+
+var GameBootstrappers = []string{
+	"/ip4/51.158.189.66/tcp/4001/ipfs/QmSWp7tT6hBPAEvDEoz76axX3HHT87vyYN2vEMyiwmcFZk",
+}
+
+func init() {
+	if nodes, ok := os.LookupEnv("JASON_BOOTSTRAP_NODES"); ok {
+		GameBootstrappers = strings.Split(nodes, ",")
+	}
+}
+
 type Network interface {
 	CreateNamedChainTree(name string) (*consensus.SignedChainTree, error)
 	GetChainTreeByName(name string) (*consensus.SignedChainTree, error)
 	GetRemoteTree(did string) (*consensus.SignedChainTree, error)
 	GetTreeByTip(tip cid.Cid) (*consensus.SignedChainTree, error)
 	UpdateChainTree(tree *consensus.SignedChainTree, path string, value interface{}) (*consensus.SignedChainTree, error)
+	PubSubSystem() remote.PubSub
+	StartDiscovery(string) error
+	StopDiscovery(string)
+	WaitForDiscovery(ns string, num int, dur time.Duration) error
 }
 
 type RemoteNetwork struct {
 	Tupelo        *Tupelo
-	Ipld          *ipfslite.Peer
+	Ipld          *p2p.BitswapPeer
 	KeyValueStore datastore.Batching
 	TreeStore     TreeStore
+	pubSubSystem  remote.PubSub
+	ipldp2pHost   *p2p.LibP2PHost
 }
 
 func NewRemoteNetwork(ctx context.Context, group *types.NotaryGroup, path string) (Network, error) {
@@ -49,46 +69,77 @@ func NewRemoteNetwork(ctx context.Context, group *types.NotaryGroup, path string
 		KeyValueStore: ds,
 	}
 
-	lite, err := NewIPLDClient(ctx, ds)
-	if err != nil {
-		return nil, errors.Wrap(err, "error creating IPLD client")
-	}
-	net.Ipld = lite
-
 	// TODO: keep the keys in a separate KeyStore
 	key, err := net.getOrCreatePrivateKey()
 	if err != nil {
 		return nil, errors.Wrap(err, "error getting private key")
 	}
 
-	p2pHost, err := p2p.NewLibP2PHost(ctx, key, 0)
+	ipldNetHost, lite, err := NewIPLDClient(ctx, key, ds)
+	if err != nil {
+		return nil, errors.Wrap(err, "error creating IPLD client")
+	}
+	net.Ipld = lite
+	net.ipldp2pHost = ipldNetHost
+	net.pubSubSystem = remote.NewNetworkPubSub(ipldNetHost)
+
+	go func() {
+		_, err := ipldNetHost.Bootstrap(GameBootstrappers)
+		if err != nil {
+			log.Errorf("error bootstrapping ipld host: %v", err)
+		}
+		// _, err = ipldNetHost.Bootstrap(IpfsBootstrappers)
+		// if err != nil {
+		// 	log.Errorf("error bootstrapping ipld host: %v", err)
+		// }
+	}()
+
+	tupeloP2PHost, err := p2p.NewLibP2PHost(ctx, key, 0)
 	if err != nil {
 		return nil, fmt.Errorf("error setting up p2p host: %s", err)
 	}
-	if _, err = p2pHost.Bootstrap(p2p.BootstrapNodes()); err != nil {
+	if _, err = tupeloP2PHost.Bootstrap(p2p.BootstrapNodes()); err != nil {
 		return nil, err
 	}
-	if err = p2pHost.WaitForBootstrap(len(group.Signers), 15*time.Second); err != nil {
+	if err = tupeloP2PHost.WaitForBootstrap(len(group.Signers), 15*time.Second); err != nil {
 		return nil, err
 	}
 
-	remote.NewRouter(p2pHost)
+	log.Infof("started tupelo host %s", tupeloP2PHost.Identity())
+
+	remote.NewRouter(tupeloP2PHost)
 	group.SetupAllRemoteActors(&key.PublicKey)
 
-	store := NewIPLDTreeStore(lite, ds)
+	store := NewIPLDTreeStore(lite, ds, net.pubSubSystem)
 	net.TreeStore = store
 
-	pubsub := remote.NewNetworkPubSub(p2pHost)
+	tupeloPubSub := remote.NewNetworkPubSub(tupeloP2PHost)
 
 	tup := &Tupelo{
 		key:          key,
 		Store:        store,
 		NotaryGroup:  group,
-		PubSubSystem: pubsub,
+		PubSubSystem: tupeloPubSub,
 	}
 	net.Tupelo = tup
 
 	return net, nil
+}
+
+func (rn *RemoteNetwork) PubSubSystem() remote.PubSub {
+	return rn.pubSubSystem
+}
+
+func (rn *RemoteNetwork) StartDiscovery(ns string) error {
+	return rn.ipldp2pHost.StartDiscovery(ns)
+}
+
+func (rn *RemoteNetwork) StopDiscovery(ns string) {
+	rn.ipldp2pHost.StopDiscovery(ns)
+}
+
+func (rn *RemoteNetwork) WaitForDiscovery(ns string, num int, dur time.Duration) error {
+	return rn.ipldp2pHost.WaitForDiscovery(ns, num, dur)
 }
 
 func (n *RemoteNetwork) getOrCreatePrivateKey() (*ecdsa.PrivateKey, error) {
@@ -139,6 +190,7 @@ func (n *RemoteNetwork) CreateNamedChainTree(name string) (*consensus.SignedChai
 }
 
 func (n *RemoteNetwork) GetChainTreeByName(name string) (*consensus.SignedChainTree, error) {
+	log.Debugf("getchaintree by name")
 	did, err := n.KeyValueStore.Get(datastore.NewKey("-n-" + name))
 	if err == nil {
 		return n.TreeStore.GetTree(string(did))

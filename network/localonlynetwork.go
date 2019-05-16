@@ -4,6 +4,7 @@ import (
 	"crypto/ecdsa"
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ipfs/go-blockservice"
@@ -14,6 +15,7 @@ import (
 	"github.com/ipfs/go-merkledag"
 	"github.com/pkg/errors"
 	"github.com/quorumcontrol/tupelo-go-sdk/consensus"
+	"github.com/quorumcontrol/tupelo-go-sdk/gossip3/remote"
 )
 
 // LocalNetwork implements the Network interface but doesn't require
@@ -22,6 +24,7 @@ type LocalNetwork struct {
 	key           *ecdsa.PrivateKey
 	KeyValueStore datastore.Batching
 	TreeStore     TreeStore
+	pubSubSystem  remote.PubSub
 }
 
 func NewLocalNetwork() Network {
@@ -30,8 +33,9 @@ func NewLocalNetwork() Network {
 	bstore := blockstore.NewBlockstore(keystore)
 	bserv := blockservice.New(bstore, offline.Exchange(bstore))
 	dag := merkledag.NewDAGService(bserv)
+	pubsub := remote.NewSimulatedPubSub()
 
-	ipldstore := NewIPLDTreeStore(dag, keystore)
+	ipldstore := NewIPLDTreeStore(dag, keystore, pubsub)
 
 	key, err := crypto.GenerateKey()
 	if err != nil {
@@ -42,7 +46,26 @@ func NewLocalNetwork() Network {
 		key:           key,
 		KeyValueStore: keystore,
 		TreeStore:     ipldstore,
+		pubSubSystem:  pubsub,
 	}
+}
+
+func (ln *LocalNetwork) PubSubSystem() remote.PubSub {
+	return ln.pubSubSystem
+}
+
+func (ln *LocalNetwork) StartDiscovery(_ string) error {
+	//noop
+	return nil
+}
+
+func (ln *LocalNetwork) StopDiscovery(_ string) {
+	//noop
+}
+
+func (ln *LocalNetwork) WaitForDiscovery(ns string, num int, dur time.Duration) error {
+	//noop
+	return nil
 }
 
 func (ln *LocalNetwork) CreateNamedChainTree(name string) (*consensus.SignedChainTree, error) {

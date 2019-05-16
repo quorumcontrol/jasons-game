@@ -15,6 +15,7 @@ import (
 	"github.com/quorumcontrol/chaintree/safewrap"
 	"github.com/quorumcontrol/jasons-game/pb/jasonsgame"
 	"github.com/quorumcontrol/tupelo-go-sdk/consensus"
+	"github.com/quorumcontrol/tupelo-go-sdk/gossip3/remote"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -25,8 +26,9 @@ func TestPublicTreeStore(t *testing.T) {
 	bstore := blockstore.NewBlockstore(keystore)
 	bserv := blockservice.New(bstore, offline.Exchange(bstore))
 	dag := merkledag.NewDAGService(bserv)
+	pubsub := remote.NewSimulatedPubSub()
 
-	ipldstore := NewIPLDTreeStore(dag, keystore)
+	ipldstore := NewIPLDTreeStore(dag, keystore, pubsub)
 	SubtestAll(t, ipldstore)
 	SubtestTreeStore(t, ipldstore)
 }
