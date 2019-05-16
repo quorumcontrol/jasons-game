@@ -6,6 +6,7 @@ import (
 	"fmt"
 
 	ipfsconfig "github.com/ipfs/go-ipfs-config"
+	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	"github.com/quorumcontrol/tupelo-go-sdk/p2p"
 
 	"github.com/ipfs/go-datastore"
@@ -41,6 +42,7 @@ func NewIPLDClient(ctx context.Context, key *ecdsa.PrivateKey, ds datastore.Batc
 		p2p.WithAutoRelay(true),
 		p2p.WithDiscoveryNamespaces("jasons-game-tupelo"),
 		p2p.WithAddrFilters(addrFilters),
+		p2p.WithPubSubOptions(pubsub.WithStrictSignatureVerification(false), pubsub.WithMessageSigning(true)),
 	}, addlOpts...)
 
 	h, bitPeer, err := p2p.NewHostAndBitSwapPeer(
