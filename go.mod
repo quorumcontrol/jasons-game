@@ -26,10 +26,12 @@ require (
 	github.com/pkg/errors v0.8.1
 	github.com/quorumcontrol/chaintree v0.0.0-20190426130059-dda329e6bd87
 	github.com/quorumcontrol/storage v1.1.2
-	github.com/quorumcontrol/tupelo-go-sdk v0.2.1-0.20190501192947-444f1691a874475ef66c36b2e6b53ccc4794ea0d
+	github.com/quorumcontrol/tupelo-go-sdk v0.2.1-0.20190501192947-4fb42cc37c2ab97828b3492d08d2a123d73a781f
 	github.com/shibukawa/configdir v0.0.0-20170330084843-e180dbdc8da0
 	github.com/stretchr/testify v1.3.0
 	github.com/tinylib/msgp v1.1.0
 	golang.org/x/sync v0.0.0-20190423024810-112230192c58 // indirect
 	google.golang.org/grpc v1.20.0
 )
+
+replace github.com/libp2p/go-libp2p-pubsub v0.0.3 => github.com/quorumcontrol/go-libp2p-pubsub v0.0.0-20190515123400-58d894b144ff864d212cf4b13c42e8fdfe783aba
