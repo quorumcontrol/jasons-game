@@ -23,7 +23,9 @@ func main() {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	logging.SetLogLevel("*", "info")
+	logging.SetLogLevel("*", "warning")
+	logging.SetLogLevel("pubsub", "error")
+	logging.SetLogLevel("jasonblocks", "debug")
 
 	configDirs := configdir.New("tupelo", "jasons-game")
 	folders := configDirs.QueryFolders(configdir.Global)

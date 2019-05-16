@@ -52,5 +52,6 @@ func (g *getter) Receive(aCtx actor.Context) {
 		if err != nil {
 			log.Errorf("error getting block: %v", err)
 		}
+		log.Debugf("success %s", id.String())
 	}
 }
