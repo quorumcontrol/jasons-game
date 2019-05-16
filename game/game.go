@@ -186,6 +186,10 @@ func (g *Game) handleUserInput(actorCtx actor.Context, input *jasonsgame.UserInp
 		}
 	case "name":
 		err = g.handleName(args)
+	case "open-portal":
+		if err := g.handleOpenPortal(actorCtx, cmd, args); err != nil {
+			g.sendUIMessage(actorCtx, err)
+		}
 	default:
 		log.Error("unhandled but matched command", cmd.name)
 	}
@@ -331,6 +335,20 @@ func (g *Game) handleLocationInput(actorCtx actor.Context, cmd *command, args st
 	}
 
 	g.sendUIMessage(actorCtx, l)
+}
+
+func (g *Game) handleOpenPortal(actorCtx actor.Context, cmd *command, args string) error {
+	l, err := g.cursor.GetLocation()
+	if err != nil {
+		g.sendUIMessage(actorCtx, err)
+	}
+
+	log.Debugf("Requesting to open portal in location %q", l.String())
+	// Find out whose land we're on
+
+	g.sendUIMessage(actorCtx, l)
+	
+	return nil
 }
 
 func (g *Game) handleCreateObject(actorCtx actor.Context, args string) error {
