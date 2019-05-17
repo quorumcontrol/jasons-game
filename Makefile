@@ -88,4 +88,4 @@ clean:
 	go clean ./...
 	rm -rf vendor
 
-.PHONY: all build test integration-test localnet clean lint game-server
+.PHONY: all build test integration-test localnet clean lint game-server jason game2
