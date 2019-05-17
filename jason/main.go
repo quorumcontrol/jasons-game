@@ -5,6 +5,7 @@ import (
 	"flag"
 	"fmt"
 	"io/ioutil"
+	"os"
 	"path/filepath"
 	"strings"
 
@@ -68,7 +69,15 @@ func main() {
 
 	fmt.Printf("ip %s port %d\n", *ip, *port)
 
-	p, err := provider.New(ctx, key, ds, p2p.WithListenIP(*ip, *port))
+	p2popts := []p2p.Option{
+		p2p.WithListenIP(*ip, *port),
+	}
+
+	if publicIP, ok := os.LookupEnv("JASON_PUBLIC_IP"); ok {
+		p2popts = append(p2popts, p2p.WithExternalIP(publicIP, *port))
+	}
+
+	p, err := provider.New(ctx, key, ds, p2popts...)
 	if err != nil {
 		panic(errors.Wrap(err, "error creating provider"))
 	}
