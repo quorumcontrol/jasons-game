@@ -24,6 +24,10 @@ import (
 
 var log = logging.Logger("jason")
 
+const minConnections = 200
+const maxConnections = 7372
+const connectionGracePeriod = 20 * time.Second
+
 func main() {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
@@ -70,7 +74,7 @@ func main() {
 	flag.Parse()
 	fmt.Printf("ip %s port %d\n", *ip, *port)
 
-	cm := connmgr.NewConnManager(200, 900, 20*time.Second)
+	cm := connmgr.NewConnManager(minConnections, maxConnections, connectionGracePeriod)
 
 	p2pOpts := []p2p.Option{
 		p2p.WithListenIP(*ip, *port),
