@@ -24,8 +24,8 @@ import (
 
 var log = logging.Logger("jason")
 
-const minConnections = 200
-const maxConnections = 7372
+const minConnections = 4915 // 60% of 8192 ulimit
+const maxConnections = 7372 // 90% of 8192 ulimit
 const connectionGracePeriod = 20 * time.Second
 
 func main() {
