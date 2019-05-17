@@ -8,6 +8,7 @@ func init() {
 	messages.RegisterMessage(&ChatMessage{})
 	messages.RegisterMessage(&ShoutMessage{})
 	messages.RegisterMessage(&JoinMessage{})
+	messages.RegisterMessage(&OpenPortalMessage{})
 }
 
 type ChatMessage struct {
@@ -34,4 +35,14 @@ type JoinMessage struct {
 
 func (cm *JoinMessage) TypeCode() int8 {
 	return -102
+}
+
+type OpenPortalMessage struct {
+	From      string
+	LocationX int
+	LocationY int
+}
+
+func (cm *OpenPortalMessage) TypeCode() int8 {
+	return -103
 }

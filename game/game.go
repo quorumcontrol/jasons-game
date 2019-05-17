@@ -2,6 +2,7 @@ package game
 
 import (
 	"fmt"
+	"strconv"
 	"strings"
 	"time"
 
@@ -53,6 +54,8 @@ func (g *Game) Receive(actorCtx actor.Context) {
 		g.handleUserInput(actorCtx, msg)
 	case *ChatMessage, *ShoutMessage, *JoinMessage:
 		g.sendUIMessage(actorCtx, msg)
+	case *OpenPortalMessage:
+		g.handleOpenPortalMessage(actorCtx, msg)
 	case *ping:
 		actorCtx.Respond(true)
 	}
@@ -188,7 +191,7 @@ func (g *Game) handleUserInput(actorCtx actor.Context, input *jasonsgame.UserInp
 		err = g.handleName(args)
 	case "open-portal":
 		if err := g.handleOpenPortal(actorCtx, cmd, args); err != nil {
-			g.sendUIMessage(actorCtx, err)
+			log.Errorf("g.handleOpenPortal failed: %s", err)
 		}
 	default:
 		log.Error("unhandled but matched command", cmd.name)
@@ -338,15 +341,48 @@ func (g *Game) handleLocationInput(actorCtx actor.Context, cmd *command, args st
 }
 
 func (g *Game) handleOpenPortal(actorCtx actor.Context, cmd *command, args string) error {
-	l, err := g.cursor.GetLocation()
-	if err != nil {
-		g.sendUIMessage(actorCtx, err)
+	a := strings.Split(args, " ")
+	if len(a) != 2 {
+		g.sendUIMessage(actorCtx, "2 arguments required")
+		return nil
 	}
 
-	log.Debugf("Requesting to open portal in location %q", l.String())
-	// Find out whose land we're on
+	land := a[0]
+	loc := a[1]
+	log.Debugf("Requesting to open portal in land %q, location %q", land, loc)
+	locArr := strings.Split(loc, ",")
+	if len(locArr) != 2 {
+		g.sendUIMessage(actorCtx, "You must specify the location as x,y")
+		return nil
+	}
+	x, err := strconv.Atoi(locArr[0])
+	if err != nil {
+		g.sendUIMessage(actorCtx, "X coordinate must be numeric")
+		return nil
+	}
+	y, err := strconv.Atoi(locArr[1])
+	if err != nil {
+		g.sendUIMessage(actorCtx, "Y coordinate must be numeric")
+		return nil
+	}
 
-	g.sendUIMessage(actorCtx, l)
+	playerId, err := g.player.tree.Id()
+	if err != nil {
+		log.Errorf("failed getting player ID: %s", err)
+		return err
+	}
+	if err := g.network.PubSubSystem().Broadcast(topicFromDid(land), &OpenPortalMessage{
+		From:      playerId,
+		LocationX: x,
+		LocationY: y,
+	}); err != nil {
+		log.Errorf("failed to broadcast OpenPortalMessage: %s", err)
+		return err
+	}
+	// Send/Ack cycle
+	// Send message, receiver acks the message (signing the payload)
+
+	g.sendUIMessage(actorCtx, fmt.Sprintf("Requested to open portal on land %s", land))
 	
 	return nil
 }
@@ -396,4 +432,9 @@ func (g *Game) sendUIMessage(actorCtx actor.Context, mesgInter interface{}) {
 	}
 	actorCtx.Send(g.ui, msgToUser)
 	g.messageSequence++
+}
+
+func (g *Game) handleOpenPortalMessage(actorCtx actor.Context, msg *OpenPortalMessage) {
+	g.sendUIMessage(actorCtx, fmt.Sprintf("Player %s wants to open a portal in your land",
+		msg.From))
 }

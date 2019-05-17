@@ -238,6 +238,159 @@ func (z JoinMessage) Msgsize() (s int) {
 }
 
 // DecodeMsg implements msgp.Decodable
+func (z *OpenPortalMessage) DecodeMsg(dc *msgp.Reader) (err error) {
+	var field []byte
+	_ = field
+	var zb0001 uint32
+	zb0001, err = dc.ReadMapHeader()
+	if err != nil {
+		err = msgp.WrapError(err)
+		return
+	}
+	for zb0001 > 0 {
+		zb0001--
+		field, err = dc.ReadMapKeyPtr()
+		if err != nil {
+			err = msgp.WrapError(err)
+			return
+		}
+		switch msgp.UnsafeString(field) {
+		case "From":
+			z.From, err = dc.ReadString()
+			if err != nil {
+				err = msgp.WrapError(err, "From")
+				return
+			}
+		case "LocationX":
+			z.LocationX, err = dc.ReadInt()
+			if err != nil {
+				err = msgp.WrapError(err, "LocationX")
+				return
+			}
+		case "LocationY":
+			z.LocationY, err = dc.ReadInt()
+			if err != nil {
+				err = msgp.WrapError(err, "LocationY")
+				return
+			}
+		default:
+			err = dc.Skip()
+			if err != nil {
+				err = msgp.WrapError(err)
+				return
+			}
+		}
+	}
+	return
+}
+
+// EncodeMsg implements msgp.Encodable
+func (z OpenPortalMessage) EncodeMsg(en *msgp.Writer) (err error) {
+	// map header, size 3
+	// write "From"
+	err = en.Append(0x83, 0xa4, 0x46, 0x72, 0x6f, 0x6d)
+	if err != nil {
+		return
+	}
+	err = en.WriteString(z.From)
+	if err != nil {
+		err = msgp.WrapError(err, "From")
+		return
+	}
+	// write "LocationX"
+	err = en.Append(0xa9, 0x4c, 0x6f, 0x63, 0x61, 0x74, 0x69, 0x6f, 0x6e, 0x58)
+	if err != nil {
+		return
+	}
+	err = en.WriteInt(z.LocationX)
+	if err != nil {
+		err = msgp.WrapError(err, "LocationX")
+		return
+	}
+	// write "LocationY"
+	err = en.Append(0xa9, 0x4c, 0x6f, 0x63, 0x61, 0x74, 0x69, 0x6f, 0x6e, 0x59)
+	if err != nil {
+		return
+	}
+	err = en.WriteInt(z.LocationY)
+	if err != nil {
+		err = msgp.WrapError(err, "LocationY")
+		return
+	}
+	return
+}
+
+// MarshalMsg implements msgp.Marshaler
+func (z OpenPortalMessage) MarshalMsg(b []byte) (o []byte, err error) {
+	o = msgp.Require(b, z.Msgsize())
+	// map header, size 3
+	// string "From"
+	o = append(o, 0x83, 0xa4, 0x46, 0x72, 0x6f, 0x6d)
+	o = msgp.AppendString(o, z.From)
+	// string "LocationX"
+	o = append(o, 0xa9, 0x4c, 0x6f, 0x63, 0x61, 0x74, 0x69, 0x6f, 0x6e, 0x58)
+	o = msgp.AppendInt(o, z.LocationX)
+	// string "LocationY"
+	o = append(o, 0xa9, 0x4c, 0x6f, 0x63, 0x61, 0x74, 0x69, 0x6f, 0x6e, 0x59)
+	o = msgp.AppendInt(o, z.LocationY)
+	return
+}
+
+// UnmarshalMsg implements msgp.Unmarshaler
+func (z *OpenPortalMessage) UnmarshalMsg(bts []byte) (o []byte, err error) {
+	var field []byte
+	_ = field
+	var zb0001 uint32
+	zb0001, bts, err = msgp.ReadMapHeaderBytes(bts)
+	if err != nil {
+		err = msgp.WrapError(err)
+		return
+	}
+	for zb0001 > 0 {
+		zb0001--
+		field, bts, err = msgp.ReadMapKeyZC(bts)
+		if err != nil {
+			err = msgp.WrapError(err)
+			return
+		}
+		switch msgp.UnsafeString(field) {
+		case "From":
+			z.From, bts, err = msgp.ReadStringBytes(bts)
+			if err != nil {
+				err = msgp.WrapError(err, "From")
+				return
+			}
+		case "LocationX":
+			z.LocationX, bts, err = msgp.ReadIntBytes(bts)
+			if err != nil {
+				err = msgp.WrapError(err, "LocationX")
+				return
+			}
+		case "LocationY":
+			z.LocationY, bts, err = msgp.ReadIntBytes(bts)
+			if err != nil {
+				err = msgp.WrapError(err, "LocationY")
+				return
+			}
+		default:
+			bts, err = msgp.Skip(bts)
+			if err != nil {
+				err = msgp.WrapError(err)
+				return
+			}
+		}
+	}
+	o = bts
+	return
+}
+
+// Msgsize returns an upper bound estimate of the number of bytes occupied by the serialized message
+func (z OpenPortalMessage) Msgsize() (s int) {
+	s = 1 + 5 + msgp.StringPrefixSize + len(z.From) + 10 + msgp.IntSize + 10 + msgp.IntSize
+	return
+}
+
+// DecodeMsg implements msgp.Decodable
 func (z *ShoutMessage) DecodeMsg(dc *msgp.Reader) (err error) {
 	var field []byte
 	_ = field
