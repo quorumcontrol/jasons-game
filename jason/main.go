@@ -7,8 +7,11 @@ import (
 	"io/ioutil"
 	"path/filepath"
 	"strings"
+	"time"
 
 	logging "github.com/ipfs/go-log"
+	"github.com/libp2p/go-libp2p"
+	connmgr "github.com/libp2p/go-libp2p-connmgr"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/crypto"
@@ -20,6 +23,10 @@ import (
 )
 
 var log = logging.Logger("jason")
+
+const minConnections = 4915 // 60% of 8192 ulimit
+const maxConnections = 7372 // 90% of 8192 ulimit
+const connectionGracePeriod = 20 * time.Second
 
 func main() {
 	ctx, cancel := context.WithCancel(context.Background())
@@ -65,10 +72,16 @@ func main() {
 	port := flag.Int("port", 0, "Port to listen on, 0 means random port")
 
 	flag.Parse()
-
 	fmt.Printf("ip %s port %d\n", *ip, *port)
 
-	p, err := provider.New(ctx, key, ds, p2p.WithListenIP(*ip, *port))
+	cm := connmgr.NewConnManager(minConnections, maxConnections, connectionGracePeriod)
+
+	p2pOpts := []p2p.Option{
+		p2p.WithListenIP(*ip, *port),
+		p2p.WithLibp2pOptions(libp2p.ConnectionManager(cm)),
+	}
+
+	p, err := provider.New(ctx, key, ds, p2pOpts...)
 	if err != nil {
 		panic(errors.Wrap(err, "error creating provider"))
 	}
