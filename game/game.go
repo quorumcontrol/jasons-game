@@ -231,7 +231,7 @@ func (g *Game) goToTree(actorCtx actor.Context, tree *consensus.SignedChainTree)
 	if newDid := tree.MustId(); newDid != oldDid {
 		log.Debugf("moving to a new did %s", newDid)
 		g.network.StopDiscovery(oldDid)
-		g.network.StartDiscovery(newDid)
+		go g.network.StartDiscovery(newDid)
 		if g.chatSubscriber != nil {
 			actorCtx.Stop(g.chatSubscriber)
 		}
