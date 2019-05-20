@@ -25,15 +25,14 @@ const shoutChannel = "jasons-game-shouting-players"
 type ping struct{}
 
 type Game struct {
-	ui               *actor.PID
-	network          network.Network
-	player           *Player
-	cursor           *navigator.Cursor
-	commands         commandList
-	messageSequence  uint64
-	chatSubscriber   *actor.PID
-	shoutSubscriber  *actor.PID
-	directSubscriber *actor.PID
+	ui              *actor.PID
+	network         network.Network
+	player          *Player
+	cursor          *navigator.Cursor
+	commands        commandList
+	messageSequence uint64
+	chatSubscriber  *actor.PID
+	shoutSubscriber *actor.PID
 	objectCreator   *actor.PID
 }
 
@@ -60,6 +59,12 @@ func (g *Game) Receive(actorCtx actor.Context) {
 		g.handleOpenPortalMessage(actorCtx, msg)
 	case *OpenPortalResponseMessage:
 		log.Debugf("received OpenPortalResponseMessage")
+		if msg.Opener != g.player.tree.MustId() {
+			log.Debugf("OpenPortalResponseMessage is not for us, ignoring it")
+			return
+		}
+
+		log.Debugf("OpenPortalResponseMessage is for us, handling it")
 		g.handleOpenPortalResponseMessage(actorCtx, msg)
 	case *ping:
 		actorCtx.Respond(true)
@@ -120,13 +125,9 @@ func (g *Game) initialize(actorCtx actor.Context) {
 		}
 	}
 
-	chatTopic := topicFromDid(homeTree.MustId())
-	log.Debugf("subscribing to messages with topic %s", chatTopic)
-	g.chatSubscriber = actorCtx.Spawn(g.network.PubSubSystem().NewSubscriberProps(chatTopic))
-
-	directTopic := topicFromDid(playerTree.MustId())
-	log.Debugf("subscribing to direct messages with topic %s", directTopic)
-	g.directSubscriber = actorCtx.Spawn(g.network.PubSubSystem().NewSubscriberProps(directTopic))
+	landTopic := topicFromDid(homeTree.MustId())
+	log.Debugf("subscribing to messages with our land as topic %s", landTopic)
+	g.chatSubscriber = actorCtx.Spawn(g.network.PubSubSystem().NewSubscriberProps(landTopic))
 
 	cursor := new(navigator.Cursor).SetChainTree(homeTree)
 	g.cursor = cursor
@@ -465,9 +466,8 @@ func (g *Game) handleOpenPortalMessage(actorCtx actor.Context, msg *OpenPortalMe
 		return
 	}
 
-	topic := topicFromDid(msg.From)
-	log.Debugf("Broadcasting OpenPortalResponseMessage directed at sender, topic: %s", topic)
-	if err := g.network.PubSubSystem().Broadcast(topic, &OpenPortalResponseMessage{
+	log.Debugf("Broadcasting OpenPortalResponseMessage directed at sender")
+	if err := g.network.PubSubSystem().Broadcast(shoutChannel, &OpenPortalResponseMessage{
 		Accepted:  true,
 		Opener:    msg.From,
 		LandId:    landId,
