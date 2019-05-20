@@ -46,6 +46,10 @@ func (c *Cursor) SetChainTree(tree *consensus.SignedChainTree) *Cursor {
 	return c
 }
 
+func (c *Cursor) Tree() *consensus.SignedChainTree {
+	return c.tree
+}
+
 func (c *Cursor) Did() string {
 	return c.did
 }

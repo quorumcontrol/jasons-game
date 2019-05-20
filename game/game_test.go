@@ -66,3 +66,59 @@ func TestSetDescription(t *testing.T) {
 	require.Nil(t, err)
 	require.Equal(t, newDescription, loc.Description)
 }
+func TestBuildPortal(t *testing.T) {
+	rootCtx := actor.EmptyRootContext
+	net := network.NewLocalNetwork()
+	stream := ui.NewTestStream()
+
+	simulatedUI, err := rootCtx.SpawnNamed(ui.NewUIProps(stream, net), "test-set-description-ui")
+	require.Nil(t, err)
+	defer rootCtx.Stop(simulatedUI)
+
+	game, err := rootCtx.SpawnNamed(NewGameProps(simulatedUI, net), "test-set-description-game")
+	require.Nil(t, err)
+	defer rootCtx.Stop(game)
+
+	did := "did:fakedidtonowhere"
+
+	rootCtx.Send(game, &jasonsgame.UserInput{Message: "build portal to " + did})
+	time.Sleep(100 * time.Millisecond)
+
+	tree, err := net.GetChainTreeByName("home")
+	require.Nil(t, err)
+	c := new(navigator.Cursor).SetLocation(0, 0).SetChainTree(tree)
+	loc, err := c.GetLocation()
+	require.Nil(t, err)
+	require.Equal(t, did, loc.Portal.To)
+}
+
+func TestGoThroughPortal(t *testing.T) {
+	rootCtx := actor.EmptyRootContext
+	net := network.NewLocalNetwork()
+	stream := ui.NewTestStream()
+
+	simulatedUI, err := rootCtx.SpawnNamed(ui.NewUIProps(stream, net), "test-set-description-ui")
+	require.Nil(t, err)
+	defer rootCtx.Stop(simulatedUI)
+
+	game, err := rootCtx.SpawnNamed(NewGameProps(simulatedUI, net), "test-set-description-game")
+	require.Nil(t, err)
+	defer rootCtx.Stop(game)
+
+	remoteTree, err := net.CreateNamedChainTree("remotetree")
+	require.Nil(t, err)
+	remoteDescription := "a remote foreign land"
+	remoteTree, err = net.UpdateChainTree(remoteTree, "jasons-game/0/0", &jasonsgame.Location{Description: remoteDescription})
+	require.Nil(t, err)
+
+	did := remoteTree.MustId()
+
+	rootCtx.Send(game, &jasonsgame.UserInput{Message: "build portal to " + did})
+	time.Sleep(100 * time.Millisecond)
+	rootCtx.Send(game, &jasonsgame.UserInput{Message: "go through portal"})
+	time.Sleep(100 * time.Millisecond)
+
+	msgs := stream.GetMessages()
+	lastMsg := msgs[len(msgs)-1]
+	assert.Equal(t, remoteDescription, lastMsg.Message)
+}

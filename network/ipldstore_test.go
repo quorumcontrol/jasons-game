@@ -28,7 +28,7 @@ func TestPublicTreeStore(t *testing.T) {
 	dag := merkledag.NewDAGService(bserv)
 	pubsub := remote.NewSimulatedPubSub()
 
-	ipldstore := NewIPLDTreeStore(dag, keystore, pubsub)
+	ipldstore := NewIPLDTreeStore(dag, keystore, pubsub, new(DevNullTipGetter))
 	SubtestAll(t, ipldstore)
 	SubtestTreeStore(t, ipldstore)
 }

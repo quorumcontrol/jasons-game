@@ -10,6 +10,7 @@ import (
 	"github.com/ipfs/go-blockservice"
 	cid "github.com/ipfs/go-cid"
 	"github.com/ipfs/go-datastore"
+	dssync "github.com/ipfs/go-datastore/sync"
 	blockstore "github.com/ipfs/go-ipfs-blockstore"
 	offline "github.com/ipfs/go-ipfs-exchange-offline"
 	"github.com/ipfs/go-merkledag"
@@ -17,6 +18,12 @@ import (
 	"github.com/quorumcontrol/tupelo-go-sdk/consensus"
 	"github.com/quorumcontrol/tupelo-go-sdk/gossip3/remote"
 )
+
+type DevNullTipGetter struct{}
+
+func (dntg *DevNullTipGetter) GetTip(_ string) (cid.Cid, error) {
+	return cid.Undef, fmt.Errorf("tip not found")
+}
 
 // LocalNetwork implements the Network interface but doesn't require
 // a full tupelo/IPLD setup
@@ -28,14 +35,14 @@ type LocalNetwork struct {
 }
 
 func NewLocalNetwork() Network {
-	keystore := datastore.NewMapDatastore()
+	keystore := dssync.MutexWrap(datastore.NewMapDatastore())
 
 	bstore := blockstore.NewBlockstore(keystore)
 	bserv := blockservice.New(bstore, offline.Exchange(bstore))
 	dag := merkledag.NewDAGService(bserv)
 	pubsub := remote.NewSimulatedPubSub()
 
-	ipldstore := NewIPLDTreeStore(dag, keystore, pubsub)
+	ipldstore := NewIPLDTreeStore(dag, keystore, pubsub, new(DevNullTipGetter))
 
 	key, err := crypto.GenerateKey()
 	if err != nil {
@@ -101,9 +108,8 @@ func (ln *LocalNetwork) GetChainTreeByName(name string) (*consensus.SignedChainT
 	return nil, errors.Wrap(err, "error getting tree")
 }
 
-func (ln *LocalNetwork) GetRemoteTree(did string) (*consensus.SignedChainTree, error) {
-	// TODO: if we enable this, we'll need to also do some sort of "insert" for test purposes
-	return nil, fmt.Errorf("unimplemented")
+func (ln *LocalNetwork) GetTree(did string) (*consensus.SignedChainTree, error) {
+	return ln.TreeStore.GetTree(did)
 }
 
 func (ln *LocalNetwork) GetTreeByTip(tip cid.Cid) (*consensus.SignedChainTree, error) {
