@@ -1,5 +1,6 @@
 (ns jasons-game.frontend.events
   (:require [re-frame.core :as re-frame]
+            [jasons-game.frontend.db :as db]
             [jasons-game.frontend.remote.game :as game]
             [day8.re-frame.tracing :refer-macros [fn-traced]]
             [clojure.walk :refer [keywordize-keys]]))
@@ -46,11 +47,7 @@
 
 (re-frame/reg-event-db
  :initialize-db
- (fn-traced  [_ _]
-             {:game/messages []
-              :game/session (game/new-session "12345")
-              :remote/host default-host
-              :nav/page :home}))
+ (fn-traced [_ _] db/initial-state))
 
 (re-frame/reg-event-db
  :new-host
