@@ -31,10 +31,22 @@ func (cm *ShoutMessage) TypeCode() int8 {
 
 type OpenPortalMessage struct {
 	From      string
-	LocationX int
-	LocationY int
+	LocationX int64
+	LocationY int64
 }
 
 func (cm *OpenPortalMessage) TypeCode() int8 {
 	return -103
+}
+
+type OpenPortalResponseMessage struct {
+	Accepted  bool
+	Opener    string
+	LandId    string
+	LocationX int64
+	LocationY int64
+}
+
+func (cm *OpenPortalResponseMessage) TypeCode() int8 {
+	return -104
 }
