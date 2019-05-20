@@ -28,12 +28,23 @@ All of the network (Tupelo and IPFS) is in the "network" package. This is where 
 These are written as short hand notes and will get fleshed out.
 
 * Many things are in the Make file - explore there first :)
-* A complete local env: `make localnet` `make game-server` `make frontend-dev`
-  * Now you can see http://localhost:8280/ in your browser
-  * this will actually send nodes to IPLD still
+* A complete local env: `make localnet` `make game-server`
+  * the first time you do this you'll also need to run a `make frontend-build`
+  * Now you can see http://localhost:8080/ in your browser
 * There are some "hacks" to make the docker dev run faster, you can see them in the docker-compose-dev.yml where we use the go pkg cache from your local box, and also cache go builds to your local box (rather than having to recreate all that every time in the container). This makes `make integration-test` not take a decade to startup.
 * frontend uses re-frame and shadow-cljs with all the fixins (hot reload, reframe-10x, etc)
 * the IPFS libp2p node has autorelay turned on (as it is in IPFS 0.4.20+ now), it also tries to discover other open games and directly connect to them. (network/discovery.go)
 * ipldstore.go is a new TreeStore which is a combo nodestore and also an easy way to get/store the tree. This store is backed directly by an ipfslite instance, so nodes are stored locally *and* broadcast to the network as they are created. Additionally, there is a publish of the nodes (currently to infura).
 * ipfslite package is mostly taken from here: https://github.com/hsanjuan/ipfs-lite but we need to be able to keep versions consistent across our libp2p interactions, and our usecase is actually simpler, so was able to strip away more from even the "lite" nodes.
+
+### Hacking on the frontend
+
+* `make frontend-dev` will launch a hot reloadable frontend - available at http://localhost:8280 (and pointing to the game server at localhost:8080)
+
+### Two games
+* `make game2` will launch a second game available at http://localhost:8090
+
+### Against testnet
+
+* `make game-server testnet=1` and then hit http://localhost:8080
 
