@@ -50,6 +50,8 @@ type Network interface {
 	WaitForDiscovery(ns string, num int, dur time.Duration) error
 }
 
+// RemoteNetwork implements the Network interface. Note this is *not* considered a secure system and private keys
+// are stored on disk in plain text. It's "game-ready" security not "money-ready" security.
 type RemoteNetwork struct {
 	Tupelo        *Tupelo
 	Ipld          *p2p.BitswapPeer
