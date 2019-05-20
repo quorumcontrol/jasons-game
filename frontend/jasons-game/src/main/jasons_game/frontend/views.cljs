@@ -54,4 +54,3 @@
                     :placeholder "What do you want to do?"}]]]
        (let [messages (subscribe [:game-messages])]
          [scrolling-container @messages])])))
-
