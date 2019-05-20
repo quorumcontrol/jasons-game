@@ -28,6 +28,8 @@ const minConnections = 4915 // 60% of 8192 ulimit
 const maxConnections = 7372 // 90% of 8192 ulimit
 const connectionGracePeriod = 20 * time.Second
 
+const jasonPath = "jason"
+
 func main() {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
@@ -38,9 +40,9 @@ func main() {
 
 	configDirs := configdir.New("tupelo", "jasons-game")
 	folders := configDirs.QueryFolders(configdir.Global)
-	folder := configDirs.QueryFolderContainsFile("storage")
+	folder := configDirs.QueryFolderContainsFile(jasonPath)
 	if folder == nil {
-		folders[0].CreateParentDir("storage")
+		folders[0].CreateParentDir(jasonPath)
 	}
 
 	folder = configDirs.QueryFolderContainsFile("private.key")
@@ -63,7 +65,7 @@ func main() {
 		panic(errors.Wrap(err, "error unmarshaling key"))
 	}
 
-	ds, err := badger.NewDatastore(filepath.Join(folders[0].Path, "storage"), &badger.DefaultOptions)
+	ds, err := badger.NewDatastore(filepath.Join(folders[0].Path, jasonPath), &badger.DefaultOptions)
 	if err != nil {
 		panic(errors.Wrap(err, "error creating store"))
 	}

@@ -16,7 +16,6 @@ import (
 )
 
 type Tupelo struct {
-	key          *ecdsa.PrivateKey
 	Store        nodestore.NodeStore
 	NotaryGroup  *types.NotaryGroup
 	PubSubSystem remote.PubSub
@@ -39,7 +38,7 @@ func (t *Tupelo) GetTip(did string) (cid.Cid, error) {
 	return tip, nil
 }
 
-func (t *Tupelo) CreateChainTree() (*consensus.SignedChainTree, error) {
+func (t *Tupelo) CreateChainTree(key *ecdsa.PrivateKey) (*consensus.SignedChainTree, error) {
 	ephemeralPrivate, err := crypto.GenerateKey()
 	if err != nil {
 		return nil, errors.Wrap(err, "error creating key")
@@ -50,7 +49,7 @@ func (t *Tupelo) CreateChainTree() (*consensus.SignedChainTree, error) {
 			Type: consensus.TransactionTypeSetOwnership,
 			Payload: &consensus.SetOwnershipPayload{
 				Authentication: []string{
-					crypto.PubkeyToAddress(t.key.PublicKey).String(),
+					crypto.PubkeyToAddress(key.PublicKey).String(),
 				},
 			},
 		},
@@ -71,7 +70,7 @@ func (t *Tupelo) CreateChainTree() (*consensus.SignedChainTree, error) {
 	return tree, nil
 }
 
-func (t *Tupelo) UpdateChainTree(tree *consensus.SignedChainTree, path string, value interface{}) error {
+func (t *Tupelo) UpdateChainTree(tree *consensus.SignedChainTree, key *ecdsa.PrivateKey, path string, value interface{}) error {
 	c := client.New(t.NotaryGroup, tree.MustId(), t.PubSubSystem)
 	c.Listen()
 	defer c.Stop()
@@ -94,6 +93,6 @@ func (t *Tupelo) UpdateChainTree(tree *consensus.SignedChainTree, path string, v
 		tipPtr = &tip
 	}
 
-	_, err := c.PlayTransactions(tree, t.key, tipPtr, transactions)
+	_, err := c.PlayTransactions(tree, key, tipPtr, transactions)
 	return err
 }
