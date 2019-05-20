@@ -691,6 +691,8 @@ github.com/quorumcontrol/storage v1.1.2 h1:F6qRGnWx2GzO5fitMh8axvT9NjHUHnGp3n2MY
 github.com/quorumcontrol/storage v1.1.2/go.mod h1:QGtqgqqMaULflN8Jcctj3zdzMFoyE/RxP0uTd15EKtY=
 github.com/quorumcontrol/tupelo-go-sdk v0.2.4-0.20190520083019-d7b9666e1432 h1:Bv9HvlC8N4lB/G5OkP1VUYAFefcra2PxYkXhz6Yw9Cw=
 github.com/quorumcontrol/tupelo-go-sdk v0.2.4-0.20190520083019-d7b9666e1432/go.mod h1:zws0UOMCRdQwV0VarkUwnvl9WTpG611e2YY462I4h7A=
+github.com/quorumcontrol/tupelo-go-sdk v0.2.4-0.20190520115851-8d9a6a658514 h1:3w458sy+rMM0o6LcLO19FB4jtCwcW/1ttLtpDQp6DYU=
+github.com/quorumcontrol/tupelo-go-sdk v0.2.4-0.20190520115851-8d9a6a658514/go.mod h1:zws0UOMCRdQwV0VarkUwnvl9WTpG611e2YY462I4h7A=
 github.com/rcrowley/go-metrics v0.0.0-20181016184325-3113b8401b8a/go.mod h1:bCqnVzQkZxMG4s8nGwiZ5l3QUCyqpo9Y+/ZMZ9VjZe4=
 github.com/rs/cors v1.6.0 h1:G9tHG9lebljV9mfp9SNPDL36nCDxmo3zTlAf1YgvzmI=
 github.com/rs/cors v1.6.0/go.mod h1:gFx+x8UowdsKA9AchylcLynDq+nNFfI8FkUZdN/jGCU=
