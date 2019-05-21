@@ -10,6 +10,7 @@ func init() {
 	messages.RegisterMessage(&JoinMessage{})
 	messages.RegisterMessage(&OpenPortalMessage{})
 	messages.RegisterMessage(&OpenPortalResponseMessage{})
+	messages.RegisterMessage(&OpenPortalStatusMessage{})
 }
 
 type ChatMessage struct {
@@ -40,6 +41,8 @@ func (cm *JoinMessage) TypeCode() int8 {
 
 type OpenPortalMessage struct {
 	From      string
+	OnLandId  string
+	ToLandId  string
 	LocationX int64
 	LocationY int64
 }
@@ -58,4 +61,17 @@ type OpenPortalResponseMessage struct {
 
 func (cm *OpenPortalResponseMessage) TypeCode() int8 {
 	return -104
+}
+
+type OpenPortalStatusMessage struct {
+	Success   bool
+	Reason    string
+	Opener    string
+	LandId    string
+	LocationX int64
+	LocationY int64
+}
+
+func (cm *OpenPortalStatusMessage) TypeCode() int8 {
+	return -105
 }
