@@ -127,6 +127,7 @@ func (g *Game) initialize(actorCtx actor.Context) {
 
 	landTopic := topicFromDid(homeTree.MustId())
 	log.Debugf("subscribing to messages with our land as topic %s", landTopic)
+	// TODO: Use general, non-specific, pubsub topic instead
 	g.chatSubscriber = actorCtx.Spawn(g.network.PubSubSystem().NewSubscriberProps(landTopic))
 
 	cursor := new(navigator.Cursor).SetChainTree(homeTree)
@@ -190,6 +191,8 @@ func (g *Game) handleUserInput(actorCtx actor.Context, input *jasonsgame.UserInp
 		var l *jasonsgame.Location
 		l, err = g.cursor.GetLocation()
 		if err == nil {
+			// TODO: Use general, non-specific, pubsub topic instead, designating recipient through a
+			// field.
 			chatTopic := topicFromDid(l.Did)
 			log.Debugf("publishing chat message (topic %s)", chatTopic)
 			err = g.network.PubSubSystem().Broadcast(chatTopic, &ChatMessage{Message: args})
