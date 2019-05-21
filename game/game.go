@@ -104,13 +104,10 @@ func (g *Game) initialize(actorCtx actor.Context) {
 		}
 	}
 
-	chatTopic := topicFromDid(homeTree.MustId())
-	log.Debugf("subscribing to messages with topic %s", chatTopic)
-	g.chatSubscriber = actorCtx.Spawn(g.network.PubSubSystem().NewSubscriberProps(chatTopic))
-
-	directTopic := topicFromDid(playerTree.MustId())
-	log.Debugf("subscribing to direct messages with topic %s", directTopic)
-	g.directSubscriber = actorCtx.Spawn(g.network.PubSubSystem().NewSubscriberProps(directTopic))
+	landTopic := topicFromDid(homeTree.MustId())
+	log.Debugf("subscribing to messages with our land as topic %s", landTopic)
+	// TODO: Use general, non-specific, pubsub topic instead
+	g.chatSubscriber = actorCtx.Spawn(g.network.PubSubSystem().NewSubscriberProps(landTopic))
 
 	cursor := new(navigator.Cursor).SetChainTree(homeTree)
 	g.cursor = cursor
@@ -174,6 +171,8 @@ func (g *Game) handleUserInput(actorCtx actor.Context, input *jasonsgame.UserInp
 	case "say":
 		l, err := g.cursor.GetLocation()
 		if err == nil {
+			// TODO: Use general, non-specific, pubsub topic instead, designating recipient through a
+			// field.
 			chatTopic := topicFromDid(l.Did)
 			log.Debugf("publishing chat message (topic %s)", chatTopic)
 			if err := g.network.PubSubSystem().Broadcast(chatTopic, &ChatMessage{Message: args}); err != nil {
@@ -510,9 +509,8 @@ func (g *Game) handleOpenPortalMessage(actorCtx actor.Context, msg *OpenPortalMe
 		return
 	}
 
-	topic := topicFromDid(msg.From)
-	log.Debugf("Broadcasting OpenPortalResponseMessage directed at sender, topic: %s", topic)
-	if err := g.network.PubSubSystem().Broadcast(topic, &OpenPortalResponseMessage{
+	log.Debugf("Broadcasting OpenPortalResponseMessage directed at sender")
+	if err := g.network.PubSubSystem().Broadcast(shoutChannel, &OpenPortalResponseMessage{
 		Accepted:  true,
 		Opener:    msg.From,
 		LandId:    landId,
