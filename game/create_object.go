@@ -45,6 +45,41 @@ type Object struct {
 	ChainTreeDID string
 }
 
+type NetworkObject struct {
+	Object
+	Network network.Network
+}
+
+func (no *NetworkObject) getProp(prop string) (string, error) {
+	objectChainTree, err := no.Network.GetTree(no.ChainTreeDID)
+	if err != nil {
+		return "", err
+	}
+
+	objectNode, remainingPath, err := objectChainTree.ChainTree.Dag.Resolve([]string{"tree", "data", prop})
+	if err != nil {
+		return "", err
+	}
+	if len(remainingPath) > 0 {
+		return "", fmt.Errorf("error resolving object %s: path elements remaining: %v", prop, remainingPath)
+	}
+
+	val, ok := objectNode.(string)
+	if !ok {
+		return "", fmt.Errorf("error casting %s to string; type is %T", prop, objectNode)
+	}
+
+	return val, nil
+}
+
+func (no *NetworkObject) Name() (string, error) {
+	return no.getProp("name")
+}
+
+func (no *NetworkObject) Description() (string, error) {
+	return no.getProp("description")
+}
+
 func NewCreateObjectActorProps(cfg *CreateObjectActorConfig) *actor.Props {
 	return actor.PropsFromProducer(func() actor.Actor {
 		return &CreateObjectActor{
@@ -80,6 +115,18 @@ func (co *CreateObjectActor) handleCreateObject(context actor.Context, msg *Crea
 		return
 	}
 
+	objectChainTree, err = co.network.UpdateChainTree(objectChainTree, "name", msg.Name)
+	if err != nil {
+		co.Log.Errorw("error setting name of new object", "err", err)
+		return
+	}
+
+	objectChainTree, err = co.network.UpdateChainTree(objectChainTree, "description", msg.Description)
+	if err != nil {
+		co.Log.Errorw("error setting description of new object", "err", err)
+		return
+	}
+
 	playerChainTree := player.ChainTree()
 
 	objectsPath, _ := consensus.DecodePath(ObjectsPath)
@@ -90,13 +137,13 @@ func (co *CreateObjectActor) handleCreateObject(context actor.Context, msg *Crea
 	}
 
 	var newObject Object
-	var newObjects []Object
+	var newObjects map[string]Object
 
 	if len(remainingPath) > 0 {
 		newObject = Object{ChainTreeDID: objectChainTree.MustId()}
-		newObjects = []Object{newObject}
+		newObjects = map[string]Object{msg.Name: newObject}
 	} else {
-		existingObjects := make([]Object, 0)
+		existingObjects := make(map[string]Object)
 
 		err = typecaster.ToType(existingObjectsNode, &existingObjects)
 		if err != nil {
@@ -105,7 +152,8 @@ func (co *CreateObjectActor) handleCreateObject(context actor.Context, msg *Crea
 		}
 
 		newObject = Object{ChainTreeDID: objectChainTree.MustId()}
-		newObjects = append(existingObjects, newObject)
+		newObjects = existingObjects
+		newObjects[msg.Name] = newObject
 	}
 
 	newPlayerChainTree, err := co.network.UpdateChainTree(playerChainTree, ObjectsPath, newObjects)

@@ -33,16 +33,18 @@ func TestCreateObjectActor_Receive(t *testing.T) {
 
 	// create first object
 
-	context.Send(createObject, &CreateObjectRequest{Name: "test", Description: "test object"})
+	response, err := context.RequestFuture(createObject, &CreateObjectRequest{Name: "test", Description: "test object"}, 1 * time.Second).Result()
+	require.Nil(t, err)
 
-	time.Sleep(100 * time.Millisecond)
+	createObjectResponse, ok := response.(*CreateObjectResponse)
+	require.True(t, ok)
 
 	objectsPath, _ := consensus.DecodePath(ObjectsPath)
 	playerObjectsNode, remainingPath, err := testPlayer.ChainTree().ChainTree.Dag.Resolve(append([]string{"tree", "data"}, objectsPath...))
 	require.Nil(t, err)
 	require.Empty(t, remainingPath)
 
-	playerObjects := make([]Object, 0)
+	playerObjects := make(map[string]Object)
 
 	err = typecaster.ToType(playerObjectsNode, &playerObjects)
 	require.Nil(t, err)
@@ -52,19 +54,34 @@ func TestCreateObjectActor_Receive(t *testing.T) {
 	objectChainTree, err := net.GetChainTreeByName("object:test")
 	require.Nil(t, err)
 
-	assert.Equal(t, Object{ChainTreeDID: objectChainTree.MustId()}, playerObjects[0])
+	obj := Object{ChainTreeDID: objectChainTree.MustId()}
+	assert.Equal(t, obj, playerObjects["test"])
+
+	assert.Equal(t, obj.ChainTreeDID, createObjectResponse.Object.ChainTreeDID)
+
+	netObj := NetworkObject{Object: obj, Network: net}
+
+	name, err := netObj.Name()
+	require.Nil(t, err)
+	assert.Equal(t, "test", name)
+
+	desc, err := netObj.Description()
+	require.Nil(t, err)
+	assert.Equal(t, "test object", desc)
 
 	// create second object
 
-	context.Send(createObject, &CreateObjectRequest{Name: "sword", Description: "ultimate sword"})
+	response, err = context.RequestFuture(createObject, &CreateObjectRequest{Name: "sword", Description: "ultimate sword"}, 1 * time.Second).Result()
+	require.Nil(t, err)
 
-	time.Sleep(100 * time.Millisecond)
+	createObjectResponse, ok = response.(*CreateObjectResponse)
+	require.True(t, ok)
 
 	playerObjectsNode, remainingPath, err = testPlayer.ChainTree().ChainTree.Dag.Resolve(append([]string{"tree", "data"}, objectsPath...))
 	require.Nil(t, err)
 	require.Empty(t, remainingPath)
 
-	playerObjects = make([]Object, 0)
+	playerObjects = make(map[string]Object)
 
 	err = typecaster.ToType(playerObjectsNode, &playerObjects)
 	require.Nil(t, err)
@@ -74,5 +91,18 @@ func TestCreateObjectActor_Receive(t *testing.T) {
 	objectChainTree, err = net.GetChainTreeByName("object:sword")
 	require.Nil(t, err)
 
-	assert.Equal(t, Object{ChainTreeDID: objectChainTree.MustId()}, playerObjects[1])
+	obj = Object{ChainTreeDID: objectChainTree.MustId()}
+	assert.Equal(t, obj, playerObjects["sword"])
+
+	assert.Equal(t, obj.ChainTreeDID, createObjectResponse.Object.ChainTreeDID)
+
+	netObj = NetworkObject{Object: obj, Network: net}
+
+	name, err = netObj.Name()
+	require.Nil(t, err)
+	assert.Equal(t, "sword", name)
+
+	desc, err = netObj.Description()
+	require.Nil(t, err)
+	assert.Equal(t, "ultimate sword", desc)
 }
