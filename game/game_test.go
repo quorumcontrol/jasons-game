@@ -13,17 +13,23 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+var rootCtx = actor.EmptyRootContext
+
+func setupUiAndGame(t *testing.T, stream *ui.TestStream, net network.Network) (simulatedUI, game *actor.PID) {
+	simulatedUI, err := rootCtx.SpawnNamed(ui.NewUIProps(stream, net), t.Name() + "-ui")
+	require.Nil(t, err)
+
+	game, err = rootCtx.SpawnNamed(NewGameProps(simulatedUI, net), t.Name() + "-game")
+	require.Nil(t, err)
+	return simulatedUI, game
+}
+
 func TestNavigation(t *testing.T) {
-	rootCtx := actor.EmptyRootContext
 	net := network.NewLocalNetwork()
 	stream := ui.NewTestStream()
 
-	simulatedUI, err := rootCtx.SpawnNamed(ui.NewUIProps(stream, net), "test-navigation-ui")
-	require.Nil(t, err)
+	simulatedUI, game := setupUiAndGame(t, stream, net)
 	defer rootCtx.Stop(simulatedUI)
-
-	game, err := rootCtx.SpawnNamed(NewGameProps(simulatedUI, net), "test-navigation-game")
-	require.Nil(t, err)
 	defer rootCtx.Stop(game)
 
 	rootCtx.Send(game, &jasonsgame.UserInput{Message: "north"})
@@ -42,16 +48,11 @@ func TestNavigation(t *testing.T) {
 }
 
 func TestSetDescription(t *testing.T) {
-	rootCtx := actor.EmptyRootContext
 	net := network.NewLocalNetwork()
 	stream := ui.NewTestStream()
 
-	simulatedUI, err := rootCtx.SpawnNamed(ui.NewUIProps(stream, net), "test-set-description-ui")
-	require.Nil(t, err)
+	simulatedUI, game := setupUiAndGame(t, stream, net)
 	defer rootCtx.Stop(simulatedUI)
-
-	game, err := rootCtx.SpawnNamed(NewGameProps(simulatedUI, net), "test-set-description-game")
-	require.Nil(t, err)
 	defer rootCtx.Stop(game)
 
 	newDescription := "multi word"
@@ -67,16 +68,11 @@ func TestSetDescription(t *testing.T) {
 	require.Equal(t, newDescription, loc.Description)
 }
 func TestBuildPortal(t *testing.T) {
-	rootCtx := actor.EmptyRootContext
 	net := network.NewLocalNetwork()
 	stream := ui.NewTestStream()
 
-	simulatedUI, err := rootCtx.SpawnNamed(ui.NewUIProps(stream, net), "test-set-description-ui")
-	require.Nil(t, err)
+	simulatedUI, game := setupUiAndGame(t, stream, net)
 	defer rootCtx.Stop(simulatedUI)
-
-	game, err := rootCtx.SpawnNamed(NewGameProps(simulatedUI, net), "test-set-description-game")
-	require.Nil(t, err)
 	defer rootCtx.Stop(game)
 
 	did := "did:fakedidtonowhere"
@@ -93,16 +89,11 @@ func TestBuildPortal(t *testing.T) {
 }
 
 func TestGoThroughPortal(t *testing.T) {
-	rootCtx := actor.EmptyRootContext
 	net := network.NewLocalNetwork()
 	stream := ui.NewTestStream()
 
-	simulatedUI, err := rootCtx.SpawnNamed(ui.NewUIProps(stream, net), "test-set-description-ui")
-	require.Nil(t, err)
+	simulatedUI, game := setupUiAndGame(t, stream, net)
 	defer rootCtx.Stop(simulatedUI)
-
-	game, err := rootCtx.SpawnNamed(NewGameProps(simulatedUI, net), "test-set-description-game")
-	require.Nil(t, err)
 	defer rootCtx.Stop(game)
 
 	remoteTree, err := net.CreateNamedChainTree("remotetree")

@@ -2,8 +2,8 @@ package server
 
 import (
 	"context"
-	"fmt"
 	"os"
+	"path/filepath"
 	"time"
 
 	"github.com/AsynkronIT/protoactor-go/actor"
@@ -13,15 +13,19 @@ import (
 	"github.com/quorumcontrol/jasons-game/network"
 	"github.com/quorumcontrol/jasons-game/pb/jasonsgame"
 	"github.com/quorumcontrol/jasons-game/ui"
+	"github.com/quorumcontrol/tupelo-go-sdk/gossip3/types"
+	"github.com/shibukawa/configdir"
 )
 
 var log = logging.Logger("gameserver")
 
-const statePath = "/tmp/jasonsgame"
+const sessionStorageDir = "session-storage"
 
 type GameServer struct {
-	sessions map[string]*actor.PID
-	network  network.Network
+	sessions    map[string]*actor.PID
+	group       *types.NotaryGroup
+	parentCtx   context.Context
+	sessionPath string
 }
 
 func NewGameServer(ctx context.Context) *GameServer {
@@ -30,21 +34,18 @@ func NewGameServer(ctx context.Context) *GameServer {
 		panic(errors.Wrap(err, "setting up notary group"))
 	}
 
-	os.RemoveAll(statePath)
-	err = os.MkdirAll(statePath, 0755)
-	if err != nil {
-		panic(errors.Wrap(err, fmt.Sprintf("error creating state path %s", statePath)))
-	}
-	defer os.RemoveAll(statePath)
-
-	net, err := network.NewRemoteNetwork(ctx, group, statePath)
-	if err != nil {
-		panic(errors.Wrap(err, "setting up notary group"))
+	configDirs := configdir.New("tupelo", "jasons-game")
+	folders := configDirs.QueryFolders(configdir.Global)
+	folder := configDirs.QueryFolderContainsFile(sessionStorageDir)
+	if folder == nil {
+		folders[0].CreateParentDir(sessionStorageDir)
 	}
 
 	return &GameServer{
-		sessions: make(map[string]*actor.PID),
-		network:  net,
+		sessions:    make(map[string]*actor.PID),
+		group:       group,
+		parentCtx:   ctx,
+		sessionPath: filepath.Join(folders[0].Path, sessionStorageDir),
 	}
 }
 
@@ -83,15 +84,28 @@ func (gs *GameServer) ReceiveStatMessages(sess *jasonsgame.Session, stream jason
 func (gs *GameServer) getOrCreateSession(sess *jasonsgame.Session, stream jasonsgame.GameService_ReceiveUserMessagesServer) *actor.PID {
 	uiActor, ok := gs.sessions[sess.Uuid]
 	if !ok {
+
+		// use filepath.Base as a "cleaner" here to not allow setting arbitrary directors with, for example, uuid: "../../etc/passwd"
+		statePath := filepath.Join(gs.sessionPath, filepath.Base(sess.Uuid))
+		err := os.MkdirAll(statePath, 0750)
+		if err != nil {
+			panic(errors.Wrap(err, "error creating session storage"))
+		}
+
+		net, err := network.NewRemoteNetwork(gs.parentCtx, gs.group, statePath)
+		if err != nil {
+			panic(errors.Wrap(err, "setting up notary group"))
+		}
+
 		if sess == nil {
 			// TODO: do this more gracefully
 			log.Errorf("no session")
 			panic("must supply a valid session")
 		}
 		log.Debugf("creating actor")
-		uiActor = actor.EmptyRootContext.Spawn(ui.NewUIProps(stream, gs.network))
+		uiActor = actor.EmptyRootContext.Spawn(ui.NewUIProps(stream, net))
 
-		actor.EmptyRootContext.Spawn(game.NewGameProps(uiActor, gs.network))
+		actor.EmptyRootContext.Spawn(game.NewGameProps(uiActor, net))
 
 		gs.sessions[sess.Uuid] = uiActor
 	}

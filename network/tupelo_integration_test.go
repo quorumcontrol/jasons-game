@@ -104,13 +104,12 @@ func TestCreateChainTree(t *testing.T) {
 	ps := remote.NewNetworkPubSub(node)
 	
 	tup := &Tupelo{
-		key:   key,
 		Store: nodestore.NewStorageBasedStore(storage.NewMemStorage()),
 		NotaryGroup: group,
 		PubSubSystem: ps,
 	}
 
-	_,err = tup.CreateChainTree()
+	_,err = tup.CreateChainTree(key)
 	require.Nil(t,err)
 }
 
@@ -130,13 +129,12 @@ func TestGetTip(t *testing.T) {
 	ps := remote.NewNetworkPubSub(node)
 	
 	tup := &Tupelo{
-		key:   key,
 		Store: nodestore.NewStorageBasedStore(storage.NewMemStorage()),
 		NotaryGroup: group,
 		PubSubSystem: ps,
 	}
 
-	tree,err := tup.CreateChainTree()
+	tree,err := tup.CreateChainTree(key)
 	require.Nil(t,err)
 
 	time.Sleep(100 * time.Millisecond)

@@ -12,8 +12,13 @@ import (
 
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ipfs/go-datastore"
+	dssync "github.com/ipfs/go-datastore/sync"
 	"github.com/stretchr/testify/require"
 )
+
+func newDatastore() datastore.Batching {
+	return dssync.MutexWrap(datastore.NewMapDatastore())
+}
 
 func TestStart(t *testing.T) {
 	logging.SetLogLevel("*", "info")
@@ -23,7 +28,7 @@ func TestStart(t *testing.T) {
 
 	key, err := crypto.GenerateKey()
 	require.Nil(t, err)
-	ds := datastore.NewMapDatastore()
+	ds := newDatastore()
 
 	provider, err := New(ctx, key, ds)
 	require.Nil(t, err)
@@ -38,7 +43,7 @@ func TestProviderPubsubRelay(t *testing.T) {
 
 	key, err := crypto.GenerateKey()
 	require.Nil(t, err)
-	ds := datastore.NewMapDatastore()
+	ds := newDatastore()
 
 	provider, err := New(ctx, key, ds)
 	require.Nil(t, err)
@@ -70,7 +75,7 @@ func TestProviderPubsubRelay(t *testing.T) {
 	err = hostb.WaitForBootstrap(2, 5*time.Second)
 	require.Nil(t, err)
 
-	err = provider.p2pHost.WaitForBootstrap(3, 10*time.Second)
+	err = provider.p2pHost.WaitForBootstrap(2, 10*time.Second)
 	require.Nil(t, err)
 }
 
