@@ -1,16 +1,9 @@
 (ns jasons-game.frontend.events
   (:require [re-frame.core :as re-frame]
             [jasons-game.frontend.db :as db]
-            [jasons-game.frontend.remote.game :as game]
+            [jasons-game.frontend.remote :as remote]
             [day8.re-frame.tracing :refer-macros [fn-traced]]
             [clojure.walk :refer [keywordize-keys]]))
-
-(goog-define dev-host false)
-
-(defonce default-host
-  (if dev-host
-    dev-host
-    (-> js/window (.-location) (.-origin))))
 
 (re-frame/reg-sub
  :game-messages
@@ -42,7 +35,7 @@
 (re-frame/reg-event-fx
  :initialize-game-listener
  (fn initialize-game-listener [{:keys [db]} _]
-   (let [req (game/start-game-listener (:remote/host db) (:game/session db) handle-game-message handle-game-end)]
+   (let [req (remote/start-game-listener (:remote/host db) (:game/session db) handle-game-message handle-game-end)]
      {:db (conj db {:remote/current-listener req})})))
 
 (re-frame/reg-event-db
@@ -56,7 +49,7 @@
 
 
 (defn handle-user-input [{:keys [db]} [_ user-command]]
-  (game/send-user-input (:remote/host db) (:game/session db) user-command (fn [resp] (.log js/console resp)))
+  (remote/send-user-input (:remote/host db) (:game/session db) user-command (fn [resp] (.log js/console resp)))
   {:db (update db :game/messages #(conj % {:user true :message user-command}))})
 
 (re-frame/reg-event-fx
