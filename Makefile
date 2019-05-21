@@ -23,7 +23,7 @@ $(FIRSTGOPATH)/bin/protoc-gen-gogofaster: $(FIRSTGOPATH)/src/github.com/gogo/pro
 
 $(generated): $(FIRSTGOPATH)/bin/protoc-gen-gogofaster $(jsmodules) game/messages.go
 	./scripts/protogen.sh && cd game && go generate
-	
+
 $(jsmodules):
 	cd frontend/jasons-game && npm install
 
