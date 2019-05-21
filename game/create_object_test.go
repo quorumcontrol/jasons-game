@@ -10,7 +10,6 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/quorumcontrol/jasons-game/game"
 	"github.com/quorumcontrol/jasons-game/network"
 )
 
@@ -21,19 +20,20 @@ func TestCreateObjectActor_Receive(t *testing.T) {
 
 	net := network.NewLocalNetwork()
 
+	playerChainTree, err := net.CreateNamedChainTree("player")
+	require.Nil(t, err)
+
+	testPlayer := NewPlayer(playerChainTree)
+
 	createObject, err := context.SpawnNamed(NewCreateObjectActorProps(&CreateObjectActorConfig{
+		Player:  testPlayer,
 		Network: net,
 	}), "testCreateObject")
 	require.Nil(t, err)
 
-	playerChainTree, err := net.CreateNamedChainTree("player")
-	require.Nil(t, err)
-
-	testPlayer := game.NewPlayer(playerChainTree)
-
 	// create first object
 
-	context.Send(createObject, &CreateObjectMessage{Player: testPlayer, Name: "test", Description: "test object"})
+	context.Send(createObject, &CreateObjectRequest{Name: "test", Description: "test object"})
 
 	time.Sleep(100 * time.Millisecond)
 
@@ -56,7 +56,7 @@ func TestCreateObjectActor_Receive(t *testing.T) {
 
 	// create second object
 
-	context.Send(createObject, &CreateObjectMessage{Player: testPlayer, Name: "sword", Description: "ultimate sword"})
+	context.Send(createObject, &CreateObjectRequest{Name: "sword", Description: "ultimate sword"})
 
 	time.Sleep(100 * time.Millisecond)
 

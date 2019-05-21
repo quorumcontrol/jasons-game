@@ -2,17 +2,19 @@ package game
 
 import (
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/AsynkronIT/protoactor-go/actor"
 	"github.com/ipfs/go-cid"
 	logging "github.com/ipfs/go-log"
 	"github.com/pkg/errors"
+	"github.com/quorumcontrol/tupelo-go-sdk/consensus"
+
 	"github.com/quorumcontrol/jasons-game/navigator"
 	"github.com/quorumcontrol/jasons-game/network"
 	"github.com/quorumcontrol/jasons-game/pb/jasonsgame"
 	"github.com/quorumcontrol/jasons-game/ui"
-	"github.com/quorumcontrol/tupelo-go-sdk/consensus"
 )
 
 var log = logging.Logger("game")
@@ -30,6 +32,7 @@ type Game struct {
 	messageSequence uint64
 	chatSubscriber  *actor.PID
 	shoutSubscriber *actor.PID
+	objectCreator   *actor.PID
 }
 
 func NewGameProps(ui *actor.PID, network network.Network) *actor.Props {
@@ -101,6 +104,14 @@ func (g *Game) initialize(actorCtx actor.Context) {
 	cursor := new(navigator.Cursor).SetChainTree(homeTree)
 	g.cursor = cursor
 
+	g.objectCreator, err = actorCtx.SpawnNamed(NewCreateObjectActorProps(&CreateObjectActorConfig{
+		Player:  g.player,
+		Network: g.network,
+	}), "objectCreator")
+	if err != nil {
+		panic(fmt.Errorf("error spawning object creator actor: %v", err))
+	}
+
 	g.sendUIMessage(
 		actorCtx,
 		fmt.Sprintf("Created Player %s \n( %s )\nHome: %s \n( %s )",
@@ -155,6 +166,8 @@ func (g *Game) handleUserInput(actorCtx actor.Context, input *jasonsgame.UserInp
 		}
 	case "shout":
 		g.network.PubSubSystem().Broadcast(shoutChannel, &ShoutMessage{Message: args})
+	case "create-object":
+		err = g.handleCreateObject(actorCtx, args)
 	default:
 		log.Error("unhandled but matched command", cmd.name)
 	}
@@ -291,6 +304,26 @@ func (g *Game) handleLocationInput(actorCtx actor.Context, cmd *command, args st
 	}
 
 	g.sendUIMessage(actorCtx, l)
+}
+
+func (g *Game) handleCreateObject(actorCtx actor.Context, args string) error {
+	splitArgs := strings.Split(args, " ")
+	objName := splitArgs[0]
+	response, err := actorCtx.RequestFuture(g.objectCreator, &CreateObjectRequest{
+		Name:        objName,
+		Description: strings.Join(splitArgs[1:], " "),
+	}, 1 * time.Second).Result()
+	if err != nil {
+		return err
+	}
+
+	newObject, ok := response.(*CreateObjectResponse)
+	if !ok {
+		return fmt.Errorf("error casting create object response")
+	}
+
+	g.sendUIMessage(actorCtx, fmt.Sprintf("%s has been created with DID %s and is in your bag of hodling", objName, newObject.Object.ChainTreeDID))
+	return nil
 }
 
 func topicFromDid(did string) string {

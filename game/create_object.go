@@ -10,7 +10,6 @@ import (
 	"github.com/quorumcontrol/tupelo-go-sdk/consensus"
 	"github.com/quorumcontrol/tupelo-go-sdk/gossip3/middleware"
 
-	"github.com/quorumcontrol/jasons-game/game"
 	"github.com/quorumcontrol/jasons-game/network"
 )
 
@@ -24,17 +23,22 @@ func init() {
 type CreateObjectActor struct {
 	middleware.LogAwareHolder
 
+	player  *Player
 	network network.Network
 }
 
 type CreateObjectActorConfig struct {
+	Player  *Player
 	Network network.Network
 }
 
-type CreateObjectMessage struct {
-	Player      *game.Player
+type CreateObjectRequest struct {
 	Name        string
 	Description string
+}
+
+type CreateObjectResponse struct {
+	Object Object
 }
 
 type Object struct {
@@ -44,6 +48,7 @@ type Object struct {
 func NewCreateObjectActorProps(cfg *CreateObjectActorConfig) *actor.Props {
 	return actor.PropsFromProducer(func() actor.Actor {
 		return &CreateObjectActor{
+			player:  cfg.Player,
 			network: cfg.Network,
 		}
 	}).WithReceiverMiddleware(
@@ -54,14 +59,14 @@ func NewCreateObjectActorProps(cfg *CreateObjectActorConfig) *actor.Props {
 
 func (co *CreateObjectActor) Receive(context actor.Context) {
 	switch msg := context.Message().(type) {
-	case *CreateObjectMessage:
-		co.Log.Debugf("Received CreateObjectMessage: %+v\n", msg)
+	case *CreateObjectRequest:
+		co.Log.Debugf("Received CreateObjectRequest: %+v\n", msg)
 		co.handleCreateObject(context, msg)
 	}
 }
 
-func (co *CreateObjectActor) handleCreateObject(context actor.Context, msg *CreateObjectMessage) {
-	player := msg.Player
+func (co *CreateObjectActor) handleCreateObject(context actor.Context, msg *CreateObjectRequest) {
+	player := co.player
 
 	if player == nil {
 		co.Log.Error("player is required to create an object")
@@ -84,10 +89,12 @@ func (co *CreateObjectActor) handleCreateObject(context actor.Context, msg *Crea
 		return
 	}
 
+	var newObject Object
 	var newObjects []Object
 
 	if len(remainingPath) > 0 {
-		newObjects = []Object{{ChainTreeDID: objectChainTree.MustId()}}
+		newObject = Object{ChainTreeDID: objectChainTree.MustId()}
+		newObjects = []Object{newObject}
 	} else {
 		existingObjects := make([]Object, 0)
 
@@ -97,7 +104,8 @@ func (co *CreateObjectActor) handleCreateObject(context actor.Context, msg *Crea
 			return
 		}
 
-		newObjects = append(existingObjects, Object{ChainTreeDID: objectChainTree.MustId()})
+		newObject = Object{ChainTreeDID: objectChainTree.MustId()}
+		newObjects = append(existingObjects, newObject)
 	}
 
 	newPlayerChainTree, err := co.network.UpdateChainTree(playerChainTree, ObjectsPath, newObjects)
@@ -107,5 +115,7 @@ func (co *CreateObjectActor) handleCreateObject(context actor.Context, msg *Crea
 		return
 	}
 
-	msg.Player.SetChainTree(newPlayerChainTree)
+	co.player.SetChainTree(newPlayerChainTree)
+
+	context.Respond(&CreateObjectResponse{Object: newObject})
 }
