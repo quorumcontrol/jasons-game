@@ -68,15 +68,6 @@ func (g *Game) Receive(actorCtx actor.Context) {
 
 		log.Debugf("OpenPortalResponseMessage is for us, handling it")
 		g.handleOpenPortalResponseMessage(actorCtx, msg)
-	case *OpenPortalStatusMessage:
-		log.Debugf("received OpenPortalStatusMessage")
-		if msg.Opener != g.player.tree.MustId() {
-			log.Debugf("OpenPortalStatusMessage is not for us, ignoring it")
-			return
-		}
-
-		log.Debugf("OpenPortalStatusMessage is for us, handling it")
-		g.handleOpenPortalStatusMessage(actorCtx, msg)
 	case *ping:
 		actorCtx.Respond(true)
 	default:
@@ -517,24 +508,6 @@ func (g *Game) handleOpenPortalMessage(actorCtx actor.Context, msg *OpenPortalMe
 		g.cursor.SetChainTree(updated)
 	}
 
-	success := err == nil
-	reason := ""
-	if !success {
-		reason = err.Error()
-	}
-	log.Debugf("Broadcasting OpenPortalStatusMessage directed at sender, success: %v",
-		success)
-	if err := g.network.PubSubSystem().Broadcast(shoutChannel, &OpenPortalStatusMessage{
-		Success:   success,
-		Reason:    reason,
-		Opener:    msg.From,
-		LandId:    landId,
-		LocationX: msg.LocationX,
-		LocationY: msg.LocationY,
-	}); err != nil {
-		return err
-	}
-
 	return nil
 }
 
@@ -547,19 +520,6 @@ func (g *Game) handleOpenPortalResponseMessage(actorCtx actor.Context,
 	} else {
 		uiMsg = fmt.Sprintf("Owner of %s did not accept your opening a portal at (%d, %d)",
 			msg.LandId, msg.LocationX, msg.LocationY)
-	}
-	g.sendUIMessage(actorCtx, uiMsg)
-}
-
-func (g *Game) handleOpenPortalStatusMessage(actorCtx actor.Context,
-	msg *OpenPortalStatusMessage) {
-	var uiMsg string
-	if msg.Success {
-		uiMsg = fmt.Sprintf("Your portal was successfully opened in %s at (%d, %d)", msg.LandId,
-			msg.LocationX, msg.LocationY)
-	} else {
-		uiMsg = fmt.Sprintf("Your portal failed to open in %s at (%d, %d): %s", msg.LandId,
-			msg.LocationX, msg.LocationY, msg.Reason)
 	}
 	g.sendUIMessage(actorCtx, uiMsg)
 }
