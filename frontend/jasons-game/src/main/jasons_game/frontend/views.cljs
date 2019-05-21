@@ -3,6 +3,7 @@
    [reagent.core :as r]
    [re-frame.core :as re-frame :refer [subscribe dispatch]]
    [jasons-game.frontend.components.terminal :as terminal]
+   [jasons-game.frontend.remote :as remote]
    ["react"]
    ["react-dom" :as ReactDOM]
    ["semantic-ui-react" :refer [Container Input Button Menu Form]]))
@@ -52,5 +53,5 @@
                     :size "big"
                     :value @input-state
                     :placeholder "What do you want to do?"}]]]
-       (let [messages (subscribe [:game-messages])]
+       (let [messages (subscribe [::remote/messages])]
          [scrolling-container @messages])])))

@@ -6,19 +6,19 @@
             [clojure.walk :refer [keywordize-keys]]))
 
 (re-frame/reg-sub
- :game-messages
- (fn game-messages-sub [db _]
-  (:game/messages db)))
+ ::remote/messages
+ (fn [db _]
+  (::remote/messages db)))
 
 (re-frame/reg-sub
- :remote/host
+ ::remote/host
  (fn set-remote-host [db _]
-   (:remote/host db)))
+   (::remote/host db)))
 
 (re-frame/reg-event-fx
  :initialize
- (fn initialize [_ _]
-   (re-frame/dispatch [:initialize-game-listener])
+ (fn [_ _]
+   (re-frame/dispatch [::remote/listen])
    {}))
 
 (defn handle-game-message [resp]
@@ -30,27 +30,27 @@
 
 (defn handle-game-end [resp]
   (.log js/console "game end, redoing" resp)
-  (re-frame/dispatch [:initialize-game-listener]))
+  (re-frame/dispatch [::remote/listen]))
 
 (re-frame/reg-event-fx
- :initialize-game-listener
- (fn initialize-game-listener [{:keys [db]} _]
-   (let [req (remote/start-game-listener (:remote/host db) (:game/session db) handle-game-message handle-game-end)]
-     {:db (conj db {:remote/current-listener req})})))
+ ::remote/listen
+ (fn [{:keys [db]} _]
+   (let [req (remote/start-game-listener (::remote/host db) (::remote/session db) handle-game-message handle-game-end)]
+     {:db (assoc db :remote/current-listener req)})))
 
 (re-frame/reg-event-db
- :initialize-db
+ ::db/initialize
  (fn-traced [_ _] db/initial-state))
 
 (re-frame/reg-event-db
  :new-host
  (fn-traced  [db host]
-   (conj db {:remote/host host})))
+   (conj db {::remote/host host})))
 
 
 (defn handle-user-input [{:keys [db]} [_ user-command]]
-  (remote/send-user-input (:remote/host db) (:game/session db) user-command (fn [resp] (.log js/console resp)))
-  {:db (update db :game/messages #(conj % {:user true :message user-command}))})
+  (remote/send-user-input (::remote/host db) (::remote/session db) user-command (fn [resp] (.log js/console resp)))
+  {:db (update db ::remote/messages #(conj % {:user true :message user-command}))})
 
 (re-frame/reg-event-fx
  :user-input
@@ -59,4 +59,4 @@
 (re-frame/reg-event-fx
  :game-message
  (fn [{:keys [db]} [_ message-to-user]]
-   {:db (update db :game/messages #(conj % message-to-user))}))
+   {:db (update db ::remote/messages #(conj % message-to-user))}))
