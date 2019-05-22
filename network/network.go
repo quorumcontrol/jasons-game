@@ -50,6 +50,8 @@ type Network interface {
 	WaitForDiscovery(ns string, num int, dur time.Duration) error
 }
 
+// RemoteNetwork implements the Network interface. Note this is *not* considered a secure system and private keys
+// are stored on disk in plain text. It's "game-ready" security not "money-ready" security.
 type RemoteNetwork struct {
 	Tupelo        *Tupelo
 	Ipld          *p2p.BitswapPeer
@@ -114,7 +116,6 @@ func NewRemoteNetwork(ctx context.Context, group *types.NotaryGroup, path string
 	tupeloPubSub := remote.NewNetworkPubSub(tupeloP2PHost)
 
 	tup := &Tupelo{
-		key:          key,
 		NotaryGroup:  group,
 		PubSubSystem: tupeloPubSub,
 	}
@@ -173,9 +174,17 @@ func (n *RemoteNetwork) getOrCreatePrivateKey() (*ecdsa.PrivateKey, error) {
 	return key, nil
 }
 
+func (n *RemoteNetwork) mustPrivateKey() *ecdsa.PrivateKey {
+	key, err := n.getOrCreatePrivateKey()
+	if err != nil || key == nil {
+		panic(errors.Wrap(err, "error getting or creating private key"))
+	}
+	return key
+}
+
 func (n *RemoteNetwork) CreateNamedChainTree(name string) (*consensus.SignedChainTree, error) {
 	log.Debug("CreateNamedChainTree", name)
-	tree, err := n.Tupelo.CreateChainTree()
+	tree, err := n.Tupelo.CreateChainTree(n.mustPrivateKey())
 	if err != nil {
 		return nil, errors.Wrap(err, "error creating tree")
 	}
@@ -223,7 +232,7 @@ func (n *RemoteNetwork) GetTreeByTip(tip cid.Cid) (*consensus.SignedChainTree, e
 
 func (n *RemoteNetwork) UpdateChainTree(tree *consensus.SignedChainTree, path string, value interface{}) (*consensus.SignedChainTree, error) {
 	log.Debug("updateTree", tree.MustId(), path, value)
-	err := n.Tupelo.UpdateChainTree(tree, path, value)
+	err := n.Tupelo.UpdateChainTree(tree, n.mustPrivateKey(), path, value)
 	if err != nil {
 		return nil, errors.Wrap(err, "error updating chaintree")
 	}

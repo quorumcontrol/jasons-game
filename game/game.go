@@ -168,6 +168,11 @@ func (g *Game) handleUserInput(actorCtx actor.Context, input *jasonsgame.UserInp
 		g.network.PubSubSystem().Broadcast(shoutChannel, &ShoutMessage{Message: args})
 	case "create-object":
 		err = g.handleCreateObject(actorCtx, args)
+	case "help":
+		g.sendUIMessage(actorCtx, "available commands:")
+		for _, c := range g.commands {
+			g.sendUIMessage(actorCtx, c.parse)
+		}
 	default:
 		log.Error("unhandled but matched command", cmd.name)
 	}
