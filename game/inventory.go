@@ -6,12 +6,14 @@ import (
 
 	"github.com/AsynkronIT/protoactor-go/actor"
 	"github.com/AsynkronIT/protoactor-go/plugin"
+	"github.com/ipfs/go-cid"
 	cbornode "github.com/ipfs/go-ipld-cbor"
 	"github.com/quorumcontrol/chaintree/typecaster"
 	"github.com/quorumcontrol/tupelo-go-sdk/consensus"
 	"github.com/quorumcontrol/tupelo-go-sdk/gossip3/middleware"
 
 	"github.com/quorumcontrol/jasons-game/network"
+	"github.com/quorumcontrol/jasons-game/pb/jasonsgame"
 )
 
 const ObjectsPath = "jasons-game/player/bag-of-hodling"
@@ -41,6 +43,15 @@ type CreateObjectRequest struct {
 type CreateObjectResponse struct {
 	Object *Object
 	Error  error
+}
+
+type DropObjectRequest struct {
+	Name     string
+	Location *jasonsgame.Location
+}
+
+type DropObjectResponse struct {
+	Error error
 }
 
 type Object struct {
@@ -99,6 +110,9 @@ func (co *InventoryActor) Receive(context actor.Context) {
 	case *CreateObjectRequest:
 		co.Log.Debugf("Received CreateObjectRequest: %+v\n", msg)
 		co.handleCreateObject(context, msg)
+	case *DropObjectRequest:
+		co.Log.Debugf("Received DropObjectRequest: %+v\n", msg)
+		co.handleDropObject(context, msg)
 	}
 }
 
@@ -181,4 +195,118 @@ func (co *InventoryActor) handleCreateObject(context actor.Context, msg *CreateO
 	co.player.SetChainTree(newPlayerChainTree)
 
 	context.Respond(&CreateObjectResponse{Object: &newObject})
+}
+
+func (co *InventoryActor) handleDropObject(context actor.Context, msg *DropObjectRequest) {
+	var err error
+
+	player := co.player
+
+	if player == nil {
+		err = fmt.Errorf("player is required to drop an object")
+		co.Log.Error(err)
+		context.Respond(&DropObjectResponse{Error: err})
+		return
+	}
+
+	objectName := msg.Name
+
+	if objectName == "" {
+		err = fmt.Errorf("name is required to drop an object")
+		co.Log.Error(err)
+		context.Respond(&DropObjectResponse{Error: err})
+		return
+	}
+
+	if msg.Location == nil {
+		err = fmt.Errorf("location is required to drop an object")
+		co.Log.Error(err)
+		context.Respond(&DropObjectResponse{Error: err})
+		return
+	}
+
+	playerChainTree := player.ChainTree()
+	treeObjectsPath, _ := consensus.DecodePath(fmt.Sprintf("tree/data/%s", ObjectsPath))
+	objectsUncasted, _, err := playerChainTree.ChainTree.Dag.Resolve(treeObjectsPath)
+	if err != nil {
+		err = fmt.Errorf("error fetching inventory; error: %v", err)
+		co.Log.Error(err)
+		context.Respond(&DropObjectResponse{Error: err})
+		return
+	}
+
+	if objectsUncasted == nil {
+		err = fmt.Errorf("object %v is not in your inventory", objectName)
+		context.Respond(&DropObjectResponse{Error: err})
+		return
+	}
+
+	objects := make(map[string]cid.Cid, len(objectsUncasted.(map[string]interface{})))
+	for k, v := range objectsUncasted.(map[string]interface{}) {
+		objects[k] = v.(cid.Cid)
+	}
+
+	if _, ok := objects[objectName]; !ok {
+		err = fmt.Errorf("object %v is not in your inventory", objectName)
+		context.Respond(&DropObjectResponse{Error: err})
+		return
+	}
+
+	locationTree, err := co.network.GetTree(msg.Location.Did)
+	if err != nil {
+		err = fmt.Errorf("error fetching location chaintree %s; error: %v", msg.Location.Did, err)
+		co.Log.Error(err)
+		context.Respond(&DropObjectResponse{Error: err})
+		return
+	}
+
+	locationAuthsUncasted, _, err := locationTree.ChainTree.Dag.Resolve(strings.Split("tree/"+consensus.TreePathForAuthentications, "/"))
+	if err != nil {
+		err = fmt.Errorf("error fetching location chaintree authentications %s; error: %v", msg.Location.Did, err)
+		co.Log.Error(err)
+		context.Respond(&DropObjectResponse{Error: err})
+		return
+	}
+
+	locationAuths := make([]string, len(locationAuthsUncasted.([]interface{})))
+	for k, v := range locationAuthsUncasted.([]interface{}) {
+		locationAuths[k] = v.(string)
+	}
+
+	chainTreeName := fmt.Sprintf("object:%s", objectName)
+	existingObj, err := co.network.GetChainTreeByName(chainTreeName)
+	if err != nil {
+		err = fmt.Errorf("error fetching object chaintree; object name: %s; error: %v", objectName, err)
+		co.Log.Error(err)
+		context.Respond(&DropObjectResponse{Error: err})
+		return
+	}
+
+	if existingObj == nil {
+		err = fmt.Errorf("object %s does not exist", objectName)
+		co.Log.Error(err)
+		context.Respond(&DropObjectResponse{Error: err})
+		return
+	}
+
+	_, err = co.network.ChangeChainTreeOwner(existingObj, locationAuths)
+	if err != nil {
+		err = fmt.Errorf("error changing owner for object %s; error: %v", msg.Location.Did, err)
+		co.Log.Error(err)
+		context.Respond(&DropObjectResponse{Error: err})
+		return
+	}
+	// TODO: publish drop
+
+	delete(objects, objectName)
+
+	newPlayerChainTree, err := co.network.UpdateChainTree(playerChainTree, ObjectsPath, objects)
+	if err != nil {
+		err = fmt.Errorf("error updating objects in inventory: %v", err)
+		co.Log.Error(err)
+		return
+	}
+	co.player.SetChainTree(newPlayerChainTree)
+
+	context.Respond(&DropObjectResponse{})
 }

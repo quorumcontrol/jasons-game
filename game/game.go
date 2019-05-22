@@ -197,6 +197,8 @@ func (g *Game) handleUserInput(actorCtx actor.Context, input *jasonsgame.UserInp
 		err = g.network.PubSubSystem().Broadcast(shoutChannel, &ShoutMessage{Message: args})
 	case "create-object":
 		err = g.handleCreateObject(actorCtx, args)
+	case "drop-object":
+		err = g.handleDropObject(actorCtx, args)
 	case "help":
 		g.sendUIMessage(actorCtx, "available commands:")
 		for _, c := range g.commands {
@@ -400,10 +402,10 @@ func (g *Game) handleOpenPortal(actorCtx actor.Context, cmd *command, args strin
 
 	onLandTree := g.cursor.Tree()
 	toLandId, err := onLandTree.Id()
+
 	if err != nil {
 		return err
 	}
-
 	log.Debugf("broadcasting OpenPortalMessage, on land ID: %s, location: (%d, %d), to land ID",
 		landId, x, y, toLandId)
 	if err := g.network.PubSubSystem().Broadcast(shoutChannel, &OpenPortalMessage{
@@ -418,7 +420,39 @@ func (g *Game) handleOpenPortal(actorCtx actor.Context, cmd *command, args strin
 	}
 
 	g.sendUIMessage(actorCtx, fmt.Sprintf("Requested to open portal on land %s", landId))
+	return nil
+}
 
+func (g *Game) handleDropObject(actorCtx actor.Context, args string) error {
+	if len(args) == 0 {
+		g.sendUIMessage(actorCtx, "must give an object name to drop")
+		return nil
+	}
+
+	objName := args
+
+	l, err := g.cursor.GetLocation()
+	if err != nil {
+		g.sendUIMessage(actorCtx, fmt.Sprintf("Could not find your current location: %v", err))
+		return fmt.Errorf("Error on GetLocation %v", err)
+	}
+
+	response, err := actorCtx.RequestFuture(g.inventory, &DropObjectRequest{
+		Name:     objName,
+		Location: l,
+	}, 5*time.Second).Result()
+
+	resp, ok := response.(*DropObjectResponse)
+	if !ok {
+		return fmt.Errorf("error casting drop object response")
+	}
+
+	if resp.Error != nil {
+		g.sendUIMessage(actorCtx, resp.Error)
+		return resp.Error
+	}
+
+	g.sendUIMessage(actorCtx, fmt.Sprintf("%s has been dropped into %v", objName, l.PrettyString()))
 	return nil
 }
 
