@@ -80,7 +80,7 @@ func (p *Provider) Start() error {
 	go func() {
 		<-p.parentCtx.Done()
 		sub.Cancel()
-		act.Stop()
+		actor.EmptyRootContext.Stop(act)
 	}()
 	log.Infof("serving a provider now")
 

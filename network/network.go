@@ -27,15 +27,14 @@ var log = logging.Logger("gamenetwork")
 const BlockTopic = "jasons-game-tupelo-world-blocks"
 const ShoutTopic = "jasons-game-shouting-players"
 
-var GameBootstrappers = []string{
-	"/ip4/18.217.223.67/tcp/34001/ipfs/16Uiu2HAm8KLsnWiMjE2zqwgWqeZEwfJn5U7Qkp36prgoWM3jHqsp",
-	"/ip4/18.221.60.150/tcp/34001/ipfs/16Uiu2HAmBRmhZ3WLyGKAZy843Zk2MQRBKqPVeXpHu8FyEWumGPBN",
+var DefaultTupeloBootstrappers = []string{
+	"/ip4/18.196.112.81/tcp/34001/ipfs/16Uiu2HAmJGZXyrrQ9CcAJWh5Q8rNsoi9yK1VT2HANhH2NcqkRmaZ",
+	"/ip4/34.231.17.217/tcp/34001/ipfs/16Uiu2HAkxNHzLn5cTpGs7RuTQSTKjtxtT9jGcYa6PousihVzEPc6",
 }
 
-func init() {
-	if nodes, ok := os.LookupEnv("JASON_BOOTSTRAP_NODES"); ok {
-		GameBootstrappers = strings.Split(nodes, ",")
-	}
+var DefaultGameBootstrappers = []string{
+	"/ip4/18.217.223.67/tcp/34001/ipfs/16Uiu2HAm8KLsnWiMjE2zqwgWqeZEwfJn5U7Qkp36prgoWM3jHqsp",
+	"/ip4/18.221.60.150/tcp/34001/ipfs/16Uiu2HAmBRmhZ3WLyGKAZy843Zk2MQRBKqPVeXpHu8FyEWumGPBN",
 }
 
 type Network interface {
@@ -87,7 +86,7 @@ func NewRemoteNetwork(ctx context.Context, group *types.NotaryGroup, path string
 	net.pubSubSystem = remote.NewNetworkPubSub(ipldNetHost)
 
 	go func() {
-		_, err := ipldNetHost.Bootstrap(GameBootstrappers)
+		_, err := ipldNetHost.Bootstrap(gameBootstrappers())
 		if err != nil {
 			log.Errorf("error bootstrapping ipld host: %v", err)
 		}
@@ -101,7 +100,7 @@ func NewRemoteNetwork(ctx context.Context, group *types.NotaryGroup, path string
 	if err != nil {
 		return nil, fmt.Errorf("error setting up p2p host: %s", err)
 	}
-	if _, err = tupeloP2PHost.Bootstrap(p2p.BootstrapNodes()); err != nil {
+	if _, err = tupeloP2PHost.Bootstrap(tupeloBootstrappers()); err != nil {
 		return nil, err
 	}
 	if err = tupeloP2PHost.WaitForBootstrap(len(group.Signers), 15*time.Second); err != nil {
@@ -237,4 +236,18 @@ func (n *RemoteNetwork) UpdateChainTree(tree *consensus.SignedChainTree, path st
 		return nil, errors.Wrap(err, "error updating chaintree")
 	}
 	return tree, n.TreeStore.SaveTreeMetadata(tree)
+}
+
+func tupeloBootstrappers() []string {
+	if envSpecifiedNodes, ok := os.LookupEnv("TUPELO_BOOTSTRAP_NODES"); ok {
+		return strings.Split(envSpecifiedNodes, ",")
+	}
+	return DefaultTupeloBootstrappers
+}
+
+func gameBootstrappers() []string {
+	if envSpecifiedNodes, ok := os.LookupEnv("TUPELO_BOOTSTRAP_NODES"); ok {
+		return strings.Split(envSpecifiedNodes, ",")
+	}
+	return DefaultTupeloBootstrappers
 }
