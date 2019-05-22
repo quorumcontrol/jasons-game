@@ -57,11 +57,11 @@ func (g *Game) Receive(actorCtx actor.Context) {
 		g.handleUserInput(actorCtx, msg)
 	case *ChatMessage, *ShoutMessage:
 		g.sendUIMessage(actorCtx, msg)
-	// case *OpenPortalMessage:
-	// 	log.Debugf("received OpenPortalMessage")
-	// 	if err := g.handleOpenPortalMessage(actorCtx, msg); err != nil {
-	// 		panic(err)
-	// 	}
+	case *messages.OpenPortalMessage:
+		log.Debugf("received OpenPortalMessage")
+		if err := g.handleOpenPortalMessage(actorCtx, msg); err != nil {
+			panic(err)
+		}
 	// case *OpenPortalResponseMessage:
 	// 	log.Debugf("received OpenPortalResponseMessage")
 	// 	if msg.Opener != g.player.tree.MustId() {
@@ -506,51 +506,51 @@ func (g *Game) sendUIMessage(actorCtx actor.Context, mesgInter interface{}) {
 	g.messageSequence++
 }
 
-// func (g *Game) handleOpenPortalMessage(actorCtx actor.Context, msg *OpenPortalMessage) error {
-// 	landTree := g.cursor.Tree()
-// 	landId, err := landTree.Id()
-// 	if err != nil {
-// 		return err
-// 	}
-// 	if msg.OnLandId != landId {
-// 		log.Debugf("OpenPortalMessage is not for us, ignoring it")
-// 		return nil
-// 	}
+func (g *Game) handleOpenPortalMessage(actorCtx actor.Context, msg *messages.OpenPortalMessage) error {
+	landTree := g.cursor.Tree()
+	landId, err := landTree.Id()
+	if err != nil {
+		return err
+	}
+	if msg.OnLandId != landId {
+		log.Debugf("OpenPortalMessage is not for us, ignoring it")
+		return nil
+	}
 
-// 	log.Debugf("handling OpenPortalMessage from %s, location: (%d, %d)", msg.From, msg.LocationX,
-// 		msg.LocationY)
-// 	g.sendUIMessage(actorCtx, fmt.Sprintf("Player %s wants to open a portal in your land",
-// 		msg.From))
-// 	// TODO: Prompt user for permission
+	log.Debugf("handling OpenPortalMessage from %s, location: (%d, %d)", msg.From, msg.LocationX,
+		msg.LocationY)
+	g.sendUIMessage(actorCtx, fmt.Sprintf("Player %s wants to open a portal in your land",
+		msg.From))
+	// TODO: Prompt user for permission
 
-// 	log.Debugf("Broadcasting OpenPortalResponseMessage directed at sender")
-// 	if err := g.network.PubSubSystem().Broadcast(shoutChannel, &OpenPortalResponseMessage{
-// 		Accepted:  true,
-// 		Opener:    msg.From,
-// 		LandId:    landId,
-// 		LocationX: msg.LocationX,
-// 		LocationY: msg.LocationY,
-// 	}); err != nil {
-// 		return err
-// 	}
+	log.Debugf("Broadcasting OpenPortalResponseMessage directed at sender")
+	if err := g.network.PubSubSystem().Broadcast(shoutChannel, &messages.OpenPortalResponseMessage{
+		Accepted:  true,
+		Opener:    msg.From,
+		LandId:    landId,
+		LocationX: msg.LocationX,
+		LocationY: msg.LocationY,
+	}); err != nil {
+		return err
+	}
 
-// 	loc, err := g.cursor.GetLocation()
-// 	if err != nil {
-// 		return err
-// 	}
-// 	loc.Portal = &jasonsgame.Portal{
-// 		To: msg.ToLandId,
-// 	}
-// 	log.Debugf("Playing transaction to add portal to %s at location (%d, %d) in land",
-// 		msg.ToLandId, loc.X, loc.Y)
-// 	updated, err := g.network.UpdateChainTree(landTree,
-// 		fmt.Sprintf("jasons-game/%d/%d", g.cursor.X(), g.cursor.Y()), loc)
-// 	if err == nil {
-// 		g.cursor.SetChainTree(updated)
-// 	}
+	loc, err := g.cursor.GetLocation()
+	if err != nil {
+		return err
+	}
+	loc.Portal = &jasonsgame.Portal{
+		To: msg.ToLandId,
+	}
+	log.Debugf("Playing transaction to add portal to %s at location (%d, %d) in land",
+		msg.ToLandId, loc.X, loc.Y)
+	updated, err := g.network.UpdateChainTree(landTree,
+		fmt.Sprintf("jasons-game/%d/%d", g.cursor.X(), g.cursor.Y()), loc)
+	if err == nil {
+		g.cursor.SetChainTree(updated)
+	}
 
-// 	return nil
-// }
+	return nil
+}
 
 // func (g *Game) handleOpenPortalResponseMessage(actorCtx actor.Context,
 // 	msg *OpenPortalResponseMessage) {

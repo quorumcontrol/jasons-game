@@ -9,8 +9,7 @@ import (
 	"github.com/AsynkronIT/protoactor-go/actor"
 	logging "github.com/ipfs/go-log"
 	"github.com/pkg/errors"
-	"github.com/quorumcontrol/jasons-game/game"
-	"github.com/quorumcontrol/jasons-game/messages"
+	"github.com/quorumcontrol/jasons-game/router"
 	"github.com/quorumcontrol/jasons-game/network"
 	"github.com/quorumcontrol/jasons-game/pb/jasonsgame"
 	"github.com/quorumcontrol/jasons-game/ui"
@@ -103,13 +102,9 @@ func (gs *GameServer) getOrCreateSession(sess *jasonsgame.Session, stream jasons
 			panic("must supply a valid session")
 		}
 
-		actor.EmptyRootContext.Spawn(messages.NewRouterProps(net))
-
-		log.Debugf("creating actor")
+		log.Debugf("creating actors")
 		uiActor = actor.EmptyRootContext.Spawn(ui.NewUIProps(stream, net))
-
-		broadcaster := messages.NewBroadcaster(net)
-		actor.EmptyRootContext.Spawn(game.NewGameProps(uiActor, net, broadcaster))
+		actor.EmptyRootContext.Spawn(router.NewRouterProps(net, uiActor))
 
 		gs.sessions[sess.Uuid] = uiActor
 	}
