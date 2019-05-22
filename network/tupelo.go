@@ -71,10 +71,6 @@ func (t *Tupelo) CreateChainTree(key *ecdsa.PrivateKey) (*consensus.SignedChainT
 }
 
 func (t *Tupelo) UpdateChainTree(tree *consensus.SignedChainTree, key *ecdsa.PrivateKey, path string, value interface{}) error {
-	c := client.New(t.NotaryGroup, tree.MustId(), t.PubSubSystem)
-	c.Listen()
-	defer c.Stop()
-
 	log.Debug("UpdateChainTree", "did", tree.MustId(), "path", path, "value", value)
 
 	transactions := []*chaintree.Transaction{
@@ -86,6 +82,14 @@ func (t *Tupelo) UpdateChainTree(tree *consensus.SignedChainTree, key *ecdsa.Pri
 			},
 		},
 	}
+
+	return t.PlayTransactions(tree, key, transactions)
+}
+
+func (t *Tupelo) PlayTransactions(tree *consensus.SignedChainTree, key *ecdsa.PrivateKey, transactions []*chaintree.Transaction) error {
+	c := client.New(t.NotaryGroup, tree.MustId(), t.PubSubSystem)
+	c.Listen()
+	defer c.Stop()
 
 	var tipPtr *cid.Cid
 	if !tree.IsGenesis() {
