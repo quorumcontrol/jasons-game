@@ -39,6 +39,7 @@ var DefaultGameBootstrappers = []string{
 }
 
 type Network interface {
+	ChangeChainTreeOwner(tree *consensus.SignedChainTree, newKeys []string) (*consensus.SignedChainTree, error)
 	CreateNamedChainTree(name string) (*consensus.SignedChainTree, error)
 	GetChainTreeByName(name string) (*consensus.SignedChainTree, error)
 	GetTreeByTip(tip cid.Cid) (*consensus.SignedChainTree, error)
@@ -243,6 +244,25 @@ func (n *RemoteNetwork) GetTreeByTip(tip cid.Cid) (*consensus.SignedChainTree, e
 func (n *RemoteNetwork) UpdateChainTree(tree *consensus.SignedChainTree, path string, value interface{}) (*consensus.SignedChainTree, error) {
 	log.Debug("updateTree", tree.MustId(), path, value)
 	err := n.Tupelo.UpdateChainTree(tree, n.mustPrivateKey(), path, value)
+	if err != nil {
+		return nil, errors.Wrap(err, "error updating chaintree")
+	}
+	return tree, n.TreeStore.SaveTreeMetadata(tree)
+}
+
+func (n *RemoteNetwork) ChangeChainTreeOwner(tree *consensus.SignedChainTree, newKeys []string) (*consensus.SignedChainTree, error) {
+	log.Debug("ChangeChainTreeOwner", tree.MustId(), newKeys)
+
+	transactions := []*chaintree.Transaction{
+		{
+			Type: consensus.TransactionTypeSetOwnership,
+			Payload: &consensus.SetOwnershipPayload{
+				Authentication: newKeys,
+			},
+		},
+	}
+
+	err := n.Tupelo.PlayTransactions(tree, n.mustPrivateKey(), transactions)
 	if err != nil {
 		return nil, errors.Wrap(err, "error updating chaintree")
 	}

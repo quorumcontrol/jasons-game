@@ -127,3 +127,8 @@ func (ln *LocalNetwork) UpdateChainTree(tree *consensus.SignedChainTree, path st
 
 	return tree, ln.TreeStore.SaveTreeMetadata(tree)
 }
+
+func (ln *LocalNetwork) ChangeChainTreeOwner(tree *consensus.SignedChainTree, newKeys []string) (*consensus.SignedChainTree, error) {
+	// TODO mock chown?
+	return tree, nil
+}
