@@ -45,3 +45,11 @@ func (p *Player) GetInfo() (*PlayerInfo, error) {
 	}
 	return pi, nil
 }
+
+func (p *Player) ChainTree() *consensus.SignedChainTree {
+	return p.tree
+}
+
+func (p *Player) SetChainTree(ct *consensus.SignedChainTree) {
+	p.tree = ct
+}

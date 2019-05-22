@@ -25,6 +25,7 @@ var defaultCommandList = commandList{
 	newCommand("exit", "exit"),
 	newCommand("say", "say"),
 	newCommand("shout", "shout"),
+	newCommand("create-object", "create object"),
 	newCommand("help", "help"),
 }
 
