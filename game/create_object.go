@@ -2,6 +2,7 @@ package game
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/AsynkronIT/protoactor-go/actor"
 	"github.com/AsynkronIT/protoactor-go/plugin"
@@ -38,7 +39,8 @@ type CreateObjectRequest struct {
 }
 
 type CreateObjectResponse struct {
-	Object Object
+	Object *Object
+	Error  error
 }
 
 type Object struct {
@@ -101,69 +103,82 @@ func (co *CreateObjectActor) Receive(context actor.Context) {
 }
 
 func (co *CreateObjectActor) handleCreateObject(context actor.Context, msg *CreateObjectRequest) {
+	var err error
+
 	player := co.player
 
 	if player == nil {
-		co.Log.Error("player is required to create an object")
+		err = fmt.Errorf("player is required to create an object")
+		co.Log.Error(err)
+		context.Respond(&CreateObjectResponse{Error: err})
 		return
 	}
 
-	chainTreeName := fmt.Sprintf("object:%s", msg.Name)
+	name := msg.Name
+	chainTreeName := fmt.Sprintf("object:%s", name)
+
+	if name == "" {
+		err = fmt.Errorf("name is required to create an object")
+		co.Log.Error(err)
+		context.Respond(&CreateObjectResponse{Error: err})
+		return
+	}
+
+	existingObj, err := co.network.GetChainTreeByName(chainTreeName)
+	if err != nil {
+		err = fmt.Errorf("error checking for existing chaintree; object name: %s; error: %v", name, err)
+		co.Log.Error(err)
+		context.Respond(&CreateObjectResponse{Error: err})
+		return
+	}
+	if existingObj != nil {
+		err = fmt.Errorf("object with name %s already exists; names must be unique", name)
+		co.Log.Error(err)
+		context.Respond(&CreateObjectResponse{Error: err})
+		return
+	}
+
 	objectChainTree, err := co.network.CreateNamedChainTree(chainTreeName)
 	if err != nil {
-		co.Log.Errorw("error creating object chaintree", "err", err)
+		err = fmt.Errorf("error creating object chaintree: %v", err)
+		co.Log.Error(err)
+		context.Respond(&CreateObjectResponse{Error: err})
 		return
 	}
 
-	objectChainTree, err = co.network.UpdateChainTree(objectChainTree, "name", msg.Name)
+	objectChainTree, err = co.network.UpdateChainTree(objectChainTree, "name", name)
 	if err != nil {
-		co.Log.Errorw("error setting name of new object", "err", err)
+		err = fmt.Errorf("error setting name of new object: %v", err)
+		co.Log.Error(err)
+		context.Respond(&CreateObjectResponse{Error: err})
 		return
 	}
 
-	objectChainTree, err = co.network.UpdateChainTree(objectChainTree, "description", msg.Description)
-	if err != nil {
-		co.Log.Errorw("error setting description of new object", "err", err)
-		return
+	if msg.Description != "" {
+		objectChainTree, err = co.network.UpdateChainTree(objectChainTree, "description", msg.Description)
+		if err != nil {
+			co.Log.Warnw("error setting description of new object", "err", err)
+		}
 	}
 
 	playerChainTree := player.ChainTree()
 
 	objectsPath, _ := consensus.DecodePath(ObjectsPath)
-	existingObjectsNode, remainingPath, err := playerChainTree.ChainTree.Dag.Resolve(append([]string{"tree", "data"}, objectsPath...))
-	if err != nil {
-		co.Log.Errorw("error resolving existing player objects", "err", err)
-		return
-	}
 
-	var newObject Object
-	var newObjects map[string]Object
+	newObject := Object{ChainTreeDID: objectChainTree.MustId()}
 
-	if len(remainingPath) > 0 {
-		newObject = Object{ChainTreeDID: objectChainTree.MustId()}
-		newObjects = map[string]Object{msg.Name: newObject}
-	} else {
-		existingObjects := make(map[string]Object)
+	newObjectPath := strings.Join(append(objectsPath, name), "/")
 
-		err = typecaster.ToType(existingObjectsNode, &existingObjects)
-		if err != nil {
-			co.Log.Errorw("error casting existing objects to string slice", "err", err)
-			return
-		}
-
-		newObject = Object{ChainTreeDID: objectChainTree.MustId()}
-		newObjects = existingObjects
-		newObjects[msg.Name] = newObject
-	}
-
-	newPlayerChainTree, err := co.network.UpdateChainTree(playerChainTree, ObjectsPath, newObjects)
+	newPlayerChainTree, err := co.network.UpdateChainTree(playerChainTree, newObjectPath, newObject)
 
 	if err != nil {
-		co.Log.Errorw("error updating objects in chaintree", "err", err)
+		err = fmt.Errorf("error updating objects in chaintree: %v", err)
+		co.Log.Error(err)
+		context.Respond(&CreateObjectResponse{Error: err})
 		return
 	}
 
 	co.player.SetChainTree(newPlayerChainTree)
 
-	context.Respond(&CreateObjectResponse{Object: newObject})
+	context.Respond(&CreateObjectResponse{Object: &newObject})
 }
