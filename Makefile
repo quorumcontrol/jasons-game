@@ -37,7 +37,7 @@ $(FIRSTGOPATH)/bin/msgp:
 	go get github.com/tinylib/msgp
 
 build: $(generated) go.mod go.sum
-	mkdir -p bin && go build -o bin/jasons-game
+	mkdir -p bin && go build -tags=desktop -o bin/jasonsgame
 
 lint: $(FIRSTGOPATH)/bin/golangci-lint $(generated)
 	$(FIRSTGOPATH)/bin/golangci-lint run --build-tags integration
