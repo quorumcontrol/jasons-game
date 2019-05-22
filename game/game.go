@@ -33,7 +33,7 @@ type Game struct {
 	messageSequence uint64
 	chatSubscriber  *actor.PID
 	shoutSubscriber *actor.PID
-	objectCreator   *actor.PID
+	inventory       *actor.PID
 }
 
 func NewGameProps(ui *actor.PID, network network.Network) *actor.Props {
@@ -127,12 +127,12 @@ func (g *Game) initialize(actorCtx actor.Context) {
 	cursor := new(navigator.Cursor).SetChainTree(homeTree)
 	g.cursor = cursor
 
-	g.objectCreator, err = actorCtx.SpawnNamed(NewCreateObjectActorProps(&CreateObjectActorConfig{
+	g.inventory, err = actorCtx.SpawnNamed(NewInventoryActorProps(&InventoryActorConfig{
 		Player:  g.playerTree,
 		Network: g.network,
-	}), "objectCreator")
+	}), "inventory")
 	if err != nil {
-		panic(fmt.Errorf("error spawning object creator actor: %v", err))
+		panic(fmt.Errorf("error spawning inventory actor: %v", err))
 	}
 
 	g.sendUIMessage(
@@ -425,7 +425,7 @@ func (g *Game) handleOpenPortal(actorCtx actor.Context, cmd *command, args strin
 func (g *Game) handleCreateObject(actorCtx actor.Context, args string) error {
 	splitArgs := strings.Split(args, " ")
 	objName := splitArgs[0]
-	response, err := actorCtx.RequestFuture(g.objectCreator, &CreateObjectRequest{
+	response, err := actorCtx.RequestFuture(g.inventory, &CreateObjectRequest{
 		Name:        objName,
 		Description: strings.Join(splitArgs[1:], " "),
 	}, 1*time.Second).Result()
