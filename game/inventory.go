@@ -21,14 +21,14 @@ func init() {
 	typecaster.AddType(Object{})
 }
 
-type CreateObjectActor struct {
+type InventoryActor struct {
 	middleware.LogAwareHolder
 
 	player  *PlayerTree
 	network network.Network
 }
 
-type CreateObjectActorConfig struct {
+type InventoryActorConfig struct {
 	Player  *PlayerTree
 	Network network.Network
 }
@@ -82,9 +82,9 @@ func (no *NetworkObject) Description() (string, error) {
 	return no.getProp("description")
 }
 
-func NewCreateObjectActorProps(cfg *CreateObjectActorConfig) *actor.Props {
+func NewInventoryActorProps(cfg *InventoryActorConfig) *actor.Props {
 	return actor.PropsFromProducer(func() actor.Actor {
-		return &CreateObjectActor{
+		return &InventoryActor{
 			player:  cfg.Player,
 			network: cfg.Network,
 		}
@@ -94,7 +94,7 @@ func NewCreateObjectActorProps(cfg *CreateObjectActorConfig) *actor.Props {
 	)
 }
 
-func (co *CreateObjectActor) Receive(context actor.Context) {
+func (co *InventoryActor) Receive(context actor.Context) {
 	switch msg := context.Message().(type) {
 	case *CreateObjectRequest:
 		co.Log.Debugf("Received CreateObjectRequest: %+v\n", msg)
@@ -102,7 +102,7 @@ func (co *CreateObjectActor) Receive(context actor.Context) {
 	}
 }
 
-func (co *CreateObjectActor) handleCreateObject(context actor.Context, msg *CreateObjectRequest) {
+func (co *InventoryActor) handleCreateObject(context actor.Context, msg *CreateObjectRequest) {
 	var err error
 
 	player := co.player
