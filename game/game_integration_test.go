@@ -100,7 +100,7 @@ func TestFullIntegration(t *testing.T) {
 	defer rootCtx.Stop(uiActor)
 
 	broadcaster := messages.NewBroadcaster(net)
-	playerTree, err := GetPlayerTree(net)
+	playerTree, err := GetOrCreatePlayerTree(net)
 	require.Nil(t, err)
 	gameActor, err := rootCtx.SpawnNamed(NewGameProps(playerTree, uiActor, net, broadcaster),
 		"test-integration-game")

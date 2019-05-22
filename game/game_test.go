@@ -20,7 +20,7 @@ func setupUiAndGame(t *testing.T, stream *ui.TestStream, net network.Network) (s
 	simulatedUI, err := rootCtx.SpawnNamed(ui.NewUIProps(stream, net), t.Name()+"-ui")
 	require.Nil(t, err)
 
-	playerTree, err := GetPlayerTree(net)
+	playerTree, err := GetOrCreatePlayerTree(net)
 	require.Nil(t, err)
 	broadcaster := messages.NewBroadcaster(net)
 	game, err = rootCtx.SpawnNamed(
@@ -99,7 +99,7 @@ func TestCallMe(t *testing.T) {
 	require.Nil(t, err)
 	defer rootCtx.Stop(simulatedUI)
 
-	playerTree, err := GetPlayerTree(net)
+	playerTree, err := GetOrCreatePlayerTree(net)
 	require.Nil(t, err)
 	broadcaster := messages.NewBroadcaster(net)
 	game, err := rootCtx.SpawnNamed(

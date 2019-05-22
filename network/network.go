@@ -99,7 +99,7 @@ func NewRemoteNetwork(ctx context.Context, group *types.NotaryGroup, path string
 			return
 		}
 		if err := net.pubSubSystem.Broadcast(BlockTopic, &Join{Identity: ipldNetHost.Identity()}); err != nil {
-			log.Errorf("broadcasting JoinMessage failed: %s", err)
+			log.Errorf("broadcasting Join failed: %s", err)
 		}
 	}()
 

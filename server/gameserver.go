@@ -9,9 +9,11 @@ import (
 	"github.com/AsynkronIT/protoactor-go/actor"
 	logging "github.com/ipfs/go-log"
 	"github.com/pkg/errors"
-	"github.com/quorumcontrol/jasons-game/router"
+	"github.com/quorumcontrol/jasons-game/game"
+	"github.com/quorumcontrol/jasons-game/messages"
 	"github.com/quorumcontrol/jasons-game/network"
 	"github.com/quorumcontrol/jasons-game/pb/jasonsgame"
+	"github.com/quorumcontrol/jasons-game/router"
 	"github.com/quorumcontrol/jasons-game/ui"
 	"github.com/quorumcontrol/tupelo-go-sdk/gossip3/types"
 	"github.com/shibukawa/configdir"
@@ -104,9 +106,33 @@ func (gs *GameServer) getOrCreateSession(sess *jasonsgame.Session, stream jasons
 
 		log.Debugf("creating actors")
 		uiActor = actor.EmptyRootContext.Spawn(ui.NewUIProps(stream, net))
-		actor.EmptyRootContext.Spawn(router.NewRouterProps(net, uiActor))
-
 		gs.sessions[sess.Uuid] = uiActor
+
+		table, err := gs.makeRoutingTable(net, uiActor)
+		if err != nil {
+			panic(err)
+		}
+		actor.EmptyRootContext.Spawn(router.NewRouterProps(net, table))
 	}
 	return uiActor
+}
+
+func (gs *GameServer) makeRoutingTable(net network.Network,
+	uiActor *actor.PID) (map[string]*actor.PID, error) {
+	table := map[string]*actor.PID{}
+	broadcaster := messages.NewBroadcaster(net)
+	playerTree, err := game.GetOrCreatePlayerTree(net)
+	if err != nil {
+		return nil, err
+	}
+	gameActor := actor.EmptyRootContext.Spawn(game.NewGameProps(playerTree, uiActor,
+		net, broadcaster))
+	treeId, err := playerTree.HomeTree.Id()
+	if err != nil {
+		return nil, err
+	}
+	table[treeId] = gameActor
+	table[playerTree.Did()] = gameActor
+
+	return table, nil
 }

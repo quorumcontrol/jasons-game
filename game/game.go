@@ -81,28 +81,15 @@ func (g *Game) initialize(actorCtx actor.Context) {
 	actorCtx.Send(g.ui, &ui.SetGame{Game: actorCtx.Self()})
 	g.shoutSubscriber = actorCtx.Spawn(g.network.PubSubSystem().NewSubscriberProps(shoutChannel))
 
-	homeTree, err := g.network.GetChainTreeByName("home")
-	log.Debug("get home", homeTree)
-	if err != nil {
-		panic(err)
-	}
-	if homeTree == nil {
-		log.Debug("create home")
-		homeTree, err = createHome(g.network)
-		if err != nil {
-			log.Error("error creating home", err)
-			panic(err)
-		}
-	}
-
-	landTopic := topicFromDid(homeTree.MustId())
+	landTopic := topicFromDid(g.playerTree.HomeTree.MustId())
 	log.Debugf("subscribing to messages with our land as topic %s", landTopic)
 	// TODO: Use general, non-specific, pubsub topic instead
 	g.chatSubscriber = actorCtx.Spawn(g.network.PubSubSystem().NewSubscriberProps(landTopic))
 
-	cursor := new(navigator.Cursor).SetChainTree(homeTree)
+	cursor := new(navigator.Cursor).SetChainTree(g.playerTree.HomeTree)
 	g.cursor = cursor
 
+	var err error
 	g.objectCreator, err = actorCtx.SpawnNamed(NewCreateObjectActorProps(&CreateObjectActorConfig{
 		Player:  g.playerTree,
 		Network: g.network,
@@ -116,8 +103,8 @@ func (g *Game) initialize(actorCtx actor.Context) {
 		fmt.Sprintf("Created Player %s \n( %s )\nHome: %s \n( %s )",
 			g.playerTree.Did(),
 			g.playerTree.Tip().String(),
-			homeTree.MustId(),
-			homeTree.Tip().String()),
+			g.playerTree.HomeTree.MustId(),
+			g.playerTree.HomeTree.Tip().String()),
 	)
 
 	// g.sendUIMessage(actorCtx, "waiting to join the game!")
@@ -349,16 +336,21 @@ func (g *Game) handleLocationInput(actorCtx actor.Context, cmd *command, args st
 }
 
 func (g *Game) handleOpenPortal(actorCtx actor.Context, cmd *command, args string) error {
-	a := strings.Split(args, " ")
-	if len(a) != 2 {
-		log.Debugf("received wrong number of arguments (%d): %v", len(a), a)
+	splitArgs := []string{}
+	for _, a := range strings.Split(args, " ") {
+		if len(strings.TrimSpace(a)) > 0 {
+			splitArgs = append(splitArgs, a)
+		}
+	}
+	if len(splitArgs) != 2 {
+		log.Debugf("received wrong number of arguments (%d): %v", len(splitArgs), splitArgs)
 		g.sendUIMessage(actorCtx, "2 arguments required")
 		return nil
 	}
 
-	ownerId := a[0]
-	loc := a[1]
-	log.Debugf("requesting to open portal in land of player %q, location %q", ownerId, loc)
+	onLandId := splitArgs[0]
+	loc := splitArgs[1]
+	log.Debugf("requesting to open portal in land ID %q, location %q", onLandId, loc)
 	locArr := strings.Split(loc, ",")
 	if len(locArr) != 2 {
 		g.sendUIMessage(actorCtx, "You must specify the location as x,y")
@@ -383,11 +375,11 @@ func (g *Game) handleOpenPortal(actorCtx actor.Context, cmd *command, args strin
 		return err
 	}
 
-	log.Debugf("broadcasting OpenPortalMessage, on land of player: %s, location: (%d, %d), to land ID %s",
-		ownerId, x, y, toLandId)
+	log.Debugf("broadcasting OpenPortalMessage, on land ID %s, location (%d, %d), to land ID %s",
+		onLandId, x, y, toLandId)
 	if err := g.broadcaster.BroadcastGeneral(&messages.OpenPortalMessage{
 		From:      playerId,
-		To:        ownerId,
+		To:        onLandId,
 		ToLandId:  toLandId,
 		LocationX: int64(x),
 		LocationY: int64(y),
@@ -396,7 +388,7 @@ func (g *Game) handleOpenPortal(actorCtx actor.Context, cmd *command, args strin
 		return err
 	}
 
-	g.sendUIMessage(actorCtx, fmt.Sprintf("Requested to open portal on land of %s", ownerId))
+	g.sendUIMessage(actorCtx, fmt.Sprintf("Requested to open portal on land ID %s", onLandId))
 
 	return nil
 }
@@ -457,6 +449,8 @@ func (g *Game) handleOpenPortalMessage(actorCtx actor.Context, msg *messages.Ope
 		msg.LocationY)
 	g.sendUIMessage(actorCtx, fmt.Sprintf("Player %s wants to open a portal in your land",
 		msg.From))
+	g.sendUIMessage(actorCtx, "Request to open portal in your land auto-accepted "+
+		"(this is an ALPHA version, future versions will prompt for acceptance)")
 	// TODO: Prompt user for permission
 
 	log.Debugf("Broadcasting OpenPortalResponseMessage back to sender")

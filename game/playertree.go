@@ -15,10 +15,11 @@ import (
 var playerTreePath = "jasons-game/player"
 
 type PlayerTree struct {
-	tree    *consensus.SignedChainTree
-	player  *jasonsgame.Player
-	network network.Network
-	did     string
+	tree     *consensus.SignedChainTree
+	HomeTree *consensus.SignedChainTree
+	player   *jasonsgame.Player
+	network  network.Network
+	did      string
 }
 
 func NewPlayerTree(net network.Network, tree *consensus.SignedChainTree) *PlayerTree {
@@ -26,6 +27,20 @@ func NewPlayerTree(net network.Network, tree *consensus.SignedChainTree) *Player
 		network: net,
 	}
 	pt.setTree(tree)
+
+	homeTree, err := net.GetChainTreeByName("home")
+	if err != nil {
+		panic(err)
+	}
+	if homeTree == nil {
+		homeTree, err = createHome(net)
+		if err != nil {
+			log.Error("error creating home", err)
+			panic(err)
+		}
+	}
+	pt.HomeTree = homeTree
+
 	return pt
 }
 
@@ -97,7 +112,7 @@ func (p *PlayerTree) SetChainTree(ct *consensus.SignedChainTree) {
 	p.tree = ct
 }
 
-func GetPlayerTree(net network.Network) (*PlayerTree, error) {
+func GetOrCreatePlayerTree(net network.Network) (*PlayerTree, error) {
 	playerChain, err := net.GetChainTreeByName("player")
 	if err != nil {
 		return nil, err

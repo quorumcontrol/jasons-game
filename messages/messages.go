@@ -9,7 +9,6 @@ import (
 func init() {
 	messages.RegisterMessage(&ChatMessage{})
 	messages.RegisterMessage(&ShoutMessage{})
-	messages.RegisterMessage(&JoinMessage{})
 	messages.RegisterMessage(&OpenPortalMessage{})
 	messages.RegisterMessage(&OpenPortalResponseMessage{})
 }
@@ -18,7 +17,7 @@ type PlayerMessage interface {
 	messages.WireMessage
 
 	FromPlayer() string
-	ToPlayer() string
+	ToDid() string
 }
 
 type ChatMessage struct {
@@ -39,14 +38,6 @@ func (cm *ShoutMessage) TypeCode() int8 {
 	return -101
 }
 
-type JoinMessage struct {
-	From string
-}
-
-func (cm *JoinMessage) TypeCode() int8 {
-	return -102
-}
-
 type OpenPortalMessage struct {
 	From      string
 	To        string
@@ -63,7 +54,7 @@ func (m *OpenPortalMessage) FromPlayer() string {
 	return m.From
 }
 
-func (m *OpenPortalMessage) ToPlayer() string {
+func (m *OpenPortalMessage) ToDid() string {
 	return m.To
 }
 
@@ -86,6 +77,6 @@ func (m *OpenPortalResponseMessage) FromPlayer() string {
 	return m.From
 }
 
-func (m *OpenPortalResponseMessage) ToPlayer() string {
+func (m *OpenPortalResponseMessage) ToDid() string {
 	return m.To
 }
