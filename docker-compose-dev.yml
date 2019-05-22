@@ -5,7 +5,7 @@ services:
     build: ./devdocker
     depends_on:
       - jason
-    command: ["go", "run", "main.go"]
+    command: ["go", "run", "main.go", "-disablewebview=true"]
     volumes:
       - .:/app:delegated
       - ./devdocker/.tmp:/root/.cache:delegated
@@ -21,7 +21,7 @@ services:
 
   game2:
     build: ./devdocker
-    command: ["go", "run", "main.go"]
+    command: ["go", "run", "main.go", "-disablewebview=true"]
     depends_on:
       - jason
     volumes:
@@ -55,7 +55,7 @@ services:
 
   game-testnet:
     build: ./devdocker
-    command: ["go", "run", "main.go"]
+    command: ["go", "run", "main.go", "-disablewebview=true"]
     volumes:
       - .:/app:delegated
       - ./devdocker/.tmp:/root/.cache:delegated
