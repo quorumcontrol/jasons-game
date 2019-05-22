@@ -24,6 +24,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/quorumcontrol/jasons-game/pb/jasonsgame"
+	"github.com/quorumcontrol/jasons-game/messages"
 
 )
 
@@ -98,7 +99,9 @@ func TestFullIntegration(t *testing.T) {
 	require.Nil(t, err)
 	defer rootCtx.Stop(uiActor)
 
-	gameActor, err := rootCtx.SpawnNamed(NewGameProps(uiActor, net), "test-integration-game")
+	broadcaster := messages.NewBroadcaster(net)
+	gameActor, err := rootCtx.SpawnNamed(NewGameProps(uiActor, net, broadcaster),
+		"test-integration-game")
 	require.Nil(t, err)
 	defer rootCtx.Stop(gameActor)
 

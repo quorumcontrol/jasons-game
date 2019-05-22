@@ -11,7 +11,7 @@ export GO111MODULE = on
 FIRSTGOPATH = $(firstword $(subst :, ,$(GOPATH)))
 
 jsmodules = ./frontend/jasons-game/node_modules
-generated = pb/jasonsgame/jasonsgame.pb.go frontend/jasons-game/src/js/frontend/remote/*_pb.* game/messages_gen.go game/messages_gen_test.go
+generated = pb/jasonsgame/jasonsgame.pb.go frontend/jasons-game/src/js/frontend/remote/*_pb.* game/messages_gen.go game/messages_gen_test.go messages/messages_gen.go messages/messages_gen_test.go
 packr = packrd/packed-packr.go main-packr.go
 
 all: frontend-build $(packr) build
@@ -27,7 +27,9 @@ $(FIRSTGOPATH)/bin/protoc-gen-gogofaster: $(FIRSTGOPATH)/src/github.com/gogo/pro
 	go get -u github.com/gogo/protobuf/protoc-gen-gogofaster
 
 $(generated): $(FIRSTGOPATH)/bin/protoc-gen-gogofaster $(jsmodules) game/messages.go
-	./scripts/protogen.sh && cd game && go generate
+	./scripts/protogen.sh
+	cd game && go generate
+	cd messages && go generate
 	
 $(jsmodules):
 	cd frontend/jasons-game && npm install

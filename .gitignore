@@ -4,6 +4,7 @@
 *.dll
 *.so
 *.dylib
+messages/*_gen*.go
 
 bin
 

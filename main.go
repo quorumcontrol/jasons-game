@@ -20,7 +20,7 @@ import (
 
 	"github.com/quorumcontrol/jasons-game/pb/jasonsgame"
 	"github.com/quorumcontrol/jasons-game/server"
-	"github.com/quorumcontrol/jasons-game/ui"
+	"github.com/quorumcontrol/tupelo-go-sdk/gossip3/middleware"
 )
 
 func mustSetLogLevel(name, level string) {
@@ -61,6 +61,8 @@ func main() {
 	mustSetLogLevel("game", "debug")
 	mustSetLogLevel("gameserver", "debug")
 	mustSetLogLevel("gamenetwork", "debug")
+	
+	middleware.SetLogLevel("debug")
 
 	port := 8080
 	grpcServer := grpc.NewServer()

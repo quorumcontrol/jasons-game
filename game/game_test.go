@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/AsynkronIT/protoactor-go/actor"
+	"github.com/quorumcontrol/jasons-game/messages"
 	"github.com/quorumcontrol/jasons-game/navigator"
 	"github.com/quorumcontrol/jasons-game/network"
 	"github.com/quorumcontrol/jasons-game/pb/jasonsgame"
@@ -19,7 +20,8 @@ func setupUiAndGame(t *testing.T, stream *ui.TestStream, net network.Network) (s
 	simulatedUI, err := rootCtx.SpawnNamed(ui.NewUIProps(stream, net), t.Name()+"-ui")
 	require.Nil(t, err)
 
-	game, err = rootCtx.SpawnNamed(NewGameProps(simulatedUI, net), t.Name()+"-game")
+	broadcaster := messages.NewBroadcaster(net)
+	game, err = rootCtx.SpawnNamed(NewGameProps(simulatedUI, net, broadcaster), t.Name()+"-game")
 	require.Nil(t, err)
 	return simulatedUI, game
 }
