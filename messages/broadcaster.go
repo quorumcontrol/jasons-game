@@ -16,7 +16,7 @@ func NewBroadcaster(network network.Network) *Broadcaster {
 }
 
 func (b *Broadcaster) BroadcastGeneral(msg messages.WireMessage) error {
-	return b.network.PubSubSystem().Broadcast(network.GeneralTopic, msg)
+	return b.Broadcast(network.GeneralTopic, msg)
 }
 
 func (b *Broadcaster) Broadcast(topic string, msg messages.WireMessage) error {
