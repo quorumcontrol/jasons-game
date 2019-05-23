@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"flag"
 	"fmt"
 	"log"
 	"net/http"
@@ -15,6 +16,7 @@ import (
 	"github.com/improbable-eng/grpc-web/go/grpcweb"
 	"github.com/quorumcontrol/jasons-game/pb/jasonsgame"
 	"github.com/quorumcontrol/jasons-game/server"
+	"github.com/quorumcontrol/jasons-game/ui"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/reflection"
 )
@@ -102,5 +104,21 @@ func main() {
 
 	})
 
-	log.Fatal(serv.ListenAndServe())
+	disableWebView := flag.Bool("disablewebview", false, "disable the webview")
+
+	flag.Parse()
+
+	if *disableWebView {
+		fmt.Println("webview disabled")
+		log.Fatal(serv.ListenAndServe())
+		return
+	}
+
+	fmt.Println("listen and serv")
+	go func() {
+		log.Fatal(serv.ListenAndServe())
+	}()
+	fmt.Println("opening webview")
+	ui.OpenWebView()
+
 }
