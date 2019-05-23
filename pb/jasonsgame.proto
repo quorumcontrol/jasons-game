@@ -28,6 +28,7 @@ message Location {
     int64 y = 4;
     string description = 5;
     Portal portal = 6;
+    map<string, string> inventory = 7;
 }
 
 message Player {
