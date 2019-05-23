@@ -24,12 +24,12 @@ func init() {
 type CreateObjectActor struct {
 	middleware.LogAwareHolder
 
-	player  *Player
+	player  *PlayerTree
 	network network.Network
 }
 
 type CreateObjectActorConfig struct {
-	Player  *Player
+	Player  *PlayerTree
 	Network network.Network
 }
 

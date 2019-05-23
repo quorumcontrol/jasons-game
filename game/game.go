@@ -111,7 +111,7 @@ func (g *Game) initialize(actorCtx actor.Context) {
 	g.cursor = cursor
 
 	g.objectCreator, err = actorCtx.SpawnNamed(NewCreateObjectActorProps(&CreateObjectActorConfig{
-		Player:  g.player,
+		Player:  g.playerTree,
 		Network: g.network,
 	}), "objectCreator")
 	if err != nil {
