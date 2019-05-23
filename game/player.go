@@ -90,10 +90,10 @@ func (pt *PlayerTree) refresh() error {
 	return nil
 }
 
-func (p *Player) ChainTree() *consensus.SignedChainTree {
+func (p *PlayerTree) ChainTree() *consensus.SignedChainTree {
 	return p.tree
 }
 
-func (p *Player) SetChainTree(ct *consensus.SignedChainTree) {
+func (p *PlayerTree) SetChainTree(ct *consensus.SignedChainTree) {
 	p.tree = ct
 }

@@ -23,7 +23,7 @@ func TestCreateObjectActor_Receive(t *testing.T) {
 	playerChainTree, err := net.CreateNamedChainTree("player")
 	require.Nil(t, err)
 
-	testPlayer := NewPlayer(playerChainTree)
+	testPlayer := NewPlayerTree(net, playerChainTree)
 
 	createObject, err := context.SpawnNamed(NewCreateObjectActorProps(&CreateObjectActorConfig{
 		Player:  testPlayer,
@@ -34,7 +34,7 @@ func TestCreateObjectActor_Receive(t *testing.T) {
 
 	// create first object
 
-	response, err := context.RequestFuture(createObject, &CreateObjectRequest{Name: "test", Description: "test object"}, 1 * time.Second).Result()
+	response, err := context.RequestFuture(createObject, &CreateObjectRequest{Name: "test", Description: "test object"}, 1*time.Second).Result()
 	require.Nil(t, err)
 
 	createObjectResponse, ok := response.(*CreateObjectResponse)
@@ -72,7 +72,7 @@ func TestCreateObjectActor_Receive(t *testing.T) {
 
 	// create second object
 
-	response, err = context.RequestFuture(createObject, &CreateObjectRequest{Name: "sword", Description: "ultimate sword"}, 1 * time.Second).Result()
+	response, err = context.RequestFuture(createObject, &CreateObjectRequest{Name: "sword", Description: "ultimate sword"}, 1*time.Second).Result()
 	require.Nil(t, err)
 
 	createObjectResponse, ok = response.(*CreateObjectResponse)
@@ -118,7 +118,7 @@ func TestCreateObjectActor_Receive_NamesMustBeUnique(t *testing.T) {
 	playerChainTree, err := net.CreateNamedChainTree("player")
 	require.Nil(t, err)
 
-	testPlayer := NewPlayer(playerChainTree)
+	testPlayer := NewPlayerTree(net, playerChainTree)
 
 	createObject, err := context.SpawnNamed(NewCreateObjectActorProps(&CreateObjectActorConfig{
 		Player:  testPlayer,
@@ -129,7 +129,7 @@ func TestCreateObjectActor_Receive_NamesMustBeUnique(t *testing.T) {
 
 	// create first object
 
-	response, err := context.RequestFuture(createObject, &CreateObjectRequest{Name: "test", Description: "test object"}, 1 * time.Second).Result()
+	response, err := context.RequestFuture(createObject, &CreateObjectRequest{Name: "test", Description: "test object"}, 1*time.Second).Result()
 	require.Nil(t, err)
 
 	createObjectResponse, ok := response.(*CreateObjectResponse)
@@ -138,7 +138,7 @@ func TestCreateObjectActor_Receive_NamesMustBeUnique(t *testing.T) {
 
 	// try to create second object w/ same name
 
-	response, err = context.RequestFuture(createObject, &CreateObjectRequest{Name: "test", Description: "another test"}, 1 * time.Second).Result()
+	response, err = context.RequestFuture(createObject, &CreateObjectRequest{Name: "test", Description: "another test"}, 1*time.Second).Result()
 	require.Nil(t, err)
 
 	createObjectResponse, ok = response.(*CreateObjectResponse)
