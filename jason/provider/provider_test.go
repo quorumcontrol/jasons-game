@@ -20,6 +20,8 @@ func newDatastore() datastore.Batching {
 }
 
 func TestStart(t *testing.T) {
+	err = logging.SetLogLevel("tupelop2p", "debug")
+	require.Nil(t, err)
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
