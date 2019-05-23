@@ -249,5 +249,5 @@ func gameBootstrappers() []string {
 	if envSpecifiedNodes, ok := os.LookupEnv("JASON_BOOTSTRAP_NODES"); ok {
 		return strings.Split(envSpecifiedNodes, ",")
 	}
-	return DefaultTupeloBootstrappers
+	return DefaultGameBootstrappers
 }
