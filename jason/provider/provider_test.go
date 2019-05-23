@@ -6,7 +6,6 @@ import (
 	"testing"
 	"time"
 
-	logging "github.com/ipfs/go-log"
 	"github.com/quorumcontrol/jasons-game/network"
 	"github.com/quorumcontrol/tupelo-go-sdk/p2p"
 
@@ -21,8 +20,6 @@ func newDatastore() datastore.Batching {
 }
 
 func TestStart(t *testing.T) {
-	logging.SetLogLevel("*", "info")
-	logging.SetLogLevel("tupelop2p", "debug")
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
@@ -66,8 +63,10 @@ func TestProviderPubsubRelay(t *testing.T) {
 	hostb, _, err := network.NewIPLDClient(ctx, keyB, storeB)
 	require.Nil(t, err)
 
-	hosta.Bootstrap(bootstrapAddresses(provider.p2pHost))
-	hostb.Bootstrap(bootstrapAddresses(provider.p2pHost))
+	_, err = hosta.Bootstrap(bootstrapAddresses(provider.p2pHost))
+	require.Nil(t, err)
+	_, err = hostb.Bootstrap(bootstrapAddresses(provider.p2pHost))
+	require.Nil(t, err)
 
 	err = hosta.WaitForBootstrap(2, 5*time.Second)
 	require.Nil(t, err)
