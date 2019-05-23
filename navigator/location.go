@@ -19,7 +19,7 @@ func locationFromTree(tree *consensus.SignedChainTree, x, y int64) (*jasonsgame.
 	}
 
 	if len(remain) > 0 {
-		if len(remain) < 2 {
+		if len(remain) <= 2 {
 			return &jasonsgame.Location{
 				Did:         tree.MustId(),
 				Tip:         tree.Tip().String(),
