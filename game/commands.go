@@ -27,6 +27,7 @@ var defaultCommandList = commandList{
 	newCommand("shout", "shout"),
 	newCommand("create-object", "create object"),
 	newCommand("help", "help"),
+	newCommand("open-portal", "open portal"),
 }
 
 func newCommand(name, parse string) *command {
