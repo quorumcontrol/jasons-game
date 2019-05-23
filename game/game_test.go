@@ -45,6 +45,22 @@ func TestNavigation(t *testing.T) {
 
 	require.Len(t, msgs, 4)
 	assert.NotNil(t, msgs[3].GetLocation())
+
+	// works going east
+	rootCtx.Send(game, &jasonsgame.UserInput{Message: "east"})
+	time.Sleep(100 * time.Millisecond)
+	msgs = stream.GetMessages()
+
+	require.Len(t, msgs, 5)
+	assert.NotNil(t, msgs[4].GetLocation())
+
+	// works going west
+	rootCtx.Send(game, &jasonsgame.UserInput{Message: "west"})
+	time.Sleep(100 * time.Millisecond)
+	msgs = stream.GetMessages()
+
+	require.Len(t, msgs, 6)
+	assert.NotNil(t, msgs[5].GetLocation())
 }
 
 func TestSetDescription(t *testing.T) {
