@@ -3,13 +3,11 @@ package server
 import (
 	"context"
 	"encoding/json"
-	"fmt"
-	"io/ioutil"
-	"path"
-	"runtime"
+	"path/filepath"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/crypto"
+	"github.com/gobuffalo/packr/v2"
 	"github.com/quorumcontrol/tupelo-go-sdk/bls"
 	"github.com/quorumcontrol/tupelo-go-sdk/gossip3/types"
 )
@@ -20,12 +18,18 @@ type publicKeySet struct {
 	PeerIDBase58Key   string `json:"peerIDBase58Key,omitempty"`
 }
 
-func loadSignerKeys() ([]*publicKeySet, error) {
-	_, filename, _, ok := runtime.Caller(0)
-	if !ok {
-		return nil, fmt.Errorf("No caller information")
+func loadSignerKeys(connectToLocalnet bool) ([]*publicKeySet, error) {
+	// TODO: Referencing devdocker dir here seems gross; should maybe rethink this
+	box := packr.New("keys", "../devdocker")
+
+	var keyDir string
+	if connectToLocalnet {
+		keyDir = "localkeys"
+	} else {
+		keyDir = "testnetkeys"
 	}
-	jsonBytes, err := ioutil.ReadFile(path.Join(path.Dir(filename), "../devdocker/localkeys/public-keys.json"))
+
+	jsonBytes, err := box.Find(filepath.Join(keyDir, "public-keys.json"))
 	if err != nil {
 		return nil, err
 	}
@@ -37,8 +41,8 @@ func loadSignerKeys() ([]*publicKeySet, error) {
 	return keySet, nil
 }
 
-func setupNotaryGroup(ctx context.Context) (*types.NotaryGroup, error) {
-	keys, err := loadSignerKeys()
+func setupNotaryGroup(ctx context.Context, connectToLocalnet bool) (*types.NotaryGroup, error) {
+	keys, err := loadSignerKeys(connectToLocalnet)
 	if err != nil {
 		return nil, err
 	}
