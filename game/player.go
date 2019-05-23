@@ -19,7 +19,6 @@ type PlayerTree struct {
 	player  *jasonsgame.Player
 	network network.Network
 	did     string
-	tip     cid.Cid
 }
 
 func NewPlayerTree(net network.Network, tree *consensus.SignedChainTree) *PlayerTree {

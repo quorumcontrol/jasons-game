@@ -5,7 +5,6 @@ import (
 	"time"
 
 	"github.com/AsynkronIT/protoactor-go/actor"
-	logging "github.com/ipfs/go-log"
 	"github.com/quorumcontrol/jasons-game/navigator"
 	"github.com/quorumcontrol/jasons-game/network"
 	"github.com/quorumcontrol/jasons-game/pb/jasonsgame"
@@ -17,10 +16,10 @@ import (
 var rootCtx = actor.EmptyRootContext
 
 func setupUiAndGame(t *testing.T, stream *ui.TestStream, net network.Network) (simulatedUI, game *actor.PID) {
-	simulatedUI, err := rootCtx.SpawnNamed(ui.NewUIProps(stream, net), t.Name() + "-ui")
+	simulatedUI, err := rootCtx.SpawnNamed(ui.NewUIProps(stream, net), t.Name()+"-ui")
 	require.Nil(t, err)
 
-	game, err = rootCtx.SpawnNamed(NewGameProps(simulatedUI, net), t.Name() + "-game")
+	game, err = rootCtx.SpawnNamed(NewGameProps(simulatedUI, net), t.Name()+"-game")
 	require.Nil(t, err)
 	return simulatedUI, game
 }
@@ -70,8 +69,6 @@ func TestSetDescription(t *testing.T) {
 }
 
 func TestCallMe(t *testing.T) {
-	logging.SetLogLevel("game", "debug")
-	logging.SetLogLevel("gamenetwork", "debug")
 	rootCtx := actor.EmptyRootContext
 	net := network.NewLocalNetwork()
 	stream := ui.NewTestStream()

@@ -80,9 +80,11 @@ func (g *Game) initialize(actorCtx actor.Context) {
 		}
 		g.playerTree = NewPlayerTree(g.network, playerChain)
 
-		g.playerTree.SetPlayer(&jasonsgame.Player{
+		if err := g.playerTree.SetPlayer(&jasonsgame.Player{
 			Name: fmt.Sprintf("newb (%s)", playerChain.MustId()),
-		})
+		}); err != nil {
+			panic(err)
+		}
 	} else {
 		g.playerTree = NewPlayerTree(g.network, playerChain)
 	}
