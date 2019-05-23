@@ -10,15 +10,17 @@ import (
 	"os"
 
 	"github.com/gorilla/mux"
+	"github.com/improbable-eng/grpc-web/go/grpcweb"
 	logging "github.com/ipfs/go-log"
 	"github.com/pkg/errors"
 
-	"github.com/improbable-eng/grpc-web/go/grpcweb"
+	"github.com/gobuffalo/packr/v2"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/reflection"
+
 	"github.com/quorumcontrol/jasons-game/pb/jasonsgame"
 	"github.com/quorumcontrol/jasons-game/server"
 	"github.com/quorumcontrol/jasons-game/ui"
-	"google.golang.org/grpc"
-	"google.golang.org/grpc/reflection"
 )
 
 func mustSetLogLevel(name, level string) {
@@ -81,7 +83,9 @@ func main() {
 		MaxHeaderBytes: 1 << 20,
 	}
 
-	fs := http.FileServer(http.Dir("frontend/jasons-game/public"))
+	box := packr.New("Frontend", "./frontend/jasons-game/public")
+
+	fs := http.FileServer(box)
 
 	serv.Handler = http.HandlerFunc(func(resp http.ResponseWriter, req *http.Request) {
 		if wrappedGrpc.IsGrpcWebRequest(req) {

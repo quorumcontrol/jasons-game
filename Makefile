@@ -5,12 +5,17 @@ else
 	TAG = $(VERSION)
 endif
 
+# This is important to export until we're on Go 1.13+ or packr can break
+export GO111MODULE = on
+
 FIRSTGOPATH = $(firstword $(subst :, ,$(GOPATH)))
 
 jsmodules = ./frontend/jasons-game/node_modules
 generated = pb/jasonsgame/jasonsgame.pb.go frontend/jasons-game/src/js/frontend/remote/*_pb.* game/messages_gen.go game/messages_gen_test.go
+packr = packrd/packed-packr.go main-packr.go
 
-all: build $(jsmodules) $(generated)
+all: frontend-build $(packr) build
+	$(FIRSTGOPATH)/bin/packr2 clean
 
 $(FIRSTGOPATH)/src/github.com/gogo/protobuf/proto:
 	go get github.com/gogo/protobuf/proto
@@ -36,8 +41,11 @@ $(FIRSTGOPATH)/bin/gotestsum:
 $(FIRSTGOPATH)/bin/msgp:
 	go get github.com/tinylib/msgp
 
-build: $(generated) go.mod go.sum
-	mkdir -p bin && go build -tags=desktop -o bin/jasonsgame
+bin/jasonsgame: $(generated) go.mod go.sum
+	mkdir -p bin
+	go build -tags=desktop -o ./bin/jasonsgame
+
+build: bin/jasonsgame
 
 lint: $(FIRSTGOPATH)/bin/golangci-lint $(generated)
 	$(FIRSTGOPATH)/bin/golangci-lint run --build-tags integration
@@ -84,8 +92,16 @@ vendor: go.mod go.sum $(FIRSTGOPATH)/bin/modvendor
 	go mod vendor
 	modvendor -copy="**/*.c **/*.h"
 
-clean:
+$(FIRSTGOPATH)/bin/packr2:
+	go get -u github.com/gobuffalo/packr/v2/packr2
+
+$(packr): $(FIRSTGOPATH)/bin/packr2 main.go
+	$(FIRSTGOPATH)/bin/packr2
+
+clean: $(FIRSTGOPATH)/bin/packr2
+	$(FIRSTGOPATH)/bin/packr2 clean
 	go clean ./...
 	rm -rf vendor
+	rm -rf bin
 
 .PHONY: all build test integration-test localnet clean lint game-server jason game2
