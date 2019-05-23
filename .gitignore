@@ -21,3 +21,6 @@ test_results/
 
 .tmp
 log
+
+/packrd/
+*-packr.go
