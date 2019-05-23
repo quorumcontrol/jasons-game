@@ -30,6 +30,10 @@ message Location {
     Portal portal = 6;
 }
 
+message Player {
+    string name = 1;
+}
+
 message Portal {
     string to = 1; // A did
 }

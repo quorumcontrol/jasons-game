@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/AsynkronIT/protoactor-go/actor"
+	logging "github.com/ipfs/go-log"
 	"github.com/quorumcontrol/jasons-game/navigator"
 	"github.com/quorumcontrol/jasons-game/network"
 	"github.com/quorumcontrol/jasons-game/pb/jasonsgame"
@@ -67,6 +68,36 @@ func TestSetDescription(t *testing.T) {
 	require.Nil(t, err)
 	require.Equal(t, newDescription, loc.Description)
 }
+
+func TestCallMe(t *testing.T) {
+	logging.SetLogLevel("game", "debug")
+	logging.SetLogLevel("gamenetwork", "debug")
+	rootCtx := actor.EmptyRootContext
+	net := network.NewLocalNetwork()
+	stream := ui.NewTestStream()
+
+	simulatedUI, err := rootCtx.SpawnNamed(ui.NewUIProps(stream, net), "test-callme-ui")
+	require.Nil(t, err)
+	defer rootCtx.Stop(simulatedUI)
+
+	game, err := rootCtx.SpawnNamed(NewGameProps(simulatedUI, net), "test-callme-game")
+	require.Nil(t, err)
+	defer rootCtx.Stop(game)
+
+	newName := "Johnny B Good"
+
+	rootCtx.Send(game, &jasonsgame.UserInput{Message: "call me " + newName})
+	time.Sleep(100 * time.Millisecond)
+
+	tree, err := net.GetChainTreeByName("player")
+	require.Nil(t, err)
+
+	pt := NewPlayerTree(net, tree)
+	player, err := pt.Player()
+	require.Nil(t, err)
+	require.Equal(t, newName, player.Name)
+}
+
 func TestBuildPortal(t *testing.T) {
 	net := network.NewLocalNetwork()
 	stream := ui.NewTestStream()
