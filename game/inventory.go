@@ -6,9 +6,6 @@ import (
 
 	"github.com/AsynkronIT/protoactor-go/actor"
 	"github.com/AsynkronIT/protoactor-go/plugin"
-	"github.com/ipfs/go-cid"
-	cbornode "github.com/ipfs/go-ipld-cbor"
-	"github.com/quorumcontrol/chaintree/typecaster"
 	"github.com/quorumcontrol/tupelo-go-sdk/consensus"
 	"github.com/quorumcontrol/tupelo-go-sdk/gossip3/middleware"
 
@@ -17,11 +14,6 @@ import (
 )
 
 const ObjectsPath = "jasons-game/player/bag-of-hodling"
-
-func init() {
-	cbornode.RegisterCborType(Object{})
-	typecaster.AddType(Object{})
-}
 
 type InventoryActor struct {
 	middleware.LogAwareHolder
@@ -55,7 +47,7 @@ type DropObjectResponse struct {
 }
 
 type Object struct {
-	ChainTreeDID string
+	Did string
 }
 
 type NetworkObject struct {
@@ -64,7 +56,7 @@ type NetworkObject struct {
 }
 
 func (no *NetworkObject) getProp(prop string) (string, error) {
-	objectChainTree, err := no.Network.GetTree(no.ChainTreeDID)
+	objectChainTree, err := no.Network.GetTree(no.Did)
 	if err != nil {
 		return "", err
 	}
@@ -179,11 +171,9 @@ func (co *InventoryActor) handleCreateObject(context actor.Context, msg *CreateO
 
 	objectsPath, _ := consensus.DecodePath(ObjectsPath)
 
-	newObject := Object{ChainTreeDID: objectChainTree.MustId()}
-
 	newObjectPath := strings.Join(append(objectsPath, name), "/")
 
-	newPlayerChainTree, err := co.network.UpdateChainTree(playerChainTree, newObjectPath, newObject)
+	newPlayerChainTree, err := co.network.UpdateChainTree(playerChainTree, newObjectPath, objectChainTree.MustId())
 
 	if err != nil {
 		err = fmt.Errorf("error updating objects in chaintree: %v", err)
@@ -194,7 +184,7 @@ func (co *InventoryActor) handleCreateObject(context actor.Context, msg *CreateO
 
 	co.player.SetChainTree(newPlayerChainTree)
 
-	context.Respond(&CreateObjectResponse{Object: &newObject})
+	context.Respond(&CreateObjectResponse{Object: &Object{Did: objectChainTree.MustId()}})
 }
 
 func (co *InventoryActor) handleDropObject(context actor.Context, msg *DropObjectRequest) {
@@ -241,9 +231,9 @@ func (co *InventoryActor) handleDropObject(context actor.Context, msg *DropObjec
 		return
 	}
 
-	objects := make(map[string]cid.Cid, len(objectsUncasted.(map[string]interface{})))
+	objects := make(map[string]string, len(objectsUncasted.(map[string]interface{})))
 	for k, v := range objectsUncasted.(map[string]interface{}) {
-		objects[k] = v.(cid.Cid)
+		objects[k] = v.(string)
 	}
 
 	if _, ok := objects[objectName]; !ok {
@@ -296,7 +286,14 @@ func (co *InventoryActor) handleDropObject(context actor.Context, msg *DropObjec
 		context.Respond(&DropObjectResponse{Error: err})
 		return
 	}
-	// TODO: publish drop
+
+	// TODO: switch to global topic
+	co.network.PubSubSystem().Broadcast(topicFromDid(msg.Location.Did), &TransferredObjectMessage{
+		From:   playerChainTree.MustId(),
+		To:     msg.Location.Did,
+		Object: existingObj.MustId(),
+		Loc:    []int64{msg.Location.X, msg.Location.Y},
+	})
 
 	delete(objects, objectName)
 

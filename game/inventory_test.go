@@ -5,7 +5,6 @@ import (
 	"time"
 
 	"github.com/AsynkronIT/protoactor-go/actor"
-	"github.com/quorumcontrol/chaintree/typecaster"
 	"github.com/quorumcontrol/tupelo-go-sdk/consensus"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -48,18 +47,12 @@ func TestInventoryActor_CreateObject(t *testing.T) {
 	require.Nil(t, err)
 	require.Empty(t, remainingPath)
 
-	playerObj := Object{}
-
-	err = typecaster.ToType(playerObjNode, &playerObj)
-	require.Nil(t, err)
-
 	objectChainTree, err := net.GetChainTreeByName("object:test")
 	require.Nil(t, err)
 
-	obj := Object{ChainTreeDID: objectChainTree.MustId()}
-	assert.Equal(t, obj, playerObj)
-
-	assert.Equal(t, obj.ChainTreeDID, createObjectResponse.Object.ChainTreeDID)
+	obj := Object{Did: objectChainTree.MustId()}
+	assert.Equal(t, obj.Did, playerObjNode.(string))
+	assert.Equal(t, obj.Did, createObjectResponse.Object.Did)
 
 	netObj := NetworkObject{Object: obj, Network: net}
 
@@ -85,19 +78,12 @@ func TestInventoryActor_CreateObject(t *testing.T) {
 	require.Nil(t, err)
 	require.Empty(t, remainingPath)
 
-	playerObj = Object{}
-
-	err = typecaster.ToType(playerObjNode, &playerObj)
-	require.Nil(t, err)
-
 	objectChainTree, err = net.GetChainTreeByName("object:sword")
 	require.Nil(t, err)
 
-	obj = Object{ChainTreeDID: objectChainTree.MustId()}
-	assert.Equal(t, obj, playerObj)
-
-	assert.Equal(t, obj.ChainTreeDID, createObjectResponse.Object.ChainTreeDID)
-
+	obj = Object{Did: objectChainTree.MustId()}
+	assert.Equal(t, obj.Did, playerObjNode.(string))
+	assert.Equal(t, obj.Did, createObjectResponse.Object.Did)
 	netObj = NetworkObject{Object: obj, Network: net}
 
 	name, err = netObj.Name()
@@ -153,7 +139,7 @@ func TestInventoryActor_DropObject(t *testing.T) {
 
 	playerChainTree, err := net.CreateNamedChainTree("player")
 	require.Nil(t, err)
-	testPlayer := NewPlayer(playerChainTree)
+	testPlayer := NewPlayerTree(net, playerChainTree)
 
 	inventory, err := rootCtx.SpawnNamed(NewInventoryActorProps(&InventoryActorConfig{
 		Player:  testPlayer,
