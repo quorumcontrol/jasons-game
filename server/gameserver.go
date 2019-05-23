@@ -28,8 +28,8 @@ type GameServer struct {
 	sessionPath string
 }
 
-func NewGameServer(ctx context.Context) *GameServer {
-	group, err := setupNotaryGroup(ctx)
+func NewGameServer(ctx context.Context, connectToLocalnet bool) *GameServer {
+	group, err := setupNotaryGroup(ctx, connectToLocalnet)
 	if err != nil {
 		panic(errors.Wrap(err, "setting up notary group"))
 	}
