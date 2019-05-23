@@ -475,6 +475,8 @@ func (g *Game) handleOpenPortalMessage(actorCtx actor.Context, msg *OpenPortalMe
 		msg.LocationY)
 	g.sendUIMessage(actorCtx, fmt.Sprintf("Player %s wants to open a portal in your land",
 		msg.From))
+	g.sendUIMessage(actorCtx, "Request to open portal in your land auto-accepted "+
+		"(this is an ALPHA version, future versions will prompt for acceptance)")
 	// TODO: Prompt user for permission
 
 	log.Debugf("Broadcasting OpenPortalResponseMessage directed at sender")
