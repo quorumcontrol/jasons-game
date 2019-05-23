@@ -27,7 +27,7 @@ type ping struct{}
 type Game struct {
 	ui              *actor.PID
 	network         network.Network
-	player          *Player
+	playerTree      *PlayerTree
 	cursor          *navigator.Cursor
 	commands        commandList
 	messageSequence uint64
@@ -61,7 +61,7 @@ func (g *Game) Receive(actorCtx actor.Context) {
 		}
 	case *OpenPortalResponseMessage:
 		log.Debugf("received OpenPortalResponseMessage")
-		if msg.Opener != g.player.tree.MustId() {
+		if msg.Opener != g.playerTree.Did() {
 			log.Debugf("OpenPortalResponseMessage is not for us, ignoring it")
 			return
 		}
@@ -79,7 +79,6 @@ func (g *Game) initialize(actorCtx actor.Context) {
 	actorCtx.Send(g.ui, &ui.SetGame{Game: actorCtx.Self()})
 	g.shoutSubscriber = actorCtx.Spawn(g.network.PubSubSystem().NewSubscriberProps(shoutChannel))
 
-	var playerChain *consensus.SignedChainTree
 	var homeTree *consensus.SignedChainTree
 
 	log.Debug("get player", homeTree)
@@ -107,8 +106,8 @@ func (g *Game) initialize(actorCtx actor.Context) {
 	}
 
 	time.AfterFunc(2*time.Second, func() {
-		if err := g.network.PubSubSystem().Broadcast(shoutChannel
-			&JoinMessage{From: g.player.tree.MustId()}); err != nil {
+		if err := g.network.PubSubSystem().Broadcast(shoutChannel,
+			&JoinMessage{From: g.playerTree.Did()}); err != nil {
 			log.Errorf("broadcasting JoinMessage failed: %s", err)
 		}
 	})
@@ -388,11 +387,7 @@ func (g *Game) handleOpenPortal(actorCtx actor.Context, cmd *command, args strin
 		return nil
 	}
 
-	playerId, err := g.player.tree.Id()
-	if err != nil {
-		log.Errorf("failed getting player ID: %s", err)
-		return err
-	}
+	playerId := g.playerTree.Did()
 
 	onLandTree := g.cursor.Tree()
 	toLandId, err := onLandTree.Id()
@@ -414,7 +409,7 @@ func (g *Game) handleOpenPortal(actorCtx actor.Context, cmd *command, args strin
 	}
 
 	g.sendUIMessage(actorCtx, fmt.Sprintf("Requested to open portal on land %s", landId))
-	
+
 	return nil
 }
 

@@ -29,7 +29,7 @@ require (
 	github.com/pkg/errors v0.8.1
 	github.com/quorumcontrol/chaintree v0.0.0-20190515172607-6a3407e067bd
 	github.com/quorumcontrol/storage v1.1.2
-	github.com/quorumcontrol/tupelo-go-sdk v0.2.4-0.20190520115851-8d9a6a658514
+	github.com/quorumcontrol/tupelo-go-sdk v0.2.4-0.20190517142847-0a1ac484a9b8
 	github.com/shibukawa/configdir v0.0.0-20170330084843-e180dbdc8da0
 	github.com/stretchr/testify v1.3.0
 	github.com/tinylib/msgp v1.1.0
