@@ -2,7 +2,7 @@ FROM golang:1.12.5-alpine3.9 AS build
 
 WORKDIR /app
 
-RUN apk add --no-cache --update build-base
+RUN apk add --no-cache --update build-base git
 
 COPY . .
 
