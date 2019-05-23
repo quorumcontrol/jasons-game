@@ -38,7 +38,9 @@ func NewGameServer(ctx context.Context) *GameServer {
 	folders := configDirs.QueryFolders(configdir.Global)
 	folder := configDirs.QueryFolderContainsFile(sessionStorageDir)
 	if folder == nil {
-		folders[0].CreateParentDir(sessionStorageDir)
+		if err := folders[0].CreateParentDir(sessionStorageDir); err != nil {
+			panic(err)
+		}
 	}
 
 	return &GameServer{

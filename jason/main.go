@@ -22,7 +22,11 @@ import (
 	"github.com/shibukawa/configdir"
 )
 
-var log = logging.Logger("jason")
+func mustSetLogLevel(name, level string) {
+	if err := logging.SetLogLevel(name, level); err != nil {
+		panic(errors.Wrapf(err, "error setting log level of %s to %s", name, level))
+	}
+}
 
 const minConnections = 4915 // 60% of 8192 ulimit
 const maxConnections = 7372 // 90% of 8192 ulimit
@@ -34,26 +38,32 @@ func main() {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	logging.SetLogLevel("*", "warning")
-	logging.SetLogLevel("pubsub", "error")
-	logging.SetLogLevel("jasonblocks", "debug")
+	mustSetLogLevel("*", "warning")
+	mustSetLogLevel("pubsub", "error")
+	mustSetLogLevel("jasonblocks", "debug")
 
 	configDirs := configdir.New("tupelo", "jasons-game")
 	folders := configDirs.QueryFolders(configdir.Global)
 	folder := configDirs.QueryFolderContainsFile(jasonPath)
 	if folder == nil {
-		folders[0].CreateParentDir(jasonPath)
+		if err := folders[0].CreateParentDir(jasonPath); err != nil {
+			panic(err)
+		}
 	}
 
 	folder = configDirs.QueryFolderContainsFile("private.key")
 	if folder == nil {
-		folders[0].Create("private.key")
+		if _, err := folders[0].Create("private.key"); err != nil {
+			panic(err)
+		}
 		fullPath := filepath.Join(folders[0].Path, "private.key")
 		key, err := crypto.GenerateKey()
 		if err != nil {
 			panic(errors.Wrap(err, "error generating key"))
 		}
-		ioutil.WriteFile(fullPath, []byte(hexutil.Encode(crypto.FromECDSA(key))), 0600)
+		if err := ioutil.WriteFile(fullPath, []byte(hexutil.Encode(crypto.FromECDSA(key))), 0600); err != nil {
+			panic(err)
+		}
 	}
 	folder = configDirs.QueryFolderContainsFile("private.key")
 	keyHexBytes, err := folder.ReadFile("private.key")

@@ -62,25 +62,26 @@ func TestUpdateChainTree(t *testing.T) {
 	require.Nil(t,err)
 	tree, err = net.UpdateChainTree(tree, "jasons-game/0/0", &jasonsgame.Location{Description: "hi, welcome"})
 	require.Nil(t,err)
-	tree,err = net.UpdateChainTree(tree, "jasons-game/0/1", &jasonsgame.Location{Description: "north of welcome"})
+	_, err = net.UpdateChainTree(tree, "jasons-game/0/1", &jasonsgame.Location{Description: "north of welcome"})
 	require.Nil(t,err)
 
 	newTree,err := net.GetChainTreeByName("home")
 	require.Nil(t,err)
 
-	tree, err = net.UpdateChainTree(newTree, "jasons-game/0/0", &jasonsgame.Location{Description: "new"})
+	_, err = net.UpdateChainTree(newTree, "jasons-game/0/0", &jasonsgame.Location{Description: "new"})
 	require.Nil(t,err)
 
 }
 func TestGetChainTreeByName(t *testing.T) {
-	logging.SetLogLevel("gamenetwork", "debug")
+	err := logging.SetLogLevel("gamenetwork", "debug")
+	require.Nil(t, err)
 	ctx,cancel := context.WithCancel(context.Background())
 	defer cancel()
 
 	testPath := "/tmp/test-get-named-tree"
-	err := os.MkdirAll(testPath, 0755)
+	err = os.MkdirAll(testPath, 0755)
 	require.Nil(t,err)
-		defer os.RemoveAll(testPath)
+	defer os.RemoveAll(testPath)
 
 	// just to test it doesn't error here
 	log.Infof("new remote network")

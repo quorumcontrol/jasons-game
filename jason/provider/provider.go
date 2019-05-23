@@ -16,11 +16,6 @@ import (
 
 var log = logging.Logger("jasonblocks")
 
-var topics = []string{
-	network.BlockTopic,
-	network.ShoutTopic,
-}
-
 // Provider is a service that replaces an IPFS node as a bootstrapper
 // it listens to some default topics, and provides a service where it will try to do a
 // DAG on any CID sent to the BlockTopic which should cache it and make it available
@@ -80,7 +75,7 @@ func (p *Provider) Start() error {
 	go func() {
 		<-p.parentCtx.Done()
 		sub.Cancel()
-		act.Stop()
+		actor.EmptyRootContext.Stop(act)
 	}()
 	log.Infof("serving a provider now")
 

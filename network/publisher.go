@@ -21,6 +21,8 @@ type publisher struct {
 func (p *publisher) Receive(aCtx actor.Context) {
 	switch msg := aCtx.Message().(type) {
 	case *cbornode.Node:
-		p.pubsubSystem.Broadcast(BlockTopic, &Block{Cid: msg.Cid().Bytes()})
+		if err := p.pubsubSystem.Broadcast(BlockTopic, &Block{Cid: msg.Cid().Bytes()}); err != nil {
+			log.Errorf("failed to broadcast: %s", err)
+		}
 	}
 }

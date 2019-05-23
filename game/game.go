@@ -88,7 +88,9 @@ func (g *Game) initialize(actorCtx actor.Context) {
 	}
 
 	time.AfterFunc(2*time.Second, func() {
-		g.network.PubSubSystem().Broadcast(shoutChannel, &JoinMessage{From: g.playerTree.Did()})
+		if err := g.network.PubSubSystem().Broadcast(shoutChannel, &JoinMessage{From: g.playerTree.Did()}); err != nil {
+			log.Errorf("failure broadcasting: %s", err)
+		}
 	})
 
 	homeTree, err = g.network.GetChainTreeByName("home")
@@ -165,13 +167,14 @@ func (g *Game) handleUserInput(actorCtx actor.Context, input *jasonsgame.UserInp
 	case "build-portal":
 		err = g.handleBuildPortal(actorCtx, args)
 	case "say":
-		l, err := g.cursor.GetLocation()
+		var l *jasonsgame.Location
+		l, err = g.cursor.GetLocation()
 		if err == nil {
 			log.Debugf("publishing chat message (topic %s)", topicFromDid(l.Did))
-			g.network.PubSubSystem().Broadcast(topicFromDid(l.Did), &ChatMessage{Message: args})
+			err = g.network.PubSubSystem().Broadcast(topicFromDid(l.Did), &ChatMessage{Message: args})
 		}
 	case "shout":
-		g.network.PubSubSystem().Broadcast(shoutChannel, &ShoutMessage{Message: args})
+		err = g.network.PubSubSystem().Broadcast(shoutChannel, &ShoutMessage{Message: args})
 	case "create-object":
 		err = g.handleCreateObject(actorCtx, args)
 	case "help":
@@ -249,7 +252,11 @@ func (g *Game) goToTree(actorCtx actor.Context, tree *consensus.SignedChainTree)
 	if newDid := tree.MustId(); newDid != oldDid {
 		log.Debugf("moving to a new did %s", newDid)
 		g.network.StopDiscovery(oldDid)
-		go g.network.StartDiscovery(newDid)
+		go func() {
+			if err := g.network.StartDiscovery(newDid); err != nil {
+				log.Errorf("network.StartDiscovery failed: %s", err)
+			}
+		}()
 		if g.chatSubscriber != nil {
 			actorCtx.Stop(g.chatSubscriber)
 		}
