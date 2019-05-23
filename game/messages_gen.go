@@ -770,3 +770,217 @@ func (z ShoutMessage) Msgsize() (s int) {
 	s = 1 + 5 + msgp.StringPrefixSize + len(z.From) + 8 + msgp.StringPrefixSize + len(z.Message)
 	return
 }
+
+// DecodeMsg implements msgp.Decodable
+func (z *TransferredObjectMessage) DecodeMsg(dc *msgp.Reader) (err error) {
+	var field []byte
+	_ = field
+	var zb0001 uint32
+	zb0001, err = dc.ReadMapHeader()
+	if err != nil {
+		err = msgp.WrapError(err)
+		return
+	}
+	for zb0001 > 0 {
+		zb0001--
+		field, err = dc.ReadMapKeyPtr()
+		if err != nil {
+			err = msgp.WrapError(err)
+			return
+		}
+		switch msgp.UnsafeString(field) {
+		case "From":
+			z.From, err = dc.ReadString()
+			if err != nil {
+				err = msgp.WrapError(err, "From")
+				return
+			}
+		case "To":
+			z.To, err = dc.ReadString()
+			if err != nil {
+				err = msgp.WrapError(err, "To")
+				return
+			}
+		case "Object":
+			z.Object, err = dc.ReadString()
+			if err != nil {
+				err = msgp.WrapError(err, "Object")
+				return
+			}
+		case "Loc":
+			var zb0002 uint32
+			zb0002, err = dc.ReadArrayHeader()
+			if err != nil {
+				err = msgp.WrapError(err, "Loc")
+				return
+			}
+			if cap(z.Loc) >= int(zb0002) {
+				z.Loc = (z.Loc)[:zb0002]
+			} else {
+				z.Loc = make([]int64, zb0002)
+			}
+			for za0001 := range z.Loc {
+				z.Loc[za0001], err = dc.ReadInt64()
+				if err != nil {
+					err = msgp.WrapError(err, "Loc", za0001)
+					return
+				}
+			}
+		default:
+			err = dc.Skip()
+			if err != nil {
+				err = msgp.WrapError(err)
+				return
+			}
+		}
+	}
+	return
+}
+
+// EncodeMsg implements msgp.Encodable
+func (z *TransferredObjectMessage) EncodeMsg(en *msgp.Writer) (err error) {
+	// map header, size 4
+	// write "From"
+	err = en.Append(0x84, 0xa4, 0x46, 0x72, 0x6f, 0x6d)
+	if err != nil {
+		return
+	}
+	err = en.WriteString(z.From)
+	if err != nil {
+		err = msgp.WrapError(err, "From")
+		return
+	}
+	// write "To"
+	err = en.Append(0xa2, 0x54, 0x6f)
+	if err != nil {
+		return
+	}
+	err = en.WriteString(z.To)
+	if err != nil {
+		err = msgp.WrapError(err, "To")
+		return
+	}
+	// write "Object"
+	err = en.Append(0xa6, 0x4f, 0x62, 0x6a, 0x65, 0x63, 0x74)
+	if err != nil {
+		return
+	}
+	err = en.WriteString(z.Object)
+	if err != nil {
+		err = msgp.WrapError(err, "Object")
+		return
+	}
+	// write "Loc"
+	err = en.Append(0xa3, 0x4c, 0x6f, 0x63)
+	if err != nil {
+		return
+	}
+	err = en.WriteArrayHeader(uint32(len(z.Loc)))
+	if err != nil {
+		err = msgp.WrapError(err, "Loc")
+		return
+	}
+	for za0001 := range z.Loc {
+		err = en.WriteInt64(z.Loc[za0001])
+		if err != nil {
+			err = msgp.WrapError(err, "Loc", za0001)
+			return
+		}
+	}
+	return
+}
+
+// MarshalMsg implements msgp.Marshaler
+func (z *TransferredObjectMessage) MarshalMsg(b []byte) (o []byte, err error) {
+	o = msgp.Require(b, z.Msgsize())
+	// map header, size 4
+	// string "From"
+	o = append(o, 0x84, 0xa4, 0x46, 0x72, 0x6f, 0x6d)
+	o = msgp.AppendString(o, z.From)
+	// string "To"
+	o = append(o, 0xa2, 0x54, 0x6f)
+	o = msgp.AppendString(o, z.To)
+	// string "Object"
+	o = append(o, 0xa6, 0x4f, 0x62, 0x6a, 0x65, 0x63, 0x74)
+	o = msgp.AppendString(o, z.Object)
+	// string "Loc"
+	o = append(o, 0xa3, 0x4c, 0x6f, 0x63)
+	o = msgp.AppendArrayHeader(o, uint32(len(z.Loc)))
+	for za0001 := range z.Loc {
+		o = msgp.AppendInt64(o, z.Loc[za0001])
+	}
+	return
+}
+
+// UnmarshalMsg implements msgp.Unmarshaler
+func (z *TransferredObjectMessage) UnmarshalMsg(bts []byte) (o []byte, err error) {
+	var field []byte
+	_ = field
+	var zb0001 uint32
+	zb0001, bts, err = msgp.ReadMapHeaderBytes(bts)
+	if err != nil {
+		err = msgp.WrapError(err)
+		return
+	}
+	for zb0001 > 0 {
+		zb0001--
+		field, bts, err = msgp.ReadMapKeyZC(bts)
+		if err != nil {
+			err = msgp.WrapError(err)
+			return
+		}
+		switch msgp.UnsafeString(field) {
+		case "From":
+			z.From, bts, err = msgp.ReadStringBytes(bts)
+			if err != nil {
+				err = msgp.WrapError(err, "From")
+				return
+			}
+		case "To":
+			z.To, bts, err = msgp.ReadStringBytes(bts)
+			if err != nil {
+				err = msgp.WrapError(err, "To")
+				return
+			}
+		case "Object":
+			z.Object, bts, err = msgp.ReadStringBytes(bts)
+			if err != nil {
+				err = msgp.WrapError(err, "Object")
+				return
+			}
+		case "Loc":
+			var zb0002 uint32
+			zb0002, bts, err = msgp.ReadArrayHeaderBytes(bts)
+			if err != nil {
+				err = msgp.WrapError(err, "Loc")
+				return
+			}
+			if cap(z.Loc) >= int(zb0002) {
+				z.Loc = (z.Loc)[:zb0002]
+			} else {
+				z.Loc = make([]int64, zb0002)
+			}
+			for za0001 := range z.Loc {
+				z.Loc[za0001], bts, err = msgp.ReadInt64Bytes(bts)
+				if err != nil {
+					err = msgp.WrapError(err, "Loc", za0001)
+					return
+				}
+			}
+		default:
+			bts, err = msgp.Skip(bts)
+			if err != nil {
+				err = msgp.WrapError(err)
+				return
+			}
+		}
+	}
+	o = bts
+	return
+}
+
+// Msgsize returns an upper bound estimate of the number of bytes occupied by the serialized message
+func (z *TransferredObjectMessage) Msgsize() (s int) {
+	s = 1 + 5 + msgp.StringPrefixSize + len(z.From) + 3 + msgp.StringPrefixSize + len(z.To) + 7 + msgp.StringPrefixSize + len(z.Object) + 4 + msgp.ArrayHeaderSize + (len(z.Loc) * (msgp.Int64Size))
+	return
+}

@@ -34,6 +34,7 @@ type Game struct {
 	chatSubscriber  *actor.PID
 	shoutSubscriber *actor.PID
 	inventory       *actor.PID
+	home            *actor.PID
 }
 
 func NewGameProps(ui *actor.PID, network network.Network) *actor.Props {
@@ -134,6 +135,15 @@ func (g *Game) initialize(actorCtx actor.Context) {
 	cursor := new(navigator.Cursor).SetChainTree(homeTree)
 	g.cursor = cursor
 
+	g.home, err = actorCtx.SpawnNamed(NewLandActorProps(&LandActorConfig{
+		Did:     homeTree.MustId(),
+		Network: g.network,
+	}), "home")
+	if err != nil {
+		panic(fmt.Errorf("error spawning home actor: %v", err))
+	}
+
+	// TODO: switch to global topic
 	g.inventory, err = actorCtx.SpawnNamed(NewInventoryActorProps(&InventoryActorConfig{
 		Player:  g.playerTree,
 		Network: g.network,
@@ -463,7 +473,7 @@ func (g *Game) handleCreateObject(actorCtx actor.Context, args string) error {
 		return fmt.Errorf("error casting create object response")
 	}
 
-	g.sendUIMessage(actorCtx, fmt.Sprintf("%s has been created with DID %s and is in your bag of hodling", objName, newObject.Object.ChainTreeDID))
+	g.sendUIMessage(actorCtx, fmt.Sprintf("%s has been created with DID %s and is in your bag of hodling", objName, newObject.Object.Did))
 	return nil
 }
 
