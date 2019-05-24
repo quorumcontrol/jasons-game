@@ -5,18 +5,23 @@ import (
 	"flag"
 	"fmt"
 	"io/ioutil"
+	"os"
 	"path/filepath"
 	"strings"
+	"time"
 
 	logging "github.com/ipfs/go-log"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/crypto"
-	badger "github.com/ipfs/go-ds-badger"
+	s3ds "github.com/ipfs/go-ds-s3"
 	"github.com/pkg/errors"
 	"github.com/quorumcontrol/jasons-game/jason/provider"
 	"github.com/quorumcontrol/tupelo-go-sdk/p2p"
 	"github.com/shibukawa/configdir"
+
+	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/service/s3"
 )
 
 func mustSetLogLevel(name, level string) {
@@ -25,7 +30,9 @@ func mustSetLogLevel(name, level string) {
 	}
 }
 
-const jasonPath = "jason"
+const (
+	localBucketName = "tupelo-jason-blocks-local"
+)
 
 func main() {
 	ctx, cancel := context.WithCancel(context.Background())
@@ -35,16 +42,16 @@ func main() {
 	mustSetLogLevel("pubsub", "error")
 	mustSetLogLevel("jasonblocks", "debug")
 
+	ip := flag.String("ip", "0.0.0.0", "The IP address to bind jason to")
+	port := flag.Int("port", 0, "Port to listen on, 0 means random port")
+	isLocal := flag.Bool("local", false, "turn on localmode config for s3")
+	flag.Parse()
+	fmt.Printf("ip %s port %d\n", *ip, *port)
+
 	configDirs := configdir.New("tupelo", "jasons-game")
 	folders := configDirs.QueryFolders(configdir.Global)
-	folder := configDirs.QueryFolderContainsFile(jasonPath)
-	if folder == nil {
-		if err := folders[0].CreateParentDir(jasonPath); err != nil {
-			panic(err)
-		}
-	}
 
-	folder = configDirs.QueryFolderContainsFile("private.key")
+	folder := configDirs.QueryFolderContainsFile("private.key")
 	if folder == nil {
 		if _, err := folders[0].Create("private.key"); err != nil {
 			panic(err)
@@ -68,16 +75,50 @@ func main() {
 		panic(errors.Wrap(err, "error unmarshaling key"))
 	}
 
-	ds, err := badger.NewDatastore(filepath.Join(folders[0].Path, jasonPath), &badger.DefaultOptions)
+	var config s3ds.Config
+	if *isLocal {
+		// first sleep to give the localstack docker container time to startup
+		time.Sleep(2 * time.Second)
+		config = s3ds.Config{
+			RegionEndpoint: "http://localstack:4572",
+			Bucket:         localBucketName,
+			Region:         "us-east-1",
+			AccessKey:      "localonlyac",
+			SecretKey:      "localonlysk",
+		}
+	} else {
+		var bucket string
+		var region string
+
+		bucket, ok := os.LookupEnv("JASON_S3_BUCKET")
+		if !ok {
+			panic(fmt.Errorf("${JASON_S3_BUCKET} is required in non-local mode"))
+		}
+
+		region, ok = os.LookupEnv("AWS_REGION")
+		if !ok {
+			panic(fmt.Errorf("${AWS_REGION} is required in non-local mode"))
+		}
+
+		// we expect credentials to come from the normal ec2 environment
+		config = s3ds.Config{
+			Bucket: bucket,
+			Region: region,
+		}
+	}
+
+	ds, err := s3ds.NewS3Datastore(config)
 	if err != nil {
 		panic(errors.Wrap(err, "error creating store"))
 	}
 
-	ip := flag.String("ip", "0.0.0.0", "The IP address to bind jason to")
-	port := flag.Int("port", 0, "Port to listen on, 0 means random port")
-
-	flag.Parse()
-	fmt.Printf("ip %s port %d\n", *ip, *port)
+	if *isLocal {
+		// because we're local, go ahead and create the bucket
+		err := devMakeBucket(ds.S3, localBucketName)
+		if err != nil {
+			panic(fmt.Errorf("error creating bucket: %v", err))
+		}
+	}
 
 	p2pOpts := []p2p.Option{
 		p2p.WithListenIP(*ip, *port),
@@ -93,4 +134,12 @@ func main() {
 	}
 
 	<-make(chan struct{})
+}
+
+func devMakeBucket(s3obj *s3.S3, bucketName string) error {
+	_, err := s3obj.CreateBucket(&s3.CreateBucketInput{
+		Bucket: aws.String(bucketName),
+	})
+
+	return err
 }
