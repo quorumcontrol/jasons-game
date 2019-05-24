@@ -3,7 +3,6 @@ package network
 import (
 	"crypto/ecdsa"
 	"fmt"
-	"strings"
 	"time"
 
 	"github.com/ethereum/go-ethereum/crypto"
@@ -13,8 +12,10 @@ import (
 	dssync "github.com/ipfs/go-datastore/sync"
 	blockstore "github.com/ipfs/go-ipfs-blockstore"
 	offline "github.com/ipfs/go-ipfs-exchange-offline"
+	cbornode "github.com/ipfs/go-ipld-cbor"
 	"github.com/ipfs/go-merkledag"
 	"github.com/pkg/errors"
+	"github.com/quorumcontrol/chaintree/chaintree"
 	"github.com/quorumcontrol/tupelo-go-sdk/consensus"
 	"github.com/quorumcontrol/tupelo-go-sdk/gossip3/remote"
 )
@@ -86,7 +87,11 @@ func (ln *LocalNetwork) CreateNamedChainTree(name string) (*consensus.SignedChai
 		return nil, errors.Wrap(err, "error creating tree")
 	}
 
-	// TODO: do we need to actually set the authorizations here? or do we just not care
+	newTree, err := ln.ChangeChainTreeOwner(tree, []string{crypto.PubkeyToAddress(ln.key.PublicKey).String()})
+	if err != nil {
+		return nil, errors.Wrap(err, "error changing ownership")
+	}
+	tree = newTree
 
 	err = ln.TreeStore.SaveTreeMetadata(tree)
 	if err != nil {
@@ -118,17 +123,73 @@ func (ln *LocalNetwork) GetTreeByTip(tip cid.Cid) (*consensus.SignedChainTree, e
 }
 
 func (ln *LocalNetwork) UpdateChainTree(tree *consensus.SignedChainTree, path string, value interface{}) (*consensus.SignedChainTree, error) {
-	log.Debugf("updating tree %s path: %s value: %v", tree.MustId(), path, value)
-	updated, err := tree.ChainTree.Dag.SetAsLink(append([]string{"tree", "data"}, strings.Split(path, "/")...), value)
-	if err != nil {
-		return nil, errors.Wrap(err, "error setting data")
+	transactions := []*chaintree.Transaction{
+		{
+			Type: consensus.TransactionTypeSetData,
+			Payload: &consensus.SetDataPayload{
+				Path:  path,
+				Value: value,
+			},
+		},
 	}
-	tree.ChainTree.Dag = updated
-
-	return tree, ln.TreeStore.SaveTreeMetadata(tree)
+	return ln.playTransaction(tree, transactions)
 }
 
 func (ln *LocalNetwork) ChangeChainTreeOwner(tree *consensus.SignedChainTree, newKeys []string) (*consensus.SignedChainTree, error) {
-	// TODO mock chown?
-	return tree, nil
+	transactions := []*chaintree.Transaction{
+		{
+			Type: consensus.TransactionTypeSetOwnership,
+			Payload: &consensus.SetOwnershipPayload{
+				Authentication: newKeys,
+			},
+		},
+	}
+	return ln.playTransaction(tree, transactions)
+}
+
+func (ln *LocalNetwork) playTransaction(tree *consensus.SignedChainTree, transactions []*chaintree.Transaction) (*consensus.SignedChainTree, error) {
+	unmarshaledRoot, err := tree.ChainTree.Dag.Get(tree.Tip())
+	if unmarshaledRoot == nil || err != nil {
+		return nil, fmt.Errorf("error,missing root: %v", err)
+	}
+	root := &chaintree.RootNode{}
+
+	err = cbornode.DecodeInto(unmarshaledRoot.RawData(), root)
+	if err != nil {
+		return nil, fmt.Errorf("error decoding root: %v", err)
+	}
+
+	var height uint64
+	var tip *cid.Cid
+	if tree.IsGenesis() {
+		height = 0
+	} else {
+		height = root.Height + 1
+		storedTip := tree.Tip()
+		tip = &storedTip
+	}
+
+	unsignedBlock := &chaintree.BlockWithHeaders{
+		Block: chaintree.Block{
+			PreviousTip:  tip,
+			Height:       height,
+			Transactions: transactions,
+		},
+	}
+
+	blockWithHeaders, err := consensus.SignBlock(unsignedBlock, ln.key)
+	if err != nil {
+		return nil, fmt.Errorf("error signing root: %v", err)
+	}
+
+	isValid, err := tree.ChainTree.ProcessBlock(blockWithHeaders)
+	if err != nil {
+		return nil, fmt.Errorf("error processing block: %v", err)
+	}
+
+	if !isValid {
+		return nil, fmt.Errorf("error invalid transaction")
+	}
+
+	return tree, ln.TreeStore.SaveTreeMetadata(tree)
 }
