@@ -37,7 +37,7 @@ require (
 	github.com/pkg/errors v0.8.1
 	github.com/quorumcontrol/chaintree v0.0.0-20190515172607-6a3407e067bd
 	github.com/quorumcontrol/storage v1.1.2
-	github.com/quorumcontrol/tupelo-go-sdk v0.2.4-0.20190517142847-a0fe1f0beedc2bb347d66629fab44683d888e11c
+	github.com/quorumcontrol/tupelo-go-sdk v0.2.4-0.20190517142847-a8abc862d8a0dd497e2630b0657dec428d86f1a2
 	github.com/shibukawa/configdir v0.0.0-20170330084843-e180dbdc8da0
 	github.com/sirupsen/logrus v1.4.2 // indirect
 	github.com/stretchr/testify v1.3.0
