@@ -57,6 +57,14 @@ type PickupObjectResponse struct {
 	Error  error
 }
 
+type InventoryListRequest struct {
+}
+
+type InventoryListResponse struct {
+	Objects map[string]*Object
+	Error   error
+}
+
 type Object struct {
 	Did string
 }
@@ -150,6 +158,9 @@ func (co *InventoryActor) Receive(context actor.Context) {
 	case *DropObjectRequest:
 		co.Log.Debugf("Received DropObjectRequest: %+v\n", msg)
 		co.handleDropObject(context, msg)
+	case *InventoryListRequest:
+		co.Log.Debugf("Received InventoryListRequest: %+v\n", msg)
+		co.handleListObjects(context, msg)
 	}
 }
 
@@ -496,4 +507,40 @@ func (co *InventoryActor) handlePickupObject(context actor.Context, msg *PickupO
 
 	co.player.SetChainTree(newPlayerChainTree)
 	context.Respond(&PickupObjectResponse{Object: &obj.Object})
+}
+
+func (co *InventoryActor) handleListObjects(context actor.Context, msg *InventoryListRequest) {
+	var err error
+
+	player := co.player
+
+	if player == nil {
+		err = fmt.Errorf("player is required to drop an object")
+		co.Log.Error(err)
+		context.Respond(&InventoryListResponse{Error: err})
+		return
+	}
+
+	playerChainTree := player.ChainTree()
+	treeObjectsPath, _ := consensus.DecodePath(fmt.Sprintf("tree/data/%s", ObjectsPath))
+	objectsUncasted, _, err := playerChainTree.ChainTree.Dag.Resolve(treeObjectsPath)
+	if err != nil {
+		err = fmt.Errorf("error fetching inventory; error: %v", err)
+		co.Log.Error(err)
+		context.Respond(&InventoryListResponse{Error: err})
+		return
+	}
+
+	if objectsUncasted == nil {
+		context.Respond(&InventoryListResponse{Objects: make(map[string]*Object, 0)})
+		return
+	}
+
+	objects := make(map[string]*Object, len(objectsUncasted.(map[string]interface{})))
+	for k, v := range objectsUncasted.(map[string]interface{}) {
+		objects[k] = &Object{Did: v.(string)}
+	}
+
+	context.Respond(&InventoryListResponse{Objects: objects})
+	return
 }

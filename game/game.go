@@ -211,6 +211,8 @@ func (g *Game) handleUserInput(actorCtx actor.Context, input *jasonsgame.UserInp
 		err = g.handleDropObject(actorCtx, args)
 	case "pickup-object":
 		err = g.handlePickupObject(actorCtx, args)
+	case "player-inventory-list":
+		err = g.handlePlayerInventoryList(actorCtx)
 	case "help":
 		g.sendUIMessage(actorCtx, "available commands:")
 		for _, c := range g.commands {
@@ -529,6 +531,28 @@ func (g *Game) handleCreateObject(actorCtx actor.Context, args string) error {
 	}
 
 	g.sendUIMessage(actorCtx, fmt.Sprintf("%s has been created with DID %s and is in your bag of hodling", objName, newObject.Object.Did))
+	return nil
+}
+
+func (g *Game) handlePlayerInventoryList(actorCtx actor.Context) error {
+	response, err := actorCtx.RequestFuture(g.inventory, &InventoryListRequest{}, 2*time.Second).Result()
+	if err != nil {
+		return err
+	}
+	inventoryList, ok := response.(*InventoryListResponse)
+	if !ok {
+		return fmt.Errorf("error casting InventoryListResponse")
+	}
+
+	if len(inventoryList.Objects) == 0 {
+		g.sendUIMessage(actorCtx, "your bag of hodling appears to be empty")
+		return nil
+	}
+
+	g.sendUIMessage(actorCtx, "inside of your bag of hodling you find:")
+	for objName, obj := range inventoryList.Objects {
+		g.sendUIMessage(actorCtx, fmt.Sprintf("%s (%s)", objName, obj.Did))
+	}
 	return nil
 }
 
