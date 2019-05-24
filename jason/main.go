@@ -5,6 +5,7 @@ import (
 	"flag"
 	"fmt"
 	"io/ioutil"
+	"os"
 	"path/filepath"
 	"strings"
 	"time"
@@ -99,12 +100,27 @@ func main() {
 			panic(fmt.Errorf("error creating bucket: %v", err))
 		}
 	} else {
-		panic("only local is supported")
+		var bucket string
+		var region string
+
+		bucket, ok := os.LookupEnv("JASON_S3_BUCKET")
+		if !ok {
+			panic(fmt.Errorf("${JASON_S3_BUCKET} is required in non-local mode"))
+		}
+
+		region, ok = os.LookupEnv("AWS_REGION")
+		if !ok {
+			panic(fmt.Errorf("${AWS_REGION} is required in non-local mode"))
+		}
+
+		// we expect credentials to come from the normal ec2 environment
+		config = s3ds.Config{
+			Bucket: bucket,
+			Region: region,
+		}
 	}
 
 	ds, err := s3ds.NewS3Datastore(config)
-
-	// ds, err := badger.NewDatastore(filepath.Join(folders[0].Path, jasonPath), &badger.DefaultOptions)
 	if err != nil {
 		panic(errors.Wrap(err, "error creating store"))
 	}
