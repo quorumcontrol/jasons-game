@@ -134,7 +134,7 @@ func TestInventoryActor_Receive_NamesMustBeUnique(t *testing.T) {
 	assert.Nil(t, createObjectResponse.Object)
 }
 
-func TestInventoryActor_DropObject(t *testing.T) {
+func TestInventoryActor_DropPickupObject(t *testing.T) {
 	net := network.NewLocalNetwork()
 
 	playerChainTree, err := net.CreateNamedChainTree("player")
@@ -148,18 +148,25 @@ func TestInventoryActor_DropObject(t *testing.T) {
 	require.Nil(t, err)
 	defer rootCtx.Stop(inventory)
 
+	homeTree, err := createHome(net)
+	require.Nil(t, err)
+	c := new(navigator.Cursor).SetLocation(0, 0).SetChainTree(homeTree)
+	loc, err := c.GetLocation()
+	require.Nil(t, err)
+
+	homeActor, err := rootCtx.SpawnNamed(NewLandActorProps(&LandActorConfig{
+		Did:     homeTree.MustId(),
+		Network: net,
+	}), "home")
+	require.Nil(t, err)
+	defer rootCtx.Stop(homeActor)
+
 	response, err := rootCtx.RequestFuture(inventory, &CreateObjectRequest{Name: "test", Description: "test object"}, 1*time.Second).Result()
 	require.Nil(t, err)
 
 	createObjectResponse, ok := response.(*CreateObjectResponse)
 	require.True(t, ok)
 	require.Nil(t, createObjectResponse.Error)
-
-	homeTree, err := createHome(net)
-	require.Nil(t, err)
-	c := new(navigator.Cursor).SetLocation(0, 0).SetChainTree(homeTree)
-	loc, err := c.GetLocation()
-	require.Nil(t, err)
 
 	response, err = rootCtx.RequestFuture(inventory, &DropObjectRequest{Name: "test", Location: loc}, 1*time.Second).Result()
 	require.Nil(t, err)
@@ -174,4 +181,20 @@ func TestInventoryActor_DropObject(t *testing.T) {
 	require.Nil(t, err)
 	require.Nil(t, playerObjNode)
 	require.Equal(t, remainingPath, []string{"test"})
+
+	// Give time for location to pickup change and refresh
+	time.Sleep(500 * time.Millisecond)
+	homeTree, err = net.GetTree(c.Did())
+	require.Nil(t, err)
+	c.SetChainTree(homeTree)
+	loc, err = c.GetLocation()
+	require.Nil(t, err)
+
+	response, err = rootCtx.RequestFuture(inventory, &PickupObjectRequest{Name: "test", Location: loc}, 1*time.Second).Result()
+	require.Nil(t, err)
+
+	playerObjNode, remainingPath, err = testPlayer.ChainTree().ChainTree.Dag.Resolve(append([]string{"tree", "data"}, objectPath...))
+	require.Nil(t, err)
+	require.Nil(t, remainingPath)
+	require.Equal(t, playerObjNode.(string), createObjectResponse.Object.Did)
 }
