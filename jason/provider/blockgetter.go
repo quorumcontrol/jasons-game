@@ -53,14 +53,16 @@ func (g *getter) Receive(aCtx actor.Context) {
 		defer cancel()
 
 		if len(msg.Data) > 0 {
-			log.Debugf("received block with data %s", msg.Cid)
 			// if we have data, we can just add it right away.
 			sw := &safewrap.SafeWrap{}
 			n := sw.Decode(msg.Data)
 			if sw.Err != nil {
-				log.Errorf("error decoding block: %v", sw.Err)
+				id, _ := cid.Cast(msg.Cid)
+				log.Errorf("error decoding block %s: %v", id.String(), sw.Err)
 				return
 			}
+			log.Debugf("received block with data %s", n.Cid().String())
+
 			// if the Block comes in with Data attached, then we can just add it directly to the provider
 			err := g.provider.swapper.Add(ctx, n)
 			if err != nil {
