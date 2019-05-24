@@ -108,3 +108,106 @@ func (z *Block) Msgsize() (s int) {
 	s = 1 + 4 + msgp.BytesPrefixSize + len(z.Cid)
 	return
 }
+
+// DecodeMsg implements msgp.Decodable
+func (z *Join) DecodeMsg(dc *msgp.Reader) (err error) {
+	var field []byte
+	_ = field
+	var zb0001 uint32
+	zb0001, err = dc.ReadMapHeader()
+	if err != nil {
+		err = msgp.WrapError(err)
+		return
+	}
+	for zb0001 > 0 {
+		zb0001--
+		field, err = dc.ReadMapKeyPtr()
+		if err != nil {
+			err = msgp.WrapError(err)
+			return
+		}
+		switch msgp.UnsafeString(field) {
+		case "Identity":
+			z.Identity, err = dc.ReadString()
+			if err != nil {
+				err = msgp.WrapError(err, "Identity")
+				return
+			}
+		default:
+			err = dc.Skip()
+			if err != nil {
+				err = msgp.WrapError(err)
+				return
+			}
+		}
+	}
+	return
+}
+
+// EncodeMsg implements msgp.Encodable
+func (z Join) EncodeMsg(en *msgp.Writer) (err error) {
+	// map header, size 1
+	// write "Identity"
+	err = en.Append(0x81, 0xa8, 0x49, 0x64, 0x65, 0x6e, 0x74, 0x69, 0x74, 0x79)
+	if err != nil {
+		return
+	}
+	err = en.WriteString(z.Identity)
+	if err != nil {
+		err = msgp.WrapError(err, "Identity")
+		return
+	}
+	return
+}
+
+// MarshalMsg implements msgp.Marshaler
+func (z Join) MarshalMsg(b []byte) (o []byte, err error) {
+	o = msgp.Require(b, z.Msgsize())
+	// map header, size 1
+	// string "Identity"
+	o = append(o, 0x81, 0xa8, 0x49, 0x64, 0x65, 0x6e, 0x74, 0x69, 0x74, 0x79)
+	o = msgp.AppendString(o, z.Identity)
+	return
+}
+
+// UnmarshalMsg implements msgp.Unmarshaler
+func (z *Join) UnmarshalMsg(bts []byte) (o []byte, err error) {
+	var field []byte
+	_ = field
+	var zb0001 uint32
+	zb0001, bts, err = msgp.ReadMapHeaderBytes(bts)
+	if err != nil {
+		err = msgp.WrapError(err)
+		return
+	}
+	for zb0001 > 0 {
+		zb0001--
+		field, bts, err = msgp.ReadMapKeyZC(bts)
+		if err != nil {
+			err = msgp.WrapError(err)
+			return
+		}
+		switch msgp.UnsafeString(field) {
+		case "Identity":
+			z.Identity, bts, err = msgp.ReadStringBytes(bts)
+			if err != nil {
+				err = msgp.WrapError(err, "Identity")
+				return
+			}
+		default:
+			bts, err = msgp.Skip(bts)
+			if err != nil {
+				err = msgp.WrapError(err)
+				return
+			}
+		}
+	}
+	o = bts
+	return
+}
+
+// Msgsize returns an upper bound estimate of the number of bytes occupied by the serialized message
+func (z Join) Msgsize() (s int) {
+	s = 1 + 9 + msgp.StringPrefixSize + len(z.Identity)
+	return
+}

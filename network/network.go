@@ -77,7 +77,7 @@ func NewRemoteNetwork(ctx context.Context, group *types.NotaryGroup, path string
 		return nil, errors.Wrap(err, "error getting private key")
 	}
 
-	ipldNetHost, lite, err := NewIPLDClient(ctx, key, ds)
+	ipldNetHost, lite, err := NewIPLDClient(ctx, key, ds, p2p.WithClientOnlyDHT(true))
 	if err != nil {
 		return nil, errors.Wrap(err, "error creating IPLD client")
 	}
@@ -85,16 +85,14 @@ func NewRemoteNetwork(ctx context.Context, group *types.NotaryGroup, path string
 	net.ipldp2pHost = ipldNetHost
 	net.pubSubSystem = remote.NewNetworkPubSub(ipldNetHost)
 
-	go func() {
-		_, err := ipldNetHost.Bootstrap(gameBootstrappers())
-		if err != nil {
-			log.Errorf("error bootstrapping ipld host: %v", err)
-		}
-		// _, err = ipldNetHost.Bootstrap(IpfsBootstrappers)
-		// if err != nil {
-		// 	log.Errorf("error bootstrapping ipld host: %v", err)
-		// }
-	}()
+	_, err = ipldNetHost.Bootstrap(gameBootstrappers())
+	if err != nil {
+		log.Errorf("error bootstrapping ipld host: %v", err)
+	}
+
+	if err := net.pubSubSystem.Broadcast(BlockTopic, &Join{Identity: ipldNetHost.Identity()}); err != nil {
+		log.Errorf("broadcasting JoinMessage failed: %s", err)
+	}
 
 	tupeloP2PHost, err := p2p.NewLibP2PHost(ctx, key, 0)
 	if err != nil {

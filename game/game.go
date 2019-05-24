@@ -52,7 +52,7 @@ func (g *Game) Receive(actorCtx actor.Context) {
 		g.initialize(actorCtx)
 	case *jasonsgame.UserInput:
 		g.handleUserInput(actorCtx, msg)
-	case *ChatMessage, *ShoutMessage, *JoinMessage:
+	case *ChatMessage, *ShoutMessage:
 		g.sendUIMessage(actorCtx, msg)
 	case *OpenPortalMessage:
 		log.Debugf("received OpenPortalMessage")
@@ -81,14 +81,14 @@ func (g *Game) initialize(actorCtx actor.Context) {
 
 	var homeTree *consensus.SignedChainTree
 
-	log.Debug("get player", homeTree)
+	log.Debug("get player")
 	playerChain, err := g.network.GetChainTreeByName("player")
 	if err != nil {
 		log.Error("error getting player: %v", err)
 		panic(err)
 	}
 	if playerChain == nil {
-		log.Debug("create player", homeTree)
+		log.Debug("create player")
 		playerChain, err = g.network.CreateNamedChainTree("player")
 		if err != nil {
 			log.Error("error creating player: %v", err)
@@ -104,13 +104,6 @@ func (g *Game) initialize(actorCtx actor.Context) {
 	} else {
 		g.playerTree = NewPlayerTree(g.network, playerChain)
 	}
-
-	time.AfterFunc(2*time.Second, func() {
-		if err := g.network.PubSubSystem().Broadcast(shoutChannel,
-			&JoinMessage{From: g.playerTree.Did()}); err != nil {
-			log.Errorf("broadcasting JoinMessage failed: %s", err)
-		}
-	})
 
 	homeTree, err = g.network.GetChainTreeByName("home")
 	log.Debug("get home", homeTree)
@@ -451,8 +444,6 @@ func (g *Game) sendUIMessage(actorCtx actor.Context, mesgInter interface{}) {
 		msgToUser.Message = fmt.Sprintf("Someone here says: %s", msg.Message)
 	case *ShoutMessage:
 		msgToUser.Message = fmt.Sprintf("Someone SHOUTED: %s", msg.Message)
-	case *JoinMessage:
-		msgToUser.Message = fmt.Sprintf("a new player joined: %s", msg.From)
 	default:
 		log.Errorf("error, unknown message type: %v", msg)
 	}
