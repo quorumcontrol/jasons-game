@@ -9,7 +9,8 @@ func init() {
 }
 
 type Block struct {
-	Cid []byte
+	Cid  []byte
+	Data []byte
 }
 
 func (b *Block) TypeCode() int8 {
