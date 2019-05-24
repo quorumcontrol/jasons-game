@@ -21,10 +21,6 @@ import (
 	"github.com/shibukawa/configdir"
 
 	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/aws/credentials"
-	"github.com/aws/aws-sdk-go/aws/credentials/ec2rolecreds"
-	"github.com/aws/aws-sdk-go/aws/ec2metadata"
-	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/s3"
 )
 
@@ -34,7 +30,9 @@ func mustSetLogLevel(name, level string) {
 	}
 }
 
-const jasonPath = "jason"
+const (
+	localBucketName = "tupelo-jason-blocks-local"
+)
 
 func main() {
 	ctx, cancel := context.WithCancel(context.Background())
@@ -52,14 +50,8 @@ func main() {
 
 	configDirs := configdir.New("tupelo", "jasons-game")
 	folders := configDirs.QueryFolders(configdir.Global)
-	folder := configDirs.QueryFolderContainsFile(jasonPath)
-	if folder == nil {
-		if err := folders[0].CreateParentDir(jasonPath); err != nil {
-			panic(err)
-		}
-	}
 
-	folder = configDirs.QueryFolderContainsFile("private.key")
+	folder := configDirs.QueryFolderContainsFile("private.key")
 	if folder == nil {
 		if _, err := folders[0].Create("private.key"); err != nil {
 			panic(err)
@@ -89,15 +81,10 @@ func main() {
 		time.Sleep(2 * time.Second)
 		config = s3ds.Config{
 			RegionEndpoint: "http://localstack:4572",
-			Bucket:         "tupelo-jason-blocks-local",
+			Bucket:         localBucketName,
 			Region:         "us-east-1",
 			AccessKey:      "localonlyac",
 			SecretKey:      "localonlysk",
-		}
-		// because we're local, go ahead and create the bucket
-		err := devMakeBucket(config)
-		if err != nil {
-			panic(fmt.Errorf("error creating bucket: %v", err))
 		}
 	} else {
 		var bucket string
@@ -125,6 +112,14 @@ func main() {
 		panic(errors.Wrap(err, "error creating store"))
 	}
 
+	if *isLocal {
+		// because we're local, go ahead and create the bucket
+		err := devMakeBucket(ds.S3, localBucketName)
+		if err != nil {
+			panic(fmt.Errorf("error creating bucket: %v", err))
+		}
+	}
+
 	p2pOpts := []p2p.Option{
 		p2p.WithListenIP(*ip, *port),
 	}
@@ -141,40 +136,9 @@ func main() {
 	<-make(chan struct{})
 }
 
-func devMakeBucket(conf s3ds.Config) error {
-	awsConfig := aws.NewConfig()
-	sess, err := session.NewSession()
-	if err != nil {
-		return fmt.Errorf("failed to create new session: %s", err)
-	}
-
-	creds := credentials.NewChainCredentials([]credentials.Provider{
-		&credentials.StaticProvider{Value: credentials.Value{
-			AccessKeyID:     conf.AccessKey,
-			SecretAccessKey: conf.SecretKey,
-			SessionToken:    conf.SessionToken,
-		}},
-		&credentials.EnvProvider{},
-		&credentials.SharedCredentialsProvider{},
-		&ec2rolecreds.EC2RoleProvider{Client: ec2metadata.New(sess)},
-	})
-
-	if conf.RegionEndpoint != "" {
-		awsConfig.WithS3ForcePathStyle(true)
-		awsConfig.WithEndpoint(conf.RegionEndpoint)
-	}
-
-	awsConfig.WithCredentials(creds)
-	awsConfig.WithRegion(conf.Region)
-
-	sess, err = session.NewSession(awsConfig)
-	if err != nil {
-		return fmt.Errorf("failed to create new session with aws config: %s", err)
-	}
-	s3obj := s3.New(sess)
-
-	_, err = s3obj.CreateBucket(&s3.CreateBucketInput{
-		Bucket: aws.String(conf.Bucket),
+func devMakeBucket(s3obj *s3.S3, bucketName string) error {
+	_, err := s3obj.CreateBucket(&s3.CreateBucketInput{
+		Bucket: aws.String(bucketName),
 	})
 
 	return err
