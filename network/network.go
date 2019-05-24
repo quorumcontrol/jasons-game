@@ -91,15 +91,15 @@ func NewRemoteNetwork(ctx context.Context, group *types.NotaryGroup, path string
 	wg := &sync.WaitGroup{}
 	wg.Add(1)
 	go func() {
+		defer wg.Done()
 		_, err := ipldNetHost.Bootstrap(gameBootstrappers())
 		if err != nil {
 			log.Errorf("error bootstrapping ipld host: %v", err)
+			return
 		}
 		if err := net.pubSubSystem.Broadcast(BlockTopic, &Join{Identity: ipldNetHost.Identity()}); err != nil {
 			log.Errorf("broadcasting JoinMessage failed: %s", err)
 		}
-
-		wg.Done()
 	}()
 
 	tupeloP2PHost, err := p2p.NewLibP2PHost(ctx, key, 0)
