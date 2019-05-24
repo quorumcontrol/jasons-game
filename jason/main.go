@@ -7,11 +7,8 @@ import (
 	"io/ioutil"
 	"path/filepath"
 	"strings"
-	"time"
 
 	logging "github.com/ipfs/go-log"
-	"github.com/libp2p/go-libp2p"
-	connmgr "github.com/libp2p/go-libp2p-connmgr"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/crypto"
@@ -27,10 +24,6 @@ func mustSetLogLevel(name, level string) {
 		panic(errors.Wrapf(err, "error setting log level of %s to %s", name, level))
 	}
 }
-
-const minConnections = 4915 // 60% of 8192 ulimit
-const maxConnections = 7372 // 90% of 8192 ulimit
-const connectionGracePeriod = 20 * time.Second
 
 const jasonPath = "jason"
 
@@ -86,11 +79,8 @@ func main() {
 	flag.Parse()
 	fmt.Printf("ip %s port %d\n", *ip, *port)
 
-	cm := connmgr.NewConnManager(minConnections, maxConnections, connectionGracePeriod)
-
 	p2pOpts := []p2p.Option{
 		p2p.WithListenIP(*ip, *port),
-		p2p.WithLibp2pOptions(libp2p.ConnectionManager(cm)),
 	}
 
 	p, err := provider.New(ctx, key, ds, p2pOpts...)
