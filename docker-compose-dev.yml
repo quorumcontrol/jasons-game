@@ -49,6 +49,7 @@ services:
     environment:
       PPROF_ENABLED: "true"
       GOPATH: /go
+      JASON_BOOTSTRAP_NODES: /ip4/172.16.239.100/tcp/34001/ipfs/16Uiu2HAmBL6Xz9ichyunCexiqomcHyzVpKKmxAMgUusksBZzzM3K
     networks:
       default:
         ipv4_address: 172.16.239.100

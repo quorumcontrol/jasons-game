@@ -238,6 +238,7 @@ func (n *RemoteNetwork) UpdateChainTree(tree *consensus.SignedChainTree, path st
 
 func tupeloBootstrappers() []string {
 	if envSpecifiedNodes, ok := os.LookupEnv("TUPELO_BOOTSTRAP_NODES"); ok {
+		log.Debugf("using tupelo bootstrap nodes: %s", envSpecifiedNodes)
 		return strings.Split(envSpecifiedNodes, ",")
 	}
 	return DefaultTupeloBootstrappers
@@ -245,6 +246,7 @@ func tupeloBootstrappers() []string {
 
 func gameBootstrappers() []string {
 	if envSpecifiedNodes, ok := os.LookupEnv("JASON_BOOTSTRAP_NODES"); ok {
+		log.Debugf("using jason bootstrap nodes: %s", envSpecifiedNodes)
 		return strings.Split(envSpecifiedNodes, ",")
 	}
 	return DefaultGameBootstrappers
