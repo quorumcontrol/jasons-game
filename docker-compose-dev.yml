@@ -73,12 +73,8 @@ services:
   
   localstack:
     image: localstack/localstack
-    ports:
-      - "4567-4584:4567-4584"
-      - 9000:9000
     environment:
       - SERVICES=s3
-      - PORT_WEB_UI=9000
 
   integration:
     build: ./devdocker
