@@ -522,7 +522,7 @@ func (g *Game) handleCreateObject(actorCtx actor.Context, args string) error {
 	response, err := actorCtx.RequestFuture(g.inventory, &CreateObjectRequest{
 		Name:        objName,
 		Description: strings.Join(splitArgs[1:], " "),
-	}, 1*time.Second).Result()
+	}, 5*time.Second).Result()
 	if err != nil {
 		return err
 	}
@@ -537,7 +537,7 @@ func (g *Game) handleCreateObject(actorCtx actor.Context, args string) error {
 }
 
 func (g *Game) handlePlayerInventoryList(actorCtx actor.Context) error {
-	response, err := actorCtx.RequestFuture(g.inventory, &InventoryListRequest{}, 2*time.Second).Result()
+	response, err := actorCtx.RequestFuture(g.inventory, &InventoryListRequest{}, 5*time.Second).Result()
 	if err != nil {
 		return err
 	}
