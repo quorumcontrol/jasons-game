@@ -213,6 +213,8 @@ func (g *Game) handleUserInput(actorCtx actor.Context, input *jasonsgame.UserInp
 		err = g.handlePickupObject(actorCtx, args)
 	case "player-inventory-list":
 		err = g.handlePlayerInventoryList(actorCtx)
+	case "location-inventory-list":
+		err = g.handleLocationInventoryList(actorCtx)
 	case "help":
 		g.sendUIMessage(actorCtx, "available commands:")
 		for _, c := range g.commands {
@@ -552,6 +554,35 @@ func (g *Game) handlePlayerInventoryList(actorCtx actor.Context) error {
 	g.sendUIMessage(actorCtx, "inside of your bag of hodling you find:")
 	for objName, obj := range inventoryList.Objects {
 		g.sendUIMessage(actorCtx, fmt.Sprintf("%s (%s)", objName, obj.Did))
+	}
+	return nil
+}
+
+func (g *Game) handleLocationInventoryList(actorCtx actor.Context) error {
+	g.refreshLocation()
+	l, err := g.cursor.GetLocation()
+	if err != nil {
+		g.sendUIMessage(actorCtx, fmt.Sprintf("Could not find your current location: %v", err))
+		return fmt.Errorf("Error on GetLocation %v", err)
+	}
+
+	sawSomething := false
+
+	if len(l.Inventory) > 0 {
+		sawSomething = true
+		g.sendUIMessage(actorCtx, "you see the following objects around you:")
+		for objName, objDid := range l.Inventory {
+			g.sendUIMessage(actorCtx, fmt.Sprintf("%s (%s)", objName, objDid))
+		}
+	}
+
+	if l.Portal != nil {
+		sawSomething = true
+		g.sendUIMessage(actorCtx, fmt.Sprintf("you see a mysterious portal leading to %s", l.Portal.To))
+	}
+
+	if !sawSomething {
+		g.sendUIMessage(actorCtx, "you look around but don't see anything")
 	}
 	return nil
 }
