@@ -27,7 +27,7 @@ var defaultCommandList = commandList{
 	newCommand("shout", "shout"),
 	newCommand("create-object", "create object"),
 	newCommand("drop-object", "drop object"),
-	newCommand("pickup-object", "pickup object"),
+	newCommand("pick-up-object", "pick up object"),
 	newCommand("player-inventory-list", "look in bag"),
 	newCommand("location-inventory-list", "look around"),
 	newCommand("help", "help"),

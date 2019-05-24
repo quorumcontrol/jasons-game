@@ -209,7 +209,7 @@ func (g *Game) handleUserInput(actorCtx actor.Context, input *jasonsgame.UserInp
 		err = g.handleCreateObject(actorCtx, args)
 	case "drop-object":
 		err = g.handleDropObject(actorCtx, args)
-	case "pickup-object":
+	case "pick-up-object":
 		err = g.handlePickupObject(actorCtx, args)
 	case "player-inventory-list":
 		err = g.handlePlayerInventoryList(actorCtx)
