@@ -91,7 +91,7 @@ func NewRemoteNetwork(ctx context.Context, group *types.NotaryGroup, path string
 	wg := &sync.WaitGroup{}
 	wg.Add(1)
 	go func() {
-		_, err = ipldNetHost.Bootstrap(gameBootstrappers())
+		_, err := ipldNetHost.Bootstrap(gameBootstrappers())
 		if err != nil {
 			log.Errorf("error bootstrapping ipld host: %v", err)
 		}
