@@ -179,6 +179,8 @@ func (g *Game) handleUserInput(actorCtx actor.Context, input *jasonsgame.UserInp
 		err = g.handleTipZoom(actorCtx, args)
 	case "go-portal":
 		err = g.handleGoThroughPortal(actorCtx)
+	case "refresh":
+		err = g.handleRefresh(actorCtx)
 	case "build-portal":
 		err = g.handleBuildPortal(actorCtx, args)
 	case "say":
@@ -266,6 +268,20 @@ func (g *Game) handleGoThroughPortal(actorCtx actor.Context) error {
 		return errors.Wrap(err, "error getting remote tree")
 	}
 	return g.goToTree(actorCtx, tree)
+}
+
+func (g *Game) handleRefresh(actorCtx actor.Context) error {
+	tree, err := g.network.GetTree(g.cursor.Did())
+	if err != nil {
+		return errors.Wrap(err, "error getting remote tree")
+	}
+	g.cursor.SetChainTree(tree)
+	l, err := g.cursor.GetLocation()
+	if err != nil {
+		return errors.Wrap(err, fmt.Sprintf("error getting location (%s)", tree.MustId()))
+	}
+	g.sendUIMessage(actorCtx, l)
+	return nil
 }
 
 func (g *Game) goToTree(actorCtx actor.Context, tree *consensus.SignedChainTree) error {
