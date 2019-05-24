@@ -7,12 +7,13 @@ import (
 	"github.com/AsynkronIT/protoactor-go/actor"
 	"github.com/AsynkronIT/protoactor-go/router"
 	"github.com/ipfs/go-cid"
+	peer "github.com/libp2p/go-libp2p-peer"
 	"github.com/quorumcontrol/jasons-game/network"
 )
 
 const getterConcurrency = 50
 
-var getTimeout = 5 * time.Second
+var getTimeout = 20 * time.Second
 
 type distributer struct {
 	provider *Provider
@@ -20,7 +21,7 @@ type distributer struct {
 }
 
 func (d *distributer) Receive(aCtx actor.Context) {
-	switch aCtx.Message().(type) {
+	switch msg := aCtx.Message().(type) {
 	case *actor.Started:
 		aCtx.Spawn(d.provider.pubsubSystem.NewSubscriberProps(network.BlockTopic))
 		d.pool = aCtx.Spawn(router.NewRoundRobinPool(getterConcurrency).WithProducer(func() actor.Actor {
@@ -30,6 +31,13 @@ func (d *distributer) Receive(aCtx actor.Context) {
 		}))
 	case *network.Block:
 		aCtx.Forward(d.pool)
+	case *network.Join:
+		peerID, err := peer.IDB58Decode(msg.Identity)
+		if err != nil {
+			log.Errorf("received invalid join message with identity %s", msg.Identity)
+			return
+		}
+		d.provider.connectionManager.Protect(peerID, "player")
 	}
 }
 
@@ -51,6 +59,7 @@ func (g *getter) Receive(aCtx actor.Context) {
 		_, err = g.provider.swapper.Get(ctx, id)
 		if err != nil {
 			log.Errorf("error getting block: %v", err)
+			return
 		}
 		log.Debugf("success %s", id.String())
 	}
