@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/ethereum/go-ethereum/crypto"
@@ -85,27 +86,26 @@ func NewRemoteNetwork(ctx context.Context, group *types.NotaryGroup, path string
 	net.ipldp2pHost = ipldNetHost
 	net.pubSubSystem = remote.NewNetworkPubSub(ipldNetHost)
 
-	_, err = ipldNetHost.Bootstrap(gameBootstrappers())
-	if err != nil {
-		log.Errorf("error bootstrapping ipld host: %v", err)
-	}
+	// bootstrap to the game async so we can also setup the tupelo node, etc
+	// while this happens.
+	wg := &sync.WaitGroup{}
+	wg.Add(1)
+	go func() {
+		_, err = ipldNetHost.Bootstrap(gameBootstrappers())
+		if err != nil {
+			log.Errorf("error bootstrapping ipld host: %v", err)
+		}
+		if err := net.pubSubSystem.Broadcast(BlockTopic, &Join{Identity: ipldNetHost.Identity()}); err != nil {
+			log.Errorf("broadcasting JoinMessage failed: %s", err)
+		}
 
-	if err := net.pubSubSystem.Broadcast(BlockTopic, &Join{Identity: ipldNetHost.Identity()}); err != nil {
-		log.Errorf("broadcasting JoinMessage failed: %s", err)
-	}
+		wg.Done()
+	}()
 
 	tupeloP2PHost, err := p2p.NewLibP2PHost(ctx, key, 0)
 	if err != nil {
 		return nil, fmt.Errorf("error setting up p2p host: %s", err)
 	}
-	if _, err = tupeloP2PHost.Bootstrap(tupeloBootstrappers()); err != nil {
-		return nil, err
-	}
-	if err = tupeloP2PHost.WaitForBootstrap(len(group.Signers), 15*time.Second); err != nil {
-		return nil, err
-	}
-
-	log.Infof("started tupelo host %s", tupeloP2PHost.Identity())
 
 	remote.NewRouter(tupeloP2PHost)
 	group.SetupAllRemoteActors(&key.PublicKey)
@@ -121,6 +121,19 @@ func NewRemoteNetwork(ctx context.Context, group *types.NotaryGroup, path string
 	store := NewIPLDTreeStore(lite, ds, net.pubSubSystem, tup)
 	net.TreeStore = store
 	tup.Store = store
+
+	// now all that setup is done, wait for the tupelo and game bootstrappers
+
+	if _, err = tupeloP2PHost.Bootstrap(tupeloBootstrappers()); err != nil {
+		return nil, err
+	}
+	if err = tupeloP2PHost.WaitForBootstrap(len(group.Signers), 15*time.Second); err != nil {
+		return nil, err
+	}
+
+	log.Infof("started tupelo host %s", tupeloP2PHost.Identity())
+	wg.Wait() // wait for the game bootstrappers too
+	log.Infof("connected to game bootstrappers")
 
 	return net, nil
 }
