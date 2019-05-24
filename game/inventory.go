@@ -308,6 +308,28 @@ func (co *InventoryActor) handleDropObject(context actor.Context, msg *DropObjec
 		locationAuths[k] = v.(string)
 	}
 
+	// TODO: remove me. Checks that you can only drop in your own location. Need global broadcast first
+	playerKeys, err := player.Keys()
+	if err != nil {
+		err = fmt.Errorf("could not fetch player keys")
+		co.Log.Error(err)
+		context.Respond(&DropObjectResponse{Error: err})
+		return
+	}
+
+	for _, storedKey := range locationAuths {
+		found := false
+		for _, checkKey := range playerKeys {
+			found = found || storedKey == checkKey
+		}
+		if !found {
+			err = fmt.Errorf("WIP: objects can currently only be dropped & picked up in your own land")
+			context.Respond(&DropObjectResponse{Error: err})
+			return
+		}
+	}
+	// END TODO
+
 	chainTreeName := fmt.Sprintf("object:%s", objectName)
 	existingObj, err := co.network.GetChainTreeByName(chainTreeName)
 	if err != nil {
@@ -397,6 +419,49 @@ func (co *InventoryActor) handlePickupObject(context actor.Context, msg *PickupO
 		return
 	}
 
+	playerKeys, err := player.Keys()
+	if err != nil {
+		err = fmt.Errorf("could not fetch player keys")
+		co.Log.Error(err)
+		context.Respond(&PickupObjectResponse{Error: err})
+		return
+	}
+
+	// TODO: remove me. Checks that you can only pickup from your own location. Need global broadcast first
+	locationTree, err := co.network.GetTree(msg.Location.Did)
+	if err != nil {
+		err = fmt.Errorf("error fetching location chaintree %s; error: %v", msg.Location.Did, err)
+		co.Log.Error(err)
+		context.Respond(&PickupObjectResponse{Error: err})
+		return
+	}
+
+	locationAuthsUncasted, _, err := locationTree.ChainTree.Dag.Resolve(strings.Split("tree/"+consensus.TreePathForAuthentications, "/"))
+	if err != nil {
+		err = fmt.Errorf("error fetching location chaintree authentications %s; error: %v", msg.Location.Did, err)
+		co.Log.Error(err)
+		context.Respond(&PickupObjectResponse{Error: err})
+		return
+	}
+
+	locationAuths := make([]string, len(locationAuthsUncasted.([]interface{})))
+	for k, v := range locationAuthsUncasted.([]interface{}) {
+		locationAuths[k] = v.(string)
+	}
+
+	for _, storedKey := range locationAuths {
+		found := false
+		for _, checkKey := range playerKeys {
+			found = found || storedKey == checkKey
+		}
+		if !found {
+			err = fmt.Errorf("WIP: objects can currently only be dropped & picked up in your own land")
+			context.Respond(&PickupObjectResponse{Error: err})
+			return
+		}
+	}
+	// END TODO
+
 	// TODO: switch to global topic
 	co.network.PubSubSystem().Broadcast(topicFromDid(msg.Location.Did), &TransferredObjectMessage{
 		From:   msg.Location.Did,
@@ -406,15 +471,6 @@ func (co *InventoryActor) handlePickupObject(context actor.Context, msg *PickupO
 	})
 
 	obj := NetworkObject{Object: Object{Did: objectDid}, Network: co.network}
-
-	playerKeys, err := player.Keys()
-
-	if err != nil {
-		err = fmt.Errorf("could not fetch player keys")
-		co.Log.Error(err)
-		context.Respond(&PickupObjectResponse{Error: err})
-		return
-	}
 
 	// TOOD: receive transfer from other land
 	playerIsOwner := false
@@ -434,7 +490,7 @@ func (co *InventoryActor) handlePickupObject(context actor.Context, msg *PickupO
 	if err != nil {
 		err = fmt.Errorf("error updating objects in chaintree: %v", err)
 		co.Log.Error(err)
-		context.Respond(&CreateObjectResponse{Error: err})
+		context.Respond(&PickupObjectResponse{Error: err})
 		return
 	}
 
