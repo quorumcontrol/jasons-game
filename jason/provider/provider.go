@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/ecdsa"
 	"fmt"
+	"sync"
 	"time"
 
 	"github.com/AsynkronIT/protoactor-go/actor"
@@ -63,16 +64,26 @@ func New(ctx context.Context, key *ecdsa.PrivateKey, ds datastore.Batching, addl
 func (p *Provider) Start() error {
 	fmt.Printf("starting %s\naddresseses:%v\n", p.p2pHost.Identity(), p.p2pHost.Addresses())
 
-	_, err := p.p2pHost.Bootstrap(network.IpfsBootstrappers)
-	if err != nil {
-		log.Errorf("error bootstrapping ipld host: %v", err)
-	}
+	wg := &sync.WaitGroup{}
 
-	//TODO: once there's more than one:
-	// _, err = p.p2pHost.Bootstrap(network.GameBootstrappers)
-	// if err != nil {
-	// 	log.Errorf("error bootstrapping ipld host: %v", err)
-	// }
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		_, err := p.p2pHost.Bootstrap(network.IpfsBootstrappers)
+		if err != nil {
+			log.Errorf("error bootstrapping ipld host: %v", err)
+		}
+	}()
+
+	wg.Add(1)
+	func() {
+		defer wg.Done()
+		_, err := p.p2pHost.Bootstrap(network.GameBootstrappers())
+		if err != nil {
+			log.Errorf("error bootstrapping ipld host: %v", err)
+		}
+	}()
+	wg.Wait()
 
 	// subscribe with a noop to shouting - so that we forward it through
 	sub, err := p.p2pHost.GetPubSub().Subscribe(network.ShoutTopic)

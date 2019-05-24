@@ -92,7 +92,7 @@ func NewRemoteNetwork(ctx context.Context, group *types.NotaryGroup, path string
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		_, err := ipldNetHost.Bootstrap(gameBootstrappers())
+		_, err := ipldNetHost.Bootstrap(GameBootstrappers())
 		if err != nil {
 			log.Errorf("error bootstrapping ipld host: %v", err)
 			return
@@ -124,7 +124,7 @@ func NewRemoteNetwork(ctx context.Context, group *types.NotaryGroup, path string
 
 	// now all that setup is done, wait for the tupelo and game bootstrappers
 
-	if _, err = tupeloP2PHost.Bootstrap(tupeloBootstrappers()); err != nil {
+	if _, err = tupeloP2PHost.Bootstrap(TupeloBootstrappers()); err != nil {
 		return nil, err
 	}
 	if err = tupeloP2PHost.WaitForBootstrap(len(group.Signers), 15*time.Second); err != nil {
@@ -249,7 +249,7 @@ func (n *RemoteNetwork) UpdateChainTree(tree *consensus.SignedChainTree, path st
 	return tree, n.TreeStore.SaveTreeMetadata(tree)
 }
 
-func tupeloBootstrappers() []string {
+func TupeloBootstrappers() []string {
 	if envSpecifiedNodes, ok := os.LookupEnv("TUPELO_BOOTSTRAP_NODES"); ok {
 		log.Debugf("using tupelo bootstrap nodes: %s", envSpecifiedNodes)
 		return strings.Split(envSpecifiedNodes, ",")
@@ -257,7 +257,7 @@ func tupeloBootstrappers() []string {
 	return DefaultTupeloBootstrappers
 }
 
-func gameBootstrappers() []string {
+func GameBootstrappers() []string {
 	if envSpecifiedNodes, ok := os.LookupEnv("JASON_BOOTSTRAP_NODES"); ok {
 		log.Debugf("using jason bootstrap nodes: %s", envSpecifiedNodes)
 		return strings.Split(envSpecifiedNodes, ",")

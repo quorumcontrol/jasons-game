@@ -30,6 +30,12 @@ func (z *Block) DecodeMsg(dc *msgp.Reader) (err error) {
 				err = msgp.WrapError(err, "Cid")
 				return
 			}
+		case "Data":
+			z.Data, err = dc.ReadBytes(z.Data)
+			if err != nil {
+				err = msgp.WrapError(err, "Data")
+				return
+			}
 		default:
 			err = dc.Skip()
 			if err != nil {
@@ -43,9 +49,9 @@ func (z *Block) DecodeMsg(dc *msgp.Reader) (err error) {
 
 // EncodeMsg implements msgp.Encodable
 func (z *Block) EncodeMsg(en *msgp.Writer) (err error) {
-	// map header, size 1
+	// map header, size 2
 	// write "Cid"
-	err = en.Append(0x81, 0xa3, 0x43, 0x69, 0x64)
+	err = en.Append(0x82, 0xa3, 0x43, 0x69, 0x64)
 	if err != nil {
 		return
 	}
@@ -54,16 +60,29 @@ func (z *Block) EncodeMsg(en *msgp.Writer) (err error) {
 		err = msgp.WrapError(err, "Cid")
 		return
 	}
+	// write "Data"
+	err = en.Append(0xa4, 0x44, 0x61, 0x74, 0x61)
+	if err != nil {
+		return
+	}
+	err = en.WriteBytes(z.Data)
+	if err != nil {
+		err = msgp.WrapError(err, "Data")
+		return
+	}
 	return
 }
 
 // MarshalMsg implements msgp.Marshaler
 func (z *Block) MarshalMsg(b []byte) (o []byte, err error) {
 	o = msgp.Require(b, z.Msgsize())
-	// map header, size 1
+	// map header, size 2
 	// string "Cid"
-	o = append(o, 0x81, 0xa3, 0x43, 0x69, 0x64)
+	o = append(o, 0x82, 0xa3, 0x43, 0x69, 0x64)
 	o = msgp.AppendBytes(o, z.Cid)
+	// string "Data"
+	o = append(o, 0xa4, 0x44, 0x61, 0x74, 0x61)
+	o = msgp.AppendBytes(o, z.Data)
 	return
 }
 
@@ -91,6 +110,12 @@ func (z *Block) UnmarshalMsg(bts []byte) (o []byte, err error) {
 				err = msgp.WrapError(err, "Cid")
 				return
 			}
+		case "Data":
+			z.Data, bts, err = msgp.ReadBytesBytes(bts, z.Data)
+			if err != nil {
+				err = msgp.WrapError(err, "Data")
+				return
+			}
 		default:
 			bts, err = msgp.Skip(bts)
 			if err != nil {
@@ -105,7 +130,7 @@ func (z *Block) UnmarshalMsg(bts []byte) (o []byte, err error) {
 
 // Msgsize returns an upper bound estimate of the number of bytes occupied by the serialized message
 func (z *Block) Msgsize() (s int) {
-	s = 1 + 4 + msgp.BytesPrefixSize + len(z.Cid)
+	s = 1 + 4 + msgp.BytesPrefixSize + len(z.Cid) + 5 + msgp.BytesPrefixSize + len(z.Data)
 	return
 }
 
