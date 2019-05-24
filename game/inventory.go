@@ -3,6 +3,7 @@ package game
 import (
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/AsynkronIT/protoactor-go/actor"
 	"github.com/AsynkronIT/protoactor-go/plugin"
@@ -46,6 +47,16 @@ type DropObjectResponse struct {
 	Error error
 }
 
+type PickupObjectRequest struct {
+	Name     string
+	Location *jasonsgame.Location
+}
+
+type PickupObjectResponse struct {
+	Object *Object
+	Error  error
+}
+
 type Object struct {
 	Did string
 }
@@ -77,12 +88,43 @@ func (no *NetworkObject) getProp(prop string) (string, error) {
 	return val, nil
 }
 
+func (no *NetworkObject) ChainTree() (*consensus.SignedChainTree, error) {
+	return no.Network.GetTree(no.Did)
+}
+
 func (no *NetworkObject) Name() (string, error) {
 	return no.getProp("name")
 }
 
 func (no *NetworkObject) Description() (string, error) {
 	return no.getProp("description")
+}
+
+func (no *NetworkObject) IsOwnedBy(keys []string) (bool, error) {
+	objectChainTree, err := no.Network.GetTree(no.Did)
+	if err != nil {
+		return false, err
+	}
+
+	authsUncasted, remainingPath, err := objectChainTree.ChainTree.Dag.Resolve(strings.Split("tree/"+consensus.TreePathForAuthentications, "/"))
+	if err != nil {
+		return false, err
+	}
+	if len(remainingPath) > 0 {
+		return false, fmt.Errorf("error resolving object: path elements remaining: %v", remainingPath)
+	}
+
+	for _, storedKey := range authsUncasted.([]interface{}) {
+		found := false
+		for _, checkKey := range keys {
+			found = found || (storedKey.(string) == checkKey)
+		}
+		if !found {
+			return false, nil
+		}
+	}
+
+	return true, nil
 }
 
 func NewInventoryActorProps(cfg *InventoryActorConfig) *actor.Props {
@@ -102,6 +144,9 @@ func (co *InventoryActor) Receive(context actor.Context) {
 	case *CreateObjectRequest:
 		co.Log.Debugf("Received CreateObjectRequest: %+v\n", msg)
 		co.handleCreateObject(context, msg)
+	case *PickupObjectRequest:
+		co.Log.Debugf("Received PickupObjectRequest: %+v\n", msg)
+		co.handlePickupObject(context, msg)
 	case *DropObjectRequest:
 		co.Log.Debugf("Received DropObjectRequest: %+v\n", msg)
 		co.handleDropObject(context, msg)
@@ -306,4 +351,93 @@ func (co *InventoryActor) handleDropObject(context actor.Context, msg *DropObjec
 	co.player.SetChainTree(newPlayerChainTree)
 
 	context.Respond(&DropObjectResponse{})
+}
+
+func (co *InventoryActor) handlePickupObject(context actor.Context, msg *PickupObjectRequest) {
+	var err error
+
+	player := co.player
+
+	if player == nil {
+		err = fmt.Errorf("player is required to pickup an object")
+		co.Log.Error(err)
+		context.Respond(&PickupObjectResponse{Error: err})
+		return
+	}
+
+	objectName := msg.Name
+
+	if objectName == "" {
+		err = fmt.Errorf("name is required to pickup an object")
+		co.Log.Error(err)
+		context.Respond(&PickupObjectResponse{Error: err})
+		return
+	}
+
+	if msg.Location == nil {
+		err = fmt.Errorf("location is required to pickup an object")
+		co.Log.Error(err)
+		context.Respond(&PickupObjectResponse{Error: err})
+		return
+	}
+
+	if msg.Location.Inventory == nil {
+		err = fmt.Errorf("object not found")
+		co.Log.Error(err)
+		context.Respond(&PickupObjectResponse{Error: err})
+		return
+	}
+
+	objectDid, ok := msg.Location.Inventory[objectName]
+
+	if !ok {
+		err = fmt.Errorf("object not found")
+		co.Log.Error(err)
+		context.Respond(&PickupObjectResponse{Error: err})
+		return
+	}
+
+	// TODO: switch to global topic
+	co.network.PubSubSystem().Broadcast(topicFromDid(msg.Location.Did), &TransferredObjectMessage{
+		From:   msg.Location.Did,
+		To:     player.Did(),
+		Object: objectDid,
+		Loc:    []int64{msg.Location.X, msg.Location.Y},
+	})
+
+	obj := NetworkObject{Object: Object{Did: objectDid}, Network: co.network}
+
+	playerKeys, err := player.Keys()
+
+	if err != nil {
+		err = fmt.Errorf("could not fetch player keys")
+		co.Log.Error(err)
+		context.Respond(&PickupObjectResponse{Error: err})
+		return
+	}
+
+	// TOOD: receive transfer from other land
+	playerIsOwner := false
+	for i := 1; i < 10; i++ {
+		playerIsOwner, _ = obj.IsOwnedBy(playerKeys)
+
+		if playerIsOwner {
+			break
+		}
+		time.Sleep(500 * time.Millisecond)
+	}
+
+	objectsPath, _ := consensus.DecodePath(ObjectsPath)
+	newObjectPath := strings.Join(append(objectsPath, objectName), "/")
+	newPlayerChainTree, err := co.network.UpdateChainTree(player.ChainTree(), newObjectPath, objectDid)
+
+	if err != nil {
+		err = fmt.Errorf("error updating objects in chaintree: %v", err)
+		co.Log.Error(err)
+		context.Respond(&CreateObjectResponse{Error: err})
+		return
+	}
+
+	co.player.SetChainTree(newPlayerChainTree)
+	context.Respond(&PickupObjectResponse{Object: &obj.Object})
 }

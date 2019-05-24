@@ -209,6 +209,8 @@ func (g *Game) handleUserInput(actorCtx actor.Context, input *jasonsgame.UserInp
 		err = g.handleCreateObject(actorCtx, args)
 	case "drop-object":
 		err = g.handleDropObject(actorCtx, args)
+	case "pickup-object":
+		err = g.handlePickupObject(actorCtx, args)
 	case "help":
 		g.sendUIMessage(actorCtx, "available commands:")
 		for _, c := range g.commands {
@@ -283,17 +285,25 @@ func (g *Game) handleGoThroughPortal(actorCtx actor.Context) error {
 }
 
 func (g *Game) handleRefresh(actorCtx actor.Context) error {
+	l, err := g.refreshLocation()
+	if err != nil {
+		return err
+	}
+	g.sendUIMessage(actorCtx, l)
+	return nil
+}
+
+func (g *Game) refreshLocation() (*jasonsgame.Location, error) {
 	tree, err := g.network.GetTree(g.cursor.Did())
 	if err != nil {
-		return errors.Wrap(err, "error getting remote tree")
+		return nil, errors.Wrap(err, "error getting remote tree")
 	}
 	g.cursor.SetChainTree(tree)
 	l, err := g.cursor.GetLocation()
 	if err != nil {
-		return errors.Wrap(err, fmt.Sprintf("error getting location (%s)", tree.MustId()))
+		return nil, errors.Wrap(err, fmt.Sprintf("error getting location (%s)", tree.MustId()))
 	}
-	g.sendUIMessage(actorCtx, l)
-	return nil
+	return l, nil
 }
 
 func (g *Game) goToTree(actorCtx actor.Context, tree *consensus.SignedChainTree) error {
@@ -438,9 +448,9 @@ func (g *Game) handleDropObject(actorCtx actor.Context, args string) error {
 		g.sendUIMessage(actorCtx, "must give an object name to drop")
 		return nil
 	}
-
 	objName := args
 
+	g.refreshLocation()
 	l, err := g.cursor.GetLocation()
 	if err != nil {
 		g.sendUIMessage(actorCtx, fmt.Sprintf("Could not find your current location: %v", err))
@@ -462,7 +472,43 @@ func (g *Game) handleDropObject(actorCtx actor.Context, args string) error {
 		return resp.Error
 	}
 
+	g.refreshLocation()
 	g.sendUIMessage(actorCtx, fmt.Sprintf("%s has been dropped into %v", objName, l.PrettyString()))
+	return nil
+}
+
+func (g *Game) handlePickupObject(actorCtx actor.Context, args string) error {
+	if len(args) == 0 {
+		g.sendUIMessage(actorCtx, "must give an object name to pickup")
+		return nil
+	}
+
+	objName := args
+
+	g.refreshLocation()
+	l, err := g.cursor.GetLocation()
+	if err != nil {
+		g.sendUIMessage(actorCtx, fmt.Sprintf("Could not find your current location: %v", err))
+		return fmt.Errorf("Error on GetLocation %v", err)
+	}
+
+	response, err := actorCtx.RequestFuture(g.inventory, &PickupObjectRequest{
+		Name:     objName,
+		Location: l,
+	}, 10*time.Second).Result()
+
+	resp, ok := response.(*PickupObjectResponse)
+	if !ok {
+		return fmt.Errorf("error casting pickup object response")
+	}
+
+	if resp.Error != nil {
+		g.sendUIMessage(actorCtx, resp.Error)
+		return resp.Error
+	}
+
+	g.refreshLocation()
+	g.sendUIMessage(actorCtx, fmt.Sprintf("%s has been picked up from %v", objName, l.PrettyString()))
 	return nil
 }
 
