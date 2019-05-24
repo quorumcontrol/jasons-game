@@ -18,15 +18,19 @@ type publicKeySet struct {
 }
 
 func loadSignerKeys(connectToLocalnet bool) ([]*publicKeySet, error) {
-	var box *packr.Box
+	localBox := packr.New("localKeys", "../devdocker/localkeys")
+	testnetBox := packr.New("testnetKeys", "../devdocker/testnetkeys")
+
+	var jsonBytes []byte
+	var err error
+
 	// TODO: Referencing devdocker dir here seems gross; should maybe rethink this
 	if connectToLocalnet {
-		box = packr.New("keys", "../devdocker/localkeys")
+		jsonBytes, err = localBox.Find("public-keys.json")
 	} else {
-		box = packr.New("keys", "../devdocker/testnetkeys")
+		jsonBytes, err = testnetBox.Find("public-keys.json")
 	}
 
-	jsonBytes, err := box.Find("public-keys.json")
 	if err != nil {
 		return nil, err
 	}
