@@ -28,12 +28,14 @@ require (
 	github.com/karrick/godirwalk v1.10.3 // indirect
 	github.com/libp2p/go-libp2p v0.0.21
 	github.com/libp2p/go-libp2p-connmgr v0.0.3
+	github.com/libp2p/go-libp2p-interface-connmgr v0.0.3
+	github.com/libp2p/go-libp2p-peer v0.1.0
 	github.com/libp2p/go-libp2p-pubsub v0.0.3
 	github.com/multiformats/go-multihash v0.0.5 // indirect
 	github.com/pkg/errors v0.8.1
 	github.com/quorumcontrol/chaintree v0.0.0-20190515172607-6a3407e067bd
 	github.com/quorumcontrol/storage v1.1.2
-	github.com/quorumcontrol/tupelo-go-sdk v0.2.4-0.20190517142847-0a1ac484a9b8
+	github.com/quorumcontrol/tupelo-go-sdk v0.2.4-0.20190517142847-a0fe1f0beedc2bb347d66629fab44683d888e11c
 	github.com/shibukawa/configdir v0.0.0-20170330084843-e180dbdc8da0
 	github.com/sirupsen/logrus v1.4.2 // indirect
 	github.com/stretchr/testify v1.3.0
