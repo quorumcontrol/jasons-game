@@ -39,7 +39,9 @@ services:
 
   jason:
     build: ./devdocker
-    command: ["go", "run", "jason/main.go", "-port=34001"]
+    command: ["go", "run", "jason/main.go", "-port=34001", "-local=true"]
+    depends_on:
+      - localstack
     volumes:
       - .:/app:delegated
       - ./devdocker/.tmp:/root/.cache:delegated
@@ -69,6 +71,15 @@ services:
       PPROF_ENABLED: "true"
       GOPATH: /go
   
+  localstack:
+    image: localstack/localstack
+    ports:
+      - "4567-4584:4567-4584"
+      - 9000:9000
+    environment:
+      - SERVICES=s3
+      - PORT_WEB_UI=9000
+
   integration:
     build: ./devdocker
     depends_on:

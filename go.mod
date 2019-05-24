@@ -4,6 +4,7 @@ go 1.12
 
 require (
 	github.com/AsynkronIT/protoactor-go v0.0.0-20190429152931-21e2d03dcae5
+	github.com/aws/aws-sdk-go v1.15.60
 	github.com/btcsuite/btcd v0.0.0-20190427004231-96897255fd17 // indirect
 	github.com/ethereum/go-ethereum v1.8.27
 	github.com/gobuffalo/genny v0.1.1 // indirect
@@ -17,6 +18,7 @@ require (
 	github.com/ipfs/go-cid v0.0.1
 	github.com/ipfs/go-datastore v0.0.5
 	github.com/ipfs/go-ds-badger v0.0.3
+	github.com/ipfs/go-ds-s3 v0.0.1
 	github.com/ipfs/go-ipfs-blockstore v0.0.1
 	github.com/ipfs/go-ipfs-config v0.0.2
 	github.com/ipfs/go-ipfs-exchange-offline v0.0.1
