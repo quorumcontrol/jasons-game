@@ -3,7 +3,6 @@ package server
 import (
 	"context"
 	"encoding/json"
-	"path/filepath"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/crypto"
@@ -19,17 +18,15 @@ type publicKeySet struct {
 }
 
 func loadSignerKeys(connectToLocalnet bool) ([]*publicKeySet, error) {
+	var box *packr.Box
 	// TODO: Referencing devdocker dir here seems gross; should maybe rethink this
-	box := packr.New("keys", "../devdocker")
-
-	var keyDir string
 	if connectToLocalnet {
-		keyDir = "localkeys"
+		box = packr.New("keys", "../devdocker/localkeys")
 	} else {
-		keyDir = "testnetkeys"
+		box = packr.New("keys", "../devdocker/testnetkeys")
 	}
 
-	jsonBytes, err := box.Find(filepath.Join(keyDir, "public-keys.json"))
+	jsonBytes, err := box.Find("public-keys.json")
 	if err != nil {
 		return nil, err
 	}
