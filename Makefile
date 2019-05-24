@@ -15,7 +15,6 @@ generated = pb/jasonsgame/jasonsgame.pb.go frontend/jasons-game/src/js/frontend/
 packr = packrd/packed-packr.go main-packr.go
 
 all: frontend-build $(packr) build
-	$(FIRSTGOPATH)/bin/packr2 clean
 
 $(FIRSTGOPATH)/src/github.com/gogo/protobuf/proto:
 	go get github.com/gogo/protobuf/proto
