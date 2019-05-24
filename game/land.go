@@ -86,8 +86,6 @@ func (l *LandActor) handleIncomingObject(context actor.Context, loc *jasonsgame.
 	}
 
 	l.Log.Debugf("Object %v has been dropped at %v", obj.Did, loc.PrettyString())
-	fmt.Printf("Object %v has been dropped at %v", obj.Did, loc.PrettyString())
-
 }
 
 func (l *LandActor) handleOutgoingObject(context actor.Context, loc *jasonsgame.Location, msg *TransferredObjectMessage) {
