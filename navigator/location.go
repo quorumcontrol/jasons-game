@@ -37,6 +37,7 @@ func locationFromTree(tree *consensus.SignedChainTree, x, y int64) (*jasonsgame.
 	if err != nil {
 		return nil, fmt.Errorf("error casting: %v", err)
 	}
+
 	l.Did = tree.MustId()
 	l.Tip = tree.Tip().String()
 	l.X = x

@@ -120,6 +120,8 @@ export class Location extends jspb.Message {
   getPortal(): Portal | undefined;
   setPortal(value?: Portal): void;
 
+  getInventoryMap(): jspb.Map<string, string>;
+  clearInventoryMap(): void;
   serializeBinary(): Uint8Array;
   toObject(includeInstance?: boolean): Location.AsObject;
   static toObject(includeInstance: boolean, msg: Location): Location.AsObject;
@@ -138,6 +140,7 @@ export namespace Location {
     y: number,
     description: string,
     portal?: Portal.AsObject,
+    inventoryMap: Array<[string, string]>,
   }
 }
 

@@ -2,13 +2,16 @@
 
 package game
 
-import "github.com/quorumcontrol/tupelo-go-sdk/gossip3/messages"
+import (
+	"github.com/quorumcontrol/tupelo-go-sdk/gossip3/messages"
+)
 
 func init() {
 	messages.RegisterMessage(&ChatMessage{})
 	messages.RegisterMessage(&ShoutMessage{})
 	messages.RegisterMessage(&OpenPortalMessage{})
 	messages.RegisterMessage(&OpenPortalResponseMessage{})
+	messages.RegisterMessage(&TransferredObjectMessage{})
 }
 
 type ChatMessage struct {
@@ -51,4 +54,15 @@ type OpenPortalResponseMessage struct {
 
 func (cm *OpenPortalResponseMessage) TypeCode() int8 {
 	return -104
+}
+
+type TransferredObjectMessage struct {
+	From   string
+	To     string
+	Object string
+	Loc    []int64
+}
+
+func (m *TransferredObjectMessage) TypeCode() int8 {
+	return -105
 }
