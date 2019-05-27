@@ -119,11 +119,10 @@ func main() {
 		return
 	}
 
-	fmt.Println("listen and serv")
+	fmt.Println("listen and serve")
 	go func() {
 		log.Fatal(serv.ListenAndServe())
 	}()
 	fmt.Println("opening webview")
 	ui.OpenWebView()
-
 }

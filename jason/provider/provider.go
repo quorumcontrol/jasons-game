@@ -62,7 +62,7 @@ func New(ctx context.Context, key *ecdsa.PrivateKey, ds datastore.Batching, addl
 }
 
 func (p *Provider) Start() error {
-	fmt.Printf("starting %s\naddresseses:%v\n", p.p2pHost.Identity(), p.p2pHost.Addresses())
+	fmt.Printf("starting %s\naddresses:%v\n", p.p2pHost.Identity(), p.p2pHost.Addresses())
 
 	wg := &sync.WaitGroup{}
 
@@ -85,10 +85,14 @@ func (p *Provider) Start() error {
 	}()
 	wg.Wait()
 
-	// subscribe with a noop to shouting - so that we forward it through
-	sub, err := p.p2pHost.GetPubSub().Subscribe(network.ShoutTopic)
+	// subscribe with a noop to topics - so that we forward messages through
+	subShout, err := p.p2pHost.GetPubSub().Subscribe(network.ShoutTopic)
 	if err != nil {
-		return errors.Wrap(err, "error subscribing to ShoutTopic")
+		return errors.Wrapf(err, "error subscribing to %s", network.ShoutTopic)
+	}
+	subGeneral, err := p.p2pHost.GetPubSub().Subscribe(network.GeneralTopic)
+	if err != nil {
+		return errors.Wrapf(err, "error subscribing to %s", network.GeneralTopic)
 	}
 
 	// subscribe with the block getter
@@ -101,7 +105,8 @@ func (p *Provider) Start() error {
 
 	go func() {
 		<-p.parentCtx.Done()
-		sub.Cancel()
+		subShout.Cancel()
+		subGeneral.Cancel()
 		actor.EmptyRootContext.Stop(act)
 	}()
 	log.Infof("serving a provider now")

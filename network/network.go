@@ -27,6 +27,7 @@ var log = logging.Logger("gamenetwork")
 
 const BlockTopic = "jasons-game-tupelo-world-blocks"
 const ShoutTopic = "jasons-game-shouting-players"
+const GeneralTopic = "jasons-game-general"
 
 var DefaultTupeloBootstrappers = []string{
 	"/ip4/18.196.112.81/tcp/34001/ipfs/16Uiu2HAmJGZXyrrQ9CcAJWh5Q8rNsoi9yK1VT2HANhH2NcqkRmaZ",
@@ -98,7 +99,7 @@ func NewRemoteNetwork(ctx context.Context, group *types.NotaryGroup, path string
 			return
 		}
 		if err := net.pubSubSystem.Broadcast(BlockTopic, &Join{Identity: ipldNetHost.Identity()}); err != nil {
-			log.Errorf("broadcasting JoinMessage failed: %s", err)
+			log.Errorf("broadcasting Join failed: %s", err)
 		}
 	}()
 
