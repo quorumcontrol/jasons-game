@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"flag"
 	"fmt"
 	"log"
 	"net/http"
@@ -69,12 +68,9 @@ func main() {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	disableWebView := flag.Bool("disablewebview", false, "disable the webview")
-	localnet := flag.Bool("localnet", false, "connect to localnet instead of testnet")
+	disableWebView, localnet := ui.SetOptions()
 
-	flag.Parse()
-
-	s := server.NewGameServer(ctx, *localnet)
+	s := server.NewGameServer(ctx, localnet)
 
 	jasonsgame.RegisterGameServiceServer(grpcServer, s)
 	reflection.Register(grpcServer)
@@ -113,7 +109,7 @@ func main() {
 
 	})
 
-	if *disableWebView {
+	if disableWebView {
 		fmt.Println("webview disabled")
 		log.Fatal(serv.ListenAndServe())
 		return
