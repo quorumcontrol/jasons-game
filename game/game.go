@@ -90,6 +90,16 @@ func (g *Game) initialize(actorCtx actor.Context) {
 	cursor := new(navigator.Cursor).SetChainTree(g.playerTree.HomeTree)
 	g.cursor = cursor
 
+	homeTree, err := g.network.GetChainTreeByName("home")
+	if err != nil {
+		panic(err)
+	}
+	if homeTree == nil {
+		homeTree, err = createHome(g.network)
+		if err != nil {
+			panic(err)
+		}
+	}
 	g.home, err = actorCtx.SpawnNamed(NewLandActorProps(&LandActorConfig{
 		Did:     homeTree.MustId(),
 		Network: g.network,
@@ -99,7 +109,6 @@ func (g *Game) initialize(actorCtx actor.Context) {
 	}
 
 	// TODO: switch to global topic
-	var err error
 	g.inventory, err = actorCtx.SpawnNamed(NewInventoryActorProps(&InventoryActorConfig{
 		Player:  g.playerTree,
 		Network: g.network,
