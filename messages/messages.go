@@ -11,6 +11,7 @@ func init() {
 	messages.RegisterMessage(&ShoutMessage{})
 	messages.RegisterMessage(&OpenPortalMessage{})
 	messages.RegisterMessage(&OpenPortalResponseMessage{})
+	messages.RegisterMessage(&TransferredObjectMessage{})
 }
 
 type PlayerMessage interface {
@@ -79,4 +80,15 @@ func (m *OpenPortalResponseMessage) FromPlayer() string {
 
 func (m *OpenPortalResponseMessage) ToDid() string {
 	return m.To
+}
+
+type TransferredObjectMessage struct {
+	From   string
+	To     string
+	Object string
+	Loc    []int64
+}
+
+func (m *TransferredObjectMessage) TypeCode() int8 {
+	return -105
 }

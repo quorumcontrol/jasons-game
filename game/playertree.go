@@ -62,6 +62,23 @@ func (pt *PlayerTree) Player() (*jasonsgame.Player, error) {
 	return pt.player, nil
 }
 
+func (pt *PlayerTree) Keys() ([]string, error) {
+	authsUncasted, remain, err := pt.tree.ChainTree.Dag.Resolve(strings.Split("tree/"+consensus.TreePathForAuthentications, "/"))
+	if err != nil {
+		return nil, errors.Wrap(err, "error resolving")
+	}
+	if len(remain) > 0 {
+		return nil, fmt.Errorf("error, path remaining: %v", remain)
+	}
+
+	auths := make([]string, len(authsUncasted.([]interface{})))
+	for k, v := range authsUncasted.([]interface{}) {
+		auths[k] = v.(string)
+	}
+
+	return auths, nil
+}
+
 func (pt *PlayerTree) SetPlayer(p *jasonsgame.Player) error {
 	tree, err := pt.network.UpdateChainTree(pt.tree, playerTreePath, p)
 	if err != nil {
