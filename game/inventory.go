@@ -367,12 +367,15 @@ func (co *InventoryActor) handleDropObject(context actor.Context, msg *DropObjec
 	}
 
 	// TODO: switch to global topic
-	co.network.PubSubSystem().Broadcast(topicFromDid(msg.Location.Did), &messages.TransferredObjectMessage{
+	if err := co.network.PubSubSystem().Broadcast(topicFromDid(msg.Location.Did), &messages.TransferredObjectMessage{
 		From:   playerChainTree.MustId(),
 		To:     msg.Location.Did,
 		Object: existingObj.MustId(),
 		Loc:    []int64{msg.Location.X, msg.Location.Y},
-	})
+	}); err != nil {
+		co.Log.Error(err)
+		return
+	}
 
 	delete(objects, objectName)
 
@@ -475,20 +478,21 @@ func (co *InventoryActor) handlePickupObject(context actor.Context, msg *PickupO
 	// END TODO
 
 	// TODO: switch to global topic
-	co.network.PubSubSystem().Broadcast(topicFromDid(msg.Location.Did), &messages.TransferredObjectMessage{
+	if err := co.network.PubSubSystem().Broadcast(topicFromDid(msg.Location.Did), &messages.TransferredObjectMessage{
 		From:   msg.Location.Did,
 		To:     player.Did(),
 		Object: objectDid,
 		Loc:    []int64{msg.Location.X, msg.Location.Y},
-	})
+	}); err != nil {
+		co.Log.Error(err)
+		context.Respond(&PickupObjectResponse{Error: err})
+	}
 
 	obj := NetworkObject{Object: Object{Did: objectDid}, Network: co.network}
 
 	// TOOD: receive transfer from other land
-	playerIsOwner := false
 	for i := 1; i < 10; i++ {
-		playerIsOwner, _ = obj.IsOwnedBy(playerKeys)
-
+		playerIsOwner, _ := obj.IsOwnedBy(playerKeys)
 		if playerIsOwner {
 			break
 		}
@@ -533,7 +537,7 @@ func (co *InventoryActor) handleListObjects(context actor.Context, msg *Inventor
 	}
 
 	if objectsUncasted == nil {
-		context.Respond(&InventoryListResponse{Objects: make(map[string]*Object, 0)})
+		context.Respond(&InventoryListResponse{Objects: make(map[string]*Object)})
 		return
 	}
 
@@ -543,5 +547,4 @@ func (co *InventoryActor) handleListObjects(context actor.Context, msg *Inventor
 	}
 
 	context.Respond(&InventoryListResponse{Objects: objects})
-	return
 }

@@ -430,7 +430,9 @@ func (g *Game) handleDropObject(actorCtx actor.Context, args string) error {
 	}
 	objName := args
 
-	g.refreshLocation()
+	if _, err := g.refreshLocation(); err != nil {
+		return err
+	}
 	l, err := g.cursor.GetLocation()
 	if err != nil {
 		g.sendUIMessage(actorCtx, fmt.Sprintf("Could not find your current location: %v", err))
@@ -441,6 +443,9 @@ func (g *Game) handleDropObject(actorCtx actor.Context, args string) error {
 		Name:     objName,
 		Location: l,
 	}, 5*time.Second).Result()
+	if err != nil {
+		return err
+	}
 
 	resp, ok := response.(*DropObjectResponse)
 	if !ok {
@@ -452,7 +457,9 @@ func (g *Game) handleDropObject(actorCtx actor.Context, args string) error {
 		return resp.Error
 	}
 
-	g.refreshLocation()
+	if _, err := g.refreshLocation(); err != nil {
+		return err
+	}
 	g.sendUIMessage(actorCtx, fmt.Sprintf("%s has been dropped into %v", objName, l.PrettyString()))
 	return nil
 }
@@ -465,7 +472,9 @@ func (g *Game) handlePickupObject(actorCtx actor.Context, args string) error {
 
 	objName := args
 
-	g.refreshLocation()
+	if _, err := g.refreshLocation(); err != nil {
+		return err
+	}
 	l, err := g.cursor.GetLocation()
 	if err != nil {
 		g.sendUIMessage(actorCtx, fmt.Sprintf("Could not find your current location: %v", err))
@@ -476,6 +485,9 @@ func (g *Game) handlePickupObject(actorCtx actor.Context, args string) error {
 		Name:     objName,
 		Location: l,
 	}, 10*time.Second).Result()
+	if err != nil {
+		return err
+	}
 
 	resp, ok := response.(*PickupObjectResponse)
 	if !ok {
@@ -487,7 +499,9 @@ func (g *Game) handlePickupObject(actorCtx actor.Context, args string) error {
 		return resp.Error
 	}
 
-	g.refreshLocation()
+	if _, err := g.refreshLocation(); err != nil {
+		return err
+	}
 	g.sendUIMessage(actorCtx, fmt.Sprintf("%s has been picked up from %v", objName, l.PrettyString()))
 	return nil
 }
@@ -535,7 +549,9 @@ func (g *Game) handlePlayerInventoryList(actorCtx actor.Context) error {
 }
 
 func (g *Game) handleLocationInventoryList(actorCtx actor.Context) error {
-	g.refreshLocation()
+	if _, err := g.refreshLocation(); err != nil {
+		return err
+	}
 	l, err := g.cursor.GetLocation()
 	if err != nil {
 		g.sendUIMessage(actorCtx, fmt.Sprintf("Could not find your current location: %v", err))
