@@ -730,10 +730,8 @@ github.com/prometheus/procfs v0.0.0-20190425082905-87a4384529e0 h1:c8R11WC8m7KNM
 github.com/prometheus/procfs v0.0.0-20190425082905-87a4384529e0/go.mod h1:TjEm7ze935MbeOT/UhFTIMYKhuLP4wbCsTZCD3I8kEA=
 github.com/quorumcontrol/chaintree v0.0.0-20190524183749-8b070dcb62d7 h1:W6fNqSrVTJsvYOzpy1EdBd8aQvOgDK5MIQ2ZKVRZAoQ=
 github.com/quorumcontrol/chaintree v0.0.0-20190524183749-8b070dcb62d7/go.mod h1:16K3HUwrUl9krFyw5Qvoo7DV1qXUOBA3TxW4Rqvwpzk=
-github.com/quorumcontrol/chaintree v5.1.1+incompatible h1:bAvhEuWCIsHq98SRdJ7EaKxL8uw+ceZnASt55mqHHGI=
-github.com/quorumcontrol/community v0.0.0-20190528104209-3e49048acb84 h1:1gRMQGaDYToOB8h7WNDof1m0AsfefQkVwQ8s3rB7uGw=
-github.com/quorumcontrol/community v0.0.0-20190529022621-4b9c000010ea h1:pdcH9cYNQHHBmdm6U06ARrKueMMo4bwDs6yNdrl2iLw=
-github.com/quorumcontrol/community v0.0.0-20190529022621-4b9c000010ea/go.mod h1:Tr0fQIEugi2fKBoIkhP77L1Q6BEIj9XjYsAUA+adzOQ=
+github.com/quorumcontrol/community v0.0.0-20190529193323-4f063d70b6d3 h1:LuFhadHFpEAmy3I3ezROskiLmi7gr5UVbUIoZ+NmTNU=
+github.com/quorumcontrol/community v0.0.0-20190529193323-4f063d70b6d3/go.mod h1:rOecfdk5N0YwBAJspY7aYEsiISwtU15rnpnddkpJysY=
 github.com/quorumcontrol/go-libp2p-pubsub v0.0.0-20190515123400-58d894b144ff864d212cf4b13c42e8fdfe783aba h1:yyXbqfe6eR+DKlS8VTtpMEBCCPvVxdtYIF06hMojPA4=
 github.com/quorumcontrol/go-libp2p-pubsub v0.0.0-20190515123400-58d894b144ff864d212cf4b13c42e8fdfe783aba/go.mod h1:fYKlZBOF2yrJzYlgeEVFSbYWfbS+E8Zix6gMZ0A6WgE=
 github.com/quorumcontrol/messages v0.3.0 h1:54RwdZhqOLdNZi2PeZN/PPhPf+zps80fVySOAP4Px34=

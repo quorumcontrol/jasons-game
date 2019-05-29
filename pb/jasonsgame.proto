@@ -49,6 +49,41 @@ message Session {
     string uuid = 1;
 }
 
+message ChatMessage {
+    string from = 1;
+    string message = 2;
+}
+
+message ShoutMessage {
+    string from = 1;
+    string message = 2;
+}
+
+message OpenPortalMessage {
+    string from = 1;
+    string to = 2;
+    string to_land_id = 3;
+    int64 location_x = 4;
+    int64 location_y = 5;
+}
+
+message OpenPortalResponseMessage {
+    string from = 1;
+    string to = 2;
+    bool accepted = 3;
+    string opener = 4;
+    string land_id = 5;
+    int64 location_x = 6;
+    int64 location_y = 7;
+}
+
+message TransferredObjectMessage {
+    string from = 1;
+    string to = 2;
+    string object = 3;
+    repeated int64 loc = 4;
+}
+
 service GameService {
     rpc SendCommand(UserInput) returns (CommandReceived) {}
     rpc ReceiveUserMessages(Session) returns (stream MessageToUser) {}

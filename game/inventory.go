@@ -10,7 +10,6 @@ import (
 	"github.com/quorumcontrol/tupelo-go-sdk/consensus"
 	"github.com/quorumcontrol/tupelo-go-sdk/gossip3/middleware"
 
-	"github.com/quorumcontrol/jasons-game/messages"
 	"github.com/quorumcontrol/jasons-game/network"
 	"github.com/quorumcontrol/jasons-game/pb/jasonsgame"
 )
@@ -367,7 +366,7 @@ func (co *InventoryActor) handleDropObject(context actor.Context, msg *DropObjec
 	}
 
 	// TODO: switch to global topic
-	co.network.PubSubSystem().Broadcast(topicFromDid(msg.Location.Did), &messages.TransferredObjectMessage{
+	co.network.Send(topicFromDid(msg.Location.Did), &jasonsgame.TransferredObjectMessage{
 		From:   playerChainTree.MustId(),
 		To:     msg.Location.Did,
 		Object: existingObj.MustId(),
@@ -474,8 +473,7 @@ func (co *InventoryActor) handlePickupObject(context actor.Context, msg *PickupO
 	}
 	// END TODO
 
-	// TODO: switch to global topic
-	co.network.PubSubSystem().Broadcast(topicFromDid(msg.Location.Did), &messages.TransferredObjectMessage{
+	co.network.Send(topicFromDid(msg.Location.Did), &jasonsgame.TransferredObjectMessage{
 		From:   msg.Location.Did,
 		To:     player.Did(),
 		Object: objectDid,

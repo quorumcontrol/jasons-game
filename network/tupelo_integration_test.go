@@ -63,7 +63,6 @@ func setupRemote(ctx context.Context, group *types.NotaryGroup) (p2p.Node, error
 		return nil, err
 	}
 
-	remote.NewRouter(p2pHost)
 	group.SetupAllRemoteActors(&key.PublicKey)
 	return p2pHost, nil
 }

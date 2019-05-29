@@ -8,7 +8,6 @@ import (
 	"github.com/quorumcontrol/tupelo-go-sdk/consensus"
 	"github.com/quorumcontrol/tupelo-go-sdk/gossip3/middleware"
 
-	"github.com/quorumcontrol/jasons-game/messages"
 	"github.com/quorumcontrol/jasons-game/navigator"
 	"github.com/quorumcontrol/jasons-game/network"
 	"github.com/quorumcontrol/jasons-game/pb/jasonsgame"
@@ -16,9 +15,8 @@ import (
 
 type LandActor struct {
 	middleware.LogAwareHolder
-	network    network.Network
-	did        string
-	subscriber *actor.PID
+	network network.Network
+	did     string
 }
 
 type LandActorConfig struct {
@@ -41,13 +39,13 @@ func NewLandActorProps(cfg *LandActorConfig) *actor.Props {
 func (l *LandActor) Receive(context actor.Context) {
 	switch msg := context.Message().(type) {
 	case *actor.Started:
-		l.subscriber = context.Spawn(l.network.PubSubSystem().NewSubscriberProps(topicFromDid(l.did)))
-	case *messages.TransferredObjectMessage:
+		l.network.SubscribeActor(context.Self(), topicFromDid(l.did))
+	case *jasonsgame.TransferredObjectMessage:
 		l.handleTransferredObject(context, msg)
 	}
 }
 
-func (l *LandActor) handleTransferredObject(context actor.Context, msg *messages.TransferredObjectMessage) {
+func (l *LandActor) handleTransferredObject(context actor.Context, msg *jasonsgame.TransferredObjectMessage) {
 	c := new(navigator.Cursor).SetChainTree(l.ChainTree()).SetLocation(msg.Loc[0], msg.Loc[1])
 	loc, err := c.GetLocation()
 	if err != nil {
@@ -63,7 +61,7 @@ func (l *LandActor) handleTransferredObject(context actor.Context, msg *messages
 	}
 }
 
-func (l *LandActor) handleIncomingObject(context actor.Context, loc *jasonsgame.Location, msg *messages.TransferredObjectMessage) {
+func (l *LandActor) handleIncomingObject(context actor.Context, loc *jasonsgame.Location, msg *jasonsgame.TransferredObjectMessage) {
 	obj := Object{Did: msg.Object}
 	netobj := NetworkObject{Object: obj, Network: l.network}
 	key, err := netobj.Name()
@@ -89,7 +87,7 @@ func (l *LandActor) handleIncomingObject(context actor.Context, loc *jasonsgame.
 	l.Log.Debugf("Object %v has been dropped at %v", obj.Did, loc.PrettyString())
 }
 
-func (l *LandActor) handleOutgoingObject(context actor.Context, loc *jasonsgame.Location, msg *messages.TransferredObjectMessage) {
+func (l *LandActor) handleOutgoingObject(context actor.Context, loc *jasonsgame.Location, msg *jasonsgame.TransferredObjectMessage) {
 	obj := Object{Did: msg.Object}
 	netobj := NetworkObject{Object: obj, Network: l.network}
 	key, err := netobj.Name()

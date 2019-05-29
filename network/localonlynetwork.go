@@ -1,11 +1,14 @@
 package network
 
 import (
+	"context"
 	"crypto/ecdsa"
 	"fmt"
 	"time"
 
+	"github.com/AsynkronIT/protoactor-go/actor"
 	"github.com/ethereum/go-ethereum/crypto"
+	"github.com/gogo/protobuf/proto"
 	"github.com/ipfs/go-blockservice"
 	cid "github.com/ipfs/go-cid"
 	"github.com/ipfs/go-datastore"
@@ -16,6 +19,8 @@ import (
 	"github.com/ipfs/go-merkledag"
 	"github.com/pkg/errors"
 	"github.com/quorumcontrol/chaintree/chaintree"
+	communityClient "github.com/quorumcontrol/community/client"
+	communityMessages "github.com/quorumcontrol/community/pb/messages"
 	"github.com/quorumcontrol/messages/build/go/transactions"
 	"github.com/quorumcontrol/tupelo-go-sdk/consensus"
 	"github.com/quorumcontrol/tupelo-go-sdk/gossip3/remote"
@@ -57,6 +62,20 @@ func NewLocalNetwork() Network {
 		TreeStore:     ipldstore,
 		pubSubSystem:  pubsub,
 	}
+}
+
+func (ln *LocalNetwork) Send(topicOrTo []byte, msg proto.Message) error {
+	return nil
+}
+
+func (ln *LocalNetwork) Subscribe(topicOrTo []byte, fn func(ctx context.Context, env *communityMessages.Envelope, msg proto.Message)) (*communityClient.Subscription, error) {
+	return nil, nil
+}
+
+func (ln *LocalNetwork) SubscribeActor(pid *actor.PID, topicOrTo []byte) (*communityClient.Subscription, error) {
+	return ln.Subscribe(topicOrTo, func(ctx context.Context, _ *communityMessages.Envelope, msg proto.Message) {
+		actor.EmptyRootContext.Send(pid, msg)
+	})
 }
 
 func (ln *LocalNetwork) PubSubSystem() remote.PubSub {

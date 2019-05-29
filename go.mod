@@ -36,7 +36,7 @@ require (
 	github.com/multiformats/go-multihash v0.0.5 // indirect
 	github.com/pkg/errors v0.8.1
 	github.com/quorumcontrol/chaintree v0.0.0-20190524183749-8b070dcb62d7
-	github.com/quorumcontrol/community v0.0.0-20190529022621-4b9c000010ea // indirect
+	github.com/quorumcontrol/community v0.0.0-20190529193323-4f063d70b6d3
 	github.com/quorumcontrol/messages/build/go v0.0.0-20190524131644-280f165f71a5
 	github.com/quorumcontrol/storage v1.1.2
 	github.com/quorumcontrol/tupelo-go-sdk v0.0.0-20190527184959-a9cabb20a9a1
