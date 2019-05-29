@@ -17,6 +17,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/quorumcontrol/chaintree/chaintree"
 	"github.com/quorumcontrol/chaintree/dag"
+	"github.com/quorumcontrol/messages/build/go/transactions"
 	"github.com/quorumcontrol/tupelo-go-sdk/consensus"
 	"github.com/quorumcontrol/tupelo-go-sdk/gossip3/remote"
 	"github.com/quorumcontrol/tupelo-go-sdk/gossip3/types"
@@ -254,16 +255,12 @@ func (n *RemoteNetwork) UpdateChainTree(tree *consensus.SignedChainTree, path st
 func (n *RemoteNetwork) ChangeChainTreeOwner(tree *consensus.SignedChainTree, newKeys []string) (*consensus.SignedChainTree, error) {
 	log.Debug("ChangeChainTreeOwner", tree.MustId(), newKeys)
 
-	transactions := []*chaintree.Transaction{
-		{
-			Type: consensus.TransactionTypeSetOwnership,
-			Payload: &consensus.SetOwnershipPayload{
-				Authentication: newKeys,
-			},
-		},
+	transaction, err := chaintree.NewSetOwnershipTransaction(newKeys)
+	if err != nil {
+		return nil, errors.Wrap(err, "error updating chaintree")
 	}
 
-	err := n.Tupelo.PlayTransactions(tree, n.mustPrivateKey(), transactions)
+	err = n.Tupelo.PlayTransactions(tree, n.mustPrivateKey(), []*transactions.Transaction{transaction})
 	if err != nil {
 		return nil, errors.Wrap(err, "error updating chaintree")
 	}

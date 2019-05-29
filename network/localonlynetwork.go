@@ -16,6 +16,7 @@ import (
 	"github.com/ipfs/go-merkledag"
 	"github.com/pkg/errors"
 	"github.com/quorumcontrol/chaintree/chaintree"
+	"github.com/quorumcontrol/messages/build/go/transactions"
 	"github.com/quorumcontrol/tupelo-go-sdk/consensus"
 	"github.com/quorumcontrol/tupelo-go-sdk/gossip3/remote"
 )
@@ -123,31 +124,22 @@ func (ln *LocalNetwork) GetTreeByTip(tip cid.Cid) (*consensus.SignedChainTree, e
 }
 
 func (ln *LocalNetwork) UpdateChainTree(tree *consensus.SignedChainTree, path string, value interface{}) (*consensus.SignedChainTree, error) {
-	transactions := []*chaintree.Transaction{
-		{
-			Type: consensus.TransactionTypeSetData,
-			Payload: &consensus.SetDataPayload{
-				Path:  path,
-				Value: value,
-			},
-		},
+	transaction, err := chaintree.NewSetDataTransaction(path, value)
+	if err != nil {
+		return nil, err
 	}
-	return ln.playTransaction(tree, transactions)
+	return ln.playTransactions(tree, []*transactions.Transaction{transaction})
 }
 
 func (ln *LocalNetwork) ChangeChainTreeOwner(tree *consensus.SignedChainTree, newKeys []string) (*consensus.SignedChainTree, error) {
-	transactions := []*chaintree.Transaction{
-		{
-			Type: consensus.TransactionTypeSetOwnership,
-			Payload: &consensus.SetOwnershipPayload{
-				Authentication: newKeys,
-			},
-		},
+	transaction, err := chaintree.NewSetOwnershipTransaction(newKeys)
+	if err != nil {
+		return nil, err
 	}
-	return ln.playTransaction(tree, transactions)
+	return ln.playTransactions(tree, []*transactions.Transaction{transaction})
 }
 
-func (ln *LocalNetwork) playTransaction(tree *consensus.SignedChainTree, transactions []*chaintree.Transaction) (*consensus.SignedChainTree, error) {
+func (ln *LocalNetwork) playTransactions(tree *consensus.SignedChainTree, transactions []*transactions.Transaction) (*consensus.SignedChainTree, error) {
 	unmarshaledRoot, err := tree.ChainTree.Dag.Get(tree.Tip())
 	if unmarshaledRoot == nil || err != nil {
 		return nil, fmt.Errorf("error,missing root: %v", err)
