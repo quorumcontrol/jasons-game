@@ -206,6 +206,10 @@ func (g *Game) handleName(name string) error {
 }
 
 func (g *Game) handleBuildPortal(actorCtx actor.Context, did string) error {
+	if did == "" {
+		g.sendUIMessage(actorCtx, "you must specify a destination")
+		return nil
+	}
 	tree := g.cursor.Tree()
 	loc, err := g.cursor.GetLocation()
 	if err != nil {
