@@ -128,6 +128,7 @@ func NewRemoteNetwork(ctx context.Context, group *types.NotaryGroup, path string
 		return nil, fmt.Errorf("error setting up p2p host: %s", err)
 	}
 
+	remote.NewRouter(tupeloP2PHost)
 	group.SetupAllRemoteActors(&key.PublicKey)
 
 	tupeloPubSub := remote.NewNetworkPubSub(tupeloP2PHost)
