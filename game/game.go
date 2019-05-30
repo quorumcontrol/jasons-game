@@ -11,7 +11,6 @@ import (
 	logging "github.com/ipfs/go-log"
 	"github.com/pkg/errors"
 
-	communityClient "github.com/quorumcontrol/community/client"
 	"github.com/quorumcontrol/jasons-game/navigator"
 	"github.com/quorumcontrol/jasons-game/network"
 	"github.com/quorumcontrol/jasons-game/pb/jasonsgame"
@@ -36,7 +35,7 @@ type Game struct {
 	shoutSubscriber *actor.PID
 	inventory       *actor.PID
 	home            *actor.PID
-	chatSubscriber  *communityClient.Subscription
+	chatSubscriber  *actor.PID
 }
 
 func NewGameProps(playerTree *PlayerTree, ui *actor.PID, network network.Network) *actor.Props {
@@ -80,16 +79,13 @@ func (g *Game) initialize(actorCtx actor.Context) {
 
 	g.network.Community().SubscribeActor(actorCtx.Self(), shoutChannel)
 
-	var err error
 	chatTopic := topicFromDid(g.playerTree.HomeTree.MustId() + "-chat")
-	g.chatSubscriber, err = g.network.Community().SubscribeActor(actorCtx.Self(), chatTopic)
-	if err != nil {
-		panic(fmt.Errorf("error subscribing to chat: %v", err))
-	}
+	g.chatSubscriber = actorCtx.Spawn(g.network.Community().NewSubscriberProps(chatTopic))
 
 	cursor := new(navigator.Cursor).SetChainTree(g.playerTree.HomeTree)
 	g.cursor = cursor
 
+	var err error
 	g.home, err = actorCtx.SpawnNamed(NewLandActorProps(&LandActorConfig{
 		Did:     g.playerTree.HomeTree.MustId(),
 		Network: g.network,
@@ -290,14 +286,10 @@ func (g *Game) goToTree(actorCtx actor.Context, tree *consensus.SignedChainTree)
 		}()
 
 		if g.chatSubscriber != nil {
-			g.network.Community().Unsubscribe(g.chatSubscriber)
+			actorCtx.Stop(g.chatSubscriber)
 		}
-		var err error
 		chatTopic := topicFromDid(newDid + "-chat")
-		g.chatSubscriber, err = g.network.Community().SubscribeActor(actorCtx.Self(), chatTopic)
-		if err != nil {
-			panic(fmt.Errorf("error subscribing to chat: %v", err))
-		}
+		g.chatSubscriber = actorCtx.Spawn(g.network.Community().NewSubscriberProps(chatTopic))
 	}
 
 	g.cursor.SetChainTree(tree).SetLocation(0, 0)
