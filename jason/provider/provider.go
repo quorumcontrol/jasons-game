@@ -12,9 +12,12 @@ import (
 	"github.com/libp2p/go-libp2p"
 	connmgr "github.com/libp2p/go-libp2p-connmgr"
 
+	dsync "github.com/ipfs/go-datastore/sync"
 	logging "github.com/ipfs/go-log"
 	ifconnmgr "github.com/libp2p/go-libp2p-interface-connmgr"
 	"github.com/pkg/errors"
+	communityConfig "github.com/quorumcontrol/community/config"
+	communityHub "github.com/quorumcontrol/community/hub"
 	"github.com/quorumcontrol/jasons-game/network"
 	"github.com/quorumcontrol/tupelo-go-sdk/gossip3/remote"
 	"github.com/quorumcontrol/tupelo-go-sdk/p2p"
@@ -33,6 +36,7 @@ type Provider struct {
 	handler           *actor.PID
 	connectionManager ifconnmgr.ConnManager
 	parentCtx         context.Context
+	communityHub      *communityHub.Hub
 }
 
 const minConnections = 4915 // 60% of 8192 ulimit
@@ -40,7 +44,6 @@ const maxConnections = 7372 // 90% of 8192 ulimit
 const connectionGracePeriod = 20 * time.Second
 
 func New(ctx context.Context, key *ecdsa.PrivateKey, ds datastore.Batching, addlopts ...p2p.Option) (*Provider, error) {
-
 	cm := connmgr.NewConnManager(minConnections, maxConnections, connectionGracePeriod)
 	opts := append([]p2p.Option{
 		p2p.WithLibp2pOptions(libp2p.ConnectionManager(cm)),
@@ -52,12 +55,24 @@ func New(ctx context.Context, key *ecdsa.PrivateKey, ds datastore.Batching, addl
 
 	pubsubSystem := remote.NewNetworkPubSub(host)
 
+	communityName := "jasonsgame"
+	hubConfig := &communityConfig.HubConfig{
+		ClientConfig: &communityConfig.ClientConfig{
+			Name:   communityName,
+			Shards: 1024,
+			PubSub: host.GetPubSub(),
+		},
+		CacheMessages: true,
+		Datastore:     dsync.MutexWrap(datastore.NewMapDatastore()),
+	}
+
 	return &Provider{
 		p2pHost:           host,
 		swapper:           peer,
 		pubsubSystem:      pubsubSystem,
 		parentCtx:         ctx,
 		connectionManager: cm,
+		communityHub:      communityHub.New(ctx, hubConfig),
 	}, nil
 }
 
@@ -85,14 +100,9 @@ func (p *Provider) Start() error {
 	}()
 	wg.Wait()
 
-	// subscribe with a noop to topics - so that we forward messages through
-	subShout, err := p.p2pHost.GetPubSub().Subscribe(network.ShoutTopic)
+	err := p.communityHub.Start()
 	if err != nil {
-		return errors.Wrapf(err, "error subscribing to %s", network.ShoutTopic)
-	}
-	subGeneral, err := p.p2pHost.GetPubSub().Subscribe(network.GeneralTopic)
-	if err != nil {
-		return errors.Wrapf(err, "error subscribing to %s", network.GeneralTopic)
+		return errors.Wrap(err, "could not start community hub")
 	}
 
 	// subscribe with the block getter
@@ -105,8 +115,6 @@ func (p *Provider) Start() error {
 
 	go func() {
 		<-p.parentCtx.Done()
-		subShout.Cancel()
-		subGeneral.Cancel()
 		actor.EmptyRootContext.Stop(act)
 	}()
 	log.Infof("serving a provider now")
