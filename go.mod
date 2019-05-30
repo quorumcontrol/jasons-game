@@ -35,11 +35,11 @@ require (
 	github.com/libp2p/go-libp2p-pubsub v0.0.3
 	github.com/multiformats/go-multihash v0.0.5 // indirect
 	github.com/pkg/errors v0.8.1
-	github.com/quorumcontrol/chaintree v0.0.0-20190524183749-8b070dcb62d7
-	github.com/quorumcontrol/community v0.0.0-20190529193323-4f063d70b6d3
+	github.com/quorumcontrol/chaintree v0.0.0-20190529091624-597cb9a3b7b1
+	github.com/quorumcontrol/community v0.0.0-20190530132251-54d398f9e869
 	github.com/quorumcontrol/messages/build/go v0.0.0-20190524131644-280f165f71a5
 	github.com/quorumcontrol/storage v1.1.2
-	github.com/quorumcontrol/tupelo-go-sdk v0.0.0-20190527184959-a9cabb20a9a1
+	github.com/quorumcontrol/tupelo-go-sdk v0.3.0
 	github.com/shibukawa/configdir v0.0.0-20170330084843-e180dbdc8da0
 	github.com/sirupsen/logrus v1.4.2 // indirect
 	github.com/stretchr/testify v1.3.0
