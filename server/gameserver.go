@@ -10,8 +10,10 @@ import (
 	logging "github.com/ipfs/go-log"
 	"github.com/pkg/errors"
 	"github.com/quorumcontrol/jasons-game/game"
+	"github.com/quorumcontrol/jasons-game/messages"
 	"github.com/quorumcontrol/jasons-game/network"
 	"github.com/quorumcontrol/jasons-game/pb/jasonsgame"
+	"github.com/quorumcontrol/jasons-game/router"
 	"github.com/quorumcontrol/jasons-game/ui"
 	"github.com/quorumcontrol/tupelo-go-sdk/gossip3/types"
 	"github.com/shibukawa/configdir"
@@ -28,8 +30,8 @@ type GameServer struct {
 	sessionPath string
 }
 
-func NewGameServer(ctx context.Context) *GameServer {
-	group, err := setupNotaryGroup(ctx)
+func NewGameServer(ctx context.Context, connectToLocalnet bool) *GameServer {
+	group, err := setupNotaryGroup(ctx, connectToLocalnet)
 	if err != nil {
 		panic(errors.Wrap(err, "setting up notary group"))
 	}
@@ -38,7 +40,9 @@ func NewGameServer(ctx context.Context) *GameServer {
 	folders := configDirs.QueryFolders(configdir.Global)
 	folder := configDirs.QueryFolderContainsFile(sessionStorageDir)
 	if folder == nil {
-		folders[0].CreateParentDir(sessionStorageDir)
+		if err := folders[0].CreateParentDir(sessionStorageDir); err != nil {
+			panic(err)
+		}
 	}
 
 	return &GameServer{
@@ -84,17 +88,14 @@ func (gs *GameServer) ReceiveStatMessages(sess *jasonsgame.Session, stream jason
 func (gs *GameServer) getOrCreateSession(sess *jasonsgame.Session, stream jasonsgame.GameService_ReceiveUserMessagesServer) *actor.PID {
 	uiActor, ok := gs.sessions[sess.Uuid]
 	if !ok {
-
 		// use filepath.Base as a "cleaner" here to not allow setting arbitrary directors with, for example, uuid: "../../etc/passwd"
 		statePath := filepath.Join(gs.sessionPath, filepath.Base(sess.Uuid))
-		err := os.MkdirAll(statePath, 0750)
-		if err != nil {
+		if err := os.MkdirAll(statePath, 0750); err != nil {
 			panic(errors.Wrap(err, "error creating session storage"))
 		}
-
 		net, err := network.NewRemoteNetwork(gs.parentCtx, gs.group, statePath)
 		if err != nil {
-			panic(errors.Wrap(err, "setting up notary group"))
+			panic(errors.Wrap(err, "setting up network"))
 		}
 
 		if sess == nil {
@@ -102,12 +103,36 @@ func (gs *GameServer) getOrCreateSession(sess *jasonsgame.Session, stream jasons
 			log.Errorf("no session")
 			panic("must supply a valid session")
 		}
-		log.Debugf("creating actor")
+
+		log.Debugf("creating actors")
 		uiActor = actor.EmptyRootContext.Spawn(ui.NewUIProps(stream, net))
-
-		actor.EmptyRootContext.Spawn(game.NewGameProps(uiActor, net))
-
 		gs.sessions[sess.Uuid] = uiActor
+
+		table, err := gs.makeRoutingTable(net, uiActor)
+		if err != nil {
+			panic(err)
+		}
+		actor.EmptyRootContext.Spawn(router.NewRouterProps(net, table))
 	}
 	return uiActor
+}
+
+func (gs *GameServer) makeRoutingTable(net network.Network,
+	uiActor *actor.PID) (map[string]*actor.PID, error) {
+	table := map[string]*actor.PID{}
+	broadcaster := messages.NewBroadcaster(net)
+	playerTree, err := game.GetOrCreatePlayerTree(net)
+	if err != nil {
+		return nil, err
+	}
+	gameActor := actor.EmptyRootContext.Spawn(game.NewGameProps(playerTree, uiActor,
+		net, broadcaster))
+	treeId, err := playerTree.HomeTree.Id()
+	if err != nil {
+		return nil, err
+	}
+	table[treeId] = gameActor
+	table[playerTree.Did()] = gameActor
+
+	return table, nil
 }

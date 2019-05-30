@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"flag"
 	"fmt"
 	"log"
 	"net/http"
@@ -9,14 +10,17 @@ import (
 	"os"
 
 	"github.com/gorilla/mux"
+	"github.com/improbable-eng/grpc-web/go/grpcweb"
 	logging "github.com/ipfs/go-log"
 	"github.com/pkg/errors"
 
-	"github.com/improbable-eng/grpc-web/go/grpcweb"
-	"github.com/quorumcontrol/jasons-game/pb/jasonsgame"
-	"github.com/quorumcontrol/jasons-game/server"
+	"github.com/gobuffalo/packr/v2"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/reflection"
+
+	"github.com/quorumcontrol/jasons-game/pb/jasonsgame"
+	"github.com/quorumcontrol/jasons-game/server"
+	"github.com/quorumcontrol/jasons-game/ui"
 )
 
 func mustSetLogLevel(name, level string) {
@@ -65,7 +69,12 @@ func main() {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	s := server.NewGameServer(ctx)
+	disableWebView := flag.Bool("disablewebview", false, "disable the webview")
+	localnet := flag.Bool("localnet", false, "connect to localnet instead of testnet")
+
+	flag.Parse()
+
+	s := server.NewGameServer(ctx, *localnet)
 
 	jasonsgame.RegisterGameServiceServer(grpcServer, s)
 	reflection.Register(grpcServer)
@@ -79,7 +88,9 @@ func main() {
 		MaxHeaderBytes: 1 << 20,
 	}
 
-	fs := http.FileServer(http.Dir("frontend/jasons-game/public"))
+	box := packr.New("Frontend", "./frontend/jasons-game/public")
+
+	fs := http.FileServer(box)
 
 	serv.Handler = http.HandlerFunc(func(resp http.ResponseWriter, req *http.Request) {
 		if wrappedGrpc.IsGrpcWebRequest(req) {
@@ -102,5 +113,16 @@ func main() {
 
 	})
 
-	log.Fatal(serv.ListenAndServe())
+	if *disableWebView {
+		fmt.Println("webview disabled")
+		log.Fatal(serv.ListenAndServe())
+		return
+	}
+
+	fmt.Println("listen and serve")
+	go func() {
+		log.Fatal(serv.ListenAndServe())
+	}()
+	fmt.Println("opening webview")
+	ui.OpenWebView()
 }

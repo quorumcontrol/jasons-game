@@ -39,10 +39,9 @@ func NewIPLDClient(ctx context.Context, key *ecdsa.PrivateKey, ds datastore.Batc
 		p2p.WithListenIP("0.0.0.0", 0),
 		p2p.WithKey(key),
 		p2p.WithDatastore(ds),
-		p2p.WithAutoRelay(true),
 		p2p.WithDiscoveryNamespaces("jasons-game-tupelo"),
 		p2p.WithAddrFilters(addrFilters),
-		p2p.WithPubSubOptions(pubsub.WithStrictSignatureVerification(false), pubsub.WithMessageSigning(true)),
+		p2p.WithPubSubOptions(pubsub.WithStrictSignatureVerification(true), pubsub.WithMessageSigning(true)),
 	}, addlOpts...)
 
 	h, bitPeer, err := p2p.NewHostAndBitSwapPeer(

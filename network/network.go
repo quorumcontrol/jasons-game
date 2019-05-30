@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/ethereum/go-ethereum/crypto"
@@ -26,19 +27,20 @@ var log = logging.Logger("gamenetwork")
 
 const BlockTopic = "jasons-game-tupelo-world-blocks"
 const ShoutTopic = "jasons-game-shouting-players"
+const GeneralTopic = "jasons-game-general"
 
-var GameBootstrappers = []string{
-	"/ip4/18.217.223.67/tcp/34001/ipfs/16Uiu2HAm8KLsnWiMjE2zqwgWqeZEwfJn5U7Qkp36prgoWM3jHqsp",
-	"/ip4/18.221.60.150/tcp/34001/ipfs/16Uiu2HAmBRmhZ3WLyGKAZy843Zk2MQRBKqPVeXpHu8FyEWumGPBN",
+var DefaultTupeloBootstrappers = []string{
+	"/ip4/18.196.112.81/tcp/34001/ipfs/16Uiu2HAmJGZXyrrQ9CcAJWh5Q8rNsoi9yK1VT2HANhH2NcqkRmaZ",
+	"/ip4/34.231.17.217/tcp/34001/ipfs/16Uiu2HAkxNHzLn5cTpGs7RuTQSTKjtxtT9jGcYa6PousihVzEPc6",
 }
 
-func init() {
-	if nodes, ok := os.LookupEnv("JASON_BOOTSTRAP_NODES"); ok {
-		GameBootstrappers = strings.Split(nodes, ",")
-	}
+var DefaultGameBootstrappers = []string{
+	"/ip4/3.214.104.132/tcp/34001/ipfs/16Uiu2HAm7dUydgEydAkLKnpD93g623bAkKYNcxwBEjA1bonY9dt2",
+	"/ip4/52.8.32.189/tcp/34001/ipfs/16Uiu2HAkzNCBmLfFR7xueFSjQgKzB5UnpwqZhnkxfu2BVwE3mfGF",
 }
 
 type Network interface {
+	ChangeChainTreeOwner(tree *consensus.SignedChainTree, newKeys []string) (*consensus.SignedChainTree, error)
 	CreateNamedChainTree(name string) (*consensus.SignedChainTree, error)
 	GetChainTreeByName(name string) (*consensus.SignedChainTree, error)
 	GetTreeByTip(tip cid.Cid) (*consensus.SignedChainTree, error)
@@ -78,7 +80,7 @@ func NewRemoteNetwork(ctx context.Context, group *types.NotaryGroup, path string
 		return nil, errors.Wrap(err, "error getting private key")
 	}
 
-	ipldNetHost, lite, err := NewIPLDClient(ctx, key, ds)
+	ipldNetHost, lite, err := NewIPLDClient(ctx, key, ds, p2p.WithClientOnlyDHT(true))
 	if err != nil {
 		return nil, errors.Wrap(err, "error creating IPLD client")
 	}
@@ -86,29 +88,26 @@ func NewRemoteNetwork(ctx context.Context, group *types.NotaryGroup, path string
 	net.ipldp2pHost = ipldNetHost
 	net.pubSubSystem = remote.NewNetworkPubSub(ipldNetHost)
 
+	// bootstrap to the game async so we can also setup the tupelo node, etc
+	// while this happens.
+	wg := &sync.WaitGroup{}
+	wg.Add(1)
 	go func() {
-		_, err := ipldNetHost.Bootstrap(GameBootstrappers)
+		defer wg.Done()
+		_, err := ipldNetHost.Bootstrap(GameBootstrappers())
 		if err != nil {
 			log.Errorf("error bootstrapping ipld host: %v", err)
+			return
 		}
-		// _, err = ipldNetHost.Bootstrap(IpfsBootstrappers)
-		// if err != nil {
-		// 	log.Errorf("error bootstrapping ipld host: %v", err)
-		// }
+		if err := net.pubSubSystem.Broadcast(BlockTopic, &Join{Identity: ipldNetHost.Identity()}); err != nil {
+			log.Errorf("broadcasting Join failed: %s", err)
+		}
 	}()
 
 	tupeloP2PHost, err := p2p.NewLibP2PHost(ctx, key, 0)
 	if err != nil {
 		return nil, fmt.Errorf("error setting up p2p host: %s", err)
 	}
-	if _, err = tupeloP2PHost.Bootstrap(p2p.BootstrapNodes()); err != nil {
-		return nil, err
-	}
-	if err = tupeloP2PHost.WaitForBootstrap(len(group.Signers), 15*time.Second); err != nil {
-		return nil, err
-	}
-
-	log.Infof("started tupelo host %s", tupeloP2PHost.Identity())
 
 	remote.NewRouter(tupeloP2PHost)
 	group.SetupAllRemoteActors(&key.PublicKey)
@@ -124,6 +123,19 @@ func NewRemoteNetwork(ctx context.Context, group *types.NotaryGroup, path string
 	store := NewIPLDTreeStore(lite, ds, net.pubSubSystem, tup)
 	net.TreeStore = store
 	tup.Store = store
+
+	// now all that setup is done, wait for the tupelo and game bootstrappers
+
+	if _, err = tupeloP2PHost.Bootstrap(TupeloBootstrappers()); err != nil {
+		return nil, err
+	}
+	if err = tupeloP2PHost.WaitForBootstrap(len(group.Signers), 15*time.Second); err != nil {
+		return nil, err
+	}
+
+	log.Infof("started tupelo host %s", tupeloP2PHost.Identity())
+	wg.Wait() // wait for the game bootstrappers too
+	log.Infof("connected to game bootstrappers")
 
 	return net, nil
 }
@@ -237,4 +249,39 @@ func (n *RemoteNetwork) UpdateChainTree(tree *consensus.SignedChainTree, path st
 		return nil, errors.Wrap(err, "error updating chaintree")
 	}
 	return tree, n.TreeStore.SaveTreeMetadata(tree)
+}
+
+func (n *RemoteNetwork) ChangeChainTreeOwner(tree *consensus.SignedChainTree, newKeys []string) (*consensus.SignedChainTree, error) {
+	log.Debug("ChangeChainTreeOwner", tree.MustId(), newKeys)
+
+	transactions := []*chaintree.Transaction{
+		{
+			Type: consensus.TransactionTypeSetOwnership,
+			Payload: &consensus.SetOwnershipPayload{
+				Authentication: newKeys,
+			},
+		},
+	}
+
+	err := n.Tupelo.PlayTransactions(tree, n.mustPrivateKey(), transactions)
+	if err != nil {
+		return nil, errors.Wrap(err, "error updating chaintree")
+	}
+	return tree, n.TreeStore.SaveTreeMetadata(tree)
+}
+
+func TupeloBootstrappers() []string {
+	if envSpecifiedNodes, ok := os.LookupEnv("TUPELO_BOOTSTRAP_NODES"); ok {
+		log.Debugf("using tupelo bootstrap nodes: %s", envSpecifiedNodes)
+		return strings.Split(envSpecifiedNodes, ",")
+	}
+	return DefaultTupeloBootstrappers
+}
+
+func GameBootstrappers() []string {
+	if envSpecifiedNodes, ok := os.LookupEnv("JASON_BOOTSTRAP_NODES"); ok {
+		log.Debugf("using jason bootstrap nodes: %s", envSpecifiedNodes)
+		return strings.Split(envSpecifiedNodes, ",")
+	}
+	return DefaultGameBootstrappers
 }

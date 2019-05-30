@@ -5,7 +5,7 @@ services:
     build: ./devdocker
     depends_on:
       - jason
-    command: ["go", "run", "main.go"]
+    command: ["go", "run", "main.go", "-disablewebview=true", "-localnet=true"]
     volumes:
       - .:/app:delegated
       - ./devdocker/.tmp:/root/.cache:delegated
@@ -21,7 +21,7 @@ services:
 
   game2:
     build: ./devdocker
-    command: ["go", "run", "main.go"]
+    command: ["go", "run", "main.go", "-disablewebview=true", "-localnet=true"]
     depends_on:
       - jason
     volumes:
@@ -39,7 +39,9 @@ services:
 
   jason:
     build: ./devdocker
-    command: ["go", "run", "jason/main.go", "-port=34001"]
+    command: ["go", "run", "jason/main.go", "-port=34001", "-local=true"]
+    depends_on:
+      - localstack
     volumes:
       - .:/app:delegated
       - ./devdocker/.tmp:/root/.cache:delegated
@@ -49,13 +51,14 @@ services:
     environment:
       PPROF_ENABLED: "true"
       GOPATH: /go
+      JASON_BOOTSTRAP_NODES: /ip4/172.16.239.100/tcp/34001/ipfs/16Uiu2HAmBL6Xz9ichyunCexiqomcHyzVpKKmxAMgUusksBZzzM3K
     networks:
       default:
         ipv4_address: 172.16.239.100
 
   game-testnet:
     build: ./devdocker
-    command: ["go", "run", "main.go"]
+    command: ["go", "run", "main.go", "-disablewebview=true"]
     volumes:
       - .:/app:delegated
       - ./devdocker/.tmp:/root/.cache:delegated
@@ -67,8 +70,11 @@ services:
     environment:
       PPROF_ENABLED: "true"
       GOPATH: /go
-      TUPELO_BOOTSTRAP_NODES: /ip4/18.196.112.81/tcp/34001/ipfs/16Uiu2HAmJGZXyrrQ9CcAJWh5Q8rNsoi9yK1VT2HANhH2NcqkRmaZ,/ip4/34.231.17.217/tcp/34001/ipfs/16Uiu2HAkxNHzLn5cTpGs7RuTQSTKjtxtT9jGcYa6PousihVzEPc6
-      JASON_BOOTSTRAP_NODES: /ip4/18.217.223.67/tcp/34001/ipfs/16Uiu2HAm8KLsnWiMjE2zqwgWqeZEwfJn5U7Qkp36prgoWM3jHqsp,/ip4/18.221.60.150/tcp/34001/ipfs/16Uiu2HAmBRmhZ3WLyGKAZy843Zk2MQRBKqPVeXpHu8FyEWumGPBN
+  
+  localstack:
+    image: localstack/localstack
+    environment:
+      - SERVICES=s3
 
   integration:
     build: ./devdocker

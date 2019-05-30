@@ -25,6 +25,14 @@ var defaultCommandList = commandList{
 	newCommand("exit", "exit"),
 	newCommand("say", "say"),
 	newCommand("shout", "shout"),
+	newCommand("create-object", "create object"),
+	newCommand("drop-object", "drop object"),
+	newCommand("pick-up-object", "pick up object"),
+	newCommand("player-inventory-list", "look in bag"),
+	newCommand("location-inventory-list", "look around"),
+	newCommand("help", "help"),
+	newCommand("open-portal", "open portal"),
+	newCommand("refresh", "refresh"),
 }
 
 func newCommand(name, parse string) *command {

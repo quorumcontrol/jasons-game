@@ -21,3 +21,12 @@ test_results/
 
 .tmp
 log
+
+/packrd/
+*-packr.go
+
+*_pb.d.ts
+*_pb.js
+*_gen.go
+*_gen_test.go
+*.pb.go
