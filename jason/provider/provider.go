@@ -12,7 +12,6 @@ import (
 	"github.com/libp2p/go-libp2p"
 	connmgr "github.com/libp2p/go-libp2p-connmgr"
 
-	dsync "github.com/ipfs/go-datastore/sync"
 	logging "github.com/ipfs/go-log"
 	ifconnmgr "github.com/libp2p/go-libp2p-interface-connmgr"
 	"github.com/pkg/errors"
@@ -62,8 +61,7 @@ func New(ctx context.Context, key *ecdsa.PrivateKey, ds datastore.Batching, addl
 			Shards: 1024,
 			PubSub: host.GetPubSub(),
 		},
-		CacheMessages: true,
-		Datastore:     dsync.MutexWrap(datastore.NewMapDatastore()),
+		CacheMessages: false,
 	}
 
 	return &Provider{
