@@ -54,6 +54,10 @@ lint: $(FIRSTGOPATH)/bin/golangci-lint $(generated)
 test: $(generated) go.mod go.sum $(FIRSTGOPATH)/bin/gotestsum
 	gotestsum
 
+ci-test: $(generated) go.mod go.sum $(FIRSTGOPATH)/bin/gotestsum
+	mkdir -p test_results/tests
+	gotestsum --junitfile=test_results/tests/results.xml -- -mod=readonly ./...
+
 integration-test: $(generated) go.mod go.sum
 ifdef testpackage
 	TEST_PACKAGE=${testpackage} docker-compose -f docker-compose-dev.yml run --rm integration
