@@ -96,6 +96,11 @@ func (ln *LocalNetwork) WaitForDiscovery(ns string, num int, dur time.Duration) 
 	return nil
 }
 
+func (ln *LocalNetwork) Unsubscribe(subscription *communityClient.Subscription) error {
+	//noop
+	return nil
+}
+
 func (ln *LocalNetwork) CreateNamedChainTree(name string) (*consensus.SignedChainTree, error) {
 	ephemeralPrivate, err := crypto.GenerateKey()
 	if err != nil {

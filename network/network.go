@@ -55,6 +55,7 @@ type Network interface {
 	Send(topicOrTo []byte, msg proto.Message) error
 	Subscribe(topicOrTo []byte, fn func(ctx context.Context, env *communityMessages.Envelope, msg proto.Message)) (*communityClient.Subscription, error)
 	SubscribeActor(pid *actor.PID, topicOrTo []byte) (*communityClient.Subscription, error)
+	Unsubscribe(subscription *communityClient.Subscription) error
 	StartDiscovery(string) error
 	StopDiscovery(string)
 	WaitForDiscovery(ns string, num int, dur time.Duration) error
@@ -162,6 +163,10 @@ func NewRemoteNetwork(ctx context.Context, group *types.NotaryGroup, path string
 func (rn *RemoteNetwork) Send(topicOrTo []byte, msg proto.Message) error {
 	env := &communityMessages.Envelope{To: topicOrTo}
 	return rn.community.SendProtobuf(env, msg)
+}
+
+func (rn *RemoteNetwork) Unsubscribe(subscription *communityClient.Subscription) error {
+	return rn.community.Unsubscribe(subscription)
 }
 
 func (rn *RemoteNetwork) Subscribe(topicOrTo []byte, fn func(ctx context.Context, env *communityMessages.Envelope, msg proto.Message)) (*communityClient.Subscription, error) {
