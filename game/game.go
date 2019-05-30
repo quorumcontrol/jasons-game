@@ -78,11 +78,11 @@ func (g *Game) Receive(actorCtx actor.Context) {
 func (g *Game) initialize(actorCtx actor.Context) {
 	actorCtx.Send(g.ui, &ui.SetGame{Game: actorCtx.Self()})
 
-	g.network.SubscribeActor(actorCtx.Self(), shoutChannel)
+	g.network.Community().SubscribeActor(actorCtx.Self(), shoutChannel)
 
 	var err error
 	chatTopic := topicFromDid(g.playerTree.HomeTree.MustId() + "-chat")
-	g.chatSubscriber, err = g.network.SubscribeActor(actorCtx.Self(), chatTopic)
+	g.chatSubscriber, err = g.network.Community().SubscribeActor(actorCtx.Self(), chatTopic)
 	if err != nil {
 		panic(fmt.Errorf("error subscribing to chat: %v", err))
 	}
@@ -160,12 +160,12 @@ func (g *Game) handleUserInput(actorCtx actor.Context, input *jasonsgame.UserInp
 		if err == nil {
 			chatTopic := topicFromDid(l.Did + "-chat")
 			log.Debugf("publishing chat message (topic %s)", chatTopic)
-			if err := g.network.Send(chatTopic, &jasonsgame.ChatMessage{Message: args}); err != nil {
+			if err := g.network.Community().Send(chatTopic, &jasonsgame.ChatMessage{Message: args}); err != nil {
 				log.Errorf("failed to broadcast ChatMessage: %s", err)
 			}
 		}
 	case "shout":
-		if err := g.network.Send(shoutChannel, &jasonsgame.ShoutMessage{Message: args}); err != nil {
+		if err := g.network.Community().Send(shoutChannel, &jasonsgame.ShoutMessage{Message: args}); err != nil {
 			log.Errorf("failed to broadcast ShoutMessage: %s", err)
 		}
 	case "open-portal":
@@ -290,11 +290,11 @@ func (g *Game) goToTree(actorCtx actor.Context, tree *consensus.SignedChainTree)
 		}()
 
 		if g.chatSubscriber != nil {
-			g.network.Unsubscribe(g.chatSubscriber)
+			g.network.Community().Unsubscribe(g.chatSubscriber)
 		}
 		var err error
 		chatTopic := topicFromDid(newDid + "-chat")
-		g.chatSubscriber, err = g.network.SubscribeActor(actorCtx.Self(), chatTopic)
+		g.chatSubscriber, err = g.network.Community().SubscribeActor(actorCtx.Self(), chatTopic)
 		if err != nil {
 			panic(fmt.Errorf("error subscribing to chat: %v", err))
 		}
@@ -410,7 +410,7 @@ func (g *Game) handleOpenPortal(actorCtx actor.Context, cmd *command, args strin
 
 	log.Debugf("broadcasting OpenPortalMessage, on land ID %s, location (%d, %d), to land ID %s",
 		onLandId, x, y, toLandId)
-	if err := g.network.Send(topicFromDid(onLandId), &jasonsgame.OpenPortalMessage{
+	if err := g.network.Community().Send(topicFromDid(onLandId), &jasonsgame.OpenPortalMessage{
 		From:      playerId,
 		To:        onLandId,
 		ToLandId:  toLandId,
@@ -606,7 +606,7 @@ func (g *Game) handleOpenPortalMessage(actorCtx actor.Context, msg *jasonsgame.O
 	// TODO: Prompt user for permission
 
 	log.Debugf("Broadcasting OpenPortalResponseMessage back to sender")
-	if err := g.network.Send(topicFromDid(msg.From), &jasonsgame.OpenPortalResponseMessage{
+	if err := g.network.Community().Send(topicFromDid(msg.From), &jasonsgame.OpenPortalResponseMessage{
 		From:      g.playerTree.Did(),
 		To:        msg.From,
 		Accepted:  true,

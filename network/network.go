@@ -9,9 +9,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/AsynkronIT/protoactor-go/actor"
 	"github.com/ethereum/go-ethereum/crypto"
-	"github.com/gogo/protobuf/proto"
 	cid "github.com/ipfs/go-cid"
 	"github.com/ipfs/go-datastore"
 	badger "github.com/ipfs/go-ds-badger"
@@ -19,9 +17,6 @@ import (
 	"github.com/pkg/errors"
 	"github.com/quorumcontrol/chaintree/chaintree"
 	"github.com/quorumcontrol/chaintree/dag"
-	communityClient "github.com/quorumcontrol/community/client"
-	communityConfig "github.com/quorumcontrol/community/config"
-	communityMessages "github.com/quorumcontrol/community/pb/messages"
 	"github.com/quorumcontrol/messages/build/go/transactions"
 	"github.com/quorumcontrol/tupelo-go-sdk/consensus"
 	"github.com/quorumcontrol/tupelo-go-sdk/gossip3/remote"
@@ -46,16 +41,13 @@ var DefaultGameBootstrappers = []string{
 }
 
 type Network interface {
+	Community() *Community
 	ChangeChainTreeOwner(tree *consensus.SignedChainTree, newKeys []string) (*consensus.SignedChainTree, error)
 	CreateNamedChainTree(name string) (*consensus.SignedChainTree, error)
 	GetChainTreeByName(name string) (*consensus.SignedChainTree, error)
 	GetTreeByTip(tip cid.Cid) (*consensus.SignedChainTree, error)
 	GetTree(did string) (*consensus.SignedChainTree, error)
 	UpdateChainTree(tree *consensus.SignedChainTree, path string, value interface{}) (*consensus.SignedChainTree, error)
-	Send(topicOrTo []byte, msg proto.Message) error
-	Subscribe(topicOrTo []byte, fn func(ctx context.Context, env *communityMessages.Envelope, msg proto.Message)) (*communityClient.Subscription, error)
-	SubscribeActor(pid *actor.PID, topicOrTo []byte) (*communityClient.Subscription, error)
-	Unsubscribe(subscription *communityClient.Subscription) error
 	StartDiscovery(string) error
 	StopDiscovery(string)
 	WaitForDiscovery(ns string, num int, dur time.Duration) error
@@ -69,7 +61,7 @@ type RemoteNetwork struct {
 	KeyValueStore datastore.Batching
 	TreeStore     TreeStore
 	ipldp2pHost   *p2p.LibP2PHost
-	community     *communityClient.Client
+	community     *Community
 }
 
 func NewRemoteNetwork(ctx context.Context, group *types.NotaryGroup, path string) (Network, error) {
@@ -95,16 +87,7 @@ func NewRemoteNetwork(ctx context.Context, group *types.NotaryGroup, path string
 	}
 	net.Ipld = lite
 	net.ipldp2pHost = ipldNetHost
-
-	communityName := "jasonsgame"
-	communityClientConfig := &communityConfig.ClientConfig{
-		Name:            communityName,
-		Shards:          1024,
-		LocalIdentifier: []byte(ipldNetHost.Identity()),
-		PubSub:          ipldNetHost.GetPubSub(),
-		Key:             key,
-	}
-	net.community = communityClient.New(ctx, communityClientConfig)
+	net.community = NewJasonCommunity(ctx, key, ipldNetHost)
 
 	// bootstrap to the game async so we can also setup the tupelo node, etc
 	// while this happens.
@@ -117,11 +100,6 @@ func NewRemoteNetwork(ctx context.Context, group *types.NotaryGroup, path string
 			log.Errorf("error bootstrapping ipld host: %v", err)
 			return
 		}
-
-		// TODO: hookup community Join
-		// 		if err := net.pubSubSystem.Broadcast(BlockTopic, &Join{Identity: ipldNetHost.Identity()}); err != nil {
-		// 			log.Errorf("broadcasting Join failed: %s", err)
-		// 		}
 	}()
 
 	tupeloP2PHost, err := p2p.NewLibP2PHost(ctx, key, 0)
@@ -160,23 +138,8 @@ func NewRemoteNetwork(ctx context.Context, group *types.NotaryGroup, path string
 	return net, nil
 }
 
-func (rn *RemoteNetwork) Send(topicOrTo []byte, msg proto.Message) error {
-	env := &communityMessages.Envelope{To: topicOrTo}
-	return rn.community.SendProtobuf(env, msg)
-}
-
-func (rn *RemoteNetwork) Unsubscribe(subscription *communityClient.Subscription) error {
-	return rn.community.Unsubscribe(subscription)
-}
-
-func (rn *RemoteNetwork) Subscribe(topicOrTo []byte, fn func(ctx context.Context, env *communityMessages.Envelope, msg proto.Message)) (*communityClient.Subscription, error) {
-	return rn.community.SubscribeProtobuf(topicOrTo, fn)
-}
-
-func (rn *RemoteNetwork) SubscribeActor(pid *actor.PID, topicOrTo []byte) (*communityClient.Subscription, error) {
-	return rn.Subscribe(topicOrTo, func(ctx context.Context, _ *communityMessages.Envelope, msg proto.Message) {
-		actor.EmptyRootContext.Send(pid, msg)
-	})
+func (rn *RemoteNetwork) Community() *Community {
+	return rn.community
 }
 
 func (rn *RemoteNetwork) StartDiscovery(ns string) error {

@@ -39,7 +39,7 @@ func NewLandActorProps(cfg *LandActorConfig) *actor.Props {
 func (l *LandActor) Receive(context actor.Context) {
 	switch msg := context.Message().(type) {
 	case *actor.Started:
-		l.network.SubscribeActor(context.Self(), topicFromDid(l.did))
+		l.network.Community().SubscribeActor(context.Self(), topicFromDid(l.did))
 	case *jasonsgame.TransferredObjectMessage:
 		l.handleTransferredObject(context, msg)
 	}

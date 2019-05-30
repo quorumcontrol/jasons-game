@@ -1,12 +1,10 @@
 package network
 
 import (
-	"context"
 	"crypto/ecdsa"
 	"fmt"
 	"time"
 
-	"github.com/AsynkronIT/protoactor-go/actor"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/gogo/protobuf/proto"
 	"github.com/ipfs/go-blockservice"
@@ -19,8 +17,6 @@ import (
 	"github.com/ipfs/go-merkledag"
 	"github.com/pkg/errors"
 	"github.com/quorumcontrol/chaintree/chaintree"
-	communityClient "github.com/quorumcontrol/community/client"
-	communityMessages "github.com/quorumcontrol/community/pb/messages"
 	"github.com/quorumcontrol/messages/build/go/transactions"
 	"github.com/quorumcontrol/tupelo-go-sdk/consensus"
 	"github.com/quorumcontrol/tupelo-go-sdk/gossip3/remote"
@@ -68,14 +64,9 @@ func (ln *LocalNetwork) Send(topicOrTo []byte, msg proto.Message) error {
 	return nil
 }
 
-func (ln *LocalNetwork) Subscribe(topicOrTo []byte, fn func(ctx context.Context, env *communityMessages.Envelope, msg proto.Message)) (*communityClient.Subscription, error) {
-	return nil, nil
-}
-
-func (ln *LocalNetwork) SubscribeActor(pid *actor.PID, topicOrTo []byte) (*communityClient.Subscription, error) {
-	return ln.Subscribe(topicOrTo, func(ctx context.Context, _ *communityMessages.Envelope, msg proto.Message) {
-		actor.EmptyRootContext.Send(pid, msg)
-	})
+func (ln *LocalNetwork) Community() *Community {
+	//TODO: fix me and make real
+	return &Community{}
 }
 
 func (ln *LocalNetwork) PubSubSystem() remote.PubSub {
@@ -92,11 +83,6 @@ func (ln *LocalNetwork) StopDiscovery(_ string) {
 }
 
 func (ln *LocalNetwork) WaitForDiscovery(ns string, num int, dur time.Duration) error {
-	//noop
-	return nil
-}
-
-func (ln *LocalNetwork) Unsubscribe(subscription *communityClient.Subscription) error {
 	//noop
 	return nil
 }
