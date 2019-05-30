@@ -1,12 +1,12 @@
 package network
 
 import (
+	"context"
 	"crypto/ecdsa"
 	"fmt"
 	"time"
 
 	"github.com/ethereum/go-ethereum/crypto"
-	"github.com/gogo/protobuf/proto"
 	"github.com/ipfs/go-blockservice"
 	cid "github.com/ipfs/go-cid"
 	"github.com/ipfs/go-datastore"
@@ -20,6 +20,7 @@ import (
 	"github.com/quorumcontrol/messages/build/go/transactions"
 	"github.com/quorumcontrol/tupelo-go-sdk/consensus"
 	"github.com/quorumcontrol/tupelo-go-sdk/gossip3/remote"
+	"github.com/quorumcontrol/tupelo-go-sdk/p2p"
 )
 
 type DevNullTipGetter struct{}
@@ -34,7 +35,8 @@ type LocalNetwork struct {
 	key           *ecdsa.PrivateKey
 	KeyValueStore datastore.Batching
 	TreeStore     TreeStore
-	pubSubSystem  remote.PubSub
+	pubsub        remote.PubSub
+	community     *Community
 }
 
 func NewLocalNetwork() Network {
@@ -43,34 +45,37 @@ func NewLocalNetwork() Network {
 	bstore := blockstore.NewBlockstore(keystore)
 	bserv := blockservice.New(bstore, offline.Exchange(bstore))
 	dag := merkledag.NewDAGService(bserv)
-	pubsub := remote.NewSimulatedPubSub()
-
-	ipldstore := NewIPLDTreeStore(dag, keystore, pubsub, new(DevNullTipGetter))
+	ds := datastore.NewMapDatastore()
 
 	key, err := crypto.GenerateKey()
 	if err != nil {
 		panic(errors.Wrap(err, "error generating key"))
 	}
 
+	ipldNetHost, _, err := NewIPLDClient(context.Background(), key, ds, p2p.WithClientOnlyDHT(true))
+	if err != nil {
+		panic(errors.Wrap(err, "error creating IPLD client"))
+	}
+
+	pubsub := remote.NewNetworkPubSub(ipldNetHost)
+
+	ipldstore := NewIPLDTreeStore(dag, keystore, pubsub, new(DevNullTipGetter))
+
 	return &LocalNetwork{
 		key:           key,
 		KeyValueStore: keystore,
 		TreeStore:     ipldstore,
-		pubSubSystem:  pubsub,
+		pubsub:        pubsub,
+		community:     NewJasonCommunity(context.Background(), key, ipldNetHost),
 	}
 }
 
-func (ln *LocalNetwork) Send(topicOrTo []byte, msg proto.Message) error {
-	return nil
-}
-
 func (ln *LocalNetwork) Community() *Community {
-	//TODO: fix me and make real
-	return &Community{}
+	return ln.community
 }
 
 func (ln *LocalNetwork) PubSubSystem() remote.PubSub {
-	return ln.pubSubSystem
+	return ln.pubsub
 }
 
 func (ln *LocalNetwork) StartDiscovery(_ string) error {
