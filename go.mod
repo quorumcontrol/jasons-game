@@ -53,8 +53,6 @@ require (
 	google.golang.org/grpc v1.20.0
 )
 
-// replace github.com/quorumcontrol/community v0.0.0-20190528104209-3e49048acb84 => ../community
-
 replace github.com/libp2p/go-libp2p-pubsub v0.0.3 => github.com/quorumcontrol/go-libp2p-pubsub v0.0.0-20190515123400-58d894b144ff864d212cf4b13c42e8fdfe783aba
 
 // use our fork of packr until https://github.com/gobuffalo/packr/issues/198 is fixed

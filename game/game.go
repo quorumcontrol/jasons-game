@@ -80,6 +80,7 @@ func (g *Game) initialize(actorCtx actor.Context) {
 	g.network.Community().SubscribeActor(actorCtx.Self(), shoutChannel)
 
 	chatTopic := topicFromDid(g.playerTree.HomeTree.MustId() + "-chat")
+	log.Debugf("subscribing to chat at %s", string(chatTopic))
 	g.chatSubscriber = actorCtx.Spawn(g.network.Community().NewSubscriberProps(chatTopic))
 
 	cursor := new(navigator.Cursor).SetChainTree(g.playerTree.HomeTree)
@@ -289,6 +290,7 @@ func (g *Game) goToTree(actorCtx actor.Context, tree *consensus.SignedChainTree)
 			actorCtx.Stop(g.chatSubscriber)
 		}
 		chatTopic := topicFromDid(newDid + "-chat")
+		log.Debugf("subscribing to chat at %s", string(chatTopic))
 		g.chatSubscriber = actorCtx.Spawn(g.network.Community().NewSubscriberProps(chatTopic))
 	}
 
