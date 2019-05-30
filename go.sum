@@ -732,6 +732,8 @@ github.com/quorumcontrol/chaintree v0.0.0-20190529091624-597cb9a3b7b1 h1:fw3tlC1
 github.com/quorumcontrol/chaintree v0.0.0-20190529091624-597cb9a3b7b1/go.mod h1:LPLjoDFzh0WNh2dHJle7jXv49ttqYWOQfEvDiqTcQ8w=
 github.com/quorumcontrol/community v0.0.0-20190530132251-54d398f9e869 h1:6jXZz51xQxzA9bialwLsCIi7osFINbUEGNd3EO1AF8E=
 github.com/quorumcontrol/community v0.0.0-20190530132251-54d398f9e869/go.mod h1:mzVo8lcI3x8QgqGsWEPuMxRL4svvOabo34e7C1pf9bA=
+github.com/quorumcontrol/community v0.0.0-20190530174833-b3e58b20753e h1:RC9YhE6iscvw1c+6A+ZuLUdgG4JOdjGz5l1N5T8/vTs=
+github.com/quorumcontrol/community v0.0.0-20190530174833-b3e58b20753e/go.mod h1:mzVo8lcI3x8QgqGsWEPuMxRL4svvOabo34e7C1pf9bA=
 github.com/quorumcontrol/go-libp2p-pubsub v0.0.0-20190515123400-58d894b144ff864d212cf4b13c42e8fdfe783aba h1:yyXbqfe6eR+DKlS8VTtpMEBCCPvVxdtYIF06hMojPA4=
 github.com/quorumcontrol/go-libp2p-pubsub v0.0.0-20190515123400-58d894b144ff864d212cf4b13c42e8fdfe783aba/go.mod h1:fYKlZBOF2yrJzYlgeEVFSbYWfbS+E8Zix6gMZ0A6WgE=
 github.com/quorumcontrol/messages v0.3.1 h1:ybLTvLpfTLxAWaNItfSpH2hw0os8gNFZ4g9xyGnbRmM=
