@@ -102,9 +102,38 @@ From further east you see another opening in the wall and faintly hear a familia
 `)
 }
 
-func (q *MeetTheWizard) NextStep(actorCtx actor.Context, game *Game) (*QuestStep, error) {
-	location := game.PlayerLocation()
+func (q *MeetTheWizard) fifthStep() *QuestStep {
+	return messageStep(4, `
+You squeeze out of the hole with some difficulty into a more cheery room brightly lit with torches.
+Your friend from earlier is staring... 
+"WELL, do you HAVE it?"
+"If not we are well and truly stuck... place it right here if you have it!"
+"If not get back in there and look some more... it must be in there somewhere."
+`)
+}
 
+func (q *MeetTheWizard) sixthStep() *QuestStep {
+	return messageStep(5, `
+"Ahh perfect!" The ornery fellow seems to brighten when he sees the items you have assembled.  
+Strange tools flash from the pockets of his vest and quicker than you can comprehend the process is done.
+He cackles gleefully and hands you a vial of ink.
+"This is for your help!"
+"This I need to create a portal back to civilization."
+He spins his short little arms after dunking his fingers into an inkwell much like the one he gave to you.
+"Over and out!" he cackles to himself.
+A glowing circle the size of a man comes into view dazzlingly bright and somehow jet-black like the ink at the same time.  
+The strange fellow completes his arm twirl with a flourish.
+"Not entirely sure how I got stuck in your world here... but you might want to spruce up the place."
+"See you around!"
+With that he jumps into the glow disk and is gone.
+`)
+}
+
+func (q *MeetTheWizard) NextStep(actorCtx actor.Context, game *Game) (*QuestStep, error) {
+	location, err := game.refreshLocation()
+	if err != nil {
+		return nil, fmt.Errorf("error refreshing location: %v", err)
+	}
 
 	switch {
 	case location.X == 0 && location.Y == 1 && q.state.highestIndex == 0:
@@ -113,6 +142,16 @@ func (q *MeetTheWizard) NextStep(actorCtx actor.Context, game *Game) (*QuestStep
 		return q.thirdStep(), nil
 	case location.X == 1 && location.Y == 2 && q.state.highestIndex == 2:
 		return q.fourthStep(actorCtx, game), nil
+	case location.X == 0 && location.Y == 2 && q.state.highestIndex == 3:
+		return q.fifthStep(), nil
+	case location.X == 0 && location.Y == 2 && q.state.highestIndex == 4:
+		_, droppedGreenVitriol := location.Inventory["green-vitriol"]
+		if droppedGreenVitriol {
+			return q.sixthStep(), nil
+		} else {
+			time.Sleep(1 * time.Second)
+			return q.NextStep(actorCtx, game)
+		}
 	// TODO: Finish rest of the steps
 	default:
 		return messageStep(-1, "You are off the beaten path."), nil
