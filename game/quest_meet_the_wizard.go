@@ -90,12 +90,6 @@ func (q *MeetTheWizard) fourthStep(actorCtx actor.Context, game *Game) *QuestSte
 		return nil
 	}
 
-	// _, err = game.refreshLocation()
-	// if err != nil {
-	// 	log.Errorf("error refreshing location: %v", err)
-	// 	return nil
-	// }
-
 	return messageStep(3, `
 You crawl into the hole cautiously on hands and knees.  
 The muck slows you down but a good push from your friend from behind slides you forward through it.
@@ -111,8 +105,6 @@ From further east you see another opening in the wall and faintly hear a familia
 func (q *MeetTheWizard) NextStep(actorCtx actor.Context, game *Game) (*QuestStep, error) {
 	location := game.PlayerLocation()
 
-	fmt.Printf("Quest state: %+v\n", q.state)
-	fmt.Printf("Location: %+v\n", location)
 
 	switch {
 	case location.X == 0 && location.Y == 1 && q.state.highestIndex == 0:
