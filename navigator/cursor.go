@@ -55,7 +55,7 @@ func (c *Cursor) Did() string {
 }
 
 func (c *Cursor) GetLocation() (*jasonsgame.Location, error) {
-	return locationFromTree(c.tree, c.locX, c.locY)
+	return LocationFromTree(c.tree, c.locX, c.locY)
 }
 
 func (c *Cursor) SetLocation(x, y int64) *Cursor {

@@ -12,7 +12,8 @@ import (
 	"github.com/quorumcontrol/tupelo-go-sdk/consensus"
 )
 
-var playerTreePath = "jasons-game/player"
+const playerTreePath = "jasons-game/player"
+var ObjectsPath = fmt.Sprintf("%s/%s", playerTreePath, "bag-of-hodling")
 
 type PlayerTree struct {
 	tree     *consensus.SignedChainTree
@@ -127,6 +128,10 @@ func (p *PlayerTree) ChainTree() *consensus.SignedChainTree {
 
 func (p *PlayerTree) SetChainTree(ct *consensus.SignedChainTree) {
 	p.tree = ct
+}
+
+func (p *PlayerTree) ObjectPath(obj *CreateObjectRequest) (string, error) {
+	return fmt.Sprintf("%s/%s", ObjectsPath, obj.Name), nil
 }
 
 func GetOrCreatePlayerTree(net network.Network) (*PlayerTree, error) {

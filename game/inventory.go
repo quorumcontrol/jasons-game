@@ -11,11 +11,10 @@ import (
 	"github.com/quorumcontrol/tupelo-go-sdk/gossip3/middleware"
 
 	"github.com/quorumcontrol/jasons-game/messages"
+	"github.com/quorumcontrol/jasons-game/navigator"
 	"github.com/quorumcontrol/jasons-game/network"
 	"github.com/quorumcontrol/jasons-game/pb/jasonsgame"
 )
-
-const ObjectsPath = "jasons-game/player/bag-of-hodling"
 
 type InventoryActor struct {
 	middleware.LogAwareHolder
@@ -29,9 +28,17 @@ type InventoryActorConfig struct {
 	Network network.Network
 }
 
+type ObjectOwner interface {
+	ChainTree() *consensus.SignedChainTree
+	SetChainTree(ct *consensus.SignedChainTree)
+	ObjectPath(obj *CreateObjectRequest) (string, error)
+}
+
 type CreateObjectRequest struct {
 	Name        string
 	Description string
+	Owner       ObjectOwner
+	Loc         []int64
 }
 
 type CreateObjectResponse struct {
@@ -168,13 +175,19 @@ func (co *InventoryActor) Receive(context actor.Context) {
 func (co *InventoryActor) handleCreateObject(context actor.Context, msg *CreateObjectRequest) {
 	var err error
 
-	player := co.player
+	var owner ObjectOwner
 
-	if player == nil {
-		err = fmt.Errorf("player is required to create an object")
-		co.Log.Error(err)
-		context.Respond(&CreateObjectResponse{Error: err})
-		return
+	// default owner to player
+	if msg.Owner == nil {
+		if co.player == nil {
+			err = fmt.Errorf("owner or player is required to create an object")
+			co.Log.Error(err)
+			context.Respond(&CreateObjectResponse{Error: err})
+			return
+		}
+		owner = co.player
+	} else {
+		owner = msg.Owner
 	}
 
 	name := msg.Name
@@ -224,13 +237,37 @@ func (co *InventoryActor) handleCreateObject(context actor.Context, msg *CreateO
 		}
 	}
 
-	playerChainTree := player.ChainTree()
+	var location *jasonsgame.Location
+	if len(msg.Loc) == 2 {
+		location, err = navigator.LocationFromTree(owner.ChainTree(), msg.Loc[0], msg.Loc[1])
+		if err != nil {
+			err = fmt.Errorf("error getting location for new object: %v", err)
+			co.Log.Error(err)
+			context.Respond(&CreateObjectResponse{Error: err})
+			return
+		}
 
-	objectsPath, _ := consensus.DecodePath(ObjectsPath)
+		if location.Inventory == nil {
+			location.Inventory = make(map[string]string)
+		}
 
-	newObjectPath := strings.Join(append(objectsPath, name), "/")
+		location.Inventory[msg.Name] = objectChainTree.MustId()
+	}
 
-	newPlayerChainTree, err := co.network.UpdateChainTree(playerChainTree, newObjectPath, objectChainTree.MustId())
+	newObjectPath, err := owner.ObjectPath(msg)
+	if err != nil {
+		err = fmt.Errorf("error getting new object path: %v", err)
+		co.Log.Error(err)
+		context.Respond(&CreateObjectResponse{Error: err})
+		return
+	}
+
+	var newOwnerChainTree *consensus.SignedChainTree
+	if location != nil {
+		newOwnerChainTree, err = co.network.UpdateChainTree(owner.ChainTree(), newObjectPath, location)
+	} else {
+		newOwnerChainTree, err = co.network.UpdateChainTree(owner.ChainTree(), newObjectPath, objectChainTree.MustId())
+	}
 
 	if err != nil {
 		err = fmt.Errorf("error updating objects in chaintree: %v", err)
@@ -239,7 +276,7 @@ func (co *InventoryActor) handleCreateObject(context actor.Context, msg *CreateO
 		return
 	}
 
-	co.player.SetChainTree(newPlayerChainTree)
+	owner.SetChainTree(newOwnerChainTree)
 
 	context.Respond(&CreateObjectResponse{Object: &Object{Did: objectChainTree.MustId()}})
 }

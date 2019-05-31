@@ -12,7 +12,7 @@ import (
 
 const defaultDescription = "You are in a baron wasteland type set description <desc> to call this land something"
 
-func locationFromTree(tree *consensus.SignedChainTree, x, y int64) (*jasonsgame.Location, error) {
+func LocationFromTree(tree *consensus.SignedChainTree, x, y int64) (*jasonsgame.Location, error) {
 	pth, remain, err := tree.ChainTree.Dag.Resolve(strings.Split(fmt.Sprintf("tree/data/jasons-game/%d/%d", x, y), "/"))
 	if err != nil {
 		return nil, fmt.Errorf("error resolving: %v", err)

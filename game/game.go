@@ -661,3 +661,30 @@ func (g *Game) handleOpenPortalResponseMessage(actorCtx actor.Context,
 	}
 	g.sendUIMessage(actorCtx, uiMsg)
 }
+
+type NetworkLocation struct {
+	*jasonsgame.Location
+	Network network.Network
+}
+
+func (nl *NetworkLocation) ChainTree() *consensus.SignedChainTree {
+	ct, err := nl.Network.GetTree(nl.Did)
+	if err != nil {
+		log.Errorf("error getting location tree for DID %s", nl.Did)
+	}
+
+	return ct
+}
+
+func (nl *NetworkLocation) SetChainTree(ct *consensus.SignedChainTree) {
+	nl.Did = ct.MustId()
+	nl.Tip = ct.Tip().String()
+}
+
+func (nl *NetworkLocation) ObjectPath(obj *CreateObjectRequest) (string, error) {
+	basePath := []string{"jasons-game"}
+	locationPath := append(basePath, strconv.FormatInt(obj.Loc[0], 10), strconv.FormatInt(obj.Loc[1], 10))
+
+	return strings.Join(locationPath, "/"), nil
+}
+
