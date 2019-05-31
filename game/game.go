@@ -2,8 +2,6 @@ package game
 
 import (
 	"fmt"
-	"strconv"
-	"strings"
 	"time"
 
 	"github.com/AsynkronIT/protoactor-go/actor"
@@ -11,7 +9,6 @@ import (
 	logging "github.com/ipfs/go-log"
 	"github.com/pkg/errors"
 
-	"github.com/quorumcontrol/jasons-game/navigator"
 	"github.com/quorumcontrol/jasons-game/network"
 	"github.com/quorumcontrol/jasons-game/pb/jasonsgame"
 	"github.com/quorumcontrol/jasons-game/ui"
@@ -28,12 +25,10 @@ type Game struct {
 	ui              *actor.PID
 	network         network.Network
 	playerTree      *PlayerTree
-	cursor          *navigator.Cursor
 	commands        commandList
 	messageSequence uint64
-	inventory       *actor.PID
-	home            *actor.PID
-	chatSubscriber  *actor.PID
+	chatActor       *actor.PID
+	locationActor   *actor.PID
 }
 
 func NewGameProps(playerTree *PlayerTree, ui *actor.PID, network network.Network) *actor.Props {
@@ -72,51 +67,29 @@ func (g *Game) Receive(actorCtx actor.Context) {
 
 func (g *Game) initialize(actorCtx actor.Context) {
 	actorCtx.Send(g.ui, &ui.SetGame{Game: actorCtx.Self()})
-
+	g.network.Community().SubscribeActor(actorCtx.Self(), shoutChannel)
 	_, err := g.network.Community().SubscribeActor(actorCtx.Self(), shoutChannel)
 	if err != nil {
 		panic(fmt.Errorf("error spawning shout actor: %v", err))
 	}
 
-	chatTopic := topicFor(g.playerTree.HomeTree.MustId() + "-chat")
-	log.Debugf("subscribing to chat at %s", string(chatTopic))
-	g.chatSubscriber = actorCtx.Spawn(g.network.Community().NewSubscriberProps(chatTopic))
-
-	cursor := new(navigator.Cursor).SetChainTree(g.playerTree.HomeTree)
-	g.cursor = cursor
-
-	g.home, err = actorCtx.SpawnNamed(NewLandActorProps(&LandActorConfig{
-		Did:     g.playerTree.HomeTree.MustId(),
-		Network: g.network,
-	}), "home")
-	if err != nil {
-		panic(fmt.Errorf("error spawning home actor: %v", err))
-	}
-
-	// TODO: switch to global topic
-	g.inventory, err = actorCtx.SpawnNamed(NewInventoryActorProps(&InventoryActorConfig{
-		Player:  g.playerTree,
-		Network: g.network,
-	}), "inventory")
-	if err != nil {
-		panic(fmt.Errorf("error spawning inventory actor: %v", err))
-	}
+	g.setLocation(actorCtx, g.playerTree.HomeLocation.MustId())
 
 	g.sendUIMessage(
 		actorCtx,
 		fmt.Sprintf("Created Player %s \n( %s )\nHome: %s \n( %s )",
 			g.playerTree.Did(),
 			g.playerTree.Tip().String(),
-			g.playerTree.HomeTree.MustId(),
-			g.playerTree.HomeTree.Tip().String()),
+			g.playerTree.HomeLocation.MustId(),
+			g.playerTree.HomeLocation.Tip().String()),
 	)
 
-	// g.sendUIMessage(actorCtx, "waiting to join the game!")
+	l, err := g.getCurrentLocation(actorCtx)
 
-	l, err := g.cursor.GetLocation()
 	if err != nil {
-		panic(fmt.Errorf("error getting initial location: %v", err))
+		panic(err)
 	}
+
 	g.sendUIMessage(actorCtx, l)
 }
 
@@ -151,14 +124,14 @@ func (g *Game) handleUserInput(actorCtx actor.Context, input *jasonsgame.UserInp
 	case "build-portal":
 		err = g.handleBuildPortal(actorCtx, args)
 	case "say":
-		l, err := g.cursor.GetLocation()
-		if err == nil {
-			chatTopic := topicFor(l.Did + "-chat")
-			log.Debugf("publishing chat message (topic %s)", chatTopic)
-			if err := g.network.Community().Send(chatTopic, &jasonsgame.ChatMessage{Message: args}); err != nil {
-				log.Errorf("failed to broadcast ChatMessage: %s", err)
-			}
-		}
+		// l, err := g.cursor.GetLocation()
+		// if err == nil {
+		// 	// chatTopic := topicFor(l.Did + "-chat")
+		// 	// log.Debugf("publishing chat message (topic %s)", chatTopic)
+		// 	// if err := g.network.Community().Send(chatTopic, &jasonsgame.ChatMessage{Message: args}); err != nil {
+		// 	// 	log.Errorf("failed to broadcast ChatMessage: %s", err)
+		// 	// }
+		// }
 	case "shout":
 		if err := g.network.Community().Send(shoutChannel, &jasonsgame.ShoutMessage{Message: args}); err != nil {
 			log.Errorf("failed to broadcast ShoutMessage: %s", err)
@@ -198,25 +171,25 @@ func (g *Game) handleName(name string) error {
 }
 
 func (g *Game) handleBuildPortal(actorCtx actor.Context, did string) error {
-	if did == "" {
-		g.sendUIMessage(actorCtx, "you must specify a destination")
-		return nil
-	}
-	tree := g.cursor.Tree()
-	loc, err := g.cursor.GetLocation()
-	if err != nil {
-		return errors.Wrap(err, "error getting location")
-	}
-	loc.Portal = &jasonsgame.Portal{
-		To: did,
-	}
+	// if did == "" {
+	// 	g.sendUIMessage(actorCtx, "you must specify a destination")
+	// 	return nil
+	// }
+	// tree := g.cursor.Tree()
+	// loc, err := g.cursor.GetLocation()
+	// if err != nil {
+	// 	return errors.Wrap(err, "error getting location")
+	// }
+	// loc.Portal = &jasonsgame.Portal{
+	// 	To: did,
+	// }
 
-	err = g.updateLocation(actorCtx, tree, loc)
-	if err != nil {
-		return errors.Wrap(err, "error updating location")
-	}
+	// err = g.updateLocation(actorCtx, tree, loc)
+	// if err != nil {
+	// 	return errors.Wrap(err, "error updating location")
+	// }
 
-	g.sendUIMessage(actorCtx, fmt.Sprintf("successfully built a portal to %s", did))
+	// g.sendUIMessage(actorCtx, fmt.Sprintf("successfully built a portal to %s", did))
 	return nil
 }
 
@@ -235,19 +208,20 @@ func (g *Game) handleTipZoom(actorCtx actor.Context, tip string) error {
 }
 
 func (g *Game) handleGoThroughPortal(actorCtx actor.Context) error {
-	log.Info("go through portal")
-	l, err := g.cursor.GetLocation()
-	if err != nil {
-		return errors.Wrap(err, "error getting location")
-	}
-	if l.Portal == nil {
-		return fmt.Errorf("there is no portal where you are")
-	}
-	tree, err := g.network.GetTree(l.Portal.To)
-	if err != nil {
-		return errors.Wrap(err, "error getting remote tree")
-	}
-	return g.goToTree(actorCtx, tree)
+	// log.Info("go through portal")
+	// l, err := g.cursor.GetLocation()
+	// if err != nil {
+	// 	return errors.Wrap(err, "error getting location")
+	// }
+	// if l.Portal == nil {
+	// 	return fmt.Errorf("there is no portal where you are")
+	// }
+	// tree, err := g.network.GetTree(l.Portal.To)
+	// if err != nil {
+	// 	return errors.Wrap(err, "error getting remote tree")
+	// }
+	// return g.goToTree(actorCtx, tree)
+	return nil
 }
 
 func (g *Game) handleRefresh(actorCtx actor.Context) error {
@@ -260,316 +234,328 @@ func (g *Game) handleRefresh(actorCtx actor.Context) error {
 }
 
 func (g *Game) refreshLocation() (*jasonsgame.Location, error) {
-	tree, err := g.network.GetTree(g.cursor.Did())
-	if err != nil {
-		return nil, errors.Wrap(err, "error getting remote tree")
-	}
-	g.cursor.SetChainTree(tree)
-	l, err := g.cursor.GetLocation()
-	if err != nil {
-		return nil, errors.Wrap(err, fmt.Sprintf("error getting location (%s)", tree.MustId()))
-	}
-	return l, nil
+	// tree, err := g.network.GetTree(g.cursor.Did())
+	// if err != nil {
+	// 	return nil, errors.Wrap(err, "error getting remote tree")
+	// }
+	// g.cursor.SetChainTree(tree)
+	// l, err := g.cursor.GetLocation()
+	// if err != nil {
+	// 	return nil, errors.Wrap(err, fmt.Sprintf("error getting location (%s)", tree.MustId()))
+	// }
+	// return l, nil
+	return nil, nil
 }
 
 func (g *Game) goToTree(actorCtx actor.Context, tree *consensus.SignedChainTree) error {
-	oldDid := g.cursor.Did()
+	// oldDid := g.cursor.Did()
 
-	if newDid := tree.MustId(); newDid != oldDid {
-		log.Debugf("moving to a new did %s", newDid)
-		g.network.StopDiscovery(oldDid)
-		go func() {
-			if err := g.network.StartDiscovery(newDid); err != nil {
-				log.Errorf("network.StartDiscovery failed: %s", err)
-			}
-		}()
+	// if newDid := tree.MustId(); newDid != oldDid {
+	// 	log.Debugf("moving to a new did %s", newDid)
+	// 	g.network.StopDiscovery(oldDid)
+	// 	go func() {
+	// 		if err := g.network.StartDiscovery(newDid); err != nil {
+	// 			log.Errorf("network.StartDiscovery failed: %s", err)
+	// 		}
+	// 	}()
 
-		if g.chatSubscriber != nil {
-			actorCtx.Stop(g.chatSubscriber)
-		}
-		chatTopic := topicFor(newDid + "-chat")
-		log.Debugf("subscribing to chat at %s", string(chatTopic))
-		g.chatSubscriber = actorCtx.Spawn(g.network.Community().NewSubscriberProps(chatTopic))
-	}
+	// 	// if g.chatSubscriber != nil {
+	// 	// 	actorCtx.Stop(g.chatSubscriber)
+	// 	// }
+	// 	// chatTopic := topicFor(newDid + "-chat")
+	// 	// log.Debugf("subscribing to chat at %s", string(chatTopic))
+	// 	// g.chatSubscriber = actorCtx.Spawn(g.network.Community().NewSubscriberProps(chatTopic))
+	// }
 
-	g.cursor.SetChainTree(tree).SetLocation(0, 0)
+	// g.cursor.SetChainTree(tree).SetLocation(0, 0)
 
-	l, err := g.cursor.GetLocation()
-	if err != nil {
-		return errors.Wrap(err, fmt.Sprintf("error getting location (%s)", tree.MustId()))
-	}
-	g.sendUIMessage(actorCtx, l)
+	// l, err := g.cursor.GetLocation()
+	// if err != nil {
+	// 	return errors.Wrap(err, fmt.Sprintf("error getting location (%s)", tree.MustId()))
+	// }
+	// g.sendUIMessage(actorCtx, l)
 	return nil
 }
 
 func (g *Game) handleSetDescription(actorCtx actor.Context, desc string) error {
-	log.Info("set description")
+	// log.Info("set description")
 
-	tree := g.cursor.Tree()
-	loc, err := g.cursor.GetLocation()
-	if err != nil {
-		return errors.Wrap(err, "error getting location")
-	}
+	// tree := g.cursor.Tree()
+	// loc, err := g.cursor.GetLocation()
+	// if err != nil {
+	// 	return errors.Wrap(err, "error getting location")
+	// }
 
-	loc.Description = desc
+	// loc.Description = desc
 
-	log.Infof("updating chain %d,%d to %s", g.cursor.X(), g.cursor.Y(), desc)
+	// log.Infof("updating chain %d,%d to %s", g.cursor.X(), g.cursor.Y(), desc)
 
-	err = g.updateLocation(actorCtx, tree, loc)
-	if err != nil {
-		return errors.Wrap(err, "error updating location")
-	}
+	// err = g.updateLocation(actorCtx, tree, loc)
+	// if err != nil {
+	// 	return errors.Wrap(err, "error updating location")
+	// }
 
-	l, err := g.cursor.GetLocation()
-	if err != nil {
-		return errors.Wrap(err, "error getting location")
-	}
-	g.sendUIMessage(actorCtx, l)
+	// l, err := g.cursor.GetLocation()
+	// if err != nil {
+	// 	return errors.Wrap(err, "error getting location")
+	// }
+	// g.sendUIMessage(actorCtx, l)
 	return nil
 }
 
 func (g *Game) updateLocation(actorCtx actor.Context, tree *consensus.SignedChainTree, location *jasonsgame.Location) error {
-	updated, err := g.network.UpdateChainTree(tree, fmt.Sprintf("jasons-game/%d/%d", g.cursor.X(), g.cursor.Y()), location)
-	if err != nil {
-		return errors.Wrap(err, "error updating chaintree")
-	}
+	// updated, err := g.network.UpdateChainTree(tree, fmt.Sprintf("jasons-game/%d/%d", g.cursor.X(), g.cursor.Y()), location)
+	// if err != nil {
+	// 	return errors.Wrap(err, "error updating chaintree")
+	// }
 
-	g.cursor.SetChainTree(updated)
+	// g.cursor.SetChainTree(updated)
 
-	log.Debug("getting cursor location")
+	// log.Debug("getting cursor location")
 	return nil
 }
 
 func (g *Game) handleLocationInput(actorCtx actor.Context, cmd *command, args string) {
-	switch cmd.name {
-	case "north":
-		g.cursor.North()
-	case "east":
-		g.cursor.East()
-	case "south":
-		g.cursor.South()
-	case "west":
-		g.cursor.West()
-	}
-	l, err := g.cursor.GetLocation()
+	response, err := actorCtx.RequestFuture(g.locationActor, &GetInteractions{}, 5*time.Second).Result()
+
 	if err != nil {
 		g.sendUIMessage(actorCtx, fmt.Sprintf("%s some sort of error happened: %v", cmd.name, err))
+		return
 	}
 
-	g.sendUIMessage(actorCtx, l)
+	resp, ok := response.(map[string]*Interaction)
+
+	if !ok {
+		g.sendUIMessage(actorCtx, fmt.Sprintf("%s some sort of error happened", cmd.name))
+		return
+	}
+
+	interaction, ok := resp[cmd.name]
+
+	if !ok {
+		g.sendUIMessage(actorCtx, fmt.Sprintf("%s some sort of error happened %v", cmd.name, "command not found"))
+		return
+	}
+
+	switch interaction.Action {
+	case "changeLocation":
+		newDid, ok := interaction.Args["did"]
+
+		if !ok {
+			g.sendUIMessage(actorCtx, fmt.Sprintf("%s some sort of error happened %v", cmd.name, "did not found"))
+			return
+		}
+
+		g.setLocation(actorCtx, newDid.(string))
+
+		l, err := g.getCurrentLocation(actorCtx)
+
+		if err != nil {
+			g.sendUIMessage(actorCtx, fmt.Sprintf("%s some sort of error happened %v", cmd.name, err))
+			return
+		}
+
+		g.sendUIMessage(actorCtx, l)
+	default:
+		g.sendUIMessage(actorCtx, fmt.Sprintf("%s some sort of error happened %v", cmd.name, "action not found"))
+	}
 }
 
 func (g *Game) handleOpenPortal(actorCtx actor.Context, cmd *command, args string) error {
-	splitArgs := []string{}
-	for _, a := range strings.Split(args, " ") {
-		if len(strings.TrimSpace(a)) > 0 {
-			splitArgs = append(splitArgs, a)
-		}
-	}
-	if len(splitArgs) != 2 {
-		log.Debugf("received wrong number of arguments (%d): %v", len(splitArgs), splitArgs)
-		g.sendUIMessage(actorCtx, "2 arguments required")
-		return nil
-	}
+	// splitArgs := []string{}
+	// for _, a := range strings.Split(args, " ") {
+	// 	if len(strings.TrimSpace(a)) > 0 {
+	// 		splitArgs = append(splitArgs, a)
+	// 	}
+	// }
+	// if len(splitArgs) != 2 {
+	// 	log.Debugf("received wrong number of arguments (%d): %v", len(splitArgs), splitArgs)
+	// 	g.sendUIMessage(actorCtx, "2 arguments required")
+	// 	return nil
+	// }
 
-	onLandId := splitArgs[0]
-	loc := splitArgs[1]
-	log.Debugf("requesting to open portal in land ID %q, location %q", onLandId, loc)
-	locArr := strings.Split(loc, ",")
-	if len(locArr) != 2 {
-		g.sendUIMessage(actorCtx, "You must specify the location as x,y")
-		return nil
-	}
-	x, err := strconv.Atoi(locArr[0])
-	if err != nil {
-		g.sendUIMessage(actorCtx, "X coordinate must be numeric")
-		return nil
-	}
-	y, err := strconv.Atoi(locArr[1])
-	if err != nil {
-		g.sendUIMessage(actorCtx, "Y coordinate must be numeric")
-		return nil
-	}
+	// onLandId := splitArgs[0]
+	// loc := splitArgs[1]
+	// log.Debugf("requesting to open portal in land ID %q, location %q", onLandId, loc)
+	// locArr := strings.Split(loc, ",")
+	// if len(locArr) != 2 {
+	// 	g.sendUIMessage(actorCtx, "You must specify the location as x,y")
+	// 	return nil
+	// }
+	// x, err := strconv.Atoi(locArr[0])
+	// if err != nil {
+	// 	g.sendUIMessage(actorCtx, "X coordinate must be numeric")
+	// 	return nil
+	// }
+	// y, err := strconv.Atoi(locArr[1])
+	// if err != nil {
+	// 	g.sendUIMessage(actorCtx, "Y coordinate must be numeric")
+	// 	return nil
+	// }
 
-	playerId := g.playerTree.Did()
+	// playerId := g.playerTree.Did()
 
-	onLandTree := g.cursor.Tree()
-	toLandId, err := onLandTree.Id()
+	// onLandTree := g.cursor.Tree()
+	// toLandId, err := onLandTree.Id()
 
-	if err != nil {
-		return err
-	}
+	// if err != nil {
+	// 	return err
+	// }
 
-	log.Debugf("broadcasting OpenPortalMessage, on land ID %s, location (%d, %d), to land ID %s",
-		onLandId, x, y, toLandId)
-	if err := g.network.Community().Send(topicFor(onLandId), &jasonsgame.OpenPortalMessage{
-		From:      playerId,
-		To:        onLandId,
-		ToLandId:  toLandId,
-		LocationX: int64(x),
-		LocationY: int64(y),
-	}); err != nil {
-		log.Errorf("failed to broadcast OpenPortalMessage: %s", err)
-		return err
-	}
+	// log.Debugf("broadcasting OpenPortalMessage, on land ID %s, location (%d, %d), to land ID %s",
+	// 	onLandId, x, y, toLandId)
+	// if err := g.network.Community().Send(topicFor(onLandId), &jasonsgame.OpenPortalMessage{
+	// 	From:      playerId,
+	// 	To:        onLandId,
+	// 	ToLandId:  toLandId,
+	// 	LocationX: int64(x),
+	// 	LocationY: int64(y),
+	// }); err != nil {
+	// 	log.Errorf("failed to broadcast OpenPortalMessage: %s", err)
+	// 	return err
+	// }
 
-	g.sendUIMessage(actorCtx, fmt.Sprintf("Requested to open portal on land ID %s", onLandId))
+	// g.sendUIMessage(actorCtx, fmt.Sprintf("Requested to open portal on land ID %s", onLandId))
 	return nil
 }
 
 func (g *Game) handleDropObject(actorCtx actor.Context, args string) error {
-	if len(args) == 0 {
-		g.sendUIMessage(actorCtx, "must give an object name to drop")
-		return nil
-	}
-	objName := args
+	// if len(args) == 0 {
+	// 	g.sendUIMessage(actorCtx, "must give an object name to drop")
+	// 	return nil
+	// }
+	// objName := args
 
-	if _, err := g.refreshLocation(); err != nil {
-		return err
-	}
-	l, err := g.cursor.GetLocation()
-	if err != nil {
-		g.sendUIMessage(actorCtx, fmt.Sprintf("Could not find your current location: %v", err))
-		return fmt.Errorf("Error on GetLocation %v", err)
-	}
+	// g.refreshLocation()
+	// l, err := g.cursor.GetLocation()
+	// if err != nil {
+	// 	g.sendUIMessage(actorCtx, fmt.Sprintf("Could not find your current location: %v", err))
+	// 	return fmt.Errorf("Error on GetLocation %v", err)
+	// }
 
-	response, err := actorCtx.RequestFuture(g.inventory, &DropObjectRequest{
-		Name:     objName,
-		Location: l,
-	}, 5*time.Second).Result()
-	if err != nil {
-		return err
-	}
+	// response, err := actorCtx.RequestFuture(g.inventory, &DropObjectRequest{
+	// 	Name:     objName,
+	// 	Location: l,
+	// }, 5*time.Second).Result()
 
-	resp, ok := response.(*DropObjectResponse)
-	if !ok {
-		return fmt.Errorf("error casting drop object response")
-	}
+	// resp, ok := response.(*DropObjectResponse)
+	// if !ok {
+	// 	return fmt.Errorf("error casting drop object response")
+	// }
 
-	if resp.Error != nil {
-		g.sendUIMessage(actorCtx, resp.Error)
-		return resp.Error
-	}
+	// if resp.Error != nil {
+	// 	g.sendUIMessage(actorCtx, resp.Error)
+	// 	return resp.Error
+	// }
 
-	if _, err := g.refreshLocation(); err != nil {
-		return err
-	}
-	g.sendUIMessage(actorCtx, fmt.Sprintf("%s has been dropped into %v", objName, l.PrettyString()))
+	// g.refreshLocation()
+	// g.sendUIMessage(actorCtx, fmt.Sprintf("%s has been dropped into %v", objName, l.PrettyString()))
 	return nil
 }
 
 func (g *Game) handlePickupObject(actorCtx actor.Context, args string) error {
-	if len(args) == 0 {
-		g.sendUIMessage(actorCtx, "must give an object name to pickup")
-		return nil
-	}
+	// if len(args) == 0 {
+	// 	g.sendUIMessage(actorCtx, "must give an object name to pickup")
+	// 	return nil
+	// }
 
-	objName := args
+	// objName := args
 
-	if _, err := g.refreshLocation(); err != nil {
-		return err
-	}
-	l, err := g.cursor.GetLocation()
-	if err != nil {
-		g.sendUIMessage(actorCtx, fmt.Sprintf("Could not find your current location: %v", err))
-		return fmt.Errorf("Error on GetLocation %v", err)
-	}
+	// g.refreshLocation()
+	// l, err := g.cursor.GetLocation()
+	// if err != nil {
+	// 	g.sendUIMessage(actorCtx, fmt.Sprintf("Could not find your current location: %v", err))
+	// 	return fmt.Errorf("Error on GetLocation %v", err)
+	// }
 
-	response, err := actorCtx.RequestFuture(g.inventory, &PickupObjectRequest{
-		Name:     objName,
-		Location: l,
-	}, 10*time.Second).Result()
-	if err != nil {
-		return err
-	}
+	// response, err := actorCtx.RequestFuture(g.inventory, &PickupObjectRequest{
+	// 	Name:     objName,
+	// 	Location: l,
+	// }, 10*time.Second).Result()
 
-	resp, ok := response.(*PickupObjectResponse)
-	if !ok {
-		return fmt.Errorf("error casting pickup object response")
-	}
+	// resp, ok := response.(*PickupObjectResponse)
+	// if !ok {
+	// 	return fmt.Errorf("error casting pickup object response")
+	// }
 
-	if resp.Error != nil {
-		g.sendUIMessage(actorCtx, resp.Error)
-		return resp.Error
-	}
+	// if resp.Error != nil {
+	// 	g.sendUIMessage(actorCtx, resp.Error)
+	// 	return resp.Error
+	// }
 
-	if _, err := g.refreshLocation(); err != nil {
-		return err
-	}
-	g.sendUIMessage(actorCtx, fmt.Sprintf("%s has been picked up from %v", objName, l.PrettyString()))
+	// g.refreshLocation()
+	// g.sendUIMessage(actorCtx, fmt.Sprintf("%s has been picked up from %v", objName, l.PrettyString()))
 	return nil
 }
 
 func (g *Game) handleCreateObject(actorCtx actor.Context, args string) error {
-	splitArgs := strings.Split(args, " ")
-	objName := splitArgs[0]
-	response, err := actorCtx.RequestFuture(g.inventory, &CreateObjectRequest{
-		Name:        objName,
-		Description: strings.Join(splitArgs[1:], " "),
-	}, 5*time.Second).Result()
-	if err != nil {
-		return err
-	}
+	// splitArgs := strings.Split(args, " ")
+	// objName := splitArgs[0]
+	// response, err := actorCtx.RequestFuture(g.inventory, &CreateObjectRequest{
+	// 	Name:        objName,
+	// 	Description: strings.Join(splitArgs[1:], " "),
+	// }, 5*time.Second).Result()
+	// if err != nil {
+	// 	return err
+	// }
 
-	newObject, ok := response.(*CreateObjectResponse)
-	if !ok {
-		return fmt.Errorf("error casting create object response")
-	}
+	// newObject, ok := response.(*CreateObjectResponse)
+	// if !ok {
+	// 	return fmt.Errorf("error casting create object response")
+	// }
 
-	g.sendUIMessage(actorCtx, fmt.Sprintf("%s has been created with DID %s and is in your bag of hodling", objName, newObject.Object.Did))
+	// g.sendUIMessage(actorCtx, fmt.Sprintf("%s has been created with DID %s and is in your bag of hodling", objName, newObject.Object.Did))
 	return nil
 }
 
 func (g *Game) handlePlayerInventoryList(actorCtx actor.Context) error {
-	response, err := actorCtx.RequestFuture(g.inventory, &InventoryListRequest{}, 5*time.Second).Result()
-	if err != nil {
-		return err
-	}
-	inventoryList, ok := response.(*InventoryListResponse)
-	if !ok {
-		return fmt.Errorf("error casting InventoryListResponse")
-	}
+	// response, err := actorCtx.RequestFuture(g.inventory, &InventoryListRequest{}, 5*time.Second).Result()
+	// if err != nil {
+	// 	return err
+	// }
+	// inventoryList, ok := response.(*InventoryListResponse)
+	// if !ok {
+	// 	return fmt.Errorf("error casting InventoryListResponse")
+	// }
 
-	if len(inventoryList.Objects) == 0 {
-		g.sendUIMessage(actorCtx, "your bag of hodling appears to be empty")
-		return nil
-	}
+	// if len(inventoryList.Objects) == 0 {
+	// 	g.sendUIMessage(actorCtx, "your bag of hodling appears to be empty")
+	// 	return nil
+	// }
 
-	g.sendUIMessage(actorCtx, "inside of your bag of hodling you find:")
-	for objName, obj := range inventoryList.Objects {
-		g.sendUIMessage(actorCtx, fmt.Sprintf("%s (%s)", objName, obj.Did))
-	}
+	// g.sendUIMessage(actorCtx, "inside of your bag of hodling you find:")
+	// for objName, obj := range inventoryList.Objects {
+	// 	g.sendUIMessage(actorCtx, fmt.Sprintf("%s (%s)", objName, obj.Did))
+	// }
 	return nil
 }
 
 func (g *Game) handleLocationInventoryList(actorCtx actor.Context) error {
-	if _, err := g.refreshLocation(); err != nil {
-		return err
-	}
-	l, err := g.cursor.GetLocation()
-	if err != nil {
-		g.sendUIMessage(actorCtx, fmt.Sprintf("Could not find your current location: %v", err))
-		return fmt.Errorf("Error on GetLocation %v", err)
-	}
+	// g.refreshLocation()
+	// l, err := g.cursor.GetLocation()
+	// if err != nil {
+	// 	g.sendUIMessage(actorCtx, fmt.Sprintf("Could not find your current location: %v", err))
+	// 	return fmt.Errorf("Error on GetLocation %v", err)
+	// }
 
-	sawSomething := false
+	// sawSomething := false
 
-	if len(l.Inventory) > 0 {
-		sawSomething = true
-		g.sendUIMessage(actorCtx, "you see the following objects around you:")
-		for objName, objDid := range l.Inventory {
-			g.sendUIMessage(actorCtx, fmt.Sprintf("%s (%s)", objName, objDid))
-		}
-	}
+	// if len(l.Inventory) > 0 {
+	// 	sawSomething = true
+	// 	g.sendUIMessage(actorCtx, "you see the following objects around you:")
+	// 	for objName, objDid := range l.Inventory {
+	// 		g.sendUIMessage(actorCtx, fmt.Sprintf("%s (%s)", objName, objDid))
+	// 	}
+	// }
 
-	if l.Portal != nil {
-		sawSomething = true
-		g.sendUIMessage(actorCtx, fmt.Sprintf("you see a mysterious portal leading to %s", l.Portal.To))
-	}
+	// if l.Portal != nil {
+	// 	sawSomething = true
+	// 	g.sendUIMessage(actorCtx, fmt.Sprintf("you see a mysterious portal leading to %s", l.Portal.To))
+	// }
 
-	if !sawSomething {
-		g.sendUIMessage(actorCtx, "you look around but don't see anything")
-	}
+	// if !sawSomething {
+	// 	g.sendUIMessage(actorCtx, "you look around but don't see anything")
+	// }
 	return nil
 }
 
@@ -599,6 +585,7 @@ func (g *Game) sendUIMessage(actorCtx actor.Context, mesgInter interface{}) {
 }
 
 func (g *Game) handleOpenPortalMessage(actorCtx actor.Context, msg *jasonsgame.OpenPortalMessage) error {
+<<<<<<< HEAD
 	landTree := g.cursor.Tree()
 	landId, err := landTree.Id()
 	if err != nil {
@@ -639,6 +626,48 @@ func (g *Game) handleOpenPortalMessage(actorCtx actor.Context, msg *jasonsgame.O
 	if err == nil {
 		g.cursor.SetChainTree(updated)
 	}
+=======
+	// landTree := g.cursor.Tree()
+	// landId, err := landTree.Id()
+	// if err != nil {
+	// 	return err
+	// }
+
+	// log.Debugf("handling OpenPortalMessage from %s, location: (%d, %d)", msg.From, msg.LocationX,
+	// 	msg.LocationY)
+	// g.sendUIMessage(actorCtx, fmt.Sprintf("Player %s wants to open a portal in your land",
+	// 	msg.From))
+	// g.sendUIMessage(actorCtx, "Request to open portal in your land auto-accepted "+
+	// 	"(this is an ALPHA version, future versions will prompt for acceptance)")
+	// // TODO: Prompt user for permission
+
+	// log.Debugf("Broadcasting OpenPortalResponseMessage back to sender")
+	// if err := g.network.Community().Send(topicFor(msg.From), &jasonsgame.OpenPortalResponseMessage{
+	// 	From:      g.playerTree.Did(),
+	// 	To:        msg.From,
+	// 	Accepted:  true,
+	// 	LandId:    landId,
+	// 	LocationX: msg.LocationX,
+	// 	LocationY: msg.LocationY,
+	// }); err != nil {
+	// 	return err
+	// }
+
+	// loc, err := g.cursor.GetLocation()
+	// if err != nil {
+	// 	return err
+	// }
+	// loc.Portal = &jasonsgame.Portal{
+	// 	To: msg.ToLandId,
+	// }
+	// log.Debugf("Playing transaction to add portal to %s at location (%d, %d) in land",
+	// 	msg.ToLandId, loc.X, loc.Y)
+	// updated, err := g.network.UpdateChainTree(landTree,
+	// 	fmt.Sprintf("jasons-game/%d/%d", g.cursor.X(), g.cursor.Y()), loc)
+	// if err == nil {
+	// 	g.cursor.SetChainTree(updated)
+	// }
+>>>>>>> work twoard locations as individual chaintress in graph
 
 	return nil
 }
@@ -654,4 +683,33 @@ func (g *Game) handleOpenPortalResponseMessage(actorCtx actor.Context,
 			msg.FromPlayer(), msg.LocationX, msg.LocationY)
 	}
 	g.sendUIMessage(actorCtx, uiMsg)
+}
+
+func (g *Game) setLocation(actorCtx actor.Context, locationDid string) {
+	if g.locationActor != nil {
+		actorCtx.Stop(g.locationActor)
+	}
+	g.locationActor = actorCtx.Spawn(NewLocationActorProps(&LocationActorConfig{
+		Network: g.network,
+		Did:     locationDid,
+	}))
+	if g.chatActor != nil {
+		actorCtx.Stop(g.chatActor)
+	}
+	g.chatActor = actorCtx.Spawn(NewChatActorProps(&ChatActorConfig{
+		Network: g.network,
+		Did:     locationDid,
+	}))
+}
+
+func (g *Game) getCurrentLocation(actorCtx actor.Context) (*jasonsgame.Location, error) {
+	response, err := actorCtx.RequestFuture(g.locationActor, &GetLocation{}, 5*time.Second).Result()
+	if err != nil {
+		return nil, err
+	}
+	_, ok := response.(*jasonsgame.Location)
+	if !ok {
+		return nil, fmt.Errorf("error casting location")
+	}
+	return &jasonsgame.Location{}, nil
 }

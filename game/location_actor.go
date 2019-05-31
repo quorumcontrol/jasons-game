@@ -14,20 +14,32 @@ import (
 	"github.com/quorumcontrol/jasons-game/pb/jasonsgame"
 )
 
-type LandActor struct {
+// jasonsgame/interactions/go/north
+
+type LocationActor struct {
 	middleware.LogAwareHolder
 	network network.Network
 	did     string
 }
 
-type LandActorConfig struct {
+type LocationActorConfig struct {
 	Network network.Network
 	Did     string
 }
 
-func NewLandActorProps(cfg *LandActorConfig) *actor.Props {
+type GetLocation struct{}
+
+type GetInteractions struct{}
+
+type Interaction struct {
+	Command string
+	Action  string
+	Args    map[string]interface{}
+}
+
+func NewLocationActorProps(cfg *LocationActorConfig) *actor.Props {
 	return actor.PropsFromProducer(func() actor.Actor {
-		return &LandActor{
+		return &LocationActor{
 			did:     cfg.Did,
 			network: cfg.Network,
 		}
@@ -37,19 +49,29 @@ func NewLandActorProps(cfg *LandActorConfig) *actor.Props {
 	)
 }
 
-func (l *LandActor) Receive(context actor.Context) {
+func (l *LocationActor) Receive(context actor.Context) {
 	switch msg := context.Message().(type) {
 	case *actor.Started:
 		_, err := l.network.Community().SubscribeActor(context.Self(), topicFor(l.did))
 		if err != nil {
 			panic(errors.Wrap(err, "error spawning land actor subscription"))
 		}
+	case *GetLocation:
+		context.Respond(&jasonsgame.Location{})
+	case *GetInteractions:
+		locationInteractions := map[string]*Interaction{
+			"north": &Interaction{Command: "north", Action: "changeLocation", Args: map[string]interface{}{"did": l.did}},
+			"south": &Interaction{Command: "south", Action: "changeLocation", Args: map[string]interface{}{"did": l.did}},
+			"east":  &Interaction{Command: "east", Action: "changeLocation", Args: map[string]interface{}{"did": l.did}},
+			"west":  &Interaction{Command: "west", Action: "changeLocation", Args: map[string]interface{}{"did": l.did}},
+		}
+		context.Respond(locationInteractions)
 	case *jasonsgame.TransferredObjectMessage:
 		l.handleTransferredObject(context, msg)
 	}
 }
 
-func (l *LandActor) handleTransferredObject(context actor.Context, msg *jasonsgame.TransferredObjectMessage) {
+func (l *LocationActor) handleTransferredObject(context actor.Context, msg *jasonsgame.TransferredObjectMessage) {
 	c := new(navigator.Cursor).SetChainTree(l.ChainTree()).SetLocation(msg.Loc[0], msg.Loc[1])
 	loc, err := c.GetLocation()
 	if err != nil {
@@ -65,7 +87,7 @@ func (l *LandActor) handleTransferredObject(context actor.Context, msg *jasonsga
 	}
 }
 
-func (l *LandActor) handleIncomingObject(context actor.Context, loc *jasonsgame.Location, msg *jasonsgame.TransferredObjectMessage) {
+func (l *LocationActor) handleIncomingObject(context actor.Context, loc *jasonsgame.Location, msg *jasonsgame.TransferredObjectMessage) {
 	obj := Object{Did: msg.Object}
 	netobj := NetworkObject{Object: obj, Network: l.network}
 	key, err := netobj.Name()
@@ -91,7 +113,7 @@ func (l *LandActor) handleIncomingObject(context actor.Context, loc *jasonsgame.
 	l.Log.Debugf("Object %v has been dropped at %v", obj.Did, loc.PrettyString())
 }
 
-func (l *LandActor) handleOutgoingObject(context actor.Context, loc *jasonsgame.Location, msg *jasonsgame.TransferredObjectMessage) {
+func (l *LocationActor) handleOutgoingObject(context actor.Context, loc *jasonsgame.Location, msg *jasonsgame.TransferredObjectMessage) {
 	obj := Object{Did: msg.Object}
 	netobj := NetworkObject{Object: obj, Network: l.network}
 	key, err := netobj.Name()
@@ -140,7 +162,7 @@ func (l *LandActor) handleOutgoingObject(context actor.Context, loc *jasonsgame.
 	l.Log.Debugf("Object %v has been picked up from %v by %v", obj.Did, loc.PrettyString(), playerTree.Did())
 }
 
-func (l *LandActor) ChainTree() *consensus.SignedChainTree {
+func (l *LocationActor) ChainTree() *consensus.SignedChainTree {
 	tree, err := l.network.GetTree(l.did)
 	if err != nil {
 		panic(fmt.Errorf("could not find chaintree with did %v", l.did))

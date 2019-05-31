@@ -14,7 +14,7 @@ import (
 	"github.com/quorumcontrol/jasons-game/pb/jasonsgame"
 )
 
-const ObjectsPath = "jasons-game/player/bag-of-hodling"
+const ObjectsPath = "jasons-game/inventory"
 
 type InventoryActor struct {
 	middleware.LogAwareHolder
