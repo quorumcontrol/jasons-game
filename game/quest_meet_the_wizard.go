@@ -152,6 +152,22 @@ func (q *MeetTheWizard) NextStep(actorCtx actor.Context, game *Game) (*QuestStep
 			time.Sleep(1 * time.Second)
 			return q.NextStep(actorCtx, game)
 		}
+	case (location.X == 0 && location.Y == -1) ||
+		(location.X == -1 && location.Y == 0) ||
+		(location.X == 1 && location.Y == 0):
+			return messageStep(-1, `
+You are in a non-descript room.  
+Or maybe its a cave.
+No, its somewhere in between.
+Either way there is not much going on here.
+`), nil
+	case (location.X == 1 && location.Y == 1) ||
+		(location.X == -1 && location.Y == 1):
+			return messageStep(-1, `
+After opening the heavy wooden door and stepping through you see a pile of debris.
+At one point this may have been some sort of storage room but now it just smells musty.
+You better get back on track if you are ever going to figure out whats going on around here.
+`), nil
 	// TODO: Finish rest of the steps
 	default:
 		return messageStep(-1, "You are off the beaten path."), nil
