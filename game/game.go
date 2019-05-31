@@ -124,6 +124,7 @@ func (g *Game) handleUserInput(actorCtx actor.Context, input *jasonsgame.UserInp
 	case "build-portal":
 		err = g.handleBuildPortal(actorCtx, args)
 	case "say":
+<<<<<<< HEAD
 		// l, err := g.cursor.GetLocation()
 		// if err == nil {
 		// 	// chatTopic := topicFor(l.Did + "-chat")
@@ -132,6 +133,9 @@ func (g *Game) handleUserInput(actorCtx actor.Context, input *jasonsgame.UserInp
 		// 	// 	log.Errorf("failed to broadcast ChatMessage: %s", err)
 		// 	// }
 		// }
+=======
+		actorCtx.Send(g.chatActor, args)
+>>>>>>> interactions
 	case "shout":
 		if err := g.network.Community().Send(shoutChannel, &jasonsgame.ShoutMessage{Message: args}); err != nil {
 			log.Errorf("failed to broadcast ShoutMessage: %s", err)
@@ -316,24 +320,17 @@ func (g *Game) updateLocation(actorCtx actor.Context, tree *consensus.SignedChai
 }
 
 func (g *Game) handleLocationInput(actorCtx actor.Context, cmd *command, args string) {
-	response, err := actorCtx.RequestFuture(g.locationActor, &GetInteractions{}, 5*time.Second).Result()
+	response, err := actorCtx.RequestFuture(g.locationActor, &GetInteraction{Command: cmd.name}, 5*time.Second).Result()
 
 	if err != nil {
 		g.sendUIMessage(actorCtx, fmt.Sprintf("%s some sort of error happened: %v", cmd.name, err))
 		return
 	}
 
-	resp, ok := response.(map[string]*Interaction)
+	interaction, ok := response.(*Interaction)
 
 	if !ok {
 		g.sendUIMessage(actorCtx, fmt.Sprintf("%s some sort of error happened", cmd.name))
-		return
-	}
-
-	interaction, ok := resp[cmd.name]
-
-	if !ok {
-		g.sendUIMessage(actorCtx, fmt.Sprintf("%s some sort of error happened %v", cmd.name, "command not found"))
 		return
 	}
 
@@ -346,7 +343,7 @@ func (g *Game) handleLocationInput(actorCtx actor.Context, cmd *command, args st
 			return
 		}
 
-		g.setLocation(actorCtx, newDid.(string))
+		g.setLocation(actorCtx, newDid)
 
 		l, err := g.getCurrentLocation(actorCtx)
 
@@ -697,8 +694,8 @@ func (g *Game) setLocation(actorCtx actor.Context, locationDid string) {
 		actorCtx.Stop(g.chatActor)
 	}
 	g.chatActor = actorCtx.Spawn(NewChatActorProps(&ChatActorConfig{
-		Network: g.network,
-		Did:     locationDid,
+		Did:       locationDid,
+		Community: g.network.Community(),
 	}))
 }
 

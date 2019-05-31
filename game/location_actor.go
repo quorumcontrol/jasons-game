@@ -5,13 +5,13 @@ import (
 
 	"github.com/AsynkronIT/protoactor-go/actor"
 	"github.com/AsynkronIT/protoactor-go/plugin"
+	"github.com/mitchellh/mapstructure"
 	"github.com/pkg/errors"
-	"github.com/quorumcontrol/tupelo-go-sdk/consensus"
-	"github.com/quorumcontrol/tupelo-go-sdk/gossip3/middleware"
-
 	"github.com/quorumcontrol/jasons-game/navigator"
 	"github.com/quorumcontrol/jasons-game/network"
 	"github.com/quorumcontrol/jasons-game/pb/jasonsgame"
+	"github.com/quorumcontrol/tupelo-go-sdk/consensus"
+	"github.com/quorumcontrol/tupelo-go-sdk/gossip3/middleware"
 )
 
 // jasonsgame/interactions/go/north
@@ -29,12 +29,14 @@ type LocationActorConfig struct {
 
 type GetLocation struct{}
 
-type GetInteractions struct{}
+type GetInteraction struct {
+	Command string
+}
 
 type Interaction struct {
 	Command string
 	Action  string
-	Args    map[string]interface{}
+	Args    map[string]string
 }
 
 func NewLocationActorProps(cfg *LocationActorConfig) *actor.Props {
@@ -58,14 +60,33 @@ func (l *LocationActor) Receive(context actor.Context) {
 		}
 	case *GetLocation:
 		context.Respond(&jasonsgame.Location{})
-	case *GetInteractions:
-		locationInteractions := map[string]*Interaction{
-			"north": &Interaction{Command: "north", Action: "changeLocation", Args: map[string]interface{}{"did": l.did}},
-			"south": &Interaction{Command: "south", Action: "changeLocation", Args: map[string]interface{}{"did": l.did}},
-			"east":  &Interaction{Command: "east", Action: "changeLocation", Args: map[string]interface{}{"did": l.did}},
-			"west":  &Interaction{Command: "west", Action: "changeLocation", Args: map[string]interface{}{"did": l.did}},
+	case *GetInteraction:
+		// locationInteractions := map[string]*Interaction{
+		// 	"north": &Interaction{Command: "north", Action: "changeLocation", Args: map[string]interface{}{"did": l.did}},
+		// 	"south": &Interaction{Command: "south", Action: "changeLocation", Args: map[string]interface{}{"did": l.did}},
+		// 	"east":  &Interaction{Command: "east", Action: "changeLocation", Args: map[string]interface{}{"did": l.did}},
+		// 	"west":  &Interaction{Command: "west", Action: "changeLocation", Args: map[string]interface{}{"did": l.did}},
+		// }
+		tree, err := l.network.GetTree(l.did)
+		if err != nil {
+			panic(err)
 		}
-		context.Respond(locationInteractions)
+
+		resp, _, err := tree.ChainTree.Dag.Resolve(append([]string{"tree", "data", "jasons-game", "interactions", msg.Command}))
+		if err != nil {
+			panic(err)
+		}
+
+		var interaction Interaction
+
+		err = mapstructure.Decode(resp, &interaction)
+		if err != nil {
+			panic(err)
+		}
+
+		interaction.Command = msg.Command
+
+		context.Respond(&interaction)
 	case *jasonsgame.TransferredObjectMessage:
 		l.handleTransferredObject(context, msg)
 	}

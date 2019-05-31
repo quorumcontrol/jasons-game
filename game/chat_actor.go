@@ -1,9 +1,13 @@
 package game
 
 import (
+	"fmt"
+
 	"github.com/AsynkronIT/protoactor-go/actor"
 	"github.com/AsynkronIT/protoactor-go/plugin"
+	communityClient "github.com/quorumcontrol/community/client"
 	"github.com/quorumcontrol/jasons-game/network"
+	"github.com/quorumcontrol/jasons-game/pb/jasonsgame"
 	"github.com/quorumcontrol/tupelo-go-sdk/gossip3/middleware"
 )
 
@@ -15,20 +19,21 @@ func chatTopicFromDid(did string) []byte {
 
 type ChatActor struct {
 	middleware.LogAwareHolder
-	network network.Network
-	did     string
+	did          string
+	community    *network.Community
+	subscription *communityClient.Subscription
 }
 
 type ChatActorConfig struct {
-	Network network.Network
-	Did     string
+	Did       string
+	Community *network.Community
 }
 
 func NewChatActorProps(cfg *ChatActorConfig) *actor.Props {
 	return actor.PropsFromProducer(func() actor.Actor {
 		return &ChatActor{
-			network: cfg.Network,
-			did:     cfg.Did,
+			did:       cfg.Did,
+			community: cfg.Community,
 		}
 	}).WithReceiverMiddleware(
 		middleware.LoggingMiddleware,
@@ -37,8 +42,21 @@ func NewChatActorProps(cfg *ChatActorConfig) *actor.Props {
 }
 
 func (c *ChatActor) Receive(actorCtx actor.Context) {
-	switch actorCtx.Message().(type) {
+	switch msg := actorCtx.Message().(type) {
 	case *actor.Started:
-		c.network.Community().SubscribeActor(actorCtx.Self(), chatTopicFromDid(c.did))
+		var err error
+		c.subscription, err = c.community.SubscribeActor(actorCtx.Self(), chatTopicFromDid(c.did))
+		if err != nil {
+			panic(err)
+		}
+	case string:
+		err := c.community.Send(chatTopicFromDid(c.did), &jasonsgame.ChatMessage{Message: msg})
+		if err != nil {
+			panic(fmt.Errorf("failed to broadcast ChatMessage: %s", err))
+		}
+	case *jasonsgame.ChatMessage:
+		actorCtx.Send(actorCtx.Parent(), msg)
+	case *actor.Stopping:
+		c.community.Unsubscribe(c.subscription)
 	}
 }
