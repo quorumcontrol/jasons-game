@@ -12,6 +12,7 @@ func init() {
 	messages.RegisterMessage(&OpenPortalMessage{})
 	messages.RegisterMessage(&OpenPortalResponseMessage{})
 	messages.RegisterMessage(&TransferredObjectMessage{})
+	messages.RegisterMessage(&QuestMessage{})
 }
 
 type PlayerMessage interface {
@@ -91,4 +92,12 @@ type TransferredObjectMessage struct {
 
 func (m *TransferredObjectMessage) TypeCode() int8 {
 	return -105
+}
+
+type QuestMessage struct {
+	Message string
+}
+
+func (qm *QuestMessage) TypeCode() int8 {
+	return -106
 }

@@ -126,7 +126,10 @@ func (gs *GameServer) makeRoutingTable(net network.Network,
 		return nil, err
 	}
 	gameActor := actor.EmptyRootContext.Spawn(game.NewGameProps(playerTree, uiActor,
-		net, broadcaster))
+		net, broadcaster,
+		[]game.Quest{
+			&game.MeetTheWizard{},
+		}))
 	treeId, err := playerTree.HomeTree.Id()
 	if err != nil {
 		return nil, err

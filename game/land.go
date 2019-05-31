@@ -55,7 +55,7 @@ func (l *LandActor) handleTransferredObject(context actor.Context, msg *messages
 	}
 
 	if loc.Did == msg.To {
-		l.handleIncomingObject(context, loc, msg)
+		l.handleIncomingObject(context, loc, msg.Object)
 	} else if loc.Did == msg.From {
 		l.handleOutgoingObject(context, loc, msg)
 	} else {
@@ -63,13 +63,13 @@ func (l *LandActor) handleTransferredObject(context actor.Context, msg *messages
 	}
 }
 
-func (l *LandActor) handleIncomingObject(context actor.Context, loc *jasonsgame.Location, msg *messages.TransferredObjectMessage) {
-	obj := Object{Did: msg.Object}
+func (l *LandActor) handleIncomingObject(context actor.Context, loc *jasonsgame.Location, objDID string) {
+	obj := Object{Did: objDID}
 	netobj := NetworkObject{Object: obj, Network: l.network}
 	key, err := netobj.Name()
 
 	if err != nil {
-		panic(fmt.Errorf("error fetching object name for %v: %v", msg.Object, err))
+		panic(fmt.Errorf("error fetching object name for %v: %v", objDID, err))
 	}
 
 	if loc.Inventory == nil {

@@ -10,14 +10,16 @@ import (
 	"github.com/ipfs/go-cid"
 	logging "github.com/ipfs/go-log"
 	"github.com/pkg/errors"
+
 	"github.com/quorumcontrol/jasons-game/messages"
+
+	"github.com/quorumcontrol/tupelo-go-sdk/consensus"
+	gossip3messages "github.com/quorumcontrol/tupelo-go-sdk/gossip3/messages"
 
 	"github.com/quorumcontrol/jasons-game/navigator"
 	"github.com/quorumcontrol/jasons-game/network"
 	"github.com/quorumcontrol/jasons-game/pb/jasonsgame"
 	"github.com/quorumcontrol/jasons-game/ui"
-	"github.com/quorumcontrol/tupelo-go-sdk/consensus"
-	gossip3messages "github.com/quorumcontrol/tupelo-go-sdk/gossip3/messages"
 )
 
 var log = logging.Logger("game")
@@ -38,10 +40,16 @@ type Game struct {
 	inventory       *actor.PID
 	home            *actor.PID
 	broadcaster     *messages.Broadcaster
+	quests          []Quest
 }
 
 func NewGameProps(playerTree *PlayerTree, ui *actor.PID,
-	network network.Network, broadcaster *messages.Broadcaster) *actor.Props {
+	network network.Network, broadcaster *messages.Broadcaster, quests []Quest) *actor.Props {
+
+	for _, quest := range quests {
+		quest.InitState(&QuestState{})
+	}
+
 	return actor.PropsFromProducer(func() actor.Actor {
 		return &Game{
 			ui:          ui,
@@ -49,6 +57,7 @@ func NewGameProps(playerTree *PlayerTree, ui *actor.PID,
 			commands:    defaultCommandList,
 			broadcaster: broadcaster,
 			playerTree:  playerTree,
+			quests:      quests,
 		}
 	})
 }
@@ -124,6 +133,10 @@ func (g *Game) initialize(actorCtx actor.Context) {
 		panic(fmt.Errorf("error getting initial location: %v", err))
 	}
 	g.sendUIMessage(actorCtx, l)
+
+	g.updateQuests(actorCtx)
+
+	g.sendQuestUIMessages(actorCtx)
 }
 
 func (g *Game) handleUserInput(actorCtx actor.Context, input *jasonsgame.UserInput) {
@@ -198,6 +211,10 @@ func (g *Game) handleUserInput(actorCtx actor.Context, input *jasonsgame.UserInp
 	if err != nil {
 		g.sendUIMessage(actorCtx, fmt.Sprintf("error with your command: %v", err))
 	}
+
+	g.updateQuests(actorCtx)
+
+	g.sendQuestUIMessages(actorCtx)
 }
 
 func (g *Game) handleName(name string) error {
@@ -688,3 +705,39 @@ func (nl *NetworkLocation) ObjectPath(obj *CreateObjectRequest) (string, error) 
 	return strings.Join(locationPath, "/"), nil
 }
 
+func (g *Game) PlayerLocation() *NetworkLocation {
+	loc, err := g.cursor.GetLocation()
+	if err != nil {
+		log.Errorf("error getting player location: %v", err)
+		return nil
+	}
+
+	return &NetworkLocation{
+		Location: loc,
+		Network:  g.network,
+	}
+}
+
+func (g *Game) PlayerTree() *PlayerTree {
+	return g.playerTree
+}
+
+func (g *Game) Quests() []Quest {
+	return g.quests
+}
+
+func (g *Game) updateQuests(actorCtx actor.Context) {
+	updateQuests(actorCtx, g)
+}
+
+func (g *Game) sendQuestUIMessages(actorCtx actor.Context) {
+	for _, quest := range g.quests {
+		if quest.State().started && !quest.State().completed {
+			if quest.State().currentStep != nil {
+				if msg := quest.State().currentStep.Message.Message; msg != "" {
+					g.sendUIMessage(actorCtx, msg)
+				}
+			}
+		}
+	}
+}

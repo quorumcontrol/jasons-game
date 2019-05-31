@@ -13,11 +13,12 @@ import (
 	"github.com/ipfs/go-merkledag"
 	"github.com/quorumcontrol/chaintree/nodestore"
 	"github.com/quorumcontrol/chaintree/safewrap"
-	"github.com/quorumcontrol/jasons-game/pb/jasonsgame"
 	"github.com/quorumcontrol/tupelo-go-sdk/consensus"
 	"github.com/quorumcontrol/tupelo-go-sdk/gossip3/remote"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/quorumcontrol/jasons-game/pb/jasonsgame"
 )
 
 func TestPublicTreeStore(t *testing.T) {
