@@ -25,6 +25,8 @@ $(FIRSTGOPATH)/src/github.com/gogo/protobuf/gogoproto:
 $(FIRSTGOPATH)/bin/protoc-gen-gogofaster: $(FIRSTGOPATH)/src/github.com/gogo/protobuf/proto $(FIRSTGOPATH)/src/github.com/gogo/protobuf/gogoproto
 	go get -u github.com/gogo/protobuf/protoc-gen-gogofaster
 
+generated: $(generated)
+
 $(generated): $(FIRSTGOPATH)/bin/protoc-gen-gogofaster $(FIRSTGOPATH)/bin/msgp $(jsmodules) messages/messages.go network/messages.go
 	./scripts/protogen.sh
 	cd messages && go generate
@@ -115,4 +117,4 @@ clean: $(FIRSTGOPATH)/bin/packr2
 	rm -rf bin
 	rm -rf JasonsGame.app/Contents/MacOS
 
-.PHONY: all build test integration-test localnet clean lint game-server jason game2 mac-app
+.PHONY: all build test integration-test localnet clean lint game-server jason game2 generated mac-app
