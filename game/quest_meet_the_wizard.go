@@ -136,12 +136,21 @@ func (q *MeetTheWizard) NextStep(actorCtx actor.Context, game *Game) (*QuestStep
 	}
 
 	switch {
+	case location.X == 0 && location.Y == 0:
+		// in case player returns to origin
+		return messageStep(-1, "Should you follow that wizard fellow north?"), nil
 	case location.X == 0 && location.Y == 1 && q.state.highestIndex == 0:
 		return q.secondStep(), nil
+	case location.X == 0 && location.Y == 1 && q.state.highestIndex > 0:
+		return messageStep(-1, "Should you follow that wizard fellow north?"), nil
 	case location.X == 0 && location.Y == 2 && q.state.highestIndex == 1:
 		return q.thirdStep(), nil
+	case location.X == 0 && location.Y == 2 && q.state.highestIndex == 2:
+		return messageStep(-1, "The wizard thinks you should head east. Seems sketchy."), nil
 	case location.X == 1 && location.Y == 2 && q.state.highestIndex == 2:
 		return q.fourthStep(actorCtx, game), nil
+	case location.X == 1 && location.Y == 2 && q.state.highestIndex == 3:
+		return messageStep(-1, "Did you find it?"), nil
 	case location.X == 0 && location.Y == 2 && q.state.highestIndex == 3:
 		return q.fifthStep(), nil
 	case location.X == 0 && location.Y == 2 && q.state.highestIndex == 4:
@@ -168,7 +177,6 @@ After opening the heavy wooden door and stepping through you see a pile of debri
 At one point this may have been some sort of storage room but now it just smells musty.
 You better get back on track if you are ever going to figure out whats going on around here.
 `), nil
-	// TODO: Finish rest of the steps
 	default:
 		return messageStep(-1, "You are off the beaten path."), nil
 	}
