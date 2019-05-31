@@ -735,7 +735,8 @@ func (g *Game) sendQuestUIMessages(actorCtx actor.Context) {
 		if quest.State().started && !quest.State().completed {
 			if quest.State().currentStep != nil {
 				if msg := quest.State().currentStep.Message.Message; msg != "" {
-					g.sendUIMessage(actorCtx, msg)
+					message := fmt.Sprintf("Quest (%s): %s", quest.PrettyString(), msg)
+					g.sendUIMessage(actorCtx, message)
 				}
 			}
 		}
