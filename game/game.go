@@ -651,9 +651,9 @@ func (g *Game) getCurrentLocation(actorCtx actor.Context) (*jasonsgame.Location,
 	if err != nil {
 		return nil, err
 	}
-	_, ok := response.(*jasonsgame.Location)
+	resp, ok := response.(*jasonsgame.Location)
 	if !ok {
 		return nil, fmt.Errorf("error casting location")
 	}
-	return &jasonsgame.Location{}, nil
+	return resp, nil
 }

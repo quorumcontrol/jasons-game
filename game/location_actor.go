@@ -64,7 +64,11 @@ func (l *LocationActor) Receive(actorCtx actor.Context) {
 			Network: l.network,
 		}))
 	case *GetLocation:
-		actorCtx.Respond(&jasonsgame.Location{})
+		actorCtx.Respond(&jasonsgame.Location{
+			Did:         l.SignedTree().MustId(),
+			Tip:         l.SignedTree().Tip().String(),
+			Description: l.MustResolve([]string{"tree", "data", "jasons-game", "description"}).(string),
+		})
 	case *GetInteraction:
 		resp, _, err := l.SignedTree().ChainTree.Dag.Resolve(append([]string{"tree", "data", "jasons-game", "interactions", msg.Command}))
 		if err != nil {
@@ -86,6 +90,14 @@ func (l *LocationActor) Receive(actorCtx actor.Context) {
 	case *TransferObjectRequest:
 		actorCtx.Forward(l.inventoryActor)
 	}
+}
+
+func (l *LocationActor) MustResolve(path []string) interface{} {
+	resp, _, err := l.SignedTree().ChainTree.Dag.Resolve(path)
+	if err != nil {
+		panic(fmt.Errorf("could not find chaintree: %v", err))
+	}
+	return resp
 }
 
 func (l *LocationActor) SignedTree() *consensus.SignedChainTree {
