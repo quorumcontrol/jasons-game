@@ -5,7 +5,6 @@ import (
 
 	"github.com/AsynkronIT/protoactor-go/actor"
 	"github.com/AsynkronIT/protoactor-go/plugin"
-	communityClient "github.com/quorumcontrol/community/client"
 	"github.com/quorumcontrol/jasons-game/network"
 	"github.com/quorumcontrol/jasons-game/pb/jasonsgame"
 	"github.com/quorumcontrol/tupelo-go-sdk/gossip3/middleware"
@@ -19,9 +18,9 @@ func chatTopicFromDid(did string) []byte {
 
 type ChatActor struct {
 	middleware.LogAwareHolder
-	did          string
-	community    *network.Community
-	subscription *communityClient.Subscription
+	did        string
+	community  *network.Community
+	subscriber *actor.PID
 }
 
 type ChatActorConfig struct {
@@ -44,11 +43,7 @@ func NewChatActorProps(cfg *ChatActorConfig) *actor.Props {
 func (c *ChatActor) Receive(actorCtx actor.Context) {
 	switch msg := actorCtx.Message().(type) {
 	case *actor.Started:
-		var err error
-		c.subscription, err = c.community.SubscribeActor(actorCtx.Self(), chatTopicFromDid(c.did))
-		if err != nil {
-			panic(err)
-		}
+		c.subscriber = actorCtx.Spawn(c.community.NewSubscriberProps(chatTopicFromDid(c.did)))
 	case string:
 		err := c.community.Send(chatTopicFromDid(c.did), &jasonsgame.ChatMessage{Message: msg})
 		if err != nil {
@@ -56,7 +51,5 @@ func (c *ChatActor) Receive(actorCtx actor.Context) {
 		}
 	case *jasonsgame.ChatMessage:
 		actorCtx.Send(actorCtx.Parent(), msg)
-	case *actor.Stopping:
-		c.community.Unsubscribe(c.subscription)
 	}
 }
