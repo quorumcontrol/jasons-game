@@ -32,14 +32,15 @@ func NewPlayerTree(net network.Network, tree *consensus.SignedChainTree) *Player
 	if err != nil {
 		panic(err)
 	}
-	if homeTree == nil {
-		homeTree, err = createHome(net)
+	if homeTree != nil {
+		pt.HomeLocation = NewLocationTree(net, homeTree)
+	} else {
+		pt.HomeLocation, err = createHome(net)
 		if err != nil {
 			log.Error("error creating home", err)
 			panic(err)
 		}
 	}
-	pt.HomeLocation = NewLocationTree(net, homeTree)
 
 	return pt
 }

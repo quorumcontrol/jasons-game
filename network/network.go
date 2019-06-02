@@ -43,6 +43,7 @@ var DefaultGameBootstrappers = []string{
 type Network interface {
 	Community() *Community
 	ChangeChainTreeOwner(tree *consensus.SignedChainTree, newKeys []string) (*consensus.SignedChainTree, error)
+	CreateChainTree() (*consensus.SignedChainTree, error)
 	CreateNamedChainTree(name string) (*consensus.SignedChainTree, error)
 	GetChainTreeByName(name string) (*consensus.SignedChainTree, error)
 	GetTreeByTip(tip cid.Cid) (*consensus.SignedChainTree, error)
@@ -211,6 +212,22 @@ func (n *RemoteNetwork) CreateNamedChainTree(name string) (*consensus.SignedChai
 	log.Debug("CreateNamedChainTree - saved", name)
 
 	return tree, n.KeyValueStore.Put(datastore.NewKey("-n-"+name), []byte(tree.MustId()))
+}
+
+func (n *RemoteNetwork) CreateChainTree() (*consensus.SignedChainTree, error) {
+	tree, err := n.Tupelo.CreateChainTree(n.mustPrivateKey())
+	if err != nil {
+		return nil, errors.Wrap(err, "error creating tree")
+	}
+	log.Debug("CreateChainTree - created", tree.MustId())
+
+	err = n.TreeStore.SaveTreeMetadata(tree)
+	if err != nil {
+		return nil, errors.Wrap(err, "error saving tree")
+	}
+	log.Debug("CreateChainTree - saved", tree.MustId())
+
+	return tree, n.KeyValueStore.Put(datastore.NewKey("-n-"+tree.MustId()), []byte(tree.MustId()))
 }
 
 func (n *RemoteNetwork) GetChainTreeByName(name string) (*consensus.SignedChainTree, error) {

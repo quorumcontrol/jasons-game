@@ -5,9 +5,7 @@ import (
 
 	"github.com/AsynkronIT/protoactor-go/actor"
 	"github.com/AsynkronIT/protoactor-go/plugin"
-	"github.com/mitchellh/mapstructure"
 	"github.com/pkg/errors"
-	"github.com/quorumcontrol/jasons-game/navigator"
 	"github.com/quorumcontrol/jasons-game/network"
 	"github.com/quorumcontrol/jasons-game/pb/jasonsgame"
 	"github.com/quorumcontrol/tupelo-go-sdk/consensus"
@@ -19,6 +17,7 @@ import (
 type LocationActor struct {
 	middleware.LogAwareHolder
 	did            string
+	location       *LocationTree
 	network        network.Network
 	inventoryActor *actor.PID
 }
@@ -32,12 +31,6 @@ type GetLocation struct{}
 
 type GetInteraction struct {
 	Command string
-}
-
-type Interaction struct {
-	Command string
-	Action  string
-	Args    map[string]string
 }
 
 func NewLocationActorProps(cfg *LocationActorConfig) *actor.Props {
@@ -55,36 +48,38 @@ func NewLocationActorProps(cfg *LocationActorConfig) *actor.Props {
 func (l *LocationActor) Receive(actorCtx actor.Context) {
 	switch msg := actorCtx.Message().(type) {
 	case *actor.Started:
-		_, err := l.network.Community().SubscribeActor(context.Self(), topicFor(l.did))
+		tree, err := l.network.GetTree(l.did)
+		if err != nil {
+			panic("could not find location")
+		}
+		l.location = NewLocationTree(l.network, tree)
+
+		_, err = l.network.Community().SubscribeActor(actorCtx.Self(), topicFor(l.did))
 		if err != nil {
 			panic(errors.Wrap(err, "error spawning land actor subscription"))
 		}
+
 		l.inventoryActor = actorCtx.Spawn(NewInventoryActorProps(&InventoryActorConfig{
 			Did:     l.did,
 			Network: l.network,
 		}))
 	case *GetLocation:
+		desc, err := l.location.GetDescription()
+		if err != nil {
+			panic(fmt.Errorf("error getting description: %v", err))
+		}
+
 		actorCtx.Respond(&jasonsgame.Location{
-			Did:         l.SignedTree().MustId(),
-			Tip:         l.SignedTree().Tip().String(),
-			Description: l.MustResolve([]string{"tree", "data", "jasons-game", "description"}).(string),
+			Did:         l.location.MustId(),
+			Tip:         l.location.Tip().String(),
+			Description: desc,
 		})
 	case *GetInteraction:
-		resp, _, err := l.SignedTree().ChainTree.Dag.Resolve(append([]string{"tree", "data", "jasons-game", "interactions", msg.Command}))
+		interaction, err := l.location.GetInteraction(msg.Command)
 		if err != nil {
-			panic(err)
+			panic(errors.Wrap(err, "error fetching interaction"))
 		}
-
-		var interaction Interaction
-
-		err = mapstructure.Decode(resp, &interaction)
-		if err != nil {
-			panic(err)
-		}
-
-		interaction.Command = msg.Command
-
-		actorCtx.Respond(&interaction)
+		actorCtx.Respond(interaction)
 	case *InventoryListRequest:
 		actorCtx.Forward(l.inventoryActor)
 	case *TransferObjectRequest:
