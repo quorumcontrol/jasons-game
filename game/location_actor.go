@@ -33,6 +33,14 @@ type GetInteraction struct {
 	Command string
 }
 
+type SetLocationDescriptionRequest struct {
+	Description string
+}
+
+type SetLocationDescriptionResponse struct {
+	Error error
+}
+
 func NewLocationActorProps(cfg *LocationActorConfig) *actor.Props {
 	return actor.PropsFromProducer(func() actor.Actor {
 		return &LocationActor{
@@ -80,6 +88,9 @@ func (l *LocationActor) Receive(actorCtx actor.Context) {
 			panic(errors.Wrap(err, "error fetching interaction"))
 		}
 		actorCtx.Respond(interaction)
+	case *SetLocationDescriptionRequest:
+		err := l.location.SetDescription(msg.Description)
+		actorCtx.Respond(&SetLocationDescriptionResponse{Error: err})
 	case *InventoryListRequest:
 		actorCtx.Forward(l.inventoryActor)
 	case *TransferObjectRequest:

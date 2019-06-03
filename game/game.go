@@ -279,28 +279,19 @@ func (g *Game) goToTree(actorCtx actor.Context, tree *consensus.SignedChainTree)
 }
 
 func (g *Game) handleSetDescription(actorCtx actor.Context, desc string) error {
-	// log.Info("set description")
+	response, err := actorCtx.RequestFuture(g.locationActor, &SetLocationDescriptionRequest{Description: desc}, 5*time.Second).Result()
 
-	// tree := g.cursor.Tree()
-	// loc, err := g.cursor.GetLocation()
-	// if err != nil {
-	// 	return errors.Wrap(err, "error getting location")
-	// }
+	if err != nil {
+		return fmt.Errorf("error setting description: %v", err)
+	}
 
-	// loc.Description = desc
+	descriptionResponse, ok := response.(*SetLocationDescriptionResponse)
 
-	// log.Infof("updating chain %d,%d to %s", g.cursor.X(), g.cursor.Y(), desc)
+	if !ok || descriptionResponse.Error != nil {
+		return fmt.Errorf("error setting description %v", descriptionResponse.Error)
+	}
 
-	// err = g.updateLocation(actorCtx, tree, loc)
-	// if err != nil {
-	// 	return errors.Wrap(err, "error updating location")
-	// }
-
-	// l, err := g.cursor.GetLocation()
-	// if err != nil {
-	// 	return errors.Wrap(err, "error getting location")
-	// }
-	// g.sendUIMessage(actorCtx, l)
+	g.sendUILocation(actorCtx)
 	return nil
 }
 
@@ -326,12 +317,21 @@ func (g *Game) handleLocationInput(actorCtx actor.Context, cmd *command, args st
 
 	interaction, ok := response.(*Interaction)
 
+	// empty location
+	if interaction == nil {
+		g.goToBarrenWasteland(actorCtx, cmd.name)
+		g.sendUILocation(actorCtx)
+		return
+	}
+
 	if !ok {
 		g.sendUIMessage(actorCtx, fmt.Sprintf("%s some sort of error happened", cmd.name))
 		return
 	}
 
 	switch interaction.Action {
+	case "respond":
+		g.sendUIMessage(actorCtx, interaction.Args["response"])
 	case "changeLocation":
 		newDid, ok := interaction.Args["did"]
 
@@ -341,15 +341,7 @@ func (g *Game) handleLocationInput(actorCtx actor.Context, cmd *command, args st
 		}
 
 		g.setLocation(actorCtx, newDid)
-
-		l, err := g.getCurrentLocation(actorCtx)
-
-		if err != nil {
-			g.sendUIMessage(actorCtx, fmt.Sprintf("%s some sort of error happened %v", cmd.name, err))
-			return
-		}
-
-		g.sendUIMessage(actorCtx, l)
+		g.sendUILocation(actorCtx)
 	default:
 		g.sendUIMessage(actorCtx, fmt.Sprintf("%s some sort of error happened %v", cmd.name, "action not found"))
 	}
@@ -656,4 +648,52 @@ func (g *Game) getCurrentLocation(actorCtx actor.Context) (*jasonsgame.Location,
 		return nil, fmt.Errorf("error casting location")
 	}
 	return resp, nil
+}
+
+func (g *Game) goToBarrenWasteland(actorCtx actor.Context, direction string) {
+	var inverseLocation string
+	switch direction {
+	case "north":
+		inverseLocation = "south"
+	case "south":
+		inverseLocation = "north"
+	case "east":
+		inverseLocation = "west"
+	case "west":
+		inverseLocation = "east"
+	}
+
+	if g.chatActor != nil {
+		actorCtx.Stop(g.chatActor)
+	}
+	if g.locationActor != nil {
+		actorCtx.Stop(g.locationActor)
+	}
+
+	g.locationActor = actorCtx.Spawn(NewBarrenWastelandLocationActorProps(&BarrenWastelandLocationActorConfig{
+		Direction: direction,
+		Network:   g.network,
+		ReturnInteraction: &Interaction{
+			Command: inverseLocation,
+			Action:  "changeLocation",
+			Args: map[string]string{
+				"did": g.locationDid,
+			},
+		},
+		OnExcavate: func(newDid string) {
+			g.setLocation(actorCtx, newDid)
+			g.sendUILocation(actorCtx)
+		},
+	}))
+	g.locationDid = ""
+}
+
+func (g *Game) sendUILocation(actorCtx actor.Context) {
+	l, err := g.getCurrentLocation(actorCtx)
+
+	if err != nil {
+		g.sendUIMessage(actorCtx, fmt.Errorf("error getting current location: %v", err))
+	}
+
+	g.sendUIMessage(actorCtx, l)
 }

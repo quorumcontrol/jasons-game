@@ -61,11 +61,9 @@ func (l *LocationTree) AddInteraction(i *Interaction) error {
 	if err != nil {
 		return err
 	}
-	fmt.Printf("Response is %v", resp)
 	if resp != nil {
 		return fmt.Errorf("interaction %v already exists", i.Command)
 	}
-	fmt.Printf("Adding interaction %v", i)
 	return l.updatePath([]string{"interactions", i.Command}, i)
 }
 
