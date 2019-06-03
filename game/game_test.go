@@ -1,6 +1,7 @@
 package game
 
 import (
+	"strings"
 	"testing"
 	"time"
 
@@ -65,24 +66,25 @@ func TestNavigation(t *testing.T) {
 }
 
 func TestSetDescription(t *testing.T) {
-	// net := network.NewLocalNetwork()
-	// stream := ui.NewTestStream()
+	net := network.NewLocalNetwork()
+	stream := ui.NewTestStream()
 
-	// simulatedUI, game := setupUiAndGame(t, stream, net)
-	// defer rootCtx.Stop(simulatedUI)
-	// defer rootCtx.Stop(game)
+	simulatedUI, game := setupUiAndGame(t, stream, net)
+	defer rootCtx.Stop(simulatedUI)
+	defer rootCtx.Stop(game)
 
-	// newDescription := "multi word"
+	newDescription := "multi word"
 
-	// rootCtx.Send(game, &jasonsgame.UserInput{Message: "set description " + newDescription})
-	// time.Sleep(100 * time.Millisecond)
+	rootCtx.Send(game, &jasonsgame.UserInput{Message: "set description " + newDescription})
+	time.Sleep(100 * time.Millisecond)
 
-	// tree, err := net.GetChainTreeByName("home")
-	// require.Nil(t, err)
-	// c := new(navigator.Cursor).SetLocation(0, 0).SetChainTree(tree)
-	// loc, err := c.GetLocation()
-	// require.Nil(t, err)
-	// require.Equal(t, newDescription, loc.Description)
+	respondedWithDescription := false
+	for _, msg := range stream.GetMessages() {
+		if strings.Contains(msg.Message, newDescription) {
+			respondedWithDescription = true
+		}
+	}
+	require.True(t, respondedWithDescription)
 }
 
 func TestCallMe(t *testing.T) {
@@ -115,24 +117,35 @@ func TestCallMe(t *testing.T) {
 }
 
 func TestBuildPortal(t *testing.T) {
-	// net := network.NewLocalNetwork()
-	// stream := ui.NewTestStream()
+	net := network.NewLocalNetwork()
+	stream := ui.NewTestStream()
 
-	// simulatedUI, game := setupUiAndGame(t, stream, net)
-	// defer rootCtx.Stop(simulatedUI)
-	// defer rootCtx.Stop(game)
+	simulatedUI, game := setupUiAndGame(t, stream, net)
+	defer rootCtx.Stop(simulatedUI)
+	defer rootCtx.Stop(game)
 
-	// did := "did:fakedidtonowhere"
+	did := "did:fakedidtonowhere"
+	rootCtx.Send(game, &jasonsgame.UserInput{Message: "build portal to " + did})
+	time.Sleep(100 * time.Millisecond)
 
-	// rootCtx.Send(game, &jasonsgame.UserInput{Message: "build portal to " + did})
-	// time.Sleep(100 * time.Millisecond)
+	tree, err := net.GetChainTreeByName("home")
+	require.Nil(t, err)
+	loc := NewLocationTree(net, tree)
+	portal, err := loc.GetPortal()
+	require.Nil(t, err)
+	require.Equal(t, portal.To, did)
 
-	// tree, err := net.GetChainTreeByName("home")
-	// require.Nil(t, err)
-	// c := new(navigator.Cursor).SetLocation(0, 0).SetChainTree(tree)
-	// loc, err := c.GetLocation()
-	// require.Nil(t, err)
-	// require.Equal(t, did, loc.Portal.To)
+	stream.ClearMessages()
+	rootCtx.Send(game, &jasonsgame.UserInput{Message: "look around"})
+	time.Sleep(100 * time.Millisecond)
+
+	respondedWithPortal := false
+	for _, msg := range stream.GetMessages() {
+		if strings.Contains(msg.Message, did) {
+			respondedWithPortal = true
+		}
+	}
+	require.True(t, respondedWithPortal)
 }
 
 func TestGoThroughPortal(t *testing.T) {
@@ -143,16 +156,18 @@ func TestGoThroughPortal(t *testing.T) {
 	defer rootCtx.Stop(simulatedUI)
 	defer rootCtx.Stop(game)
 
-	remoteTree, err := net.CreateNamedChainTree("remotetree")
+	remoteTree, err := net.CreateChainTree()
 	require.Nil(t, err)
+	loc := NewLocationTree(net, remoteTree)
 	remoteDescription := "a remote foreign land"
-	remoteTree, err = net.UpdateChainTree(remoteTree, "jasons-game/0/0", &jasonsgame.Location{Description: remoteDescription})
+	err = loc.SetDescription(remoteDescription)
 	require.Nil(t, err)
 
 	did := remoteTree.MustId()
-
 	rootCtx.Send(game, &jasonsgame.UserInput{Message: "build portal to " + did})
 	time.Sleep(100 * time.Millisecond)
+
+	stream.ClearMessages()
 	rootCtx.Send(game, &jasonsgame.UserInput{Message: "go through portal"})
 	time.Sleep(100 * time.Millisecond)
 
