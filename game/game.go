@@ -295,18 +295,6 @@ func (g *Game) handleSetDescription(actorCtx actor.Context, desc string) error {
 	return nil
 }
 
-func (g *Game) updateLocation(actorCtx actor.Context, tree *consensus.SignedChainTree, location *jasonsgame.Location) error {
-	// updated, err := g.network.UpdateChainTree(tree, fmt.Sprintf("jasons-game/%d/%d", g.cursor.X(), g.cursor.Y()), location)
-	// if err != nil {
-	// 	return errors.Wrap(err, "error updating chaintree")
-	// }
-
-	// g.cursor.SetChainTree(updated)
-
-	// log.Debug("getting cursor location")
-	return nil
-}
-
 func (g *Game) handleLocationInput(actorCtx actor.Context, cmd *command, args string) {
 	response, err := actorCtx.RequestFuture(g.locationActor, &GetInteraction{Command: cmd.name}, 5*time.Second).Result()
 
