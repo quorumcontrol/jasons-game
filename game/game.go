@@ -120,13 +120,13 @@ func (g *Game) handleUserInput(actorCtx actor.Context, input *jasonsgame.UserInp
 	case "exit":
 		g.sendUIMessage(actorCtx, "exit is unsupported in the browser")
 	case "north", "east", "south", "west":
-		g.handleLocationInput(actorCtx, cmd, args)
+		g.handleInteractionInput(actorCtx, cmd, args)
+	case "go-portal":
+		g.handleInteractionInput(actorCtx, cmd, args)
 	case "set-description":
 		err = g.handleSetDescription(actorCtx, args)
 	case "tip-zoom":
 		err = g.handleTipZoom(actorCtx, args)
-	case "go-portal":
-		err = g.handleGoThroughPortal(actorCtx)
 	case "refresh":
 		err = g.handleRefresh(actorCtx)
 	case "build-portal":
@@ -171,26 +171,19 @@ func (g *Game) handleName(name string) error {
 	return g.playerTree.SetName(name)
 }
 
-func (g *Game) handleBuildPortal(actorCtx actor.Context, did string) error {
-	// if did == "" {
-	// 	g.sendUIMessage(actorCtx, "you must specify a destination")
-	// 	return nil
-	// }
-	// tree := g.cursor.Tree()
-	// loc, err := g.cursor.GetLocation()
-	// if err != nil {
-	// 	return errors.Wrap(err, "error getting location")
-	// }
-	// loc.Portal = &jasonsgame.Portal{
-	// 	To: did,
-	// }
+func (g *Game) handleBuildPortal(actorCtx actor.Context, toDid string) error {
+	response, err := actorCtx.RequestFuture(g.locationActor, &BuildPortalRequest{
+		To: toDid,
+	}, 5*time.Second).Result()
+	if err != nil {
+		return fmt.Errorf("Error building portal: %v", err)
+	}
 
-	// err = g.updateLocation(actorCtx, tree, loc)
-	// if err != nil {
-	// 	return errors.Wrap(err, "error updating location")
-	// }
+	if respErr := response.(*BuildPortalResponse).Error; respErr != nil {
+		return fmt.Errorf("Error building portal: %v", respErr)
+	}
 
-	// g.sendUIMessage(actorCtx, fmt.Sprintf("successfully built a portal to %s", did))
+	g.sendUIMessage(actorCtx, fmt.Sprintf("successfully built a portal to %s", toDid))
 	return nil
 }
 
@@ -295,11 +288,11 @@ func (g *Game) handleSetDescription(actorCtx actor.Context, desc string) error {
 	return nil
 }
 
-func (g *Game) handleLocationInput(actorCtx actor.Context, cmd *command, args string) {
-	response, err := actorCtx.RequestFuture(g.locationActor, &GetInteraction{Command: cmd.name}, 5*time.Second).Result()
-
+func (g *Game) handleInteractionInput(actorCtx actor.Context, cmd *command, args string) {
+	interactionInput := cmd.parse
+	response, err := actorCtx.RequestFuture(g.locationActor, &GetInteractionRequest{Command: interactionInput}, 5*time.Second).Result()
 	if err != nil {
-		g.sendUIMessage(actorCtx, fmt.Sprintf("%s some sort of error happened: %v", cmd.name, err))
+		g.sendUIMessage(actorCtx, fmt.Sprintf("%s some sort of error happened: %v", interactionInput, err))
 		return
 	}
 
@@ -307,13 +300,13 @@ func (g *Game) handleLocationInput(actorCtx actor.Context, cmd *command, args st
 
 	// empty location
 	if interaction == nil {
-		g.goToBarrenWasteland(actorCtx, cmd.name)
+		g.goToBarrenWasteland(actorCtx, interactionInput)
 		g.sendUILocation(actorCtx)
 		return
 	}
 
 	if !ok {
-		g.sendUIMessage(actorCtx, fmt.Sprintf("%s some sort of error happened", cmd.name))
+		g.sendUIMessage(actorCtx, fmt.Sprintf("%s some sort of error happened", interactionInput))
 		return
 	}
 
@@ -504,6 +497,11 @@ func (g *Game) handleLocationInventoryList(actorCtx actor.Context) error {
 		return fmt.Errorf("error casting InventoryListResponse")
 	}
 
+	l, err := g.getCurrentLocation(actorCtx)
+	if err != nil {
+		return fmt.Errorf("error getting current location: %v", err)
+	}
+
 	sawSomething := false
 
 	if len(inventoryList.Objects) > 0 {
@@ -514,15 +512,14 @@ func (g *Game) handleLocationInventoryList(actorCtx actor.Context) error {
 		}
 	}
 
-	// if l.Portal != nil {
-	// 	sawSomething = true
-	// 	g.sendUIMessage(actorCtx, fmt.Sprintf("you see a mysterious portal leading to %s", l.Portal.To))
-	// }
+	if l.Portal != nil {
+		sawSomething = true
+		g.sendUIMessage(actorCtx, fmt.Sprintf("you see a mysterious portal leading to %s", l.Portal.To))
+	}
 
 	if !sawSomething {
 		g.sendUIMessage(actorCtx, "you look around but don't see anything")
 	}
-
 	return nil
 }
 

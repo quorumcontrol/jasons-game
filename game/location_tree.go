@@ -9,8 +9,11 @@ import (
 	"github.com/mitchellh/mapstructure"
 	"github.com/quorumcontrol/chaintree/typecaster"
 	"github.com/quorumcontrol/jasons-game/network"
+	"github.com/quorumcontrol/jasons-game/pb/jasonsgame"
 	"github.com/quorumcontrol/tupelo-go-sdk/consensus"
 )
+
+var portalPath = []string{"portal"}
 
 func init() {
 	cbor.RegisterCborType(Interaction{})
@@ -57,7 +60,7 @@ func (l *LocationTree) SetDescription(description string) error {
 }
 
 func (l *LocationTree) AddInteraction(i *Interaction) error {
-	resp, err := l.GetInteraction(i.Command)
+	resp, err := l.GetInteractionRequest(i.Command)
 	if err != nil {
 		return err
 	}
@@ -67,7 +70,7 @@ func (l *LocationTree) AddInteraction(i *Interaction) error {
 	return l.updatePath([]string{"interactions", i.Command}, i)
 }
 
-func (l *LocationTree) GetInteraction(command string) (*Interaction, error) {
+func (l *LocationTree) GetInteractionRequest(command string) (*Interaction, error) {
 	val, err := l.getPath([]string{"interactions", command})
 	if err != nil || val == nil {
 		return nil, err
@@ -81,6 +84,40 @@ func (l *LocationTree) GetInteraction(command string) (*Interaction, error) {
 	}
 
 	return &interaction, nil
+}
+
+func (l *LocationTree) BuildPortal(toDid string) error {
+	currentPortal, err := l.GetPortal()
+
+	if err != nil {
+		return fmt.Errorf("error fetching portals: %v", err)
+	}
+
+	if currentPortal != nil {
+		return fmt.Errorf("error, portal already exists")
+	}
+
+	portal := &jasonsgame.Portal{To: toDid}
+	return l.updatePath(portalPath, portal)
+}
+
+func (l *LocationTree) GetPortal() (*jasonsgame.Portal, error) {
+	portal, err := l.getPath(portalPath)
+	if err != nil {
+		return nil, fmt.Errorf("error fetching portal: %v", err)
+	}
+
+	if portal == nil {
+		return nil, nil
+	}
+
+	var castedPortal *jasonsgame.Portal
+	err = mapstructure.Decode(portal, &castedPortal)
+	if err != nil {
+		return nil, fmt.Errorf("error casting portal: %v", err)
+	}
+
+	return castedPortal, nil
 }
 
 func (l *LocationTree) updatePath(path []string, val interface{}) error {

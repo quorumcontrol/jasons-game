@@ -29,8 +29,13 @@ type LocationActorConfig struct {
 
 type GetLocation struct{}
 
-type GetInteraction struct {
+type GetInteractionRequest struct {
 	Command string
+}
+
+type GetInteractionResponse struct {
+	Interaction *Interaction
+	Error       error
 }
 
 type SetLocationDescriptionRequest struct {
@@ -38,6 +43,14 @@ type SetLocationDescriptionRequest struct {
 }
 
 type SetLocationDescriptionResponse struct {
+	Error error
+}
+
+type BuildPortalRequest struct {
+	To string
+}
+
+type BuildPortalResponse struct {
 	Error error
 }
 
@@ -77,17 +90,19 @@ func (l *LocationActor) Receive(actorCtx actor.Context) {
 			panic(fmt.Errorf("error getting description: %v", err))
 		}
 
+		portal, err := l.location.GetPortal()
+		if err != nil {
+			panic(fmt.Errorf("error getting portal: %v", err))
+		}
+
 		actorCtx.Respond(&jasonsgame.Location{
 			Did:         l.location.MustId(),
 			Tip:         l.location.Tip().String(),
 			Description: desc,
+			Portal:      portal,
 		})
-	case *GetInteraction:
-		interaction, err := l.location.GetInteraction(msg.Command)
-		if err != nil {
-			panic(errors.Wrap(err, "error fetching interaction"))
-		}
-		actorCtx.Respond(interaction)
+	case *GetInteractionRequest:
+		l.handleGetInteractionRequest(actorCtx, msg)
 	case *SetLocationDescriptionRequest:
 		err := l.location.SetDescription(msg.Description)
 		actorCtx.Respond(&SetLocationDescriptionResponse{Error: err})
@@ -95,15 +110,49 @@ func (l *LocationActor) Receive(actorCtx actor.Context) {
 		actorCtx.Forward(l.inventoryActor)
 	case *TransferObjectRequest:
 		actorCtx.Forward(l.inventoryActor)
+	case *BuildPortalRequest:
+		l.handleBuildPortal(actorCtx, msg)
 	}
 }
 
-func (l *LocationActor) MustResolve(path []string) interface{} {
-	resp, _, err := l.SignedTree().ChainTree.Dag.Resolve(path)
-	if err != nil {
-		panic(fmt.Errorf("could not find chaintree: %v", err))
+func (l *LocationActor) handleGetInteractionRequest(actorCtx actor.Context, msg *GetInteractionRequest) {
+	// TODO: allow portal to expose interactions
+	if msg.Command == "go through portal" {
+		portal, err := l.location.GetPortal()
+		if err != nil {
+			actorCtx.Respond(&GetInteractionResponse{Error: fmt.Errorf("error getting portal: %v", err)})
+			return
+		}
+		actorCtx.Respond(&Interaction{
+			Command: msg.Command,
+			Action:  "changeLocation",
+			Args: map[string]string{
+				"did": portal.To,
+			},
+		})
+		return
 	}
-	return resp
+
+	interaction, err := l.location.GetInteractionRequest(msg.Command)
+	if err != nil {
+		panic(errors.Wrap(err, "error fetching interaction"))
+	}
+	actorCtx.Respond(interaction)
+}
+
+func (l *LocationActor) handleBuildPortal(actorCtx actor.Context, msg *BuildPortalRequest) {
+	if msg.To == "" {
+		actorCtx.Respond(&BuildPortalResponse{Error: fmt.Errorf("must specify a did to build a portal")})
+		return
+	}
+
+	err := l.location.BuildPortal(msg.To)
+	if err != nil {
+		actorCtx.Respond(&BuildPortalResponse{Error: err})
+		return
+	}
+
+	actorCtx.Respond(&BuildPortalResponse{})
 }
 
 func (l *LocationActor) SignedTree() *consensus.SignedChainTree {

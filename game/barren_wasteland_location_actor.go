@@ -36,7 +36,7 @@ func (l *BarrenWastelandLocationActor) Receive(actorCtx actor.Context) {
 		actorCtx.Respond(&jasonsgame.Location{
 			Description: "You are in a barren wasteland type set description <desc> to call this land something",
 		})
-	case *GetInteraction:
+	case *GetInteractionRequest:
 		if msg.Command == l.cfg.ReturnInteraction.Command {
 			actorCtx.Respond(l.cfg.ReturnInteraction)
 		} else {
