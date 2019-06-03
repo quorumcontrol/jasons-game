@@ -1,11 +1,15 @@
 package game
 
 import (
+	"strings"
+
 	"github.com/AsynkronIT/protoactor-go/actor"
 	"github.com/quorumcontrol/tupelo-go-sdk/consensus"
 
 	"github.com/quorumcontrol/jasons-game/messages"
 )
+
+var questPath = []string{"tree", "jasons-game", "quest-log"}
 
 type QuestCompletion struct {
 	Finished bool
@@ -19,6 +23,7 @@ type QuestStep struct {
 }
 
 type Quest interface {
+	ID() string                                                      // unique identifier of the quest for the ChainTree quest-log
 	PrettyString() string                                            // name of the quest
 	Start(game *Game) (bool, error)                                  // called every time the player does basically anything, so make it fast
 	InitState(state *QuestState)                                     // initialize quest state
@@ -48,6 +53,13 @@ func updateQuests(actorCtx actor.Context, game *Game) {
 			if completion.Finished {
 				quest.State().completed = true
 			}
+
+			questLogPath := strings.Join(append(questPath, quest.ID(), "completion"), "/")
+			finishedChainTree, err := game.network.UpdateChainTree(player.tree, questLogPath, completion)
+			if err != nil {
+				log.Errorf("error adding quest completion to player chaintree: %v", err)
+			}
+			player.SetChainTree(finishedChainTree)
 
 			step, err := quest.NextStep(actorCtx, game)
 			if err != nil {

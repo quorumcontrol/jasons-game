@@ -17,6 +17,10 @@ type MeetTheWizard struct {
 
 var _ Quest = &MeetTheWizard{}
 
+func (q *MeetTheWizard) ID() string {
+	return "intro-quest"
+}
+
 func (q *MeetTheWizard) PrettyString() string {
 	return "Meet The Wizard"
 }
@@ -183,8 +187,10 @@ You better get back on track if you are ever going to figure out whats going on 
 }
 
 func (q *MeetTheWizard) End(game *Game) (*QuestCompletion, error) {
-	// TODO: Write the real end conditions
+	successfullyCompleted := q.state.highestIndex == 5
+
 	return &QuestCompletion{
-		Finished: false,
+		Finished: successfullyCompleted,
+		Success: successfullyCompleted,
 	}, nil
 }
