@@ -70,7 +70,7 @@ func main() {
 
 	disableWebView, localnet := ui.SetOptions()
 
-	s := server.NewGameServer(ctx, localnet)
+	s := server.NewGameServer(ctx, *localnet)
 
 	jasonsgame.RegisterGameServiceServer(grpcServer, s)
 	reflection.Register(grpcServer)
@@ -109,7 +109,7 @@ func main() {
 
 	})
 
-	if disableWebView {
+	if *disableWebView {
 		fmt.Println("webview disabled")
 		log.Fatal(serv.ListenAndServe())
 		return
