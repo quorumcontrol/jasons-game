@@ -53,14 +53,6 @@ func (g *Game) Receive(actorCtx actor.Context) {
 		g.handleUserInput(actorCtx, msg)
 	case *jasonsgame.ChatMessage, *jasonsgame.ShoutMessage:
 		g.sendUIMessage(actorCtx, msg)
-	case *jasonsgame.OpenPortalMessage:
-		log.Debugf("received OpenPortalMessage")
-		if err := g.handleOpenPortalMessage(actorCtx, msg); err != nil {
-			panic(err)
-		}
-	case *jasonsgame.OpenPortalResponseMessage:
-		log.Debugf("received OpenPortalResponseMessage")
-		g.handleOpenPortalResponseMessage(actorCtx, msg)
 	case *ping:
 		actorCtx.Respond(true)
 	default:
@@ -136,10 +128,6 @@ func (g *Game) handleUserInput(actorCtx actor.Context, input *jasonsgame.UserInp
 	case "shout":
 		if err := g.network.Community().Send(shoutChannel, &jasonsgame.ShoutMessage{Message: args}); err != nil {
 			log.Errorf("failed to broadcast ShoutMessage: %s", err)
-		}
-	case "open-portal":
-		if err := g.handleOpenPortal(actorCtx, cmd, args); err != nil {
-			log.Errorf("g.handleOpenPortal failed: %s", err)
 		}
 	case "create-object":
 		err = g.handleCreateObject(actorCtx, args)
@@ -317,73 +305,15 @@ func (g *Game) handleInteractionInput(actorCtx actor.Context, cmd *command, args
 		newDid, ok := interaction.Args["did"]
 
 		if !ok {
-			g.sendUIMessage(actorCtx, fmt.Sprintf("%s some sort of error happened %v", cmd.name, "did not found"))
+			g.sendUIMessage(actorCtx, fmt.Sprintf("%s some sort of error happened %v", interactionInput, "did not found"))
 			return
 		}
 
 		g.setLocation(actorCtx, newDid)
 		g.sendUILocation(actorCtx)
 	default:
-		g.sendUIMessage(actorCtx, fmt.Sprintf("%s some sort of error happened %v", cmd.name, "action not found"))
+		g.sendUIMessage(actorCtx, fmt.Sprintf("%s some sort of error happened %v", interactionInput, "action not found"))
 	}
-}
-
-func (g *Game) handleOpenPortal(actorCtx actor.Context, cmd *command, args string) error {
-	// splitArgs := []string{}
-	// for _, a := range strings.Split(args, " ") {
-	// 	if len(strings.TrimSpace(a)) > 0 {
-	// 		splitArgs = append(splitArgs, a)
-	// 	}
-	// }
-	// if len(splitArgs) != 2 {
-	// 	log.Debugf("received wrong number of arguments (%d): %v", len(splitArgs), splitArgs)
-	// 	g.sendUIMessage(actorCtx, "2 arguments required")
-	// 	return nil
-	// }
-
-	// onLandId := splitArgs[0]
-	// loc := splitArgs[1]
-	// log.Debugf("requesting to open portal in land ID %q, location %q", onLandId, loc)
-	// locArr := strings.Split(loc, ",")
-	// if len(locArr) != 2 {
-	// 	g.sendUIMessage(actorCtx, "You must specify the location as x,y")
-	// 	return nil
-	// }
-	// x, err := strconv.Atoi(locArr[0])
-	// if err != nil {
-	// 	g.sendUIMessage(actorCtx, "X coordinate must be numeric")
-	// 	return nil
-	// }
-	// y, err := strconv.Atoi(locArr[1])
-	// if err != nil {
-	// 	g.sendUIMessage(actorCtx, "Y coordinate must be numeric")
-	// 	return nil
-	// }
-
-	// playerId := g.playerTree.Did()
-
-	// onLandTree := g.cursor.Tree()
-	// toLandId, err := onLandTree.Id()
-
-	// if err != nil {
-	// 	return err
-	// }
-
-	// log.Debugf("broadcasting OpenPortalMessage, on land ID %s, location (%d, %d), to land ID %s",
-	// 	onLandId, x, y, toLandId)
-	// if err := g.network.Community().Send(topicFor(onLandId), &jasonsgame.OpenPortalMessage{
-	// 	From:      playerId,
-	// 	To:        onLandId,
-	// 	ToLandId:  toLandId,
-	// 	LocationX: int64(x),
-	// 	LocationY: int64(y),
-	// }); err != nil {
-	// 	log.Errorf("failed to broadcast OpenPortalMessage: %s", err)
-	// 	return err
-	// }
-
-	// g.sendUIMessage(actorCtx, fmt.Sprintf("Requested to open portal on land ID %s", onLandId))
-	return nil
 }
 
 func (g *Game) handleDropObject(actorCtx actor.Context, args string) error {
@@ -527,6 +457,16 @@ func topicFor(str string) []byte {
 	return []byte(str)
 }
 
+func (g *Game) sendUILocation(actorCtx actor.Context) {
+	l, err := g.getCurrentLocation(actorCtx)
+
+	if err != nil {
+		g.sendUIMessage(actorCtx, fmt.Errorf("error getting current location: %v", err))
+	}
+
+	g.sendUIMessage(actorCtx, l)
+}
+
 func (g *Game) sendUIMessage(actorCtx actor.Context, mesgInter interface{}) {
 	msgToUser := &jasonsgame.MessageToUser{
 		Sequence: g.messageSequence,
@@ -546,63 +486,6 @@ func (g *Game) sendUIMessage(actorCtx actor.Context, mesgInter interface{}) {
 	}
 	actorCtx.Send(g.ui, msgToUser)
 	g.messageSequence++
-}
-
-func (g *Game) handleOpenPortalMessage(actorCtx actor.Context, msg *jasonsgame.OpenPortalMessage) error {
-	// landTree := g.cursor.Tree()
-	// landId, err := landTree.Id()
-	// if err != nil {
-	// 	return err
-	// }
-
-	// log.Debugf("handling OpenPortalMessage from %s, location: (%d, %d)", msg.From, msg.LocationX,
-	// 	msg.LocationY)
-	// g.sendUIMessage(actorCtx, fmt.Sprintf("Player %s wants to open a portal in your land",
-	// 	msg.From))
-	// g.sendUIMessage(actorCtx, "Request to open portal in your land auto-accepted "+
-	// 	"(this is an ALPHA version, future versions will prompt for acceptance)")
-	// // TODO: Prompt user for permission
-
-	// log.Debugf("Broadcasting OpenPortalResponseMessage back to sender")
-	// if err := g.network.Community().Send(topicFor(msg.From), &jasonsgame.OpenPortalResponseMessage{
-	// 	From:      g.playerTree.Did(),
-	// 	To:        msg.From,
-	// 	Accepted:  true,
-	// 	LandId:    landId,
-	// 	LocationX: msg.LocationX,
-	// 	LocationY: msg.LocationY,
-	// }); err != nil {
-	// 	return err
-	// }
-
-	// loc, err := g.cursor.GetLocation()
-	// if err != nil {
-	// 	return err
-	// }
-	// loc.Portal = &jasonsgame.Portal{
-	// 	To: msg.ToLandId,
-	// }
-	// log.Debugf("Playing transaction to add portal to %s at location (%d, %d) in land",
-	// 	msg.ToLandId, loc.X, loc.Y)
-	// updated, err := g.network.UpdateChainTree(landTree,
-	// 	fmt.Sprintf("jasons-game/%d/%d", g.cursor.X(), g.cursor.Y()), loc)
-	// if err == nil {
-	// 	g.cursor.SetChainTree(updated)
-	// }
-	return nil
-}
-
-func (g *Game) handleOpenPortalResponseMessage(actorCtx actor.Context,
-	msg *jasonsgame.OpenPortalResponseMessage) {
-	// var uiMsg string
-	// if msg.Accepted {
-	// 	uiMsg = fmt.Sprintf("Player %s accepted your opening a portal at (%d, %d)", msg.FromPlayer(),
-	// 		msg.LocationX, msg.LocationY)
-	// } else {
-	// 	uiMsg = fmt.Sprintf("Player %s did not accept your opening a portal at (%d, %d)",
-	// 		msg.FromPlayer(), msg.LocationX, msg.LocationY)
-	// }
-	// g.sendUIMessage(actorCtx, uiMsg)
 }
 
 func (g *Game) setLocation(actorCtx actor.Context, locationDid string) {
@@ -671,14 +554,4 @@ func (g *Game) goToBarrenWasteland(actorCtx actor.Context, direction string) {
 		},
 	}))
 	g.locationDid = ""
-}
-
-func (g *Game) sendUILocation(actorCtx actor.Context) {
-	l, err := g.getCurrentLocation(actorCtx)
-
-	if err != nil {
-		g.sendUIMessage(actorCtx, fmt.Errorf("error getting current location: %v", err))
-	}
-
-	g.sendUIMessage(actorCtx, l)
 }
