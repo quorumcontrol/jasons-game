@@ -18,7 +18,7 @@ const ObjectsPath = "jasons-game/inventory"
 const inventorySuffix = "/inventory"
 
 func inventoryTopicFrom(did string) []byte {
-	return topicFromDid(did + inventorySuffix)
+	return topicFor(did + inventorySuffix)
 }
 
 type InventoryActor struct {
@@ -378,7 +378,7 @@ func (inv *InventoryActor) handleTransferObject(context actor.Context, msg *Tran
 		To:     targetTree.MustId(),
 		Object: existingObj.MustId(),
 	}); err != nil {
-		co.Log.Error(err)
+		inv.Log.Error(err)
 		return
 	}
 

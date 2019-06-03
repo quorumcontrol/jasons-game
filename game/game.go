@@ -13,7 +13,6 @@ import (
 	"github.com/quorumcontrol/jasons-game/network"
 	"github.com/quorumcontrol/jasons-game/pb/jasonsgame"
 	"github.com/quorumcontrol/jasons-game/ui"
-	"github.com/quorumcontrol/tupelo-go-sdk/consensus"
 )
 
 var log = logging.Logger("game")
@@ -120,7 +119,7 @@ func (g *Game) handleUserInput(actorCtx actor.Context, input *jasonsgame.UserInp
 	case "tip-zoom":
 		err = g.handleTipZoom(actorCtx, args)
 	case "refresh":
-		err = g.handleRefresh(actorCtx)
+		g.sendUILocation(actorCtx)
 	case "build-portal":
 		err = g.handleBuildPortal(actorCtx, args)
 	case "say":
@@ -186,76 +185,8 @@ func (g *Game) handleTipZoom(actorCtx actor.Context, tip string) error {
 		return errors.Wrap(err, fmt.Sprintf("error getting tip (%s)", tip))
 	}
 
-	return g.goToTree(actorCtx, tree)
-}
-
-func (g *Game) handleGoThroughPortal(actorCtx actor.Context) error {
-	// log.Info("go through portal")
-	// l, err := g.cursor.GetLocation()
-	// if err != nil {
-	// 	return errors.Wrap(err, "error getting location")
-	// }
-	// if l.Portal == nil {
-	// 	return fmt.Errorf("there is no portal where you are")
-	// }
-	// tree, err := g.network.GetTree(l.Portal.To)
-	// if err != nil {
-	// 	return errors.Wrap(err, "error getting remote tree")
-	// }
-	// return g.goToTree(actorCtx, tree)
-	return nil
-}
-
-func (g *Game) handleRefresh(actorCtx actor.Context) error {
-	l, err := g.refreshLocation()
-	if err != nil {
-		return err
-	}
-	g.sendUIMessage(actorCtx, l)
-	return nil
-}
-
-func (g *Game) refreshLocation() (*jasonsgame.Location, error) {
-	// tree, err := g.network.GetTree(g.cursor.Did())
-	// if err != nil {
-	// 	return nil, errors.Wrap(err, "error getting remote tree")
-	// }
-	// g.cursor.SetChainTree(tree)
-	// l, err := g.cursor.GetLocation()
-	// if err != nil {
-	// 	return nil, errors.Wrap(err, fmt.Sprintf("error getting location (%s)", tree.MustId()))
-	// }
-	// return l, nil
-	return nil, nil
-}
-
-func (g *Game) goToTree(actorCtx actor.Context, tree *consensus.SignedChainTree) error {
-	// oldDid := g.cursor.Did()
-
-	// if newDid := tree.MustId(); newDid != oldDid {
-	// 	log.Debugf("moving to a new did %s", newDid)
-	// 	g.network.StopDiscovery(oldDid)
-	// 	go func() {
-	// 		if err := g.network.StartDiscovery(newDid); err != nil {
-	// 			log.Errorf("network.StartDiscovery failed: %s", err)
-	// 		}
-	// 	}()
-
-	// 	// if g.chatSubscriber != nil {
-	// 	// 	actorCtx.Stop(g.chatSubscriber)
-	// 	// }
-	// 	// chatTopic := topicFor(newDid + "-chat")
-	// 	// log.Debugf("subscribing to chat at %s", string(chatTopic))
-	// 	// g.chatSubscriber = actorCtx.Spawn(g.network.Community().NewSubscriberProps(chatTopic))
-	// }
-
-	// g.cursor.SetChainTree(tree).SetLocation(0, 0)
-
-	// l, err := g.cursor.GetLocation()
-	// if err != nil {
-	// 	return errors.Wrap(err, fmt.Sprintf("error getting location (%s)", tree.MustId()))
-	// }
-	// g.sendUIMessage(actorCtx, l)
+	g.setLocation(actorCtx, tree.MustId())
+	g.sendUILocation(actorCtx)
 	return nil
 }
 
@@ -416,8 +347,6 @@ func (g *Game) handlePlayerInventoryList(actorCtx actor.Context) error {
 }
 
 func (g *Game) handleLocationInventoryList(actorCtx actor.Context) error {
-	g.refreshLocation()
-
 	response, err := actorCtx.RequestFuture(g.locationActor, &InventoryListRequest{}, 5*time.Second).Result()
 	if err != nil {
 		return err
