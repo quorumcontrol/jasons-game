@@ -169,9 +169,9 @@ func (q *MeetTheWizard) NextStep(actorCtx actor.Context, game *Game) (*QuestStep
 		(location.X == -1 && location.Y == 0) ||
 		(location.X == 1 && location.Y == 0):
 			return messageStep(-1, `
-You are in a non-descript room.  
-Or maybe its a cave.
-No, its somewhere in between.
+You are in a nondescript room.  
+Or maybe it's a cave.
+No, it's somewhere in between.
 Either way there is not much going on here.
 `), nil
 	case (location.X == 1 && location.Y == 1) ||
