@@ -38,6 +38,14 @@ type GetInteractionResponse struct {
 	Error       error
 }
 
+type AddInteractionRequest struct {
+	Interaction *Interaction
+}
+
+type AddInteractionResponse struct {
+	Error error
+}
+
 type SetLocationDescriptionRequest struct {
 	Description string
 }
@@ -112,6 +120,10 @@ func (l *LocationActor) Receive(actorCtx actor.Context) {
 		actorCtx.Forward(l.inventoryActor)
 	case *BuildPortalRequest:
 		l.handleBuildPortal(actorCtx, msg)
+	case *AddInteractionRequest:
+		actorCtx.Respond(&AddInteractionResponse{
+			Error: l.location.AddInteraction(msg.Interaction),
+		})
 	}
 }
 

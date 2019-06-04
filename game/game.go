@@ -2,6 +2,7 @@ package game
 
 import (
 	"fmt"
+	"regexp"
 	"strings"
 	"time"
 
@@ -138,6 +139,10 @@ func (g *Game) handleUserInput(actorCtx actor.Context, input *jasonsgame.UserInp
 		err = g.handlePlayerInventoryList(actorCtx)
 	case "location-inventory-list":
 		err = g.handleLocationInventoryList(actorCtx)
+	case "create-location":
+		err = g.handleCreateLocation(actorCtx, args)
+	case "connect-location":
+		err = g.handleConnectLocation(actorCtx, args)
 	case "help":
 		g.sendUIMessage(actorCtx, "available commands:")
 		for _, c := range g.commands {
@@ -217,10 +222,8 @@ func (g *Game) handleInteractionInput(actorCtx actor.Context, cmd *command, args
 
 	interaction, ok := response.(*Interaction)
 
-	// empty location
 	if interaction == nil {
-		g.goToBarrenWasteland(actorCtx, interactionInput)
-		g.sendUILocation(actorCtx)
+		g.sendUIMessage(actorCtx, fmt.Sprintf("no interaction matching %s %s", cmd.parse, args))
 		return
 	}
 
@@ -382,6 +385,71 @@ func (g *Game) handleLocationInventoryList(actorCtx actor.Context) error {
 	return nil
 }
 
+func (g *Game) handleCreateLocation(actorCtx actor.Context, args string) error {
+	newLocation, err := g.network.CreateChainTree()
+	if err != nil {
+		return err
+	}
+
+	g.sendUIMessage(actorCtx, "new location created "+newLocation.MustId())
+	return nil
+}
+
+func (g *Game) handleConnectLocation(actorCtx actor.Context, args string) error {
+	connectRegex := regexp.MustCompile(`^(did:tupelo:\w+) as (.*)`)
+	matches := connectRegex.FindStringSubmatch(args)
+
+	if len(matches) < 2 {
+		return fmt.Errorf("must specify connections in the syntax of: connect location DID as CMD")
+	}
+
+	toDid := matches[1]
+	interactionCommand := matches[2]
+
+	targetTree, err := g.network.GetTree(toDid)
+	if err != nil {
+		return fmt.Errorf("error fetching target location: %v", err)
+	}
+	if targetTree == nil {
+		return fmt.Errorf("could not find target location")
+	}
+
+	loc := NewLocationTree(g.network, targetTree)
+
+	keys, err := g.playerTree.Keys()
+	if err != nil {
+		return fmt.Errorf("error fetching player keys")
+	}
+	isOwnedBy, _ := loc.IsOwnedBy(keys)
+	if !isOwnedBy {
+		return fmt.Errorf("can't connect a location that you don't own")
+	}
+
+	interaction := &Interaction{
+		Command: interactionCommand,
+		Action:  "changeLocation",
+		Args: map[string]string{
+			"did": toDid,
+		},
+	}
+
+	result, err := actorCtx.RequestFuture(g.locationActor, &AddInteractionRequest{Interaction: interaction}, 5*time.Second).Result()
+	if err != nil {
+		return fmt.Errorf("error adding connection: %v", err)
+	}
+
+	resp, ok := result.(*AddInteractionResponse)
+	if !ok {
+		return fmt.Errorf("error casting location")
+	}
+	if resp.Error != nil {
+		return fmt.Errorf("error adding connection: %v", resp.Error)
+	}
+
+	g.sendUIMessage(actorCtx, fmt.Sprintf("added a connection to %s as %s", toDid, interactionCommand))
+	return nil
+}
+
 func topicFor(str string) []byte {
 	return []byte(str)
 }
@@ -445,42 +513,4 @@ func (g *Game) getCurrentLocation(actorCtx actor.Context) (*jasonsgame.Location,
 		return nil, fmt.Errorf("error casting location")
 	}
 	return resp, nil
-}
-
-func (g *Game) goToBarrenWasteland(actorCtx actor.Context, direction string) {
-	var inverseLocation string
-	switch direction {
-	case "north":
-		inverseLocation = "south"
-	case "south":
-		inverseLocation = "north"
-	case "east":
-		inverseLocation = "west"
-	case "west":
-		inverseLocation = "east"
-	}
-
-	if g.chatActor != nil {
-		actorCtx.Stop(g.chatActor)
-	}
-	if g.locationActor != nil {
-		actorCtx.Stop(g.locationActor)
-	}
-
-	g.locationActor = actorCtx.Spawn(NewBarrenWastelandLocationActorProps(&BarrenWastelandLocationActorConfig{
-		Direction: direction,
-		Network:   g.network,
-		ReturnInteraction: &Interaction{
-			Command: inverseLocation,
-			Action:  "changeLocation",
-			Args: map[string]string{
-				"did": g.locationDid,
-			},
-		},
-		OnExcavate: func(newDid string) {
-			g.setLocation(actorCtx, newDid)
-			g.sendUILocation(actorCtx)
-		},
-	}))
-	g.locationDid = ""
 }

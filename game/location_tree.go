@@ -52,6 +52,9 @@ func (l *LocationTree) Tip() cid.Cid {
 
 func (l *LocationTree) GetDescription() (string, error) {
 	val, err := l.getPath([]string{"description"})
+	if err != nil || val == nil {
+		return "", err
+	}
 	return val.(string), err
 }
 
@@ -118,6 +121,28 @@ func (l *LocationTree) GetPortal() (*jasonsgame.Portal, error) {
 	}
 
 	return castedPortal, nil
+}
+
+func (l *LocationTree) IsOwnedBy(keys []string) (bool, error) {
+	authsUncasted, remainingPath, err := l.tree.ChainTree.Dag.Resolve(strings.Split("tree/"+consensus.TreePathForAuthentications, "/"))
+	if err != nil {
+		return false, err
+	}
+	if len(remainingPath) > 0 {
+		return false, fmt.Errorf("error resolving tree: path elements remaining: %v", remainingPath)
+	}
+
+	for _, storedKey := range authsUncasted.([]interface{}) {
+		found := false
+		for _, checkKey := range keys {
+			found = found || (storedKey.(string) == checkKey)
+		}
+		if !found {
+			return false, nil
+		}
+	}
+
+	return true, nil
 }
 
 func (l *LocationTree) updatePath(path []string, val interface{}) error {
