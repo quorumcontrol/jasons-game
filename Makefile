@@ -47,11 +47,23 @@ bin/jasonsgame: $(generated) go.mod go.sum
 
 build: bin/jasonsgame
 
+JasonsGame.app/Contents/MacOS/jasonsgame: $(generated) go.mod go.sum frontend-build $(packr)
+	mkdir -p JasonsGame.app/Contents/MacOS
+	go build -tags='desktop macos_app_bundle' -o JasonsGame.app/Contents/MacOS/jasonsgame
+
+JasonsGame.app: JasonsGame.app/Contents/MacOS/jasonsgame
+
+mac-app: JasonsGame.app
+
 lint: $(FIRSTGOPATH)/bin/golangci-lint $(generated)
 	$(FIRSTGOPATH)/bin/golangci-lint run --build-tags integration
 
 test: $(generated) go.mod go.sum $(FIRSTGOPATH)/bin/gotestsum
 	gotestsum
+
+ci-test: $(generated) go.mod go.sum $(FIRSTGOPATH)/bin/gotestsum
+	mkdir -p test_results/tests
+	gotestsum --junitfile=test_results/tests/results.xml -- -mod=readonly ./...
 
 integration-test: $(generated) go.mod go.sum
 ifdef testpackage
@@ -100,5 +112,6 @@ clean: $(FIRSTGOPATH)/bin/packr2
 	go clean ./...
 	rm -rf vendor
 	rm -rf bin
+	rm -rf JasonsGame.app/Contents/MacOS
 
-.PHONY: all build test integration-test localnet clean lint game-server jason game2
+.PHONY: all build test integration-test localnet clean lint game-server jason game2 mac-app

@@ -23,6 +23,13 @@ All of the actual gameplay is in the "game" package (it does not need a UI to fu
 
 All of the network (Tupelo and IPFS) is in the "network" package. This is where we add lands to the IPLD DHT and interact with Tupelo, etc.
 
+## Building
+
+`make` - will package up the game and frontend into `bin/jasonsgame`
+    - You can run it with `-localnet=true` to connect to a local network; default is to connect to Quorum Control test net.
+    - You can run it with `-disablewebview=true` to just launch the server instead of the server and a webview window. Then you can point your own browser at the host and port indicated.
+`make mac-app` - will build a macOS app bundle in `JasonsGame.app`
+
 ## Developing
 
 These are written as short hand notes and will get fleshed out.

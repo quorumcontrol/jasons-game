@@ -190,7 +190,7 @@ func TestInventoryActor_DropPickupObject(t *testing.T) {
 	loc, err = c.GetLocation()
 	require.Nil(t, err)
 
-	response, err = rootCtx.RequestFuture(inventory, &PickupObjectRequest{Name: "test", Location: loc}, 1*time.Second).Result()
+	_, err = rootCtx.RequestFuture(inventory, &PickupObjectRequest{Name: "test", Location: loc}, 1*time.Second).Result()
 	require.Nil(t, err)
 
 	playerObjNode, remainingPath, err = testPlayer.ChainTree().ChainTree.Dag.Resolve(append([]string{"tree", "data"}, objectPath...))
