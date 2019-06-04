@@ -15,8 +15,8 @@ import (
 	logging "github.com/ipfs/go-log"
 	ifconnmgr "github.com/libp2p/go-libp2p-interface-connmgr"
 	"github.com/pkg/errors"
-	communityConfig "github.com/quorumcontrol/community/config"
-	communityHub "github.com/quorumcontrol/community/hub"
+	communitycfg "github.com/quorumcontrol/community/config"
+	communityhub "github.com/quorumcontrol/community/hub"
 	"github.com/quorumcontrol/jasons-game/network"
 	"github.com/quorumcontrol/tupelo-go-sdk/gossip3/remote"
 	"github.com/quorumcontrol/tupelo-go-sdk/p2p"
@@ -35,7 +35,7 @@ type Provider struct {
 	handler           *actor.PID
 	connectionManager ifconnmgr.ConnManager
 	parentCtx         context.Context
-	communityHub      *communityHub.Hub
+	communityHub      *communityhub.Hub
 }
 
 const minConnections = 4915 // 60% of 8192 ulimit
@@ -55,8 +55,8 @@ func New(ctx context.Context, key *ecdsa.PrivateKey, ds datastore.Batching, addl
 	pubsubSystem := remote.NewNetworkPubSub(host)
 
 	communityName := "jasonsgame"
-	hubConfig := &communityConfig.HubConfig{
-		ClientConfig: &communityConfig.ClientConfig{
+	hubConfig := &communitycfg.HubConfig{
+		ClientConfig: &communitycfg.ClientConfig{
 			Name:   communityName,
 			Shards: 1024,
 			PubSub: host.GetPubSub(),
@@ -70,7 +70,7 @@ func New(ctx context.Context, key *ecdsa.PrivateKey, ds datastore.Batching, addl
 		pubsubSystem:      pubsubSystem,
 		parentCtx:         ctx,
 		connectionManager: cm,
-		communityHub:      communityHub.New(ctx, hubConfig),
+		communityHub:      communityhub.New(ctx, hubConfig),
 	}, nil
 }
 
