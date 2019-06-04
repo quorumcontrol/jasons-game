@@ -1,10 +1,9 @@
 package game
 
 import (
-	"fmt"
-
 	"github.com/AsynkronIT/protoactor-go/actor"
 	"github.com/AsynkronIT/protoactor-go/plugin"
+	"github.com/pkg/errors"
 	"github.com/quorumcontrol/jasons-game/network"
 	"github.com/quorumcontrol/jasons-game/pb/jasonsgame"
 	"github.com/quorumcontrol/tupelo-go-sdk/gossip3/middleware"
@@ -47,7 +46,7 @@ func (c *ChatActor) Receive(actorCtx actor.Context) {
 	case string:
 		err := c.community.Send(chatTopicFromDid(c.did), &jasonsgame.ChatMessage{Message: msg})
 		if err != nil {
-			panic(fmt.Errorf("failed to broadcast ChatMessage: %s", err))
+			panic(errors.Wrap(err, "failed to broadcast ChatMessage"))
 		}
 	case *jasonsgame.ChatMessage:
 		actorCtx.Send(actorCtx.Parent(), msg)

@@ -168,11 +168,11 @@ func (g *Game) handleBuildPortal(actorCtx actor.Context, toDid string) error {
 		To: toDid,
 	}, 5*time.Second).Result()
 	if err != nil {
-		return fmt.Errorf("Error building portal: %v", err)
+		return errors.Wrap(err, "error building portal")
 	}
 
 	if respErr := response.(*BuildPortalResponse).Error; respErr != nil {
-		return fmt.Errorf("Error building portal: %v", respErr)
+		return errors.Wrap(err, "error building portal")
 	}
 
 	g.sendUIMessage(actorCtx, fmt.Sprintf("successfully built a portal to %s", toDid))
@@ -199,13 +199,13 @@ func (g *Game) handleSetDescription(actorCtx actor.Context, desc string) error {
 	response, err := actorCtx.RequestFuture(g.locationActor, &SetLocationDescriptionRequest{Description: desc}, 5*time.Second).Result()
 
 	if err != nil {
-		return fmt.Errorf("error setting description: %v", err)
+		return errors.Wrap(err, "error setting description")
 	}
 
 	descriptionResponse, ok := response.(*SetLocationDescriptionResponse)
 
 	if !ok || descriptionResponse.Error != nil {
-		return fmt.Errorf("error setting description %v", descriptionResponse.Error)
+		return errors.Wrap(descriptionResponse.Error, "error setting description")
 	}
 
 	g.sendUILocation(actorCtx)
@@ -262,7 +262,7 @@ func (g *Game) handleDropObject(actorCtx actor.Context, args string) error {
 	}, 5*time.Second).Result()
 
 	if err != nil {
-		return fmt.Errorf("error executing drop request: %v", err)
+		return errors.Wrap(err, "error executing drop request")
 	}
 
 	resp, ok := response.(*TransferObjectResponse)

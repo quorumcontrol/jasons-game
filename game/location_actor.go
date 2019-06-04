@@ -12,8 +12,6 @@ import (
 	"github.com/quorumcontrol/tupelo-go-sdk/gossip3/middleware"
 )
 
-// jasonsgame/interactions/go/north
-
 type LocationActor struct {
 	middleware.LogAwareHolder
 	did            string
@@ -102,12 +100,12 @@ func (l *LocationActor) Receive(actorCtx actor.Context) {
 	case *GetLocation:
 		desc, err := l.location.GetDescription()
 		if err != nil {
-			panic(fmt.Errorf("error getting description: %v", err))
+			panic(errors.Wrap(err, "error getting description"))
 		}
 
 		portal, err := l.location.GetPortal()
 		if err != nil {
-			panic(fmt.Errorf("error getting portal: %v", err))
+			panic(errors.Wrap(err, "error getting portal"))
 		}
 
 		actorCtx.Respond(&jasonsgame.Location{
@@ -141,7 +139,7 @@ func (l *LocationActor) handleGetInteractionRequest(actorCtx actor.Context, msg 
 	if msg.Command == "go through portal" {
 		portal, err := l.location.GetPortal()
 		if err != nil {
-			actorCtx.Respond(&GetInteractionResponse{Error: fmt.Errorf("error getting portal: %v", err)})
+			actorCtx.Respond(&GetInteractionResponse{Error: errors.Wrap(err, "error getting portal")})
 			return
 		}
 		actorCtx.Respond(&Interaction{
