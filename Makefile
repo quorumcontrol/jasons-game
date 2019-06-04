@@ -64,6 +64,7 @@ else
 endif
 
 localnet: $(generated) go.mod go.sum
+	docker-compose -f docker-compose-localnet.yml pull --quiet
 	docker-compose -f docker-compose-localnet.yml up --force-recreate
 
 game-server: $(generated) go.mod go.sum
