@@ -62,7 +62,6 @@ func (g *Game) Receive(actorCtx actor.Context) {
 
 func (g *Game) initialize(actorCtx actor.Context) {
 	actorCtx.Send(g.ui, &ui.SetGame{Game: actorCtx.Self()})
-	g.network.Community().SubscribeActor(actorCtx.Self(), shoutChannel)
 	_, err := g.network.Community().SubscribeActor(actorCtx.Self(), shoutChannel)
 	if err != nil {
 		panic(fmt.Errorf("error spawning shout actor: %v", err))
@@ -446,7 +445,11 @@ func (g *Game) handleConnectLocation(actorCtx actor.Context, args string) error 
 		return fmt.Errorf("error adding connection: %v", resp.Error)
 	}
 
-	g.attachInteractions(actorCtx)
+	err = g.attachInteractions(actorCtx)
+	if err != nil {
+		log.Errorf("error refreshing interactions: %v", err)
+	}
+
 	g.sendUIMessage(actorCtx, fmt.Sprintf("added a connection to %s as %s", toDid, interactionCommand))
 	return nil
 }

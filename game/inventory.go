@@ -229,7 +229,7 @@ func (inv *InventoryActor) handleCreateObject(context actor.Context, msg *Create
 		return
 	}
 
-	tree, err = inv.network.UpdateChainTree(tree, newObjectPath, objectChainTree.MustId())
+	_, err = inv.network.UpdateChainTree(tree, newObjectPath, objectChainTree.MustId())
 	if err != nil {
 		err = fmt.Errorf("error updating objects in chaintree: %v", err)
 		inv.Log.Error(err)
@@ -384,7 +384,7 @@ func (inv *InventoryActor) handleTransferObject(context actor.Context, msg *Tran
 
 	delete(objects, objectName)
 
-	sourceTree, err = inv.network.UpdateChainTree(sourceTree, ObjectsPath, objects)
+	_, err = inv.network.UpdateChainTree(sourceTree, ObjectsPath, objects)
 	if err != nil {
 		err = fmt.Errorf("error updating objects in inventory: %v", err)
 		inv.Log.Error(err)
@@ -420,7 +420,7 @@ func (inv *InventoryActor) handleListObjects(context actor.Context, msg *Invento
 	}
 
 	if objectsUncasted == nil {
-		context.Respond(&InventoryListResponse{Objects: make(map[string]*Object, 0)})
+		context.Respond(&InventoryListResponse{Objects: make(map[string]*Object)})
 		return
 	}
 
@@ -430,7 +430,6 @@ func (inv *InventoryActor) handleListObjects(context actor.Context, msg *Invento
 	}
 
 	context.Respond(&InventoryListResponse{Objects: objects})
-	return
 }
 
 func (inv *InventoryActor) handleTransferredObject(context actor.Context, msg *jasonsgame.TransferredObjectMessage) {
@@ -467,7 +466,7 @@ func (inv *InventoryActor) handleTransferredObject(context actor.Context, msg *j
 
 	objects[objName] = objDid
 
-	tree, err = inv.network.UpdateChainTree(tree, ObjectsPath, objects)
+	_, err = inv.network.UpdateChainTree(tree, ObjectsPath, objects)
 	if err != nil {
 		panic(fmt.Errorf("error updating objects in chaintree: %v", err))
 	}

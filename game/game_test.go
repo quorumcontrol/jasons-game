@@ -121,7 +121,8 @@ func TestBuildPortal(t *testing.T) {
 	require.Nil(t, err)
 	require.Equal(t, portal.To, did)
 
-	stream.ClearMessages()
+	err = stream.ClearMessages()
+	require.Nil(t, err)
 	rootCtx.Send(game, &jasonsgame.UserInput{Message: "look around"})
 	time.Sleep(100 * time.Millisecond)
 
@@ -153,7 +154,8 @@ func TestGoThroughPortal(t *testing.T) {
 	rootCtx.Send(game, &jasonsgame.UserInput{Message: "build portal to " + did})
 	time.Sleep(100 * time.Millisecond)
 
-	stream.ClearMessages()
+	err = stream.ClearMessages()
+	require.Nil(t, err)
 	rootCtx.Send(game, &jasonsgame.UserInput{Message: "go through portal"})
 	time.Sleep(100 * time.Millisecond)
 
