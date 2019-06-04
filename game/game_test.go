@@ -5,7 +5,7 @@ import (
 	"time"
 
 	"github.com/AsynkronIT/protoactor-go/actor"
-	"github.com/quorumcontrol/jasons-game/messages"
+
 	"github.com/quorumcontrol/jasons-game/navigator"
 	"github.com/quorumcontrol/jasons-game/network"
 	"github.com/quorumcontrol/jasons-game/pb/jasonsgame"
@@ -22,10 +22,7 @@ func setupUiAndGame(t *testing.T, stream *ui.TestStream, net network.Network) (s
 
 	playerTree, err := GetOrCreatePlayerTree(net)
 	require.Nil(t, err)
-	broadcaster := messages.NewBroadcaster(net)
-	game, err = rootCtx.SpawnNamed(
-		NewGameProps(playerTree, simulatedUI, net, broadcaster), t.Name()+"-game",
-	)
+	game, err = rootCtx.SpawnNamed(NewGameProps(playerTree, simulatedUI, net), t.Name()+"-game")
 	require.Nil(t, err)
 	return simulatedUI, game
 }
@@ -101,10 +98,7 @@ func TestCallMe(t *testing.T) {
 
 	playerTree, err := GetOrCreatePlayerTree(net)
 	require.Nil(t, err)
-	broadcaster := messages.NewBroadcaster(net)
-	game, err := rootCtx.SpawnNamed(
-		NewGameProps(playerTree, simulatedUI, net, broadcaster), "test-callme-game",
-	)
+	game, err := rootCtx.SpawnNamed(NewGameProps(playerTree, simulatedUI, net), "test-callme-game")
 	require.Nil(t, err)
 	defer rootCtx.Stop(game)
 

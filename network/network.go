@@ -17,6 +17,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/quorumcontrol/chaintree/chaintree"
 	"github.com/quorumcontrol/chaintree/dag"
+	"github.com/quorumcontrol/messages/build/go/transactions"
 	"github.com/quorumcontrol/tupelo-go-sdk/consensus"
 	"github.com/quorumcontrol/tupelo-go-sdk/gossip3/remote"
 	"github.com/quorumcontrol/tupelo-go-sdk/gossip3/types"
@@ -40,13 +41,13 @@ var DefaultGameBootstrappers = []string{
 }
 
 type Network interface {
+	Community() *Community
 	ChangeChainTreeOwner(tree *consensus.SignedChainTree, newKeys []string) (*consensus.SignedChainTree, error)
 	CreateNamedChainTree(name string) (*consensus.SignedChainTree, error)
 	GetChainTreeByName(name string) (*consensus.SignedChainTree, error)
 	GetTreeByTip(tip cid.Cid) (*consensus.SignedChainTree, error)
 	GetTree(did string) (*consensus.SignedChainTree, error)
 	UpdateChainTree(tree *consensus.SignedChainTree, path string, value interface{}) (*consensus.SignedChainTree, error)
-	PubSubSystem() remote.PubSub
 	StartDiscovery(string) error
 	StopDiscovery(string)
 	WaitForDiscovery(ns string, num int, dur time.Duration) error
@@ -59,8 +60,8 @@ type RemoteNetwork struct {
 	Ipld          *p2p.BitswapPeer
 	KeyValueStore datastore.Batching
 	TreeStore     TreeStore
-	pubSubSystem  remote.PubSub
 	ipldp2pHost   *p2p.LibP2PHost
+	community     *Community
 }
 
 func NewRemoteNetwork(ctx context.Context, group *types.NotaryGroup, path string) (Network, error) {
@@ -86,7 +87,8 @@ func NewRemoteNetwork(ctx context.Context, group *types.NotaryGroup, path string
 	}
 	net.Ipld = lite
 	net.ipldp2pHost = ipldNetHost
-	net.pubSubSystem = remote.NewNetworkPubSub(ipldNetHost)
+	net.community = NewJasonCommunity(ctx, key, ipldNetHost)
+	pubSubSystem := remote.NewNetworkPubSub(ipldNetHost)
 
 	// bootstrap to the game async so we can also setup the tupelo node, etc
 	// while this happens.
@@ -99,7 +101,7 @@ func NewRemoteNetwork(ctx context.Context, group *types.NotaryGroup, path string
 			log.Errorf("error bootstrapping ipld host: %v", err)
 			return
 		}
-		if err := net.pubSubSystem.Broadcast(BlockTopic, &Join{Identity: ipldNetHost.Identity()}); err != nil {
+		if err := pubSubSystem.Broadcast(BlockTopic, &Join{Identity: ipldNetHost.Identity()}); err != nil {
 			log.Errorf("broadcasting Join failed: %s", err)
 		}
 	}()
@@ -120,7 +122,7 @@ func NewRemoteNetwork(ctx context.Context, group *types.NotaryGroup, path string
 	}
 	net.Tupelo = tup
 
-	store := NewIPLDTreeStore(lite, ds, net.pubSubSystem, tup)
+	store := NewIPLDTreeStore(lite, ds, pubSubSystem, tup)
 	net.TreeStore = store
 	tup.Store = store
 
@@ -140,8 +142,8 @@ func NewRemoteNetwork(ctx context.Context, group *types.NotaryGroup, path string
 	return net, nil
 }
 
-func (rn *RemoteNetwork) PubSubSystem() remote.PubSub {
-	return rn.pubSubSystem
+func (rn *RemoteNetwork) Community() *Community {
+	return rn.community
 }
 
 func (rn *RemoteNetwork) StartDiscovery(ns string) error {
@@ -254,16 +256,12 @@ func (n *RemoteNetwork) UpdateChainTree(tree *consensus.SignedChainTree, path st
 func (n *RemoteNetwork) ChangeChainTreeOwner(tree *consensus.SignedChainTree, newKeys []string) (*consensus.SignedChainTree, error) {
 	log.Debug("ChangeChainTreeOwner", tree.MustId(), newKeys)
 
-	transactions := []*chaintree.Transaction{
-		{
-			Type: consensus.TransactionTypeSetOwnership,
-			Payload: &consensus.SetOwnershipPayload{
-				Authentication: newKeys,
-			},
-		},
+	transaction, err := chaintree.NewSetOwnershipTransaction(newKeys)
+	if err != nil {
+		return nil, errors.Wrap(err, "error updating chaintree")
 	}
 
-	err := n.Tupelo.PlayTransactions(tree, n.mustPrivateKey(), transactions)
+	err = n.Tupelo.PlayTransactions(tree, n.mustPrivateKey(), []*transactions.Transaction{transaction})
 	if err != nil {
 		return nil, errors.Wrap(err, "error updating chaintree")
 	}

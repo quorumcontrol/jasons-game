@@ -11,24 +11,17 @@ export GO111MODULE = on
 FIRSTGOPATH = $(firstword $(subst :, ,$(GOPATH)))
 
 jsmodules = ./frontend/jasons-game/node_modules
-generated = pb/jasonsgame/jasonsgame.pb.go frontend/jasons-game/src/js/frontend/remote/*_pb.* messages/messages_gen.go messages/messages_gen_test.go network/messages_gen.go network/messages_gen_test.go
+generated = network/messages.pb.go pb/jasonsgame/jasonsgame.pb.go frontend/jasons-game/src/js/frontend/remote/*_pb.*
 packr = packrd/packed-packr.go main-packr.go
 
 all: frontend-build $(packr) build
 
-$(FIRSTGOPATH)/src/github.com/gogo/protobuf/proto:
-	go get github.com/gogo/protobuf/proto
 
-$(FIRSTGOPATH)/src/github.com/gogo/protobuf/gogoproto:
-	go get github.com/gogo/protobuf/gogoproto
+$(FIRSTGOPATH)/bin/protoc-gen-go:
+	go get -u github.com/golang/protobuf/protoc-gen-go
 
-$(FIRSTGOPATH)/bin/protoc-gen-gogofaster: $(FIRSTGOPATH)/src/github.com/gogo/protobuf/proto $(FIRSTGOPATH)/src/github.com/gogo/protobuf/gogoproto
-	go get -u github.com/gogo/protobuf/protoc-gen-gogofaster
-
-$(generated): $(FIRSTGOPATH)/bin/protoc-gen-gogofaster $(FIRSTGOPATH)/bin/msgp $(jsmodules) messages/messages.go network/messages.go
+$(generated): $(FIRSTGOPATH)/bin/protoc-gen-go $(jsmodules)
 	./scripts/protogen.sh
-	cd messages && go generate
-	cd network && go generate
 	
 $(jsmodules):
 	cd frontend/jasons-game && npm install
@@ -38,9 +31,6 @@ $(FIRSTGOPATH)/bin/golangci-lint:
 
 $(FIRSTGOPATH)/bin/gotestsum:
 	go get gotest.tools/gotestsum
-
-$(FIRSTGOPATH)/bin/msgp:
-	go get github.com/tinylib/msgp
 
 bin/jasonsgame: $(generated) go.mod go.sum
 	mkdir -p bin
@@ -74,6 +64,7 @@ else
 endif
 
 localnet: $(generated) go.mod go.sum
+	docker-compose -f docker-compose-localnet.yml pull --quiet
 	docker-compose -f docker-compose-localnet.yml up --force-recreate
 
 game-server: $(generated) go.mod go.sum

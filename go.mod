@@ -10,7 +10,7 @@ require (
 	github.com/gobuffalo/genny v0.1.1 // indirect
 	github.com/gobuffalo/gogen v0.1.1 // indirect
 	github.com/gobuffalo/packr/v2 v2.2.0
-	github.com/gogo/protobuf v1.2.1
+	github.com/golang/protobuf v1.3.1
 	github.com/gorilla/mux v1.7.1
 	github.com/improbable-eng/grpc-web v0.9.5
 	github.com/ipfs/go-block-format v0.0.2
@@ -35,20 +35,21 @@ require (
 	github.com/libp2p/go-libp2p-pubsub v0.0.3
 	github.com/multiformats/go-multihash v0.0.5 // indirect
 	github.com/pkg/errors v0.8.1
-	github.com/quorumcontrol/chaintree v0.0.0-20190515172607-6a3407e067bd
+	github.com/quorumcontrol/chaintree v0.0.0-20190604184141-dd0cfeb9f785
+	github.com/quorumcontrol/community v0.0.0-20190604183909-66e8127502a5
+	github.com/quorumcontrol/messages/build/go v0.0.0-20190604083406-7ee8fa6b39eb
 	github.com/quorumcontrol/storage v1.1.2
-	github.com/quorumcontrol/tupelo-go-sdk v0.2.4-0.20190517142847-a8abc862d8a0dd497e2630b0657dec428d86f1a2
+	github.com/quorumcontrol/tupelo-go-sdk v0.4.1-0.20190604114430-234618cf102b
 	github.com/shibukawa/configdir v0.0.0-20170330084843-e180dbdc8da0
 	github.com/sirupsen/logrus v1.4.2 // indirect
 	github.com/stretchr/testify v1.3.0
-	github.com/tinylib/msgp v1.1.0
 	github.com/zserge/webview v0.0.0-20190123072648-16c93bcaeaeb
-	go.uber.org/zap v1.9.1
 	golang.org/x/crypto v0.0.0-20190513172903-22d7a77e9e5f // indirect
-	golang.org/x/net v0.0.0-20190522155817-f3200d17e092 // indirect
+	golang.org/x/net v0.0.0-20190522155817-f3200d17e092
 	golang.org/x/sys v0.0.0-20190523142557-0e01d883c5c5 // indirect
 	golang.org/x/text v0.3.2 // indirect
 	golang.org/x/tools v0.0.0-20190523174634-38d8bcfa38af // indirect
+	google.golang.org/genproto v0.0.0-20190418145605-e7d98fc518a7 // indirect
 	google.golang.org/grpc v1.20.0
 )
 
