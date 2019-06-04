@@ -34,12 +34,13 @@ require (
 	github.com/libp2p/go-libp2p-peer v0.1.0
 	github.com/libp2p/go-libp2p-pubsub v0.0.3
 	github.com/multiformats/go-multihash v0.0.5 // indirect
+	github.com/philhofer/fwd v1.0.0 // indirect
 	github.com/pkg/errors v0.8.1
-	github.com/quorumcontrol/chaintree v0.0.0-20190529091624-597cb9a3b7b1
-	github.com/quorumcontrol/community v0.0.0-20190530174833-b3e58b20753e
-	github.com/quorumcontrol/messages/build/go v0.0.0-20190524131644-280f165f71a5
+	github.com/quorumcontrol/chaintree v0.0.0-20190530190017-53765d7c259c
+	github.com/quorumcontrol/community v0.0.0-20190604094328-1ca5468c6d78
+	github.com/quorumcontrol/messages/build/go v0.0.0-20190604083406-7ee8fa6b39eb
 	github.com/quorumcontrol/storage v1.1.2
-	github.com/quorumcontrol/tupelo-go-sdk v0.3.0
+	github.com/quorumcontrol/tupelo-go-sdk v0.4.0
 	github.com/shibukawa/configdir v0.0.0-20170330084843-e180dbdc8da0
 	github.com/sirupsen/logrus v1.4.2 // indirect
 	github.com/stretchr/testify v1.3.0
@@ -50,6 +51,7 @@ require (
 	golang.org/x/sys v0.0.0-20190523142557-0e01d883c5c5 // indirect
 	golang.org/x/text v0.3.2 // indirect
 	golang.org/x/tools v0.0.0-20190523174634-38d8bcfa38af // indirect
+	google.golang.org/genproto v0.0.0-20190418145605-e7d98fc518a7 // indirect
 	google.golang.org/grpc v1.20.0
 )
 
