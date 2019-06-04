@@ -39,7 +39,7 @@ require (
 	github.com/quorumcontrol/community v0.0.0-20190604183909-66e8127502a5
 	github.com/quorumcontrol/messages/build/go v0.0.0-20190604083406-7ee8fa6b39eb
 	github.com/quorumcontrol/storage v1.1.2
-	github.com/quorumcontrol/tupelo-go-sdk v0.4.0
+	github.com/quorumcontrol/tupelo-go-sdk v0.4.1-0.20190604114430-234618cf102b
 	github.com/shibukawa/configdir v0.0.0-20170330084843-e180dbdc8da0
 	github.com/sirupsen/logrus v1.4.2 // indirect
 	github.com/stretchr/testify v1.3.0
