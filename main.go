@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"flag"
 	"fmt"
 	"log"
 	"net/http"
@@ -69,10 +68,7 @@ func main() {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	disableWebView := flag.Bool("disablewebview", false, "disable the webview")
-	localnet := flag.Bool("localnet", false, "connect to localnet instead of testnet")
-
-	flag.Parse()
+	disableWebView, localnet := ui.SetOptions()
 
 	s := server.NewGameServer(ctx, *localnet)
 

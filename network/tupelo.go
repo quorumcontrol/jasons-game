@@ -6,10 +6,11 @@ import (
 	"github.com/ethereum/go-ethereum/crypto"
 	cid "github.com/ipfs/go-cid"
 	"github.com/pkg/errors"
+	"github.com/quorumcontrol/chaintree/chaintree"
 	"github.com/quorumcontrol/chaintree/nodestore"
+	"github.com/quorumcontrol/messages/build/go/transactions"
 	"github.com/quorumcontrol/tupelo-go-sdk/client"
 
-	"github.com/quorumcontrol/chaintree/chaintree"
 	"github.com/quorumcontrol/tupelo-go-sdk/consensus"
 	"github.com/quorumcontrol/tupelo-go-sdk/gossip3/remote"
 	"github.com/quorumcontrol/tupelo-go-sdk/gossip3/types"
@@ -44,16 +45,11 @@ func (t *Tupelo) CreateChainTree(key *ecdsa.PrivateKey) (*consensus.SignedChainT
 		return nil, errors.Wrap(err, "error creating key")
 	}
 
-	transactions := []*chaintree.Transaction{
-		{
-			Type: consensus.TransactionTypeSetOwnership,
-			Payload: &consensus.SetOwnershipPayload{
-				Authentication: []string{
-					crypto.PubkeyToAddress(key.PublicKey).String(),
-				},
-			},
-		},
+	transaction, err := chaintree.NewSetOwnershipTransaction([]string{crypto.PubkeyToAddress(key.PublicKey).String()})
+	if err != nil {
+		return nil, errors.Wrap(err, "error creating ownership transaction for chaintree")
 	}
+
 	tree, err := consensus.NewSignedChainTree(ephemeralPrivate.PublicKey, t.Store)
 	if err != nil {
 		return nil, errors.Wrap(err, "error creating new signed chaintree")
@@ -63,7 +59,7 @@ func (t *Tupelo) CreateChainTree(key *ecdsa.PrivateKey) (*consensus.SignedChainT
 	c.Listen()
 	defer c.Stop()
 
-	_, err = c.PlayTransactions(tree, ephemeralPrivate, nil, transactions)
+	_, err = c.PlayTransactions(tree, ephemeralPrivate, nil, []*transactions.Transaction{transaction})
 	if err != nil {
 		return nil, errors.Wrap(err, "error playing transactions")
 	}
@@ -73,20 +69,15 @@ func (t *Tupelo) CreateChainTree(key *ecdsa.PrivateKey) (*consensus.SignedChainT
 func (t *Tupelo) UpdateChainTree(tree *consensus.SignedChainTree, key *ecdsa.PrivateKey, path string, value interface{}) error {
 	log.Debug("UpdateChainTree", "did", tree.MustId(), "path", path, "value", value)
 
-	transactions := []*chaintree.Transaction{
-		{
-			Type: consensus.TransactionTypeSetData,
-			Payload: &consensus.SetDataPayload{
-				Path:  path,
-				Value: value,
-			},
-		},
+	transaction, err := chaintree.NewSetDataTransaction(path, value)
+	if err != nil {
+		return errors.Wrap(err, "error creating set data transaction")
 	}
 
-	return t.PlayTransactions(tree, key, transactions)
+	return t.PlayTransactions(tree, key, []*transactions.Transaction{transaction})
 }
 
-func (t *Tupelo) PlayTransactions(tree *consensus.SignedChainTree, key *ecdsa.PrivateKey, transactions []*chaintree.Transaction) error {
+func (t *Tupelo) PlayTransactions(tree *consensus.SignedChainTree, key *ecdsa.PrivateKey, transactions []*transactions.Transaction) error {
 	c := client.New(t.NotaryGroup, tree.MustId(), t.PubSubSystem)
 	c.Listen()
 	defer c.Stop()

@@ -11,24 +11,17 @@ export GO111MODULE = on
 FIRSTGOPATH = $(firstword $(subst :, ,$(GOPATH)))
 
 jsmodules = ./frontend/jasons-game/node_modules
-generated = pb/jasonsgame/jasonsgame.pb.go frontend/jasons-game/src/js/frontend/remote/*_pb.* messages/messages_gen.go messages/messages_gen_test.go network/messages_gen.go network/messages_gen_test.go
+generated = network/messages.pb.go pb/jasonsgame/jasonsgame.pb.go frontend/jasons-game/src/js/frontend/remote/*_pb.*
 packr = packrd/packed-packr.go main-packr.go
 
 all: frontend-build $(packr) build
 
-$(FIRSTGOPATH)/src/github.com/gogo/protobuf/proto:
-	go get github.com/gogo/protobuf/proto
 
-$(FIRSTGOPATH)/src/github.com/gogo/protobuf/gogoproto:
-	go get github.com/gogo/protobuf/gogoproto
+$(FIRSTGOPATH)/bin/protoc-gen-go:
+	go get -u github.com/golang/protobuf/protoc-gen-go
 
-$(FIRSTGOPATH)/bin/protoc-gen-gogofaster: $(FIRSTGOPATH)/src/github.com/gogo/protobuf/proto $(FIRSTGOPATH)/src/github.com/gogo/protobuf/gogoproto
-	go get -u github.com/gogo/protobuf/protoc-gen-gogofaster
-
-$(generated): $(FIRSTGOPATH)/bin/protoc-gen-gogofaster $(FIRSTGOPATH)/bin/msgp $(jsmodules) messages/messages.go network/messages.go
+$(generated): $(FIRSTGOPATH)/bin/protoc-gen-go $(jsmodules)
 	./scripts/protogen.sh
-	cd messages && go generate
-	cd network && go generate
 
 $(jsmodules):
 	cd frontend/jasons-game && npm install
@@ -39,20 +32,29 @@ $(FIRSTGOPATH)/bin/golangci-lint:
 $(FIRSTGOPATH)/bin/gotestsum:
 	go get gotest.tools/gotestsum
 
-$(FIRSTGOPATH)/bin/msgp:
-	go get github.com/tinylib/msgp
-
 bin/jasonsgame: $(generated) go.mod go.sum
 	mkdir -p bin
 	go build -tags=desktop -o ./bin/jasonsgame
 
 build: bin/jasonsgame
 
+JasonsGame.app/Contents/MacOS/jasonsgame: $(generated) go.mod go.sum frontend-build $(packr)
+	mkdir -p JasonsGame.app/Contents/MacOS
+	go build -tags='desktop macos_app_bundle' -o JasonsGame.app/Contents/MacOS/jasonsgame
+
+JasonsGame.app: JasonsGame.app/Contents/MacOS/jasonsgame
+
+mac-app: JasonsGame.app
+
 lint: $(FIRSTGOPATH)/bin/golangci-lint $(generated)
 	$(FIRSTGOPATH)/bin/golangci-lint run --build-tags integration
 
 test: $(generated) go.mod go.sum $(FIRSTGOPATH)/bin/gotestsum
 	gotestsum
+
+ci-test: $(generated) go.mod go.sum $(FIRSTGOPATH)/bin/gotestsum
+	mkdir -p test_results/tests
+	gotestsum --junitfile=test_results/tests/results.xml -- -mod=readonly ./...
 
 integration-test: $(generated) go.mod go.sum
 ifdef testpackage
@@ -62,6 +64,7 @@ else
 endif
 
 localnet: $(generated) go.mod go.sum
+	docker-compose -f docker-compose-localnet.yml pull --quiet
 	docker-compose -f docker-compose-localnet.yml up --force-recreate
 
 game-server: $(generated) go.mod go.sum
@@ -101,5 +104,6 @@ clean: $(FIRSTGOPATH)/bin/packr2
 	go clean ./...
 	rm -rf vendor
 	rm -rf bin
+	rm -rf JasonsGame.app/Contents/MacOS
 
-.PHONY: all build test integration-test localnet clean lint game-server jason game2
+.PHONY: all build test integration-test localnet clean lint game-server jason game2 mac-app
