@@ -1,0 +1,12 @@
+syntax = "proto3";
+
+package network;
+
+message Block {
+  bytes cid = 1;
+  bytes data = 2;
+}
+
+message Join {
+  string identity = 1;
+}

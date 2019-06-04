@@ -11,7 +11,7 @@ export GO111MODULE = on
 FIRSTGOPATH = $(firstword $(subst :, ,$(GOPATH)))
 
 jsmodules = ./frontend/jasons-game/node_modules
-generated = pb/jasonsgame/jasonsgame.pb.go frontend/jasons-game/src/js/frontend/remote/*_pb.* network/messages_gen.go network/messages_gen_test.go
+generated = network/messages.pb.go pb/jasonsgame/jasonsgame.pb.go frontend/jasons-game/src/js/frontend/remote/*_pb.*
 packr = packrd/packed-packr.go main-packr.go
 
 all: frontend-build $(packr) build
@@ -25,9 +25,8 @@ $(FIRSTGOPATH)/src/github.com/gogo/protobuf/gogoproto:
 $(FIRSTGOPATH)/bin/protoc-gen-gogofaster: $(FIRSTGOPATH)/src/github.com/gogo/protobuf/proto $(FIRSTGOPATH)/src/github.com/gogo/protobuf/gogoproto
 	go get -u github.com/gogo/protobuf/protoc-gen-gogofaster
 
-$(generated): $(FIRSTGOPATH)/bin/protoc-gen-gogofaster $(FIRSTGOPATH)/bin/msgp $(jsmodules) network/messages.go
+$(generated): $(FIRSTGOPATH)/bin/protoc-gen-gogofaster $(jsmodules)
 	./scripts/protogen.sh
-	cd network && go generate	
 	
 $(jsmodules):
 	cd frontend/jasons-game && npm install
@@ -37,9 +36,6 @@ $(FIRSTGOPATH)/bin/golangci-lint:
 
 $(FIRSTGOPATH)/bin/gotestsum:
 	go get gotest.tools/gotestsum
-
-$(FIRSTGOPATH)/bin/msgp:
-	go get github.com/tinylib/msgp
 
 bin/jasonsgame: $(generated) go.mod go.sum
 	mkdir -p bin

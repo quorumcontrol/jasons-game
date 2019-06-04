@@ -88,6 +88,7 @@ func NewRemoteNetwork(ctx context.Context, group *types.NotaryGroup, path string
 	net.Ipld = lite
 	net.ipldp2pHost = ipldNetHost
 	net.community = NewJasonCommunity(ctx, key, ipldNetHost)
+	pubSubSystem := remote.NewNetworkPubSub(ipldNetHost)
 
 	// bootstrap to the game async so we can also setup the tupelo node, etc
 	// while this happens.
@@ -99,6 +100,9 @@ func NewRemoteNetwork(ctx context.Context, group *types.NotaryGroup, path string
 		if err != nil {
 			log.Errorf("error bootstrapping ipld host: %v", err)
 			return
+		}
+		if err := pubSubSystem.Broadcast(BlockTopic, &Join{Identity: ipldNetHost.Identity()}); err != nil {
+			log.Errorf("broadcasting Join failed: %s", err)
 		}
 	}()
 
@@ -118,7 +122,7 @@ func NewRemoteNetwork(ctx context.Context, group *types.NotaryGroup, path string
 	}
 	net.Tupelo = tup
 
-	store := NewIPLDTreeStore(lite, ds, remote.NewNetworkPubSub(ipldNetHost), tup)
+	store := NewIPLDTreeStore(lite, ds, pubSubSystem, tup)
 	net.TreeStore = store
 	tup.Store = store
 

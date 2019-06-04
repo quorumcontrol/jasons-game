@@ -13,3 +13,5 @@ protoc -I=./pb -I=$GOPATH/src -I=$GOPATH/src/github.com/gogo/protobuf/protobuf j
 --ts_out=service=true:./frontend/jasons-game/src/js/frontend/remote \
 --js_out=import_style=commonjs,binary:./frontend/jasons-game/src/js/frontend/remote \
 --gogofaster_out=plugins=grpc:./pb/jasonsgame
+
+protoc -I=./network -I=$GOPATH/src -I=$GOPATH/src/github.com/gogo/protobuf/protobuf messages.proto --gogofaster_out=plugins=grpc:./network/

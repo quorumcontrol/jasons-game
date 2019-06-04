@@ -16,7 +16,6 @@ import (
 	"github.com/quorumcontrol/jasons-game/pb/jasonsgame"
 	"github.com/quorumcontrol/jasons-game/ui"
 	"github.com/quorumcontrol/tupelo-go-sdk/consensus"
-	gossip3messages "github.com/quorumcontrol/tupelo-go-sdk/gossip3/messages"
 )
 
 var log = logging.Logger("game")
@@ -67,8 +66,6 @@ func (g *Game) Receive(actorCtx actor.Context) {
 		g.handleOpenPortalResponseMessage(actorCtx, msg)
 	case *ping:
 		actorCtx.Respond(true)
-	case gossip3messages.WireMessage:
-		log.Warningf("received message of unrecognized type, typeCode: %d", msg.TypeCode())
 	default:
 		log.Warningf("received message of unrecognized type")
 	}
