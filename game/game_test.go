@@ -1,6 +1,7 @@
 package game
 
 import (
+	"fmt"
 	"strings"
 	"testing"
 	"time"
@@ -34,35 +35,20 @@ func TestNavigation(t *testing.T) {
 	defer rootCtx.Stop(simulatedUI)
 	defer rootCtx.Stop(game)
 
-	rootCtx.Send(game, &jasonsgame.UserInput{Message: "north"})
+	someTree, err := net.CreateChainTree()
+	require.Nil(t, err)
+
+	rootCtx.Send(game, &jasonsgame.UserInput{Message: fmt.Sprintf("connect location %s as enter dungeon", someTree.MustId())})
 	time.Sleep(100 * time.Millisecond)
 	msgs := stream.GetMessages()
-
 	require.Len(t, msgs, 3)
 
-	// works going back to south
-	rootCtx.Send(game, &jasonsgame.UserInput{Message: "south"})
+	rootCtx.Send(game, &jasonsgame.UserInput{Message: "enter dungeon"})
 	time.Sleep(100 * time.Millisecond)
 	msgs = stream.GetMessages()
 
 	require.Len(t, msgs, 4)
 	assert.NotNil(t, msgs[3].GetLocation())
-
-	// works going east
-	rootCtx.Send(game, &jasonsgame.UserInput{Message: "east"})
-	time.Sleep(100 * time.Millisecond)
-	msgs = stream.GetMessages()
-
-	require.Len(t, msgs, 5)
-	assert.NotNil(t, msgs[4].GetLocation())
-
-	// works going west
-	rootCtx.Send(game, &jasonsgame.UserInput{Message: "west"})
-	time.Sleep(100 * time.Millisecond)
-	msgs = stream.GetMessages()
-
-	require.Len(t, msgs, 6)
-	assert.NotNil(t, msgs[5].GetLocation())
 }
 
 func TestSetDescription(t *testing.T) {

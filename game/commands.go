@@ -13,10 +13,6 @@ type command struct {
 
 // for now the string parsing is not working
 var defaultCommandList = commandList{
-	newCommand("north", "north"),
-	newCommand("south", "south"),
-	newCommand("east", "east"),
-	newCommand("west", "west"),
 	newCommand("name", "call me"),
 	newCommand("create-location", "create location"),
 	newCommand("connect-location", "connect location"),

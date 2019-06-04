@@ -111,8 +111,6 @@ func (g *Game) handleUserInput(actorCtx actor.Context, input *jasonsgame.UserInp
 	switch cmd.name {
 	case "exit":
 		g.sendUIMessage(actorCtx, "exit is unsupported in the browser")
-	case "north", "east", "south", "west":
-		g.handleInteractionInput(actorCtx, cmd, args)
 	case "go-portal":
 		g.handleInteractionInput(actorCtx, cmd, args)
 	case "set-description":
@@ -150,6 +148,8 @@ func (g *Game) handleUserInput(actorCtx actor.Context, input *jasonsgame.UserInp
 		}
 	case "name":
 		err = g.handleName(args)
+	case "interaction":
+		g.handleInteractionInput(actorCtx, cmd, args)
 	default:
 		log.Error("unhandled but matched command", cmd.name)
 	}
@@ -446,6 +446,7 @@ func (g *Game) handleConnectLocation(actorCtx actor.Context, args string) error 
 		return fmt.Errorf("error adding connection: %v", resp.Error)
 	}
 
+	g.attachInteractions(actorCtx)
 	g.sendUIMessage(actorCtx, fmt.Sprintf("added a connection to %s as %s", toDid, interactionCommand))
 	return nil
 }
@@ -493,6 +494,13 @@ func (g *Game) setLocation(actorCtx actor.Context, locationDid string) {
 		Network: g.network,
 		Did:     locationDid,
 	}))
+	g.locationDid = locationDid
+
+	err := g.attachInteractions(actorCtx)
+	if err != nil {
+		panic(errors.Wrap(err, "error attaching interactions for location"))
+	}
+
 	if g.chatActor != nil {
 		actorCtx.Stop(g.chatActor)
 	}
@@ -500,7 +508,30 @@ func (g *Game) setLocation(actorCtx actor.Context, locationDid string) {
 		Did:       locationDid,
 		Community: g.network.Community(),
 	}))
-	g.locationDid = locationDid
+}
+
+func (g *Game) attachInteractions(actorCtx actor.Context) error {
+	response, err := actorCtx.RequestFuture(g.locationActor, &ListInteractionsRequest{}, 5*time.Second).Result()
+	if err != nil || response == nil {
+		return err
+	}
+
+	interactionsResponse, ok := response.(*ListInteractionsResponse)
+	if !ok {
+		return fmt.Errorf("error casting ListInteractionsResponse")
+	}
+	if interactionsResponse.Error != nil {
+		return interactionsResponse.Error
+	}
+
+	interactions := interactionsResponse.Interactions
+	interactionCommands := make(commandList, len(interactions))
+	for i, cmd := range interactions {
+		interactionCommands[i] = newCommand("interaction", cmd)
+	}
+
+	g.commands = append(defaultCommandList, interactionCommands...)
+	return nil
 }
 
 func (g *Game) getCurrentLocation(actorCtx actor.Context) (*jasonsgame.Location, error) {

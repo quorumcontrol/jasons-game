@@ -63,7 +63,7 @@ func (l *LocationTree) SetDescription(description string) error {
 }
 
 func (l *LocationTree) AddInteraction(i *Interaction) error {
-	resp, err := l.GetInteractionRequest(i.Command)
+	resp, err := l.GetInteraction(i.Command)
 	if err != nil {
 		return err
 	}
@@ -73,7 +73,7 @@ func (l *LocationTree) AddInteraction(i *Interaction) error {
 	return l.updatePath([]string{"interactions", i.Command}, i)
 }
 
-func (l *LocationTree) GetInteractionRequest(command string) (*Interaction, error) {
+func (l *LocationTree) GetInteraction(command string) (*Interaction, error) {
 	val, err := l.getPath([]string{"interactions", command})
 	if err != nil || val == nil {
 		return nil, err
@@ -87,6 +87,20 @@ func (l *LocationTree) GetInteractionRequest(command string) (*Interaction, erro
 	}
 
 	return &interaction, nil
+}
+
+func (l *LocationTree) InteractionsList() ([]string, error) {
+	val, err := l.getPath([]string{"interactions"})
+	if err != nil || val == nil {
+		return nil, err
+	}
+	commands := make([]string, len(val.(map[string]interface{})))
+	i := 0
+	for cmd := range val.(map[string]interface{}) {
+		commands[i] = cmd
+		i++
+	}
+	return commands, nil
 }
 
 func (l *LocationTree) BuildPortal(toDid string) error {

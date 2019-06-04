@@ -29,6 +29,13 @@ type LocationActorConfig struct {
 
 type GetLocation struct{}
 
+type ListInteractionsRequest struct{}
+
+type ListInteractionsResponse struct {
+	Interactions []string
+	Error        error
+}
+
 type GetInteractionRequest struct {
 	Command string
 }
@@ -109,8 +116,6 @@ func (l *LocationActor) Receive(actorCtx actor.Context) {
 			Description: desc,
 			Portal:      portal,
 		})
-	case *GetInteractionRequest:
-		l.handleGetInteractionRequest(actorCtx, msg)
 	case *SetLocationDescriptionRequest:
 		err := l.location.SetDescription(msg.Description)
 		actorCtx.Respond(&SetLocationDescriptionResponse{Error: err})
@@ -124,6 +129,10 @@ func (l *LocationActor) Receive(actorCtx actor.Context) {
 		actorCtx.Respond(&AddInteractionResponse{
 			Error: l.location.AddInteraction(msg.Interaction),
 		})
+	case *GetInteractionRequest:
+		l.handleGetInteractionRequest(actorCtx, msg)
+	case *ListInteractionsRequest:
+		l.handleListInteractionsRequest(actorCtx, msg)
 	}
 }
 
@@ -145,11 +154,19 @@ func (l *LocationActor) handleGetInteractionRequest(actorCtx actor.Context, msg 
 		return
 	}
 
-	interaction, err := l.location.GetInteractionRequest(msg.Command)
+	interaction, err := l.location.GetInteraction(msg.Command)
 	if err != nil {
 		panic(errors.Wrap(err, "error fetching interaction"))
 	}
 	actorCtx.Respond(interaction)
+}
+
+func (l *LocationActor) handleListInteractionsRequest(actorCtx actor.Context, msg *ListInteractionsRequest) {
+	interactions, err := l.location.InteractionsList()
+	actorCtx.Respond(&ListInteractionsResponse{
+		Interactions: interactions,
+		Error:        err,
+	})
 }
 
 func (l *LocationActor) handleBuildPortal(actorCtx actor.Context, msg *BuildPortalRequest) {
