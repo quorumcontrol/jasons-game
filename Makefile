@@ -16,16 +16,11 @@ packr = packrd/packed-packr.go main-packr.go
 
 all: frontend-build $(packr) build
 
-$(FIRSTGOPATH)/src/github.com/gogo/protobuf/proto:
-	go get github.com/gogo/protobuf/proto
 
-$(FIRSTGOPATH)/src/github.com/gogo/protobuf/gogoproto:
-	go get github.com/gogo/protobuf/gogoproto
+$(FIRSTGOPATH)/bin/protoc-gen-go:
+	go get -u github.com/golang/protobuf/protoc-gen-go
 
-$(FIRSTGOPATH)/bin/protoc-gen-gogofaster: $(FIRSTGOPATH)/src/github.com/gogo/protobuf/proto $(FIRSTGOPATH)/src/github.com/gogo/protobuf/gogoproto
-	go get -u github.com/gogo/protobuf/protoc-gen-gogofaster
-
-$(generated): $(FIRSTGOPATH)/bin/protoc-gen-gogofaster $(jsmodules)
+$(generated): $(FIRSTGOPATH)/bin/protoc-gen-go $(jsmodules)
 	./scripts/protogen.sh
 	
 $(jsmodules):

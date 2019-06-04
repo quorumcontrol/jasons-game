@@ -666,8 +666,6 @@ github.com/openzipkin/zipkin-go v0.1.6/go.mod h1:QgAqvLzwWbR/WpD4A3cGpPtJrZXNIiJ
 github.com/orcaman/concurrent-map v0.0.0-20190107190726-7ed82d9cb717 h1:2v7IYkog9ZFN04bv5hkwjpyHkc6wujPPOVYDPp2rfwA=
 github.com/orcaman/concurrent-map v0.0.0-20190107190726-7ed82d9cb717/go.mod h1:Lu3tH6HLW3feq74c2GC+jIMS/K2CFcDWnWD9XkenwhI=
 github.com/pascaldekloe/goe v0.0.0-20180627143212-57f6aae5913c/go.mod h1:lzWF7FIEvWOWxwDKqyGYQf6ZUaNfKdP144TG7ZOy1lc=
-github.com/philhofer/fwd v1.0.0 h1:UbZqGr5Y38ApvM/V/jEljVxwocdweyH+vmYvRPBnbqQ=
-github.com/philhofer/fwd v1.0.0/go.mod h1:gk3iGcWd9+svBvR0sR+KPcfE+RNWozjowpeBVG3ZVNU=
 github.com/pierrec/lz4 v2.0.5+incompatible/go.mod h1:pdkljMzZIN41W+lC3N2tnIh5sFi+IEE17M5jbnwPHcY=
 github.com/pkg/errors v0.8.0/go.mod h1:bwawxfHBFNV+L2hUp1rHADufV3IMtnDRdf1r5NINEl0=
 github.com/pkg/errors v0.8.1 h1:iURUrRGxPUNPdy5/HRSm+Yj6okJ6UtLINN0Q9M4+h3I=
@@ -702,8 +700,12 @@ github.com/prometheus/procfs v0.0.0-20190425082905-87a4384529e0 h1:c8R11WC8m7KNM
 github.com/prometheus/procfs v0.0.0-20190425082905-87a4384529e0/go.mod h1:TjEm7ze935MbeOT/UhFTIMYKhuLP4wbCsTZCD3I8kEA=
 github.com/quorumcontrol/chaintree v0.0.0-20190530190017-53765d7c259c h1:CZlTUDjlNlhYD0S+avPNroj/o36jd2HJyez5I+eoJFE=
 github.com/quorumcontrol/chaintree v0.0.0-20190530190017-53765d7c259c/go.mod h1:ArT6IHCFvT+CBJavEW/adlW0eXbBO6jKkE8l02dawjU=
-github.com/quorumcontrol/community v0.0.0-20190604094328-1ca5468c6d78 h1:Nkjhx04v0bMs+OkBY4knlyf9+bo+xbIqBREBkqE3cz8=
-github.com/quorumcontrol/community v0.0.0-20190604094328-1ca5468c6d78/go.mod h1:VruOzp8HmfId0hFQ7WEoO6xdcX7sa+G46D3q+ZnWAQw=
+github.com/quorumcontrol/chaintree v0.0.0-20190604182421-9510a3291c9a h1:9Q+GbRcrtesz4Cj5gl883VscOjRdpm7tWDjD3rp68PQ=
+github.com/quorumcontrol/chaintree v0.0.0-20190604182421-9510a3291c9a/go.mod h1:ArT6IHCFvT+CBJavEW/adlW0eXbBO6jKkE8l02dawjU=
+github.com/quorumcontrol/chaintree v0.0.0-20190604184141-dd0cfeb9f785 h1:5Y6E2DMVaQ4/9gxSFKHEe+nc41aJK1nUpwMhOSmBMqw=
+github.com/quorumcontrol/chaintree v0.0.0-20190604184141-dd0cfeb9f785/go.mod h1:ArT6IHCFvT+CBJavEW/adlW0eXbBO6jKkE8l02dawjU=
+github.com/quorumcontrol/community v0.0.0-20190604183909-66e8127502a5 h1:wpdaLvNLQwX8PGtHRY+FwOHcrmj2oUs0keVXWXn7EEg=
+github.com/quorumcontrol/community v0.0.0-20190604183909-66e8127502a5/go.mod h1:dE/XURkposSDL1/F02jh0yFGYOKGa0vsLp/k2ql0z00=
 github.com/quorumcontrol/go-libp2p-pubsub v0.0.0-20190515123400-58d894b144ff864d212cf4b13c42e8fdfe783aba h1:yyXbqfe6eR+DKlS8VTtpMEBCCPvVxdtYIF06hMojPA4=
 github.com/quorumcontrol/go-libp2p-pubsub v0.0.0-20190515123400-58d894b144ff864d212cf4b13c42e8fdfe783aba/go.mod h1:fYKlZBOF2yrJzYlgeEVFSbYWfbS+E8Zix6gMZ0A6WgE=
 github.com/quorumcontrol/messages/build/go v0.0.0-20190530182608-30c127bffefb/go.mod h1:b8jDN8PulcGcRJ2pQc0lbC3tPaOspGHoBIbPxfB7Jqg=
@@ -764,8 +766,6 @@ github.com/stretchr/testify v1.3.0/go.mod h1:M5WIy9Dh21IEIfnGCwXGc5bZfKNJtfHm1UV
 github.com/syndtr/goleveldb v1.0.0 h1:fBdIW9lB4Iz0n9khmH8w27SJ3QEJ7+IgjPEwGSZiFdE=
 github.com/syndtr/goleveldb v1.0.0/go.mod h1:ZVVdQEZoIme9iO1Ch2Jdy24qqXrMMOU6lpPAyBWyWuQ=
 github.com/texttheater/golang-levenshtein v0.0.0-20180516184445-d188e65d659e/go.mod h1:XDKHRm5ThF8YJjx001LtgelzsoaEcvnA7lVWz9EeX3g=
-github.com/tinylib/msgp v1.1.0 h1:9fQd+ICuRIu/ue4vxJZu6/LzxN0HwMds2nq/0cFvxHU=
-github.com/tinylib/msgp v1.1.0/go.mod h1:+d+yLhGm8mzTaHzB+wgMYrodPfmZrzkirds8fDWklFE=
 github.com/uber-go/atomic v1.3.2 h1:Azu9lPBWRNKzYXSIwRfgRuDuS0YKsK4NFhiQv98gkxo=
 github.com/uber-go/atomic v1.3.2/go.mod h1:/Ct5t2lcmbJ4OSe/waGBoaVvVqtO0bmtfVNex1PFV8g=
 github.com/uber/jaeger-client-go v2.15.0+incompatible h1:NP3qsSqNxh8VYr956ur1N/1C1PjvOJnJykCzcD5QHbk=
