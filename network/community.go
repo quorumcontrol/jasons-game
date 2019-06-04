@@ -74,7 +74,10 @@ func (cs *communitySubscriberActor) Receive(actorContext actor.Context) {
 		}
 		cs.subscription = sub
 	case *actor.Stopping:
-		cs.community.Unsubscribe(cs.subscription)
+		err := cs.community.Unsubscribe(cs.subscription)
+		if err != nil {
+			cs.Log.Errorw("error unsubscribing", "err", err)
+		}
 	case proto.Message:
 		actorContext.Send(actorContext.Parent(), msg)
 	}

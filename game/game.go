@@ -31,7 +31,6 @@ type Game struct {
 	cursor          *navigator.Cursor
 	commands        commandList
 	messageSequence uint64
-	shoutSubscriber *actor.PID
 	inventory       *actor.PID
 	home            *actor.PID
 	chatSubscriber  *actor.PID
@@ -74,7 +73,10 @@ func (g *Game) Receive(actorCtx actor.Context) {
 func (g *Game) initialize(actorCtx actor.Context) {
 	actorCtx.Send(g.ui, &ui.SetGame{Game: actorCtx.Self()})
 
-	g.network.Community().SubscribeActor(actorCtx.Self(), shoutChannel)
+	_, err := g.network.Community().SubscribeActor(actorCtx.Self(), shoutChannel)
+	if err != nil {
+		panic(fmt.Errorf("error spawning shout actor: %v", err))
+	}
 
 	chatTopic := topicFor(g.playerTree.HomeTree.MustId() + "-chat")
 	log.Debugf("subscribing to chat at %s", string(chatTopic))
@@ -83,7 +85,6 @@ func (g *Game) initialize(actorCtx actor.Context) {
 	cursor := new(navigator.Cursor).SetChainTree(g.playerTree.HomeTree)
 	g.cursor = cursor
 
-	var err error
 	g.home, err = actorCtx.SpawnNamed(NewLandActorProps(&LandActorConfig{
 		Did:     g.playerTree.HomeTree.MustId(),
 		Network: g.network,

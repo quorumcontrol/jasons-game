@@ -5,6 +5,7 @@ import (
 
 	"github.com/AsynkronIT/protoactor-go/actor"
 	"github.com/AsynkronIT/protoactor-go/plugin"
+	"github.com/pkg/errors"
 	"github.com/quorumcontrol/tupelo-go-sdk/consensus"
 	"github.com/quorumcontrol/tupelo-go-sdk/gossip3/middleware"
 
@@ -39,7 +40,10 @@ func NewLandActorProps(cfg *LandActorConfig) *actor.Props {
 func (l *LandActor) Receive(context actor.Context) {
 	switch msg := context.Message().(type) {
 	case *actor.Started:
-		l.network.Community().SubscribeActor(context.Self(), topicFor(l.did))
+		_, err := l.network.Community().SubscribeActor(context.Self(), topicFor(l.did))
+		if err != nil {
+			panic(errors.Wrap(err, "error spawning land actor subscription"))
+		}
 	case *jasonsgame.TransferredObjectMessage:
 		l.handleTransferredObject(context, msg)
 	}
