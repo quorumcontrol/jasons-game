@@ -103,7 +103,7 @@ func (no *NetworkObject) Description() (string, error) {
 	return no.getProp("description")
 }
 
-func (no *NetworkObject) IsOwnedBy(keys []string) (bool, error) {
+func (no *NetworkObject) IsOwnedBy(keyAddrs []string) (bool, error) {
 	objectChainTree, err := no.Network.GetTree(no.Did)
 	if err != nil {
 		return false, err
@@ -117,10 +117,10 @@ func (no *NetworkObject) IsOwnedBy(keys []string) (bool, error) {
 		return false, fmt.Errorf("error resolving object: path elements remaining: %v", remainingPath)
 	}
 
-	for _, storedKey := range authsUncasted.([]interface{}) {
+	for _, storedAddr := range authsUncasted.([]interface{}) {
 		found := false
-		for _, checkKey := range keys {
-			found = found || (storedKey.(string) == checkKey)
+		for _, check := range keyAddrs {
+			found = found || (storedAddr.(string) == check)
 		}
 		if !found {
 			return false, nil

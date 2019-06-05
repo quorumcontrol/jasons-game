@@ -32,14 +32,14 @@ func NewPlayerTree(net network.Network, tree *consensus.SignedChainTree) *Player
 	if err != nil {
 		panic(err)
 	}
-	if homeTree != nil {
-		pt.HomeLocation = NewLocationTree(net, homeTree)
-	} else {
+	if homeTree == nil {
 		pt.HomeLocation, err = createHome(net)
 		if err != nil {
 			log.Error("error creating home", err)
 			panic(err)
 		}
+	} else {
+		pt.HomeLocation = NewLocationTree(net, homeTree)
 	}
 
 	return pt
@@ -63,7 +63,7 @@ func (pt *PlayerTree) Player() (*jasonsgame.Player, error) {
 	return pt.player, nil
 }
 
-func (pt *PlayerTree) Keys() ([]string, error) {
+func (pt *PlayerTree) Authentications() ([]string, error) {
 	authsUncasted, remain, err := pt.tree.ChainTree.Dag.Resolve(strings.Split("tree/"+consensus.TreePathForAuthentications, "/"))
 	if err != nil {
 		return nil, errors.Wrap(err, "error resolving")

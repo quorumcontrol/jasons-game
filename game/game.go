@@ -415,11 +415,11 @@ func (g *Game) handleConnectLocation(actorCtx actor.Context, args string) error 
 
 	loc := NewLocationTree(g.network, targetTree)
 
-	keys, err := g.playerTree.Keys()
+	auths, err := g.playerTree.Authentications()
 	if err != nil {
-		return fmt.Errorf("error fetching player keys")
+		return fmt.Errorf("error fetching player authentications")
 	}
-	isOwnedBy, _ := loc.IsOwnedBy(keys)
+	isOwnedBy, _ := loc.IsOwnedBy(auths)
 	if !isOwnedBy {
 		return fmt.Errorf("can't connect a location that you don't own")
 	}

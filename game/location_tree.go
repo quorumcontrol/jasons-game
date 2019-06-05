@@ -136,7 +136,7 @@ func (l *LocationTree) GetPortal() (*jasonsgame.Portal, error) {
 	return castedPortal, nil
 }
 
-func (l *LocationTree) IsOwnedBy(keys []string) (bool, error) {
+func (l *LocationTree) IsOwnedBy(keyAddrs []string) (bool, error) {
 	authsUncasted, remainingPath, err := l.tree.ChainTree.Dag.Resolve(strings.Split("tree/"+consensus.TreePathForAuthentications, "/"))
 	if err != nil {
 		return false, err
@@ -145,10 +145,10 @@ func (l *LocationTree) IsOwnedBy(keys []string) (bool, error) {
 		return false, fmt.Errorf("error resolving tree: path elements remaining: %v", remainingPath)
 	}
 
-	for _, storedKey := range authsUncasted.([]interface{}) {
+	for _, storedAddr := range authsUncasted.([]interface{}) {
 		found := false
-		for _, checkKey := range keys {
-			found = found || (storedKey.(string) == checkKey)
+		for _, check := range keyAddrs {
+			found = found || (storedAddr.(string) == check)
 		}
 		if !found {
 			return false, nil
