@@ -33,6 +33,11 @@ func (ts *TestStream) GetMessages() []*jasonsgame.MessageToUser {
 	return ts.messages
 }
 
+func (ts *TestStream) ClearMessages() error {
+	ts.messages = NewTestStream().messages
+	return nil
+}
+
 type doneChan chan struct{}
 
 type UIServer struct {
