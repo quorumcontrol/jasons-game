@@ -11,17 +11,17 @@ import (
 	"time"
 
 	"github.com/AsynkronIT/protoactor-go/actor"
-	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/common/hexutil"
+	"github.com/ethereum/go-ethereum/crypto"
 	badger "github.com/ipfs/go-ds-badger"
 	"github.com/pkg/errors"
+	"github.com/shibukawa/configdir"
+	"github.com/spf13/cobra"
+
 	"github.com/quorumcontrol/jasons-game/handlers"
 	"github.com/quorumcontrol/jasons-game/handlers/inventory"
 	"github.com/quorumcontrol/jasons-game/network"
-	"github.com/quorumcontrol/jasons-game/server"
 	"github.com/quorumcontrol/jasons-game/service"
-	"github.com/shibukawa/configdir"
-	"github.com/spf13/cobra"
 )
 
 func main() {
@@ -51,7 +51,7 @@ func main() {
 				}
 			}
 
-			notaryGroup, err := server.SetupTupeloNotaryGroup(ctx, localNetworkFlag)
+			notaryGroup, err := network.SetupTupeloNotaryGroup(ctx, localNetworkFlag)
 			if err != nil {
 				panic(errors.Wrap(err, "error setting up tupelo notary group"))
 			}
