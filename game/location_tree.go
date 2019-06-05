@@ -6,7 +6,7 @@ import (
 
 	"github.com/ipfs/go-cid"
 	cbor "github.com/ipfs/go-ipld-cbor"
-	"github.com/mitchellh/mapstructure"
+	"github.com/pkg/errors"
 	"github.com/quorumcontrol/chaintree/typecaster"
 	"github.com/quorumcontrol/jasons-game/network"
 	"github.com/quorumcontrol/jasons-game/pb/jasonsgame"
@@ -79,14 +79,13 @@ func (l *LocationTree) GetInteraction(command string) (*Interaction, error) {
 		return nil, err
 	}
 
-	var interaction Interaction
-
-	err = mapstructure.Decode(val, &interaction)
+	interaction := new(Interaction)
+	err = typecaster.ToType(val, interaction)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "error casting interaction")
 	}
 
-	return &interaction, nil
+	return interaction, nil
 }
 
 func (l *LocationTree) InteractionsList() ([]string, error) {
@@ -128,10 +127,10 @@ func (l *LocationTree) GetPortal() (*jasonsgame.Portal, error) {
 		return nil, nil
 	}
 
-	var castedPortal *jasonsgame.Portal
-	err = mapstructure.Decode(portal, &castedPortal)
+	castedPortal := new(jasonsgame.Portal)
+	err = typecaster.ToType(portal, castedPortal)
 	if err != nil {
-		return nil, fmt.Errorf("error casting portal: %v", err)
+		return nil, errors.Wrap(err, "error casting portal")
 	}
 
 	return castedPortal, nil

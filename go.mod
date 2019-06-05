@@ -33,7 +33,6 @@ require (
 	github.com/libp2p/go-libp2p-interface-connmgr v0.0.3
 	github.com/libp2p/go-libp2p-peer v0.1.0
 	github.com/libp2p/go-libp2p-pubsub v0.0.3
-	github.com/mitchellh/mapstructure v1.1.2
 	github.com/multiformats/go-multihash v0.0.5 // indirect
 	github.com/pkg/errors v0.8.1
 	github.com/quorumcontrol/chaintree v0.0.0-20190604184141-dd0cfeb9f785
