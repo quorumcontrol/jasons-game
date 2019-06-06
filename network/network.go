@@ -31,8 +31,8 @@ const ShoutTopic = "jasons-game-shouting-players"
 const GeneralTopic = "jasons-game-general"
 
 var DefaultTupeloBootstrappers = []string{
-	"/ip4/18.196.112.81/tcp/34001/ipfs/16Uiu2HAmJGZXyrrQ9CcAJWh5Q8rNsoi9yK1VT2HANhH2NcqkRmaZ",
-	"/ip4/34.231.17.217/tcp/34001/ipfs/16Uiu2HAkxNHzLn5cTpGs7RuTQSTKjtxtT9jGcYa6PousihVzEPc6",
+	"/ip4/18.185.81.67/tcp/34001/ipfs/16Uiu2HAmJTmontYmNLgWPFLoWZYuEZ6fWhaqHh7vQABncaBWnZaW",
+	"/ip4/3.217.212.32/tcp/34001/ipfs/16Uiu2HAmL5sbPp4LZJJhQTtTkpaNNEPUxrRoiyJqD8Mkj5tJkiow"
 }
 
 var DefaultGameBootstrappers = []string{
