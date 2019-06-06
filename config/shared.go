@@ -1,6 +1,10 @@
 package config
 
-import "github.com/shibukawa/configdir"
+import (
+	"path/filepath"
+
+	"github.com/shibukawa/configdir"
+)
 
 func Dir() *configdir.ConfigDir {
 	configDir := configdir.New("tupelo", "jasons-game")
@@ -14,6 +18,10 @@ func EnsureExists(name string) *configdir.Config {
 	if folder == nil {
 		if err := folders[0].CreateParentDir(name); err != nil {
 			panic(err)
+		}
+		return &configdir.Config{
+			Path: filepath.Join(folders[0].Path, name),
+			Type: configdir.Global,
 		}
 	}
 
