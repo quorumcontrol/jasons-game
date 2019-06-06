@@ -81,6 +81,9 @@ game2: $(generated) go.mod go.sum
 jason: $(generated) go.mod go.sum
 	docker-compose -p jasons-game -f docker-compose-dev.yml up --force-recreate jason
 
+inkwell: $(generated) go.mod go.sum
+	docker-compose -f docker-compose-dev.yml up --force-recreate inkwell
+
 frontend-build: $(generated) $(jsmodules)
 	cd frontend/jasons-game && ./node_modules/.bin/shadow-cljs release app
 
@@ -109,4 +112,4 @@ clean: $(FIRSTGOPATH)/bin/packr2
 	rm -rf bin
 	rm -rf JasonsGame.app/Contents/MacOS
 
-.PHONY: all build test integration-test localnet clean lint game-server jason game2 mac-app prepare
+.PHONY: all build test integration-test localnet clean lint game-server jason inkwell game2 mac-app prepare
