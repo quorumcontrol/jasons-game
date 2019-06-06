@@ -1,4 +1,4 @@
-package inkwell
+package main
 
 import (
 	"context"
@@ -9,6 +9,7 @@ import (
 	"github.com/pkg/errors"
 
 	"github.com/quorumcontrol/jasons-game/config"
+	"github.com/quorumcontrol/jasons-game/inkwell/server"
 )
 
 var log = logging.Logger("inkwell")
@@ -24,18 +25,18 @@ func main() {
 
     stateCfg := config.EnsureExists(stateStorageDir)
 
-	serverCfg := InkwellConfig{
+	serverCfg := server.InkwellConfig{
 		Localnet:  *localnet,
 		StatePath: stateCfg.Path,
 	}
 
-	inkwell, err := NewServer(ctx, serverCfg)
+	inkwell, err := server.NewServer(ctx, serverCfg)
 	if err != nil {
 		panic(errors.Wrap(err, "error creating new inkwell server"))
 	}
 
 	// TODO: Call some kind of inkwell.Start() to make it listen for player invites on a topic
 	fmt.Printf("Started inkwell %+v\n", inkwell)
-	
+
 	<-make(chan struct{})
 }

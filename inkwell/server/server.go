@@ -1,4 +1,4 @@
-package inkwell
+package server
 
 import (
 	"context"
@@ -31,6 +31,9 @@ func NewServer(ctx context.Context, cfg InkwellConfig) (*Inkwell, error) {
 	}
 
 	net, err := network.NewRemoteNetwork(ctx, group, cfg.StatePath)
+	if err != nil {
+		panic(errors.Wrap(err, "error setting up remote network"))
+	}
 
 	inkDID := os.Getenv("INK_DID")
 
