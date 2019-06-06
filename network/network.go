@@ -32,7 +32,7 @@ const GeneralTopic = "jasons-game-general"
 
 var DefaultTupeloBootstrappers = []string{
 	"/ip4/18.185.81.67/tcp/34001/ipfs/16Uiu2HAmJTmontYmNLgWPFLoWZYuEZ6fWhaqHh7vQABncaBWnZaW",
-	"/ip4/3.217.212.32/tcp/34001/ipfs/16Uiu2HAmL5sbPp4LZJJhQTtTkpaNNEPUxrRoiyJqD8Mkj5tJkiow"
+	"/ip4/3.217.212.32/tcp/34001/ipfs/16Uiu2HAmL5sbPp4LZJJhQTtTkpaNNEPUxrRoiyJqD8Mkj5tJkiow",
 }
 
 var DefaultGameBootstrappers = []string{
