@@ -4,30 +4,55 @@ import (
 	"context"
 	"flag"
 	"fmt"
+	"os"
 
 	logging "github.com/ipfs/go-log"
 	"github.com/pkg/errors"
 
-	"github.com/quorumcontrol/jasons-game/config"
 	"github.com/quorumcontrol/jasons-game/inkwell/server"
 )
 
-var log = logging.Logger("inkwell")
+const localBucketName = "tupelo-inkwell-local"
 
-const stateStorageDir = "state-storage"
+func mustSetLogLevel(name, level string) {
+	if err := logging.SetLogLevel(name, level); err != nil {
+		panic(errors.Wrapf(err, "error setting log level of %s to %s", name, level))
+	}
+}
 
 func main() {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	localnet := flag.Bool("localnet", false, "connect to localnet instead of testnet")
+	mustSetLogLevel("*", "warning")
+	mustSetLogLevel("pubsub", "error")
+	mustSetLogLevel("inkwell", "debug")
+
+	local := flag.Bool("local", false, "connect to localnet & use localstack S3 instead of testnet & real S3")
 	flag.Parse()
 
-    stateCfg := config.EnsureExists(stateStorageDir)
+	var s3Region, s3Bucket string
+
+    if *local {
+    	s3Bucket = localBucketName
+	} else {
+		var ok bool
+
+		s3Bucket, ok = os.LookupEnv("INKWELL_S3_BUCKET")
+		if !ok {
+			panic(fmt.Errorf("${INKWELL_S3_BUCKET} is required in non-local mode"))
+		}
+
+		s3Region, ok = os.LookupEnv("AWS_REGION")
+		if !ok {
+			panic(fmt.Errorf("${AWS_REGION} is required in non-local mode"))
+		}
+	}
 
 	serverCfg := server.InkwellConfig{
-		Localnet:  *localnet,
-		StatePath: stateCfg.Path,
+		Local:    *local,
+		S3Region: s3Region,
+		S3Bucket: s3Bucket,
 	}
 
 	inkwell, err := server.NewServer(ctx, serverCfg)

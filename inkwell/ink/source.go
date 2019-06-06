@@ -30,25 +30,24 @@ func NewChainTreeInkSource(cfg ChainTreeInkSourceConfig) (*ChainTreeInkSource, e
 		err error
 	)
 
-	if cfg.ChainTreeDid == "" {
-		ct, err = EnsureChainTree(cfg.Net)
-	} else {
-		ct, err = GetChainTreeByDID(cfg.Net, cfg.ChainTreeDid)
-	}
+	ct, err = ensureChainTree(cfg.Net)
 
 	if err != nil {
 		return nil, err
 	}
 
-	return &ChainTreeInkSource{
+	ctis := &ChainTreeInkSource{
 		ct:  ct,
 		net: cfg.Net,
-	}, nil
+	}
+
+	return ctis, nil
 }
 
-// EnsureChainTree is for when you want to get or generate a new ink source w/ random DID.
-// Not intended for production use (see GetChainTreeByDID for that).
-func EnsureChainTree(net network.Network) (*consensus.SignedChainTree, error) {
+// ensureChainTree gets or creates a new ink-source chaintree.
+// Note that this chaintree doesn't typically own the ink token; it just contains some
+// that was sent to it.
+func ensureChainTree(net network.Network) (*consensus.SignedChainTree, error) {
 	existing, err := net.GetChainTreeByName("ink-source")
 	if existing == nil {
 		if err != nil {
@@ -58,12 +57,6 @@ func EnsureChainTree(net network.Network) (*consensus.SignedChainTree, error) {
 	}
 
 	return existing, nil
-}
-
-// GetChainTreeByDID is used to obtain a pre-existing ink source given a specific DID.
-// Returns an error if it doesn't exist. This is what you want in production.
-func GetChainTreeByDID(net network.Network, did string) (*consensus.SignedChainTree, error) {
-	return net.GetTree(did)
 }
 
 func (ctis *ChainTreeInkSource) RequestInk(amount uint64) (*transactions.ReceiveTokenPayload, error) {

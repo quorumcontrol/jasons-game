@@ -2,35 +2,47 @@ package server
 
 import (
 	"context"
-	"fmt"
 	"os"
+	"strings"
 
+	"github.com/ipfs/go-datastore"
+	logging "github.com/ipfs/go-log"
 	"github.com/pkg/errors"
 	"github.com/quorumcontrol/tupelo-go-sdk/gossip3/types"
 
+	"github.com/quorumcontrol/jasons-game/config"
 	"github.com/quorumcontrol/jasons-game/inkwell/ink"
 	"github.com/quorumcontrol/jasons-game/network"
 )
 
+var log = logging.Logger("inkwell")
+
 type Inkwell struct {
 	group     *types.NotaryGroup
-	statePath string
+	dataStore datastore.Batching
 	net       network.Network
 	inkSource ink.Source
+	tokenName string
 }
 
 type InkwellConfig struct {
-	Localnet  bool
-	StatePath string
+	Local    bool
+	S3Region string
+	S3Bucket string
 }
 
 func NewServer(ctx context.Context, cfg InkwellConfig) (*Inkwell, error) {
-	group, err := network.SetupTupeloNotaryGroup(ctx, cfg.Localnet)
+	group, err := network.SetupTupeloNotaryGroup(ctx, cfg.Local)
 	if err != nil {
 		return nil, errors.Wrap(err,"error setting up notary group")
 	}
 
-	net, err := network.NewRemoteNetwork(ctx, group, cfg.StatePath)
+	ds, err := config.S3DataStore(cfg.Local, cfg.S3Region, cfg.S3Bucket)
+	if err != nil {
+		panic(errors.Wrap(err, "error getting S3 data store"))
+	}
+
+	net, err := network.NewRemoteNetwork(ctx, group, ds)
 	if err != nil {
 		panic(errors.Wrap(err, "error setting up remote network"))
 	}
@@ -38,7 +50,7 @@ func NewServer(ctx context.Context, cfg InkwellConfig) (*Inkwell, error) {
 	inkDID := os.Getenv("INK_DID")
 
 	if inkDID == "" {
-		fmt.Println("Generating random ink source chaintree")
+		panic("INK_DID must be set")
 	}
 
 	sourceCfg := ink.ChainTreeInkSourceConfig{
@@ -52,8 +64,9 @@ func NewServer(ctx context.Context, cfg InkwellConfig) (*Inkwell, error) {
 
 	return &Inkwell{
 		group:     group,
-		statePath: cfg.StatePath,
+		dataStore: ds,
 		net:       net,
 		inkSource: inkSource,
+		tokenName: strings.Join([]string{inkDID, "ink"}, ":"),
 	}, nil
 }

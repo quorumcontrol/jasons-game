@@ -11,18 +11,19 @@ import (
 	"path"
 	"runtime"
 	"testing"
-
 	"time"
 
 	"github.com/AsynkronIT/protoactor-go/actor"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/crypto"
-	"github.com/quorumcontrol/jasons-game/network"
-	"github.com/quorumcontrol/jasons-game/pb/jasonsgame"
-	"github.com/quorumcontrol/jasons-game/ui"
 	"github.com/quorumcontrol/tupelo-go-sdk/bls"
 	"github.com/quorumcontrol/tupelo-go-sdk/gossip3/types"
 	"github.com/stretchr/testify/require"
+
+	"github.com/quorumcontrol/jasons-game/config"
+	"github.com/quorumcontrol/jasons-game/network"
+	"github.com/quorumcontrol/jasons-game/pb/jasonsgame"
+	"github.com/quorumcontrol/jasons-game/ui"
 )
 
 type publicKeySet struct {
@@ -85,7 +86,12 @@ func TestFullIntegration(t *testing.T) {
 
 	defer os.RemoveAll(path)
 
-	net, err := network.NewRemoteNetwork(ctx, group, path)
+	ds, err := config.LocalDataStore(path)
+	if err != nil {
+		return nil, errors.Wrap(err, "error getting store")
+	}
+
+	net, err := network.NewRemoteNetwork(ctx, group, ds)
 	require.Nil(t, err)
 
 	rootCtx := actor.EmptyRootContext

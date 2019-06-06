@@ -87,7 +87,13 @@ func (gs *GameServer) getOrCreateSession(sess *jasonsgame.Session, stream jasons
 		if err := os.MkdirAll(statePath, 0750); err != nil {
 			panic(errors.Wrap(err, "error creating session storage"))
 		}
-		net, err := network.NewRemoteNetwork(gs.parentCtx, gs.group, statePath)
+
+		ds, err := config.LocalDataStore(statePath)
+		if err != nil {
+			panic(errors.Wrap(err, "error getting store"))
+		}
+
+		net, err := network.NewRemoteNetwork(gs.parentCtx, gs.group, ds)
 		if err != nil {
 			panic(errors.Wrap(err, "setting up network"))
 		}

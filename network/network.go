@@ -11,9 +11,8 @@ import (
 
 	"github.com/AsynkronIT/protoactor-go/actor"
 	"github.com/ethereum/go-ethereum/crypto"
-	cid "github.com/ipfs/go-cid"
+	"github.com/ipfs/go-cid"
 	"github.com/ipfs/go-datastore"
-	badger "github.com/ipfs/go-ds-badger"
 	logging "github.com/ipfs/go-log"
 	"github.com/pkg/errors"
 	"github.com/quorumcontrol/chaintree/chaintree"
@@ -170,12 +169,7 @@ func NewRemoteNetworkWithConfig(ctx context.Context, config *RemoteNetworkConfig
 	return net, nil
 }
 
-func NewRemoteNetwork(ctx context.Context, group *types.NotaryGroup, path string) (Network, error) {
-	ds, err := badger.NewDatastore(path, &badger.DefaultOptions)
-	if err != nil {
-		return nil, errors.Wrap(err, "error creating store")
-	}
-
+func NewRemoteNetwork(ctx context.Context, group *types.NotaryGroup, ds datastore.Batching) (Network, error) {
 	// TODO: keep the keys in a separate KeyStore
 	key, err := getOrCreateStoredPrivateKey(ds)
 	if err != nil {

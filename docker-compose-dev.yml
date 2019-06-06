@@ -75,7 +75,7 @@ services:
 
   inkwell:
     build: ./devdocker
-    command: ["go", "run", "inkwell/main.go", "-localnet=true"]
+    command: ["go", "run", "inkwell/main.go", "-local=true"]
     depends_on:
       - jason
     volumes:
@@ -86,6 +86,8 @@ services:
       GOPATH: /go
       TUPELO_BOOTSTRAP_NODES: /ip4/172.16.239.10/tcp/34001/ipfs/16Uiu2HAm3TGSEKEjagcCojSJeaT5rypaeJMKejijvYSnAjviWwV5
       JASON_BOOTSTRAP_NODES: /ip4/172.16.239.100/tcp/34001/ipfs/16Uiu2HAmBL6Xz9ichyunCexiqomcHyzVpKKmxAMgUusksBZzzM3K
+      # TODO: Stand up a dev-only service that creates a chaintree, establishes and mints some ink in it, and use its DID here
+      INK_DID: fake-did
 
   game-testnet:
     build: ./devdocker

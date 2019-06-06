@@ -2,20 +2,28 @@
 
 package network
 
-import(
-	"github.com/stretchr/testify/require"
-	"testing"
-	"os"
-	logging "github.com/ipfs/go-log"
-	"github.com/quorumcontrol/jasons-game/pb/jasonsgame"
+import (
 	"context"
+	"os"
+	"testing"
+
+	logging "github.com/ipfs/go-log"
+	"github.com/stretchr/testify/require"
+
+	"github.com/quorumcontrol/jasons-game/config"
+	"github.com/quorumcontrol/jasons-game/pb/jasonsgame"
 )
 
 func newRemoteNetwork(t *testing.T, ctx context.Context, path string) Network {
 	group,err := setupNotaryGroup(ctx)
 	require.Nil(t,err)
 
-	net,err := NewRemoteNetwork(ctx, group, path)
+	ds, err := config.LocalDataStore(path)
+	if err != nil {
+		return nil, errors.Wrap(err, "error getting store")
+	}
+
+	net,err := NewRemoteNetwork(ctx, group, ds)
 	require.Nil(t,err)
 	return net
 }
