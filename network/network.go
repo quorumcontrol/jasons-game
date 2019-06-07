@@ -36,8 +36,8 @@ var DefaultTupeloBootstrappers = []string{
 }
 
 var DefaultGameBootstrappers = []string{
-	"/ip4/3.214.104.132/tcp/34001/ipfs/16Uiu2HAm7dUydgEydAkLKnpD93g623bAkKYNcxwBEjA1bonY9dt2",
-	"/ip4/52.8.32.189/tcp/34001/ipfs/16Uiu2HAkzNCBmLfFR7xueFSjQgKzB5UnpwqZhnkxfu2BVwE3mfGF",
+	"/ip4/3.208.36.214/tcp/34001/ipfs/16Uiu2HAmGsma99vu8SaheLdCEvMAH2VGbiQ1UH75ctjEVyz89ck6",
+	"/ip4/13.57.66.151/tcp/34001/ipfs/16Uiu2HAmFsyL7pKNRYJAhsJCF9aMLajnr2DN8jskUx6bsVcumGhB",
 }
 
 type Network interface {
