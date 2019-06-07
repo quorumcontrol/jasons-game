@@ -18,6 +18,7 @@ type Object struct {
 type ObjectTree struct {
 	tree    *consensus.SignedChainTree
 	network network.Network
+	withInteractions
 }
 
 func NewObjectTree(net network.Network, tree *consensus.SignedChainTree) *ObjectTree {
@@ -92,6 +93,18 @@ func (o *ObjectTree) SetDescription(desc string) error {
 
 func (o *ObjectTree) GetDescription() (string, error) {
 	return o.getProp("description")
+}
+
+func (o *ObjectTree) AddInteraction(i Interaction) error {
+	return o.addInteractionToTree(o, i)
+}
+
+func (o *ObjectTree) GetInteraction(command string) (Interaction, error) {
+	return o.getInteractionFromTree(o, command)
+}
+
+func (o *ObjectTree) InteractionsList() ([]string, error) {
+	return o.interactionsListFromTree(o)
 }
 
 func (o *ObjectTree) IsOwnedBy(keyAddrs []string) (bool, error) {
