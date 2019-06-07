@@ -1,0 +1,15 @@
+syntax = "proto3";
+
+package jasonsgame;
+
+option go_package = "game";
+
+message RespondInteraction {
+  string command = 1;
+  string response = 2;
+}
+
+message ChangeLocationInteraction {
+  string command = 1;
+  string did = 2;
+}

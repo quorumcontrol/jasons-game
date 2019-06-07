@@ -39,12 +39,12 @@ type GetInteractionRequest struct {
 }
 
 type GetInteractionResponse struct {
-	Interaction *Interaction
+	Interaction Interaction
 	Error       error
 }
 
 type AddInteractionRequest struct {
-	Interaction *Interaction
+	Interaction Interaction
 }
 
 type AddInteractionResponse struct {
@@ -135,6 +135,7 @@ func (l *LocationActor) Receive(actorCtx actor.Context) {
 }
 
 func (l *LocationActor) handleGetInteractionRequest(actorCtx actor.Context, msg *GetInteractionRequest) {
+
 	// TODO: allow portal to expose interactions
 	if msg.Command == "go through portal" {
 		portal, err := l.location.GetPortal()
@@ -142,12 +143,9 @@ func (l *LocationActor) handleGetInteractionRequest(actorCtx actor.Context, msg 
 			actorCtx.Respond(&GetInteractionResponse{Error: errors.Wrap(err, "error getting portal")})
 			return
 		}
-		actorCtx.Respond(&Interaction{
+		actorCtx.Respond(&ChangeLocationInteraction{
 			Command: msg.Command,
-			Action:  "changeLocation",
-			Args: map[string]string{
-				"did": portal.To,
-			},
+			Did:     portal.To,
 		})
 		return
 	}

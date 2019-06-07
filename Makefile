@@ -11,16 +11,18 @@ export GO111MODULE = on
 FIRSTGOPATH = $(firstword $(subst :, ,$(GOPATH)))
 
 jsmodules = ./frontend/jasons-game/node_modules
-generated = network/messages.pb.go pb/jasonsgame/jasonsgame.pb.go frontend/jasons-game/src/js/frontend/remote/*_pb.*
+generated = network/messages.pb.go game/types.pb.go pb/jasonsgame/jasonsgame.pb.go frontend/jasons-game/src/js/frontend/remote/*_pb.*
 packr = packrd/packed-packr.go main-packr.go
 
 all: frontend-build $(packr) build
 
-
 $(FIRSTGOPATH)/bin/protoc-gen-go:
 	go get -u github.com/golang/protobuf/protoc-gen-go
 
-$(generated): $(FIRSTGOPATH)/bin/protoc-gen-go $(jsmodules)
+$(FIRSTGOPATH)/bin/protoc-go-inject-tag:
+	go get -u github.com/favadi/protoc-go-inject-tag
+
+$(generated): $(FIRSTGOPATH)/bin/protoc-gen-go $(FIRSTGOPATH)/bin/protoc-go-inject-tag $(jsmodules)
 	./scripts/protogen.sh
 	
 $(jsmodules):

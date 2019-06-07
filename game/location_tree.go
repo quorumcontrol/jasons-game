@@ -4,8 +4,9 @@ import (
 	"fmt"
 	"strings"
 
+	types "github.com/golang/protobuf/ptypes"
+	anypb "github.com/golang/protobuf/ptypes/any"
 	"github.com/ipfs/go-cid"
-	cbor "github.com/ipfs/go-ipld-cbor"
 	"github.com/pkg/errors"
 	"github.com/quorumcontrol/chaintree/typecaster"
 	"github.com/quorumcontrol/jasons-game/network"
@@ -15,20 +16,9 @@ import (
 
 var portalPath = []string{"portal"}
 
-func init() {
-	cbor.RegisterCborType(Interaction{})
-	typecaster.AddType(Interaction{})
-}
-
 type LocationTree struct {
 	tree    *consensus.SignedChainTree
 	network network.Network
-}
-
-type Interaction struct {
-	Command string
-	Action  string
-	Args    map[string]string
 }
 
 func NewLocationTree(net network.Network, tree *consensus.SignedChainTree) *LocationTree {
@@ -62,30 +52,57 @@ func (l *LocationTree) SetDescription(description string) error {
 	return l.updatePath([]string{"description"}, description)
 }
 
-func (l *LocationTree) AddInteraction(i *Interaction) error {
-	resp, err := l.GetInteraction(i.Command)
+func (l *LocationTree) AddInteraction(i Interaction) error {
+	resp, err := l.GetInteraction(i.GetCommand())
 	if err != nil {
 		return err
 	}
 	if resp != nil {
-		return fmt.Errorf("interaction %v already exists", i.Command)
+		return fmt.Errorf("interaction %v already exists", i.GetCommand())
 	}
-	return l.updatePath([]string{"interactions", i.Command}, i)
+
+	any, err := types.MarshalAny(i)
+	if err != nil {
+		return errors.Wrap(err, "error turning into any")
+	}
+
+	// marshalling a protobuf any doesn't store the underlying
+	// type as cbor, so make a any-like map and deal with type
+	// and value manually
+	toStore := map[string]interface{}{
+		"typeUrl": any.GetTypeUrl(),
+		"value":   i,
+	}
+	return l.updatePath([]string{"interactions", i.GetCommand()}, toStore)
 }
 
-func (l *LocationTree) GetInteraction(command string) (*Interaction, error) {
+func (l *LocationTree) GetInteraction(command string) (Interaction, error) {
 	val, err := l.getPath([]string{"interactions", command})
 	if err != nil || val == nil {
 		return nil, err
 	}
 
-	interaction := new(Interaction)
-	err = typecaster.ToType(val, interaction)
+	typeURL, ok := val.(map[string]interface{})["typeUrl"]
+	if !ok || typeURL.(string) == "" {
+		return nil, fmt.Errorf("interaction was not stored with protobuf typeUrl")
+	}
+
+	interactionValue, ok := val.(map[string]interface{})["value"]
+	if !ok {
+		return nil, fmt.Errorf("interaction was not stored with protobuf typeUrl")
+	}
+
+	interaction, err := types.Empty(&anypb.Any{TypeUrl: typeURL.(string)})
+	if err != nil {
+		return nil, fmt.Errorf("protobuf type %v not found: %v", typeURL, err)
+	}
+
+	err = typecaster.ToType(interactionValue, interaction)
 	if err != nil {
 		return nil, errors.Wrap(err, "error casting interaction")
 	}
 
-	return interaction, nil
+	return interaction.(Interaction), nil
 }
 
 func (l *LocationTree) InteractionsList() ([]string, error) {
