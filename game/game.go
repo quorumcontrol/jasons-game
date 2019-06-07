@@ -219,33 +219,14 @@ func (g *Game) handleInteractionInput(actorCtx actor.Context, cmd *command, args
 		return
 	}
 
-	interaction, ok := response.(*Interaction)
-
-	if interaction == nil {
-		g.sendUIMessage(actorCtx, fmt.Sprintf("no interaction matching %s %s", cmd.parse, args))
-		return
-	}
-
-	if !ok {
-		g.sendUIMessage(actorCtx, fmt.Sprintf("%s some sort of error happened", interactionInput))
-		return
-	}
-
-	switch interaction.Action {
-	case "respond":
-		g.sendUIMessage(actorCtx, interaction.Args["response"])
-	case "changeLocation":
-		newDid, ok := interaction.Args["did"]
-
-		if !ok {
-			g.sendUIMessage(actorCtx, fmt.Sprintf("%s some sort of error happened %v", interactionInput, "did not found"))
-			return
-		}
-
-		g.setLocation(actorCtx, newDid)
+	switch interaction := response.(type) {
+	case *RespondInteraction:
+		g.sendUIMessage(actorCtx, interaction.Response)
+	case *ChangeLocationInteraction:
+		g.setLocation(actorCtx, interaction.Did)
 		g.sendUILocation(actorCtx)
 	default:
-		g.sendUIMessage(actorCtx, fmt.Sprintf("%s some sort of error happened %v", interactionInput, "action not found"))
+		g.sendUIMessage(actorCtx, fmt.Sprintf("no interaction matching %s %s", cmd.parse, args))
 	}
 }
 
@@ -424,12 +405,9 @@ func (g *Game) handleConnectLocation(actorCtx actor.Context, args string) error 
 		return fmt.Errorf("can't connect a location that you don't own")
 	}
 
-	interaction := &Interaction{
+	interaction := &ChangeLocationInteraction{
 		Command: interactionCommand,
-		Action:  "changeLocation",
-		Args: map[string]string{
-			"did": toDid,
-		},
+		Did:     toDid,
 	}
 
 	result, err := actorCtx.RequestFuture(g.locationActor, &AddInteractionRequest{Interaction: interaction}, 5*time.Second).Result()
