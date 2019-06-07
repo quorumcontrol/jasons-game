@@ -114,7 +114,7 @@ func (gs *GameServer) getOrCreateSession(sess *jasonsgame.Session, stream jasons
 
 		actor.EmptyRootContext.Spawn(game.NewGameProps(playerTree, uiActor, net))
 
-		_, err = playerTree.HomeTree.Id()
+		_, err = playerTree.HomeLocation.Id()
 		if err != nil {
 			panic(errors.Wrap(err, "error starting game actor"))
 		}

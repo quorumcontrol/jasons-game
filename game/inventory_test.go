@@ -5,12 +5,9 @@ import (
 	"time"
 
 	"github.com/AsynkronIT/protoactor-go/actor"
-	"github.com/quorumcontrol/tupelo-go-sdk/consensus"
+	"github.com/quorumcontrol/jasons-game/network"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-
-	"github.com/quorumcontrol/jasons-game/navigator"
-	"github.com/quorumcontrol/jasons-game/network"
 )
 
 func TestInventoryActor_CreateObject(t *testing.T) {
@@ -26,7 +23,7 @@ func TestInventoryActor_CreateObject(t *testing.T) {
 	testPlayer := NewPlayerTree(net, playerChainTree)
 
 	createObject, err := context.SpawnNamed(NewInventoryActorProps(&InventoryActorConfig{
-		Player:  testPlayer,
+		Did:     testPlayer.Did(),
 		Network: net,
 	}), "testCreateObject")
 	require.Nil(t, err)
@@ -41,20 +38,14 @@ func TestInventoryActor_CreateObject(t *testing.T) {
 	require.True(t, ok)
 	require.Nil(t, createObjectResponse.Error)
 
-	objectsPath, _ := consensus.DecodePath(ObjectsPath)
-	objectPath := append(objectsPath, "test")
-	playerObjNode, remainingPath, err := testPlayer.ChainTree().ChainTree.Dag.Resolve(append([]string{"tree", "data"}, objectPath...))
+	response, err = rootCtx.RequestFuture(createObject, &InventoryListRequest{}, 1*time.Second).Result()
 	require.Nil(t, err)
-	require.Empty(t, remainingPath)
+	playerInventory, ok := response.(*InventoryListResponse)
+	require.True(t, ok)
+	require.Nil(t, playerInventory.Error)
+	require.Equal(t, len(playerInventory.Objects), 1)
 
-	objectChainTree, err := net.GetChainTreeByName("object:test")
-	require.Nil(t, err)
-
-	obj := Object{Did: objectChainTree.MustId()}
-	assert.Equal(t, obj.Did, playerObjNode.(string))
-	assert.Equal(t, obj.Did, createObjectResponse.Object.Did)
-
-	netObj := NetworkObject{Object: obj, Network: net}
+	netObj := NetworkObject{Object: *playerInventory.Objects["test"], Network: net}
 
 	name, err := netObj.Name()
 	require.Nil(t, err)
@@ -73,18 +64,14 @@ func TestInventoryActor_CreateObject(t *testing.T) {
 	require.True(t, ok)
 	require.Nil(t, createObjectResponse.Error)
 
-	objectPath = append(objectsPath, "sword")
-	playerObjNode, remainingPath, err = testPlayer.ChainTree().ChainTree.Dag.Resolve(append([]string{"tree", "data"}, objectPath...))
+	response, err = rootCtx.RequestFuture(createObject, &InventoryListRequest{}, 1*time.Second).Result()
 	require.Nil(t, err)
-	require.Empty(t, remainingPath)
+	playerInventory, ok = response.(*InventoryListResponse)
+	require.True(t, ok)
+	require.Nil(t, playerInventory.Error)
+	require.Equal(t, len(playerInventory.Objects), 2)
 
-	objectChainTree, err = net.GetChainTreeByName("object:sword")
-	require.Nil(t, err)
-
-	obj = Object{Did: objectChainTree.MustId()}
-	assert.Equal(t, obj.Did, playerObjNode.(string))
-	assert.Equal(t, obj.Did, createObjectResponse.Object.Did)
-	netObj = NetworkObject{Object: obj, Network: net}
+	netObj = NetworkObject{Object: *playerInventory.Objects["sword"], Network: net}
 
 	name, err = netObj.Name()
 	require.Nil(t, err)
@@ -97,7 +84,6 @@ func TestInventoryActor_CreateObject(t *testing.T) {
 
 func TestInventoryActor_Receive_NamesMustBeUnique(t *testing.T) {
 	// setup
-
 	context := actor.EmptyRootContext
 
 	net := network.NewLocalNetwork()
@@ -108,7 +94,7 @@ func TestInventoryActor_Receive_NamesMustBeUnique(t *testing.T) {
 	testPlayer := NewPlayerTree(net, playerChainTree)
 
 	createObject, err := context.SpawnNamed(NewInventoryActorProps(&InventoryActorConfig{
-		Player:  testPlayer,
+		Did:     testPlayer.Did(),
 		Network: net,
 	}), "testCreateObject")
 	require.Nil(t, err)
@@ -134,7 +120,7 @@ func TestInventoryActor_Receive_NamesMustBeUnique(t *testing.T) {
 	assert.Nil(t, createObjectResponse.Object)
 }
 
-func TestInventoryActor_DropPickupObject(t *testing.T) {
+func TestInventoryActor_TransferObject(t *testing.T) {
 	net := network.NewLocalNetwork()
 
 	playerChainTree, err := net.CreateNamedChainTree("player")
@@ -142,59 +128,50 @@ func TestInventoryActor_DropPickupObject(t *testing.T) {
 	testPlayer := NewPlayerTree(net, playerChainTree)
 
 	inventory, err := rootCtx.SpawnNamed(NewInventoryActorProps(&InventoryActorConfig{
-		Player:  testPlayer,
+		Did:     testPlayer.Did(),
 		Network: net,
-	}), "testDropObject")
+	}), "testTransferObject")
 	require.Nil(t, err)
 	defer rootCtx.Stop(inventory)
 
 	homeTree, err := createHome(net)
 	require.Nil(t, err)
-	c := new(navigator.Cursor).SetLocation(0, 0).SetChainTree(homeTree)
-	loc, err := c.GetLocation()
-	require.Nil(t, err)
-
-	homeActor, err := rootCtx.SpawnNamed(NewLandActorProps(&LandActorConfig{
+	homeActor, err := rootCtx.SpawnNamed(NewLocationActorProps(&LocationActorConfig{
 		Did:     homeTree.MustId(),
 		Network: net,
 	}), "home")
 	require.Nil(t, err)
 	defer rootCtx.Stop(homeActor)
 
-	response, err := rootCtx.RequestFuture(inventory, &CreateObjectRequest{Name: "test", Description: "test object"}, 1*time.Second).Result()
+	response, err := rootCtx.RequestFuture(inventory, &CreateObjectRequest{Name: "testTransferObject", Description: "test object"}, 1*time.Second).Result()
 	require.Nil(t, err)
 
 	createObjectResponse, ok := response.(*CreateObjectResponse)
 	require.True(t, ok)
 	require.Nil(t, createObjectResponse.Error)
 
-	response, err = rootCtx.RequestFuture(inventory, &DropObjectRequest{Name: "test", Location: loc}, 1*time.Second).Result()
+	response, err = rootCtx.RequestFuture(inventory, &TransferObjectRequest{Name: "testTransferObject", To: homeTree.MustId()}, 1*time.Second).Result()
 	require.Nil(t, err)
 
-	dropObjectResponse, ok := response.(*DropObjectResponse)
+	transferObjectResponse, ok := response.(*TransferObjectResponse)
 	require.True(t, ok)
-	require.Nil(t, dropObjectResponse.Error)
+	require.Nil(t, transferObjectResponse.Error)
 
-	objectsPath, _ := consensus.DecodePath(ObjectsPath)
-	objectPath := append(objectsPath, "test")
-	playerObjNode, remainingPath, err := testPlayer.ChainTree().ChainTree.Dag.Resolve(append([]string{"tree", "data"}, objectPath...))
+	response, err = rootCtx.RequestFuture(inventory, &InventoryListRequest{}, 1*time.Second).Result()
 	require.Nil(t, err)
-	require.Nil(t, playerObjNode)
-	require.Equal(t, remainingPath, []string{"test"})
+	playerInventory, ok := response.(*InventoryListResponse)
+	require.True(t, ok)
+	require.Nil(t, playerInventory.Error)
+	require.Equal(t, len(playerInventory.Objects), 0)
 
 	// Give time for location to pickup change and refresh
 	time.Sleep(500 * time.Millisecond)
-	homeTree, err = net.GetTree(c.Did())
-	require.Nil(t, err)
-	c.SetChainTree(homeTree)
-	loc, err = c.GetLocation()
-	require.Nil(t, err)
 
-	_, err = rootCtx.RequestFuture(inventory, &PickupObjectRequest{Name: "test", Location: loc}, 1*time.Second).Result()
+	response, err = rootCtx.RequestFuture(homeActor, &InventoryListRequest{}, 1*time.Second).Result()
 	require.Nil(t, err)
-
-	playerObjNode, remainingPath, err = testPlayer.ChainTree().ChainTree.Dag.Resolve(append([]string{"tree", "data"}, objectPath...))
-	require.Nil(t, err)
-	require.Nil(t, remainingPath)
-	require.Equal(t, playerObjNode.(string), createObjectResponse.Object.Did)
+	homeInventory, ok := response.(*InventoryListResponse)
+	require.True(t, ok)
+	require.Nil(t, homeInventory.Error)
+	require.Equal(t, len(homeInventory.Objects), 1)
+	require.Equal(t, homeInventory.Objects["testTransferObject"], createObjectResponse.Object)
 }

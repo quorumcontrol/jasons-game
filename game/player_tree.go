@@ -15,11 +15,11 @@ import (
 var playerTreePath = "jasons-game/player"
 
 type PlayerTree struct {
-	tree     *consensus.SignedChainTree
-	HomeTree *consensus.SignedChainTree
-	player   *jasonsgame.Player
-	network  network.Network
-	did      string
+	tree         *consensus.SignedChainTree
+	HomeLocation *LocationTree
+	player       *jasonsgame.Player
+	network      network.Network
+	did          string
 }
 
 func NewPlayerTree(net network.Network, tree *consensus.SignedChainTree) *PlayerTree {
@@ -33,13 +33,14 @@ func NewPlayerTree(net network.Network, tree *consensus.SignedChainTree) *Player
 		panic(err)
 	}
 	if homeTree == nil {
-		homeTree, err = createHome(net)
+		pt.HomeLocation, err = createHome(net)
 		if err != nil {
 			log.Error("error creating home", err)
 			panic(err)
 		}
+	} else {
+		pt.HomeLocation = NewLocationTree(net, homeTree)
 	}
-	pt.HomeTree = homeTree
 
 	return pt
 }
@@ -62,7 +63,7 @@ func (pt *PlayerTree) Player() (*jasonsgame.Player, error) {
 	return pt.player, nil
 }
 
-func (pt *PlayerTree) Keys() ([]string, error) {
+func (pt *PlayerTree) Authentications() ([]string, error) {
 	authsUncasted, remain, err := pt.tree.ChainTree.Dag.Resolve(strings.Split("tree/"+consensus.TreePathForAuthentications, "/"))
 	if err != nil {
 		return nil, errors.Wrap(err, "error resolving")

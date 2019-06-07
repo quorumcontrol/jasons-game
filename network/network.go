@@ -31,8 +31,8 @@ const ShoutTopic = "jasons-game-shouting-players"
 const GeneralTopic = "jasons-game-general"
 
 var DefaultTupeloBootstrappers = []string{
-	"/ip4/18.196.112.81/tcp/34001/ipfs/16Uiu2HAmJGZXyrrQ9CcAJWh5Q8rNsoi9yK1VT2HANhH2NcqkRmaZ",
-	"/ip4/34.231.17.217/tcp/34001/ipfs/16Uiu2HAkxNHzLn5cTpGs7RuTQSTKjtxtT9jGcYa6PousihVzEPc6",
+	"/ip4/18.185.81.67/tcp/34001/ipfs/16Uiu2HAmJTmontYmNLgWPFLoWZYuEZ6fWhaqHh7vQABncaBWnZaW",
+	"/ip4/3.217.212.32/tcp/34001/ipfs/16Uiu2HAmL5sbPp4LZJJhQTtTkpaNNEPUxrRoiyJqD8Mkj5tJkiow",
 }
 
 var DefaultGameBootstrappers = []string{
@@ -43,6 +43,7 @@ var DefaultGameBootstrappers = []string{
 type Network interface {
 	Community() *Community
 	ChangeChainTreeOwner(tree *consensus.SignedChainTree, newKeys []string) (*consensus.SignedChainTree, error)
+	CreateChainTree() (*consensus.SignedChainTree, error)
 	CreateNamedChainTree(name string) (*consensus.SignedChainTree, error)
 	GetChainTreeByName(name string) (*consensus.SignedChainTree, error)
 	GetTreeByTip(tip cid.Cid) (*consensus.SignedChainTree, error)
@@ -211,6 +212,22 @@ func (n *RemoteNetwork) CreateNamedChainTree(name string) (*consensus.SignedChai
 	log.Debug("CreateNamedChainTree - saved", name)
 
 	return tree, n.KeyValueStore.Put(datastore.NewKey("-n-"+name), []byte(tree.MustId()))
+}
+
+func (n *RemoteNetwork) CreateChainTree() (*consensus.SignedChainTree, error) {
+	tree, err := n.Tupelo.CreateChainTree(n.mustPrivateKey())
+	if err != nil {
+		return nil, errors.Wrap(err, "error creating tree")
+	}
+	log.Debug("CreateChainTree - created", tree.MustId())
+
+	err = n.TreeStore.SaveTreeMetadata(tree)
+	if err != nil {
+		return nil, errors.Wrap(err, "error saving tree")
+	}
+	log.Debug("CreateChainTree - saved", tree.MustId())
+
+	return tree, n.KeyValueStore.Put(datastore.NewKey("-n-"+tree.MustId()), []byte(tree.MustId()))
 }
 
 func (n *RemoteNetwork) GetChainTreeByName(name string) (*consensus.SignedChainTree, error) {

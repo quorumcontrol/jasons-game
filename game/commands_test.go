@@ -7,6 +7,6 @@ import (
 )
 
 func TestCommandList(t *testing.T) {
-	comm, _ := defaultCommandList.findCommand("north")
+	comm, _ := defaultCommandList.findCommand("help")
 	require.NotNil(t, comm)
 }
