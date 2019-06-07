@@ -2,6 +2,7 @@ package game
 
 import (
 	"fmt"
+	"reflect"
 	"regexp"
 	"strings"
 	"time"
@@ -106,12 +107,10 @@ func (g *Game) handleUserInput(actorCtx actor.Context, input *jasonsgame.UserInp
 	}
 
 	var err error
-	log.Debugf("received command %v", cmd.name)
-	switch cmd.name {
+	log.Debugf("received command %v", cmd.Name())
+	switch cmd.Name() {
 	case "exit":
 		g.sendUIMessage(actorCtx, "exit is unsupported in the browser")
-	case "go-portal":
-		g.handleInteractionInput(actorCtx, cmd, args)
 	case "set-description":
 		err = g.handleSetDescription(actorCtx, args)
 	case "tip-zoom":
@@ -128,10 +127,6 @@ func (g *Game) handleUserInput(actorCtx actor.Context, input *jasonsgame.UserInp
 		}
 	case "create-object":
 		err = g.handleCreateObject(actorCtx, args)
-	case "drop-object":
-		err = g.handleDropObject(actorCtx, args)
-	case "pick-up-object":
-		err = g.handlePickupObject(actorCtx, args)
 	case "player-inventory-list":
 		err = g.handlePlayerInventoryList(actorCtx)
 	case "location-inventory-list":
@@ -143,14 +138,14 @@ func (g *Game) handleUserInput(actorCtx actor.Context, input *jasonsgame.UserInp
 	case "help":
 		g.sendUIMessage(actorCtx, "available commands:")
 		for _, c := range g.commands {
-			g.sendUIMessage(actorCtx, c.parse)
+			g.sendUIMessage(actorCtx, c.Parse())
 		}
 	case "name":
 		err = g.handleName(args)
 	case "interaction":
-		g.handleInteractionInput(actorCtx, cmd, args)
+		err = g.handleInteractionInput(actorCtx, cmd.(*interactionCommand), args)
 	default:
-		log.Error("unhandled but matched command", cmd.name)
+		log.Error("unhandled but matched command", cmd.Name())
 	}
 	if err != nil {
 		g.sendUIMessage(actorCtx, fmt.Sprintf("error with your command: %v", err))
@@ -172,6 +167,11 @@ func (g *Game) handleBuildPortal(actorCtx actor.Context, toDid string) error {
 
 	if respErr := response.(*BuildPortalResponse).Error; respErr != nil {
 		return errors.Wrap(err, "error building portal")
+	}
+
+	err = g.refreshInteractions(actorCtx)
+	if err != nil {
+		log.Errorf("error refreshing interactions: %v", err)
 	}
 
 	g.sendUIMessage(actorCtx, fmt.Sprintf("successfully built a portal to %s", toDid))
@@ -211,34 +211,30 @@ func (g *Game) handleSetDescription(actorCtx actor.Context, desc string) error {
 	return nil
 }
 
-func (g *Game) handleInteractionInput(actorCtx actor.Context, cmd *command, args string) {
-	interactionInput := cmd.parse
-	response, err := actorCtx.RequestFuture(g.locationActor, &GetInteractionRequest{Command: interactionInput}, 5*time.Second).Result()
-	if err != nil {
-		g.sendUIMessage(actorCtx, fmt.Sprintf("%s some sort of error happened: %v", interactionInput, err))
-		return
-	}
+func (g *Game) handleInteractionInput(actorCtx actor.Context, cmd *interactionCommand, args string) error {
+	var err error
 
-	switch interaction := response.(type) {
+	switch interaction := cmd.interaction.(type) {
 	case *RespondInteraction:
 		g.sendUIMessage(actorCtx, interaction.Response)
 	case *ChangeLocationInteraction:
 		g.setLocation(actorCtx, interaction.Did)
 		g.sendUILocation(actorCtx)
+	case *DropObjectInteraction:
+		err = g.handleDropObject(actorCtx, interaction)
+	case *PickUpObjectInteraction:
+		err = g.handlePickUpObject(actorCtx, interaction)
 	default:
-		g.sendUIMessage(actorCtx, fmt.Sprintf("no interaction matching %s %s", cmd.parse, args))
+		g.sendUIMessage(actorCtx, fmt.Sprintf("no interaction matching %s, type %v", cmd.Parse(), reflect.TypeOf(interaction)))
 	}
+
+	return err
 }
 
-func (g *Game) handleDropObject(actorCtx actor.Context, args string) error {
-	if len(args) == 0 {
-		return fmt.Errorf("must give an object name to drop")
-	}
-	objName := args
-
+func (g *Game) handleDropObject(actorCtx actor.Context, interaction *DropObjectInteraction) error {
 	response, err := actorCtx.RequestFuture(g.inventoryActor, &TransferObjectRequest{
-		Name: objName,
-		To:   g.locationDid,
+		Did: interaction.Did,
+		To:  g.locationDid,
 	}, 5*time.Second).Result()
 
 	if err != nil {
@@ -254,20 +250,19 @@ func (g *Game) handleDropObject(actorCtx actor.Context, args string) error {
 		return resp.Error
 	}
 
-	g.sendUIMessage(actorCtx, fmt.Sprintf("%s has been dropped into your current location", objName))
+	err = g.refreshInteractions(actorCtx)
+	if err != nil {
+		log.Errorf("error refreshing interactions: %v", err)
+	}
+
+	g.sendUIMessage(actorCtx, "object has been dropped into your current location")
 	return nil
 }
 
-func (g *Game) handlePickupObject(actorCtx actor.Context, args string) error {
-	if len(args) == 0 {
-		return fmt.Errorf("must give an object name to pickup")
-	}
-
-	objName := args
-
+func (g *Game) handlePickUpObject(actorCtx actor.Context, interaction *PickUpObjectInteraction) error {
 	response, err := actorCtx.RequestFuture(g.locationActor, &TransferObjectRequest{
-		Name: objName,
-		To:   g.playerTree.Did(),
+		Did: interaction.Did,
+		To:  g.playerTree.Did(),
 	}, 10*time.Second).Result()
 
 	if err != nil {
@@ -283,7 +278,12 @@ func (g *Game) handlePickupObject(actorCtx actor.Context, args string) error {
 		return resp.Error
 	}
 
-	g.sendUIMessage(actorCtx, fmt.Sprintf("%s has been picked", objName))
+	err = g.refreshInteractions(actorCtx)
+	if err != nil {
+		log.Errorf("error refreshing interactions: %v", err)
+	}
+
+	g.sendUIMessage(actorCtx, "object has been picked up")
 	return nil
 }
 
@@ -301,6 +301,11 @@ func (g *Game) handleCreateObject(actorCtx actor.Context, args string) error {
 	newObject, ok := response.(*CreateObjectResponse)
 	if !ok {
 		return fmt.Errorf("error casting create object response")
+	}
+
+	err = g.refreshInteractions(actorCtx)
+	if err != nil {
+		log.Errorf("error refreshing interactions: %v", err)
 	}
 
 	g.sendUIMessage(actorCtx, fmt.Sprintf("%s has been created with DID %s and is in your bag of hodling", objName, newObject.Object.Did))
@@ -423,7 +428,7 @@ func (g *Game) handleConnectLocation(actorCtx actor.Context, args string) error 
 		return fmt.Errorf("error adding connection: %v", resp.Error)
 	}
 
-	err = g.attachInteractions(actorCtx)
+	err = g.refreshInteractions(actorCtx)
 	if err != nil {
 		log.Errorf("error refreshing interactions: %v", err)
 	}
@@ -477,7 +482,7 @@ func (g *Game) setLocation(actorCtx actor.Context, locationDid string) {
 	}))
 	g.locationDid = locationDid
 
-	err := g.attachInteractions(actorCtx)
+	err := g.refreshInteractions(actorCtx)
 	if err != nil {
 		panic(errors.Wrap(err, "error attaching interactions for location"))
 	}
@@ -491,28 +496,48 @@ func (g *Game) setLocation(actorCtx actor.Context, locationDid string) {
 	}))
 }
 
-func (g *Game) attachInteractions(actorCtx actor.Context) error {
-	response, err := actorCtx.RequestFuture(g.locationActor, &ListInteractionsRequest{}, 5*time.Second).Result()
+func (g *Game) refreshInteractions(actorCtx actor.Context) error {
+	newCommands := defaultCommandList
+
+	locationCommands, err := g.interactionCommandsFor(actorCtx, g.locationActor)
+	if err != nil {
+		return errors.Wrap(err, "location interactions")
+	}
+	newCommands = append(newCommands, locationCommands...)
+
+	inventoryCommands, err := g.interactionCommandsFor(actorCtx, g.inventoryActor)
+	if err != nil {
+		return errors.Wrap(err, "inventory interactions")
+	}
+	newCommands = append(newCommands, inventoryCommands...)
+
+	g.commands = newCommands
+	return nil
+}
+
+func (g *Game) interactionCommandsFor(actorCtx actor.Context, pid *actor.PID) (commandList, error) {
+	response, err := actorCtx.RequestFuture(pid, &ListInteractionsRequest{}, 5*time.Second).Result()
 	if err != nil || response == nil {
-		return err
+		return nil, fmt.Errorf("error fetching interactions %v", err)
 	}
 
 	interactionsResponse, ok := response.(*ListInteractionsResponse)
 	if !ok {
-		return fmt.Errorf("error casting ListInteractionsResponse")
+		return nil, fmt.Errorf("error casting ListInteractionsResponse")
 	}
 	if interactionsResponse.Error != nil {
-		return interactionsResponse.Error
+		return nil, interactionsResponse.Error
 	}
 
 	interactions := interactionsResponse.Interactions
 	interactionCommands := make(commandList, len(interactions))
-	for i, cmd := range interactions {
-		interactionCommands[i] = newCommand("interaction", cmd)
+	for i, interaction := range interactions {
+		interactionCommands[i] = &interactionCommand{
+			parse:       interaction.GetCommand(),
+			interaction: interaction,
+		}
 	}
-
-	g.commands = append(defaultCommandList, interactionCommands...)
-	return nil
+	return interactionCommands, nil
 }
 
 func (g *Game) getCurrentLocation(actorCtx actor.Context) (*jasonsgame.Location, error) {

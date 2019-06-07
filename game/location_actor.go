@@ -2,6 +2,7 @@ package game
 
 import (
 	"fmt"
+	"time"
 
 	"github.com/AsynkronIT/protoactor-go/actor"
 	"github.com/AsynkronIT/protoactor-go/plugin"
@@ -26,30 +27,6 @@ type LocationActorConfig struct {
 }
 
 type GetLocation struct{}
-
-type ListInteractionsRequest struct{}
-
-type ListInteractionsResponse struct {
-	Interactions []string
-	Error        error
-}
-
-type GetInteractionRequest struct {
-	Command string
-}
-
-type GetInteractionResponse struct {
-	Interaction Interaction
-	Error       error
-}
-
-type AddInteractionRequest struct {
-	Interaction Interaction
-}
-
-type AddInteractionResponse struct {
-	Error error
-}
 
 type SetLocationDescriptionRequest struct {
 	Description string
@@ -127,38 +104,53 @@ func (l *LocationActor) Receive(actorCtx actor.Context) {
 		actorCtx.Respond(&AddInteractionResponse{
 			Error: l.location.AddInteraction(msg.Interaction),
 		})
-	case *GetInteractionRequest:
-		l.handleGetInteractionRequest(actorCtx, msg)
 	case *ListInteractionsRequest:
 		l.handleListInteractionsRequest(actorCtx, msg)
 	}
 }
 
-func (l *LocationActor) handleGetInteractionRequest(actorCtx actor.Context, msg *GetInteractionRequest) {
+func (l *LocationActor) handleListInteractionsRequest(actorCtx actor.Context, msg *ListInteractionsRequest) {
+	interactions, err := l.location.InteractionsList()
 
-	// TODO: allow portal to expose interactions
-	if msg.Command == "go through portal" {
-		portal, err := l.location.GetPortal()
-		if err != nil {
-			actorCtx.Respond(&GetInteractionResponse{Error: errors.Wrap(err, "error getting portal")})
-			return
-		}
-		actorCtx.Respond(&ChangeLocationInteraction{
-			Command: msg.Command,
-			Did:     portal.To,
-		})
+	if err != nil {
+		actorCtx.Respond(&ListInteractionsResponse{Error: err})
 		return
 	}
 
-	interaction, err := l.location.GetInteraction(msg.Command)
+	portal, err := l.location.GetPortal()
 	if err != nil {
-		panic(errors.Wrap(err, "error fetching interaction"))
+		actorCtx.Respond(&ListInteractionsResponse{Error: errors.Wrap(err, "error getting portal")})
+		return
 	}
-	actorCtx.Respond(interaction)
-}
 
-func (l *LocationActor) handleListInteractionsRequest(actorCtx actor.Context, msg *ListInteractionsRequest) {
-	interactions, err := l.location.InteractionsList()
+	if portal != nil {
+		interactions = append(interactions, &ChangeLocationInteraction{
+			Command: "go through portal",
+			Did:     portal.To,
+		})
+	}
+
+	inventoryInteractionsResp, err := actorCtx.RequestFuture(l.inventoryActor, &ListInteractionsRequest{}, 5*time.Second).Result()
+	if err != nil {
+		actorCtx.Respond(&ListInteractionsResponse{Error: err})
+		return
+	}
+
+	if inventoryInteractionsResp != nil {
+		inventoryInteractions, ok := inventoryInteractionsResp.(*ListInteractionsResponse)
+		if !ok {
+			actorCtx.Respond(&ListInteractionsResponse{Error: err})
+			return
+		}
+
+		if inventoryInteractions.Error != nil {
+			actorCtx.Respond(&ListInteractionsResponse{Error: inventoryInteractions.Error})
+			return
+		}
+
+		interactions = append(interactions, inventoryInteractions.Interactions...)
+	}
+
 	actorCtx.Respond(&ListInteractionsResponse{
 		Interactions: interactions,
 		Error:        err,

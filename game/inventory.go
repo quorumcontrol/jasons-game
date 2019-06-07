@@ -44,8 +44,8 @@ type CreateObjectResponse struct {
 }
 
 type TransferObjectRequest struct {
-	Name string
-	To   string
+	Did string
+	To  string
 }
 
 type TransferObjectResponse struct {
@@ -94,6 +94,8 @@ func (inv *InventoryActor) Receive(actorCtx actor.Context) {
 	case *InventoryListRequest:
 		inv.Log.Debugf("Received InventoryListRequest: %+v\n", msg)
 		inv.handleListObjects(actorCtx, msg)
+	case *ListInteractionsRequest:
+		inv.handleListInteractionsRequest(actorCtx, msg)
 	}
 }
 
@@ -143,9 +145,9 @@ func (inv *InventoryActor) handleCreateObject(context actor.Context, msg *Create
 func (inv *InventoryActor) handleTransferObject(context actor.Context, msg *TransferObjectRequest) {
 	var err error
 
-	objectName := msg.Name
-	if objectName == "" {
-		err = fmt.Errorf("name is required to transfer an object")
+	objectDid := msg.Did
+	if objectDid == "" {
+		err = fmt.Errorf("Did is required to transfer an object")
 		inv.Log.Error(err)
 		context.Respond(&TransferObjectResponse{Error: err})
 		return
@@ -177,19 +179,23 @@ func (inv *InventoryActor) handleTransferObject(context actor.Context, msg *Tran
 	}
 
 	if objectsUncasted == nil {
-		err = fmt.Errorf("object %v is not in your inventory", objectName)
+		err = fmt.Errorf("the inventory is empty")
 		context.Respond(&TransferObjectResponse{Error: err})
 		return
 	}
 
+	var objectName string
 	objects := make(map[string]string, len(objectsUncasted.(map[string]interface{})))
 	for k, v := range objectsUncasted.(map[string]interface{}) {
 		objects[k] = v.(string)
+
+		if objectDid == objects[k] {
+			objectName = k
+		}
 	}
 
-	objectDid, ok := objects[objectName]
-	if !ok {
-		err = fmt.Errorf("object %v is not in the inventory", objectName)
+	if objectName == "" {
+		err = fmt.Errorf("object %v is not in the inventory", objectDid)
 		context.Respond(&TransferObjectResponse{Error: err})
 		return
 	}
@@ -295,16 +301,22 @@ func (inv *InventoryActor) handleTransferObject(context actor.Context, msg *Tran
 }
 
 func (inv *InventoryActor) handleListObjects(context actor.Context, msg *InventoryListRequest) {
-	var err error
+	objects, err := inv.listObjects(context)
+	if err != nil {
+		context.Respond(&InventoryListResponse{Error: err})
+		return
+	}
+	context.Respond(&InventoryListResponse{Objects: objects})
+}
 
-	fmt.Printf("Inventory list request for %v", inv.did)
+func (inv *InventoryActor) listObjects(context actor.Context) (map[string]*Object, error) {
+	var err error
 
 	tree, err := inv.network.GetTree(inv.did)
 	if err != nil {
 		err = fmt.Errorf("error fetching chaintree: %v", err)
 		inv.Log.Error(err)
-		context.Respond(&InventoryListResponse{Error: err})
-		return
+		return nil, err
 	}
 
 	treeObjectsPath, _ := consensus.DecodePath(fmt.Sprintf("tree/data/%s", ObjectsPath))
@@ -313,13 +325,11 @@ func (inv *InventoryActor) handleListObjects(context actor.Context, msg *Invento
 	if err != nil {
 		err = fmt.Errorf("error fetching inventory; error: %v", err)
 		inv.Log.Error(err)
-		context.Respond(&InventoryListResponse{Error: err})
-		return
+		return nil, err
 	}
 
 	if objectsUncasted == nil {
-		context.Respond(&InventoryListResponse{Objects: make(map[string]*Object)})
-		return
+		return make(map[string]*Object), nil
 	}
 
 	objects := make(map[string]*Object, len(objectsUncasted.(map[string]interface{})))
@@ -327,7 +337,7 @@ func (inv *InventoryActor) handleListObjects(context actor.Context, msg *Invento
 		objects[k] = &Object{Did: v.(string)}
 	}
 
-	context.Respond(&InventoryListResponse{Objects: objects})
+	return objects, nil
 }
 
 func (inv *InventoryActor) handleTransferredObject(context actor.Context, msg *jasonsgame.TransferredObjectMessage) {
@@ -373,4 +383,34 @@ func (inv *InventoryActor) handleTransferredObject(context actor.Context, msg *j
 	if err != nil {
 		panic(fmt.Errorf("error updating objects in chaintree: %v", err))
 	}
+}
+
+func (inv *InventoryActor) handleListInteractionsRequest(actorCtx actor.Context, msg *ListInteractionsRequest) {
+	objects, err := inv.listObjects(actorCtx)
+
+	if err != nil {
+		actorCtx.Respond(&ListInteractionsResponse{Error: err})
+		return
+	}
+
+	interactions := []Interaction{}
+
+	for _, object := range objects {
+		obj, err := FindObjectTree(inv.network, object.Did)
+
+		if err != nil {
+			actorCtx.Respond(&ListInteractionsResponse{Error: err})
+			return
+		}
+
+		objectInteractions, err := obj.InteractionsList()
+		if err != nil {
+			actorCtx.Respond(&ListInteractionsResponse{Error: err})
+			return
+		}
+
+		interactions = append(interactions, objectInteractions...)
+	}
+
+	actorCtx.Respond(&ListInteractionsResponse{Interactions: interactions})
 }

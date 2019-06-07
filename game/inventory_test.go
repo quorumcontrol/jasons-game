@@ -154,7 +154,7 @@ func TestInventoryActor_TransferObject(t *testing.T) {
 	require.True(t, ok)
 	require.Nil(t, createObjectResponse.Error)
 
-	response, err = rootCtx.RequestFuture(inventory, &TransferObjectRequest{Name: "testTransferObject", To: homeTree.MustId()}, 1*time.Second).Result()
+	response, err = rootCtx.RequestFuture(inventory, &TransferObjectRequest{Did: createObjectResponse.Object.Did, To: homeTree.MustId()}, 1*time.Second).Result()
 	require.Nil(t, err)
 
 	transferObjectResponse, ok := response.(*TransferObjectResponse)

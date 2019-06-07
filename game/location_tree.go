@@ -55,11 +55,7 @@ func (l *LocationTree) AddInteraction(i Interaction) error {
 	return l.addInteractionToTree(l, i)
 }
 
-func (l *LocationTree) GetInteraction(command string) (Interaction, error) {
-	return l.getInteractionFromTree(l, command)
-}
-
-func (l *LocationTree) InteractionsList() ([]string, error) {
+func (l *LocationTree) InteractionsList() ([]Interaction, error) {
 	return l.interactionsListFromTree(l)
 }
 
