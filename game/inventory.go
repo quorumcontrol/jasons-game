@@ -410,8 +410,6 @@ func (inv *InventoryActor) handleListObjects(context actor.Context, msg *Invento
 	treeObjectsPath, _ := consensus.DecodePath(fmt.Sprintf("tree/data/%s", ObjectsPath))
 	objectsUncasted, _, err := tree.ChainTree.Dag.Resolve(treeObjectsPath)
 
-	fmt.Printf("objs uncasted is %v", objectsUncasted)
-
 	if err != nil {
 		err = fmt.Errorf("error fetching inventory; error: %v", err)
 		inv.Log.Error(err)

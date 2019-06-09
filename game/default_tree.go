@@ -31,23 +31,17 @@ func createHome(n network.Network) (*LocationTree, error) {
 		return nil, errors.Wrap(err, "error updating north tree")
 	}
 
-	err = northLocation.AddInteraction(&Interaction{
+	err = northLocation.AddInteraction(&ChangeLocationInteraction{
 		Command: "south",
-		Action:  "changeLocation",
-		Args: map[string]string{
-			"did": homeTree.MustId(),
-		},
+		Did:     homeTree.MustId(),
 	})
 	if err != nil {
 		return nil, errors.Wrap(err, "error adding interaction to north tree")
 	}
 
-	err = homeLocation.AddInteraction(&Interaction{
+	err = homeLocation.AddInteraction(&ChangeLocationInteraction{
 		Command: "north",
-		Action:  "changeLocation",
-		Args: map[string]string{
-			"did": northLocation.MustId(),
-		},
+		Did:     northLocation.MustId(),
 	})
 	if err != nil {
 		return nil, errors.Wrap(err, "error adding interaction to home tree")

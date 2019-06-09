@@ -15,3 +15,5 @@ protoc -I=./pb -I=$GOPATH/src jasonsgame.proto \
 --go_out=plugins=grpc:./pb/jasonsgame
 
 protoc -I=./network -I=$GOPATH/src messages.proto --go_out=plugins=grpc:./network/
+
+protoc -I=./game -I=$GOPATH/src types.proto --go_out=./game/ && protoc-go-inject-tag -input=./game/types.pb.go -XXX_skip=cbor,refmt
