@@ -27,12 +27,20 @@
    (re-frame/dispatch [::remote/listen])
    {}))
 
+(defn resp->message [resp]
+  (-> resp
+      .toObject
+      js->clj
+      keywordize-keys))
+
 (defn handle-game-message [resp]
   (if (not (.getHeartbeat resp))
     (do
       (.log js/console "game message" (.toObject resp))
-      (let [clj-msg (keywordize-keys (js->clj (.toObject resp)))]
-        (re-frame/dispatch [:game-message (conj {:user false} clj-msg)])))))
+      (let [game-msg (-> resp
+                         resp->message
+                         (assoc :user false))]
+        (re-frame/dispatch [:game-message game-msg])))))
 
 (defn handle-game-end [resp]
   (.log js/console "game end, redoing" resp)
