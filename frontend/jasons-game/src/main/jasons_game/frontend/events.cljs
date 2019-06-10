@@ -69,10 +69,10 @@
  :user-input
  handle-user-input)
 
-(re-frame/reg-event-fx
+(re-frame/reg-event-db
  :game-message
- (fn [{:keys [db]} [_ message-to-user]]
-   {:db (update db ::remote/messages #(conj % message-to-user))}))
+ (fn [db [_ message-to-user]]
+   (update db ::remote/messages #(conj % message-to-user))))
 
 (re-frame/reg-event-db
  ::terminal/change-state
