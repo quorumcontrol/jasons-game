@@ -7,11 +7,14 @@
 (defn new-state []
   (.createEmpty EmulatorState))
 
+(defn msg->output [msg]
+  (.makeTextOutput OutputFactory (:message msg)))
+
 (defn add-output [outputs new-output]
   (.addRecord Outputs outputs new-output))
 
 (defn add-text-message [state msg]
-  (let [msg-output (.makeTextOutput OutputFactory msg)]
+  (let [msg-output (msg->output msg)]
     (-> state
         .getOutputs
         (add-output msg-output)
@@ -19,7 +22,7 @@
 
 (defn show [state]
   (let [current-input (r/atom "")]
-    (fn []
+    (fn [state]
       [:> ReactTerminalStateless {:emulatorState state
                                   :inputStr @current-input
                                   :onInputChange (fn [new-input]

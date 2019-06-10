@@ -72,9 +72,9 @@
 (re-frame/reg-event-db
  :game-message
  (fn [db [_ message-to-user]]
-   (update db ::remote/messages #(conj % message-to-user))))
+   (update db ::terminal/state terminal/add-text-message message-to-user)))
 
 (re-frame/reg-event-db
  ::terminal/change-state
- (fn [db new-state]
+ (fn [db [_ new-state]]
    (assoc db ::terminal/state new-state)))
