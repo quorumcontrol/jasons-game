@@ -17,11 +17,18 @@
 
 (defn help-command [_ _]
   (re-frame/dispatch [:user/input "help"])
-  (clj->js {}))
+  {})
 
 (defn refresh-command [_ _]
-  (re-frame/dispatch []))
+  (re-frame/dispatch [:user/input "refresh"])
+  {})
+
+(defn create-location-command [_ _]
+  (re-frame/dispatch [:user/input "create location"])
+  {})
 
 (def mapping
   (-> (.create CommandMapping)
-      (add-command "help" help-command)))
+      (add-command "help" help-command)
+      (add-command "refresh" refresh-command)
+      (add-command "create-location" create-location-command)))
