@@ -58,5 +58,6 @@
 
 (defn app-root []
   (let [messages (subscribe [::remote/messages])
-        state (subscribe [::terminal/state])]
-    [terminal/show @state]))
+        state (subscribe [::terminal/state])
+        read-only? (subscribe [::terminal/read-only?])]
+    [terminal/show @state @read-only?]))

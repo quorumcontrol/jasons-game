@@ -6,4 +6,5 @@
                     ::remote/session (remote/new-session "12345")
                     ::remote/host remote/default-host
                     :nav/page :home
-                    ::terminal/state (terminal/new-state)})
+                    ::terminal/state (terminal/new-state)
+                    ::terminal/read-only? false})

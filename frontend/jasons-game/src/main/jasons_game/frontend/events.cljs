@@ -21,6 +21,11 @@
  (fn [db _]
    (::terminal/state db)))
 
+(re-frame/reg-sub
+ ::terminal/read-only?
+ (fn [db _]
+   (::terminal/read-only? db)))
+
 (re-frame/reg-event-fx
  :initialize
  (fn [_ _]
@@ -78,3 +83,13 @@
  ::terminal/change-state
  (fn [db [_ new-state]]
    (assoc db ::terminal/state new-state)))
+
+(re-frame/reg-event-db
+ ::terminal/disable-input
+ (fn [db _]
+   (assoc db ::terminal/read-only? true)))
+
+(re-frame/reg-event-db
+ ::terminal/enable-input
+ (fn [db _]
+   (assoc db ::terminal/read-only? false)))

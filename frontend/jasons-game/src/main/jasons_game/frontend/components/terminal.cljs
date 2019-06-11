@@ -20,12 +20,14 @@
         (add-output msg-output)
         (as-> new-outputs (.setOutputs state new-outputs)))))
 
-(defn show [state]
+(defn show [state read-only?]
   (let [current-input (r/atom "")]
     (fn [state]
       [:> ReactTerminalStateless {:emulatorState state
+                                  :acceptInput (not read-only?)
                                   :inputStr @current-input
                                   :onInputChange (fn [new-input]
                                                    (reset! current-input new-input))
                                   :onStateChange (fn [new-state]
+                                                   (reset! current-input "")
                                                    (re-frame/dispatch [::change-state new-state]))}])))
