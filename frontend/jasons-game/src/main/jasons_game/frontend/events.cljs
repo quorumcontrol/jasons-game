@@ -75,6 +75,12 @@
  handle-user-input)
 
 (re-frame/reg-event-db
+ ::remote/send-input
+ (fn-traced [{::remote/keys [host session] :as db} [_ user-command]]
+            (remote/send-user-input host session user-command (fn [resp] (.log js/console resp)))
+            db))
+
+(re-frame/reg-event-db
  :game-message
  (fn [db [_ message-to-user]]
    (update db ::terminal/state terminal/add-text-message message-to-user)))
