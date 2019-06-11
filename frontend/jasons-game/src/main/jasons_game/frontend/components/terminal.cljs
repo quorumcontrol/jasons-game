@@ -7,8 +7,14 @@
 (defn new-state []
   (.createEmpty EmulatorState))
 
+(defn text->output [txt]
+  (.makeTextOutput OutputFactory txt))
+
 (defn msg->output [msg]
-  (.makeTextOutput OutputFactory (:message msg)))
+  (-> msg
+      :message
+      (str "\n\n")
+      text->output))
 
 (defn add-output [outputs new-output]
   (.addRecord Outputs outputs new-output))
