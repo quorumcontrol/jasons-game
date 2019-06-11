@@ -73,7 +73,7 @@
                            (fn [resp] (.log js/console resp)))))
 
 (re-frame/reg-event-fx
- ::remote/send-input
+ :user/input
  (fn-traced [{{::remote/keys [host session]} :db} [_ user-command]]
    {::remote/input {:host host, :session session, :command user-command}
     :dispatch [::terminal/disable-input]}))

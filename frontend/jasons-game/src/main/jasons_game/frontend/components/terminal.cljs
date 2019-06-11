@@ -9,7 +9,7 @@
   (clj->js {:function f, :optDef opts}))
 
 (defn help-command [_ _]
-  (re-frame/dispatch [::remote/send-input "help"])
+  (re-frame/dispatch [:user/input "help"])
   (clj->js {}))
 
 (def commands
