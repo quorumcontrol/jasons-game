@@ -1,30 +1,13 @@
 (ns jasons-game.frontend.components.terminal
   (:require [jasons-game.frontend.remote :as remote]
+            [jasons-game.frontend.components.terminal.commands :as commands]
             [reagent.core :as r]
             [re-frame.core :as re-frame]
-            ["javascript-terminal" :as jsterm :refer [CommandMapping defaultCommandMapping EmulatorState Outputs OutputFactory]]
+            ["javascript-terminal" :as jsterm :refer [EmulatorState Outputs OutputFactory]]
             ["react-terminal-component" :refer [ReactTerminalStateless]]))
 
-(defn build-command [f opts]
-  (clj->js {:function f, :optDef opts}))
-
-(defn help-command [_ _]
-  (re-frame/dispatch [:user/input "help"])
-  (clj->js {}))
-
-(defn add-command
-  ([commands new-command-name new-command-fn]
-   (add-command commands new-command-name new-command-fn {}))
-  ([commands new-command-name new-command-fn new-command-opts]
-   (.setCommand CommandMapping commands
-                new-command-name new-command-fn new-command-opts)))
-
-(def commands
-  (-> (.create CommandMapping)
-      (add-command "help" help-command)))
-
 (defn new-state []
-  (.create EmulatorState (clj->js {:commandMapping commands})))
+  (.create EmulatorState (clj->js {:commandMapping commands/mapping})))
 
 (defn text->output [txt]
   (.makeTextOutput OutputFactory txt))
