@@ -12,9 +12,16 @@
   (re-frame/dispatch [:user/input "help"])
   (clj->js {}))
 
+(defn add-command
+  ([commands new-command-name new-command-fn]
+   (add-command commands new-command-name new-command-fn {}))
+  ([commands new-command-name new-command-fn new-command-opts]
+   (.setCommand CommandMapping commands
+                new-command-name new-command-fn new-command-opts)))
+
 (def commands
-  (let [commands (.create CommandMapping)]
-    (.setCommand CommandMapping commands "help" help-command {})))
+  (-> (.create CommandMapping)
+      (add-command "help" help-command)))
 
 (defn new-state []
   (.create EmulatorState (clj->js {:commandMapping commands})))
