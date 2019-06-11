@@ -49,3 +49,28 @@
                                   :onStateChange (fn [new-state]
                                                    (reset! current-input "")
                                                    (re-frame/dispatch [::change-state new-state]))}])))
+
+(re-frame/reg-sub
+ ::state
+ (fn [{::keys [state] :as db} _]
+   state))
+
+(re-frame/reg-sub
+ ::read-only?
+ (fn [{::keys [read-only?] :as db} _]
+   read-only?))
+
+(re-frame/reg-event-db
+ ::change-state
+ (fn [db [_ new-state]]
+   (assoc db ::state new-state)))
+
+(re-frame/reg-event-db
+ ::disable-input
+ (fn [db _]
+   (assoc db ::read-only? true)))
+
+(re-frame/reg-event-db
+ ::enable-input
+ (fn [db _]
+   (assoc db ::read-only? false)))
