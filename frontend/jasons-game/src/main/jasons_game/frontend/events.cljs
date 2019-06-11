@@ -8,23 +8,23 @@
 
 (re-frame/reg-sub
  ::remote/messages
- (fn [db _]
-  (::remote/messages db)))
+ (fn [{::remote/keys [messages] :as db} _]
+   messages))
 
 (re-frame/reg-sub
  ::remote/host
- (fn [db _]
-   (::remote/host db)))
+ (fn [{::remote/keys [host] :as db} _]
+   host))
 
 (re-frame/reg-sub
  ::terminal/state
- (fn [db _]
-   (::terminal/state db)))
+ (fn [{::terminal/keys [state] :as db} _]
+   state))
 
 (re-frame/reg-sub
  ::terminal/read-only?
- (fn [db _]
-   (::terminal/read-only? db)))
+ (fn [{::terminal/keys [read-only?] :as db} _]
+   read-only?))
 
 (re-frame/reg-event-fx
  :initialize
