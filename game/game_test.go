@@ -38,7 +38,7 @@ func TestNavigation(t *testing.T) {
 	someTree, err := net.CreateChainTree()
 	require.Nil(t, err)
 
-	rootCtx.Send(game, &jasonsgame.UserInput{Message: fmt.Sprintf("connect location %s as enter dungeon", someTree.MustId())})
+	rootCtx.Send(game, &jasonsgame.UserInput{Message: fmt.Sprintf("connect-location %s as enter dungeon", someTree.MustId())})
 	time.Sleep(100 * time.Millisecond)
 	msgs := stream.GetMessages()
 	require.Len(t, msgs, 3)
@@ -61,7 +61,7 @@ func TestSetDescription(t *testing.T) {
 
 	newDescription := "multi word"
 
-	rootCtx.Send(game, &jasonsgame.UserInput{Message: "set description " + newDescription})
+	rootCtx.Send(game, &jasonsgame.UserInput{Message: "set-description " + newDescription})
 	time.Sleep(100 * time.Millisecond)
 
 	respondedWithDescription := false
@@ -90,7 +90,7 @@ func TestCallMe(t *testing.T) {
 
 	newName := "Johnny B Good"
 
-	rootCtx.Send(game, &jasonsgame.UserInput{Message: "call me " + newName})
+	rootCtx.Send(game, &jasonsgame.UserInput{Message: "call-me " + newName})
 	time.Sleep(100 * time.Millisecond)
 
 	tree, err := net.GetChainTreeByName("player")
@@ -111,7 +111,7 @@ func TestBuildPortal(t *testing.T) {
 	defer rootCtx.Stop(game)
 
 	did := "did:fakedidtonowhere"
-	rootCtx.Send(game, &jasonsgame.UserInput{Message: "build portal to " + did})
+	rootCtx.Send(game, &jasonsgame.UserInput{Message: "build-portal " + did})
 	time.Sleep(100 * time.Millisecond)
 
 	tree, err := net.GetChainTreeByName("home")
@@ -123,7 +123,7 @@ func TestBuildPortal(t *testing.T) {
 
 	err = stream.ClearMessages()
 	require.Nil(t, err)
-	rootCtx.Send(game, &jasonsgame.UserInput{Message: "look around"})
+	rootCtx.Send(game, &jasonsgame.UserInput{Message: "look-around"})
 	time.Sleep(100 * time.Millisecond)
 
 	respondedWithPortal := false
@@ -151,12 +151,12 @@ func TestGoThroughPortal(t *testing.T) {
 	require.Nil(t, err)
 
 	did := remoteTree.MustId()
-	rootCtx.Send(game, &jasonsgame.UserInput{Message: "build portal to " + did})
+	rootCtx.Send(game, &jasonsgame.UserInput{Message: "build-portal " + did})
 	time.Sleep(100 * time.Millisecond)
 
 	err = stream.ClearMessages()
 	require.Nil(t, err)
-	rootCtx.Send(game, &jasonsgame.UserInput{Message: "go through portal"})
+	rootCtx.Send(game, &jasonsgame.UserInput{Message: "go-through-portal"})
 	time.Sleep(100 * time.Millisecond)
 
 	msgs := stream.GetMessages()
