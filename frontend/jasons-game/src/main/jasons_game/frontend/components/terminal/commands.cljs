@@ -1,34 +1,53 @@
 (ns jasons-game.frontend.components.terminal.commands
   (:require [jasons-game.frontend.remote :as remote]
+            [clojure.string :as string]
+            [clojure.walk :refer [keywordize-keys]]
             [reagent.core :as r]
             [re-frame.core :as re-frame]
-            ["javascript-terminal" :as jsterm :refer [CommandMapping]]
+            ["javascript-terminal" :as jsterm
+             :refer [CommandMapping OptionParser]]
             ["react-terminal-component" :refer [ReactTerminalStateless]]))
 
-(defn build-command [f opts]
-  (clj->js {:function f, :optDef opts}))
+(defn parse-args [arg-str option-schema]
+  (let [js-schema (clj->js option-schema)]
+    (-> OptionParser
+        (.parseOptions arg-str js-schema)
+        js->clj
+        keywordize-keys)))
 
-(defn add-command
-  ([commands new-command-name new-command-fn]
-   (add-command commands new-command-name new-command-fn {}))
-  ([commands new-command-name new-command-fn new-command-opts]
-   (.setCommand CommandMapping commands
-                new-command-name new-command-fn new-command-opts)))
+(defmulti dispatch-command
+  (fn [command-name args] command-name))
 
-(defn help-command [_ _]
-  (re-frame/dispatch [:user/input "help"])
-  {})
+(defmethod dispatch-command :default [command-name arg-string]
+  (let [command (->> [command-name arg-string]
+                     (string/join " ")
+                     string/trim)]
+    (re-frame/dispatch [:user/input command])
+    {}))
 
-(defn refresh-command [_ _]
-  (re-frame/dispatch [:user/input "refresh"])
-  {})
-
-(defn create-location-command [_ _]
-  (re-frame/dispatch [:user/input "create location"])
-  {})
+(defn add-command [commands new-command-name]
+  (let [command-fn (fn [_ arg-string]
+                     (dispatch-command new-command-name arg-string))]
+    (.setCommand CommandMapping
+                 commands new-command-name command-fn {})))
 
 (def mapping
   (-> (.create CommandMapping)
-      (add-command "help" help-command)
-      (add-command "refresh" refresh-command)
-      (add-command "create-location" create-location-command)))
+      (add-command "call-me")
+      (add-command "create-location")
+      (add-command "connect-location")
+      (add-command "set-description")
+      (add-command "go-to-tip")
+      (add-command "go-through-portal")
+      (add-command "build-portal")
+      (add-command "exit")
+      (add-command "say")
+      (add-command "shout")
+      (add-command "create-object")
+      (add-command "drop-object")
+      (add-command "pick-up-object")
+      (add-command "look-in-bag")
+      (add-command "look-around")
+      (add-command "help")
+      (add-command "open-portal")
+      (add-command "refresh")))
