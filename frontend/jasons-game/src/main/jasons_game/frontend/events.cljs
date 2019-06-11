@@ -66,24 +66,23 @@
  (fn-traced [db host]
    (assoc db ::remote/host host)))
 
-(defn handle-user-input [{:keys [db]} [_ user-command]]
-  (remote/send-user-input (::remote/host db) (::remote/session db) user-command (fn [resp] (.log js/console resp)))
-  {:db (update db ::remote/messages #(conj % {:user true :message user-command}))})
+(re-frame/reg-fx
+ ::remote/input
+ (fn [{:keys [host session command]}]
+   (remote/send-user-input host session command
+                           (fn [resp] (.log js/console resp)))))
 
 (re-frame/reg-event-fx
- :user-input
- handle-user-input)
-
-(re-frame/reg-event-db
  ::remote/send-input
- (fn-traced [{::remote/keys [host session] :as db} [_ user-command]]
-            (remote/send-user-input host session user-command (fn [resp] (.log js/console resp)))
-            db))
+ (fn-traced [{{::remote/keys [host session]} :db} [_ user-command]]
+   {::remote/input {:host host, :session session, :command user-command}
+    :dispatch [::terminal/disable-input]}))
 
-(re-frame/reg-event-db
+(re-frame/reg-event-fx
  :game-message
- (fn [db [_ message-to-user]]
-   (update db ::terminal/state terminal/add-text-message message-to-user)))
+ (fn [{:keys [db]} [_ message-to-user]]
+   {:db (update db ::terminal/state terminal/add-text-message message-to-user)
+    :dispatch [::terminal/enable-input]}))
 
 (re-frame/reg-event-db
  ::terminal/change-state
