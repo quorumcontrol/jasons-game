@@ -161,10 +161,9 @@ func (q *MeetTheWizard) NextStep(actorCtx actor.Context, game *Game) (*QuestStep
 		_, droppedGreenVitriol := location.Inventory["green-vitriol"]
 		if droppedGreenVitriol {
 			return q.sixthStep(), nil
-		} else {
-			time.Sleep(1 * time.Second)
-			return q.NextStep(actorCtx, game)
 		}
+		time.Sleep(1 * time.Second)
+		return q.NextStep(actorCtx, game)
 	case (location.X == 0 && location.Y == -1) ||
 		(location.X == -1 && location.Y == 0) ||
 		(location.X == 1 && location.Y == 0):

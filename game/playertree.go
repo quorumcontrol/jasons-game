@@ -13,7 +13,7 @@ import (
 )
 
 const playerTreePath = "jasons-game/player"
-var ObjectsPath = fmt.Sprintf("%s/%s", playerTreePath, "bag-of-hodling")
+var ObjectsPath = fmt.Sprintf("%s/bag-of-hodling", playerTreePath)
 
 type PlayerTree struct {
 	tree     *consensus.SignedChainTree

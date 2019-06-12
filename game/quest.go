@@ -79,6 +79,7 @@ func updateQuests(actorCtx actor.Context, game *Game) {
 			start, err := quest.Start(game)
 			if err != nil {
 				log.Errorf("error checking for start to %s quest: %v", quest, err)
+				continue
 			}
 
 			if start {

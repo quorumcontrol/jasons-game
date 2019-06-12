@@ -732,12 +732,10 @@ func (g *Game) updateQuests(actorCtx actor.Context) {
 
 func (g *Game) sendQuestUIMessages(actorCtx actor.Context) {
 	for _, quest := range g.quests {
-		if quest.State().started && !quest.State().completed {
-			if quest.State().currentStep != nil {
-				if msg := quest.State().currentStep.Message.Message; msg != "" {
-					message := fmt.Sprintf("Quest (%s): %s", quest.PrettyString(), msg)
-					g.sendUIMessage(actorCtx, message)
-				}
+		if quest.State().started && !quest.State().completed && quest.State().currentStep != nil {
+			if msg := quest.State().currentStep.Message.Message; msg != "" {
+				message := fmt.Sprintf("Quest (%s): %s", quest.PrettyString(), msg)
+				g.sendUIMessage(actorCtx, message)
 			}
 		}
 	}
