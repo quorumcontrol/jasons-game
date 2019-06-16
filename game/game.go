@@ -15,6 +15,7 @@ import (
 	"github.com/quorumcontrol/jasons-game/network"
 	"github.com/quorumcontrol/jasons-game/pb/jasonsgame"
 	"github.com/quorumcontrol/jasons-game/ui"
+	"github.com/quorumcontrol/tupelo-go-sdk/consensus"
 )
 
 var log = logging.Logger("game")
@@ -224,11 +225,36 @@ func (g *Game) handleInteractionInput(actorCtx actor.Context, cmd *interactionCo
 		err = g.handleDropObject(actorCtx, interaction)
 	case *PickUpObjectInteraction:
 		err = g.handlePickUpObject(actorCtx, interaction)
+	case *GetTreeValueInteraction:
+		err = g.handleGetTreeValueInteraction(actorCtx, interaction)
 	default:
 		g.sendUIMessage(actorCtx, fmt.Sprintf("no interaction matching %s, type %v", cmd.Parse(), reflect.TypeOf(interaction)))
 	}
 
 	return err
+}
+
+func (g *Game) handleGetTreeValueInteraction(actorCtx actor.Context, interaction *GetTreeValueInteraction) error {
+	tree, err := g.network.GetTree(interaction.Did)
+	if err != nil {
+		return errors.Wrap(err, "error fetching tree")
+	}
+	if tree == nil {
+		return fmt.Errorf("could not find tree with did %v", interaction.Did)
+	}
+
+	pathSlice, err := consensus.DecodePath(interaction.Path)
+	if err != nil {
+		return errors.Wrap(err, "error casting path")
+	}
+
+	value, _, err := tree.ChainTree.Dag.Resolve(append([]string{"tree", "data", "jasons-game"}, pathSlice...))
+	if err != nil {
+		return errors.Wrap(err, fmt.Sprintf("error fetching value for %v", pathSlice))
+	}
+
+	g.sendUIMessage(actorCtx, value)
+	return nil
 }
 
 func (g *Game) handleDropObject(actorCtx actor.Context, interaction *DropObjectInteraction) error {
