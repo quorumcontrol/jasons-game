@@ -64,6 +64,22 @@ func CreateObjectTree(net network.Network, name string) (*ObjectTree, error) {
 		return nil, errors.Wrap(err, "error setting name of new object")
 	}
 
+	err = obj.AddInteraction(&DropObjectInteraction{
+		Command: "drop object " + name,
+		Did:     obj.MustId(),
+	})
+	if err != nil {
+		return nil, errors.Wrap(err, "error adding interactions to new object")
+	}
+
+	err = obj.AddInteraction(&PickUpObjectInteraction{
+		Command: "pick up object " + name,
+		Did:     obj.MustId(),
+	})
+	if err != nil {
+		return nil, errors.Wrap(err, "error adding interactions to new object")
+	}
+
 	return obj, nil
 }
 
@@ -99,11 +115,7 @@ func (o *ObjectTree) AddInteraction(i Interaction) error {
 	return o.addInteractionToTree(o, i)
 }
 
-func (o *ObjectTree) GetInteraction(command string) (Interaction, error) {
-	return o.getInteractionFromTree(o, command)
-}
-
-func (o *ObjectTree) InteractionsList() ([]string, error) {
+func (o *ObjectTree) InteractionsList() ([]Interaction, error) {
 	return o.interactionsListFromTree(o)
 }
 

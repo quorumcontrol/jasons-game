@@ -16,6 +16,10 @@ func init() {
 	typecaster.AddType(RespondInteraction{})
 	cbor.RegisterCborType(ChangeLocationInteraction{})
 	typecaster.AddType(ChangeLocationInteraction{})
+	cbor.RegisterCborType(PickUpObjectInteraction{})
+	typecaster.AddType(PickUpObjectInteraction{})
+	cbor.RegisterCborType(DropObjectInteraction{})
+	typecaster.AddType(DropObjectInteraction{})
 }
 
 type Interaction interface {
@@ -25,6 +29,23 @@ type Interaction interface {
 
 var _ Interaction = (*RespondInteraction)(nil)
 var _ Interaction = (*ChangeLocationInteraction)(nil)
+var _ Interaction = (*PickUpObjectInteraction)(nil)
+var _ Interaction = (*DropObjectInteraction)(nil)
+
+type ListInteractionsRequest struct{}
+
+type ListInteractionsResponse struct {
+	Interactions []Interaction
+	Error        error
+}
+
+type AddInteractionRequest struct {
+	Interaction Interaction
+}
+
+type AddInteractionResponse struct {
+	Error error
+}
 
 type withInteractions struct {
 }
@@ -87,16 +108,21 @@ func (w *withInteractions) getInteractionFromTree(tree updatableTree, command st
 	return interaction.(Interaction), nil
 }
 
-func (w *withInteractions) interactionsListFromTree(tree updatableTree) ([]string, error) {
+func (w *withInteractions) interactionsListFromTree(tree updatableTree) ([]Interaction, error) {
 	val, err := tree.getPath([]string{"interactions"})
 	if err != nil || val == nil {
 		return nil, err
 	}
-	commands := make([]string, len(val.(map[string]interface{})))
+
+	interactions := make([]Interaction, len(val.(map[string]interface{})))
 	i := 0
 	for cmd := range val.(map[string]interface{}) {
-		commands[i] = cmd
+		interaction, err := w.getInteractionFromTree(tree, cmd)
+		if err != nil {
+			return nil, err
+		}
+		interactions[i] = interaction
 		i++
 	}
-	return commands, nil
+	return interactions, nil
 }
