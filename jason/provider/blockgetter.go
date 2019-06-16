@@ -16,12 +16,20 @@ const getterConcurrency = 50
 
 var getTimeout = 20 * time.Second
 
-type distributer struct {
+type distributor struct {
 	provider *Provider
 	pool     *actor.PID
 }
 
-func (d *distributer) Receive(aCtx actor.Context) {
+func NewBlockStoreProps(p *Provider) *actor.Props {
+	return actor.PropsFromProducer(func() actor.Actor {
+		return &distributor{
+			provider: p,
+		}
+	})
+}
+
+func (d *distributor) Receive(aCtx actor.Context) {
 	switch msg := aCtx.Message().(type) {
 	case *actor.Started:
 		aCtx.Spawn(d.provider.pubsubSystem.NewSubscriberProps(network.BlockTopic))
