@@ -256,6 +256,7 @@ func (ts *IPLDTreeStore) RepublishAll() error {
 		if err != nil {
 			return errors.Wrap(err, "error getting CID")
 		}
+		log.Infof("publishing %s", node.Cid().String())
 		actor.EmptyRootContext.Send(ts.publisher, node)
 	}
 	return nil
