@@ -34,6 +34,7 @@ type Game struct {
 	locationActor   *actor.PID
 	chatActor       *actor.PID
 	inventoryActor  *actor.PID
+	shoutActor      *actor.PID
 }
 
 func NewGameProps(playerTree *PlayerTree, ui *actor.PID, network network.Network) *actor.Props {
@@ -64,10 +65,8 @@ func (g *Game) Receive(actorCtx actor.Context) {
 
 func (g *Game) initialize(actorCtx actor.Context) {
 	actorCtx.Send(g.ui, &ui.SetGame{Game: actorCtx.Self()})
-	_, err := g.network.Community().SubscribeActor(actorCtx.Self(), shoutChannel)
-	if err != nil {
-		panic(fmt.Errorf("error spawning shout actor: %v", err))
-	}
+
+	g.shoutActor = actorCtx.Spawn(g.network.Community().NewSubscriberProps(shoutChannel))
 
 	g.inventoryActor = actorCtx.Spawn(NewInventoryActorProps(&InventoryActorConfig{
 		Did:     g.playerTree.Did(),
