@@ -3,12 +3,18 @@ package network
 import (
 	"context"
 	"fmt"
+	"strings"
 	"time"
+
+	dshelp "github.com/ipfs/go-ipfs-ds-help"
+
+	"github.com/ipfs/go-datastore/query"
 
 	"github.com/AsynkronIT/protoactor-go/actor"
 	blocks "github.com/ipfs/go-block-format"
 	cid "github.com/ipfs/go-cid"
 	"github.com/ipfs/go-datastore"
+	blockstore "github.com/ipfs/go-ipfs-blockstore"
 	cbornode "github.com/ipfs/go-ipld-cbor"
 	format "github.com/ipfs/go-ipld-format"
 
@@ -227,6 +233,33 @@ func (ts *IPLDTreeStore) Resolve(tip cid.Cid, path []string) (val interface{}, r
 	default:
 		return val, remaining, err
 	}
+}
+
+func (ts *IPLDTreeStore) RepublishAll() error {
+	result, err := ts.keyValueApi.Query(query.Query{
+		Prefix:   blockstore.BlockPrefix.String(),
+		KeysOnly: true,
+	})
+	if err != nil {
+		return errors.Wrap(err, "error querying")
+	}
+	for entry := range result.Next() {
+		keyStr := entry.Key
+		key := datastore.NewKey(strings.Split(keyStr, "/")[2])
+
+		cid, err := dshelp.DsKeyToCid(key)
+		if err != nil {
+			return errors.Wrap(err, "error getting cid")
+		}
+
+		node, err := ts.GetNode(cid)
+		if err != nil {
+			return errors.Wrap(err, "error getting CID")
+		}
+		log.Infof("publishing %s", node.Cid().String())
+		actor.EmptyRootContext.Send(ts.publisher, node)
+	}
+	return nil
 }
 
 func blockToCborNode(blk blocks.Block) (*cbornode.Node, error) {

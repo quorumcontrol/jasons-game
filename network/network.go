@@ -143,6 +143,10 @@ func NewRemoteNetwork(ctx context.Context, group *types.NotaryGroup, path string
 	return net, nil
 }
 
+func (rn *RemoteNetwork) RepublishAll() error {
+	return rn.TreeStore.(*IPLDTreeStore).RepublishAll()
+}
+
 func (rn *RemoteNetwork) Community() *Community {
 	return rn.community
 }
