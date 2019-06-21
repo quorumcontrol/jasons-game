@@ -258,6 +258,7 @@ func (ts *IPLDTreeStore) RepublishAll() error {
 		}
 		log.Infof("publishing %s", node.Cid().String())
 		actor.EmptyRootContext.Send(ts.publisher, node)
+		time.Sleep(15 * time.Millisecond)
 	}
 	return nil
 }

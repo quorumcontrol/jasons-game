@@ -5,11 +5,12 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
+	"time"
 
 	"github.com/quorumcontrol/jasons-game/network"
 
-	"github.com/pkg/errors"
 	logging "github.com/ipfs/go-log"
+	"github.com/pkg/errors"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/crypto"
@@ -21,11 +22,15 @@ import (
 
 const sessionStorageDir = "session-storage"
 
+var log = logging.Logger("gamenetwork")
+
 func doIt(ctx context.Context) error {
 	err := logging.SetLogLevel("gamenetwork", "info")
 	if err != nil {
 		return errors.Wrap(err, "error setting log level")
 	}
+
+	log.Infof("Starting republisher")
 
 	group, err := setupNotaryGroup(ctx, false)
 	if err != nil {
@@ -52,7 +57,12 @@ func doIt(ctx context.Context) error {
 		panic(errors.Wrap(err, "setting up network"))
 	}
 
-	return net.(*network.RemoteNetwork).RepublishAll()
+	err = net.(*network.RemoteNetwork).RepublishAll()
+	if err != nil {
+		panic(errors.Wrap(err, "error on publish"))
+	}
+	time.Sleep(5 * time.Second)
+	return nil
 }
 
 func main() {
