@@ -2,9 +2,7 @@ version: 2
 jobs:
   build:
     docker:
-      - image: circleci/golang:1.12.6
-        environment:
-          GOPROXY: https://proxy.golang.org
+      - image: circleci/golang:1.12.5
     steps:
       - checkout
       - setup_remote_docker
