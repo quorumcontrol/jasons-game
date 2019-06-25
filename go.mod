@@ -46,6 +46,7 @@ require (
 	github.com/stretchr/testify v1.3.0
 	github.com/whyrusleeping/yamux v1.1.5 // indirect
 	github.com/zserge/webview v0.0.0-20190123072648-16c93bcaeaeb
+	golang.org/x/oauth2 v0.0.0-20190226205417-e64efc72b421 // indirect
 	golang.org/x/tools v0.0.0-20190523174634-38d8bcfa38af // indirect
 	google.golang.org/genproto v0.0.0-20190418145605-e7d98fc518a7 // indirect
 	google.golang.org/grpc v1.20.0
