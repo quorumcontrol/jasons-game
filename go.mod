@@ -18,7 +18,7 @@ require (
 	github.com/ipfs/go-datastore v0.0.5
 	github.com/ipfs/go-ds-badger v0.0.4
 	github.com/ipfs/go-ds-s3 v0.0.1
-	github.com/ipfs/go-ipfs v0.4.20 // indirect
+	github.com/ipfs/go-ipfs v0.4.22-0.20190621160838-810cb607ede8 // indirect; // 0.4.21 + badger fix ( https://github.com/ipfs/go-ipfs/pull/6461 )
 	github.com/ipfs/go-ipfs-blockstore v0.0.1
 	github.com/ipfs/go-ipfs-config v0.0.6
 	github.com/ipfs/go-ipfs-ds-help v0.0.1
@@ -31,10 +31,7 @@ require (
 	github.com/libp2p/go-libp2p v0.1.1
 	github.com/libp2p/go-libp2p-connmgr v0.1.0
 	github.com/libp2p/go-libp2p-core v0.0.4
-	github.com/libp2p/go-libp2p-host v0.0.3 // indirect
-	github.com/libp2p/go-libp2p-interface-connmgr v0.0.5 // indirect
 	github.com/libp2p/go-libp2p-pubsub v0.1.0
-	github.com/libp2p/go-stream-muxer v0.1.0 // indirect
 	github.com/pkg/errors v0.8.1
 	github.com/quorumcontrol/chaintree v0.0.0-20190624152451-31c150abdde2
 	github.com/quorumcontrol/community v0.0.0-20190604190628-e8c8dfd0222d
@@ -44,7 +41,6 @@ require (
 	github.com/shibukawa/configdir v0.0.0-20170330084843-e180dbdc8da0
 	github.com/sirupsen/logrus v1.4.2 // indirect
 	github.com/stretchr/testify v1.3.0
-	github.com/whyrusleeping/yamux v1.1.5 // indirect
 	github.com/zserge/webview v0.0.0-20190123072648-16c93bcaeaeb
 	golang.org/x/oauth2 v0.0.0-20190226205417-e64efc72b421 // indirect
 	golang.org/x/tools v0.0.0-20190523174634-38d8bcfa38af // indirect
