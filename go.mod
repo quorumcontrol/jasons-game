@@ -5,7 +5,6 @@ go 1.12
 require (
 	github.com/AsynkronIT/protoactor-go v0.0.0-20190429152931-21e2d03dcae5
 	github.com/aws/aws-sdk-go v1.15.60
-	github.com/dgraph-io/badger/v2 v2.0.0-rc2 // indirect
 	github.com/ethereum/go-ethereum v1.8.27
 	github.com/gobuffalo/genny v0.1.1 // indirect
 	github.com/gobuffalo/gogen v0.1.1 // indirect
@@ -47,7 +46,6 @@ require (
 	github.com/stretchr/testify v1.3.0
 	github.com/whyrusleeping/yamux v1.1.5 // indirect
 	github.com/zserge/webview v0.0.0-20190123072648-16c93bcaeaeb
-	golang.org/x/oauth2 v0.0.0-20190226205417-e64efc72b421 // indirect
 	golang.org/x/tools v0.0.0-20190523174634-38d8bcfa38af // indirect
 	google.golang.org/genproto v0.0.0-20190418145605-e7d98fc518a7 // indirect
 	google.golang.org/grpc v1.20.0
