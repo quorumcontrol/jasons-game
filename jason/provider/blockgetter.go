@@ -7,8 +7,9 @@ import (
 	"github.com/AsynkronIT/protoactor-go/actor"
 	"github.com/AsynkronIT/protoactor-go/router"
 	"github.com/ipfs/go-cid"
-	peer "github.com/libp2p/go-libp2p-peer"
+	"github.com/libp2p/go-libp2p-core/peer"
 	"github.com/quorumcontrol/chaintree/safewrap"
+
 	"github.com/quorumcontrol/jasons-game/network"
 )
 

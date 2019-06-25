@@ -13,13 +13,14 @@ import (
 	connmgr "github.com/libp2p/go-libp2p-connmgr"
 
 	logging "github.com/ipfs/go-log"
-	ifconnmgr "github.com/libp2p/go-libp2p-interface-connmgr"
+	ifconnmgr "github.com/libp2p/go-libp2p-core/connmgr"
 	"github.com/pkg/errors"
 	communitycfg "github.com/quorumcontrol/community/config"
 	communityhub "github.com/quorumcontrol/community/hub"
-	"github.com/quorumcontrol/jasons-game/network"
 	"github.com/quorumcontrol/tupelo-go-sdk/gossip3/remote"
 	"github.com/quorumcontrol/tupelo-go-sdk/p2p"
+
+	"github.com/quorumcontrol/jasons-game/network"
 )
 
 var log = logging.Logger("jasonblocks")
