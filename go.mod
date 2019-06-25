@@ -33,7 +33,7 @@ require (
 	github.com/libp2p/go-libp2p-pubsub v0.1.0
 	github.com/pkg/errors v0.8.1
 	github.com/quorumcontrol/chaintree v0.0.0-20190624152451-31c150abdde2
-	github.com/quorumcontrol/community v0.0.0-20190625170635-a94e9554b7e4
+	github.com/quorumcontrol/community v0.0.0-20190625180222-bf8f4bd66cc7
 	github.com/quorumcontrol/messages/build/go v0.0.0-20190604083406-7ee8fa6b39eb
 	github.com/quorumcontrol/storage v1.1.3
 	github.com/quorumcontrol/tupelo-go-sdk v0.4.1-0.20190625154334-2f189e91f596
