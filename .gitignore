@@ -6,6 +6,7 @@
 *.dylib
 
 bin
+JasonsGame.app/Contents/MacOS/*
 
 # Test binary, build with `go test -c`
 *.test

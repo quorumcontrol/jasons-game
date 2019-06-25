@@ -37,6 +37,7 @@ func TestInventoryActor_CreateObject(t *testing.T) {
 	createObjectResponse, ok := response.(*CreateObjectResponse)
 	require.True(t, ok)
 	require.Nil(t, createObjectResponse.Error)
+	require.NotNil(t, createObjectResponse.Object.Did)
 
 	response, err = rootCtx.RequestFuture(createObject, &InventoryListRequest{}, 1*time.Second).Result()
 	require.Nil(t, err)
@@ -45,13 +46,14 @@ func TestInventoryActor_CreateObject(t *testing.T) {
 	require.Nil(t, playerInventory.Error)
 	require.Equal(t, len(playerInventory.Objects), 1)
 
-	netObj := NetworkObject{Object: *playerInventory.Objects["test"], Network: net}
+	obj, err := FindObjectTree(net, playerInventory.Objects["test"].Did)
+	require.Nil(t, err)
 
-	name, err := netObj.Name()
+	name, err := obj.GetName()
 	require.Nil(t, err)
 	assert.Equal(t, "test", name)
 
-	desc, err := netObj.Description()
+	desc, err := obj.GetDescription()
 	require.Nil(t, err)
 	assert.Equal(t, "test object", desc)
 
@@ -63,6 +65,7 @@ func TestInventoryActor_CreateObject(t *testing.T) {
 	createObjectResponse, ok = response.(*CreateObjectResponse)
 	require.True(t, ok)
 	require.Nil(t, createObjectResponse.Error)
+	require.NotNil(t, createObjectResponse.Object.Did)
 
 	response, err = rootCtx.RequestFuture(createObject, &InventoryListRequest{}, 1*time.Second).Result()
 	require.Nil(t, err)
@@ -71,13 +74,14 @@ func TestInventoryActor_CreateObject(t *testing.T) {
 	require.Nil(t, playerInventory.Error)
 	require.Equal(t, len(playerInventory.Objects), 2)
 
-	netObj = NetworkObject{Object: *playerInventory.Objects["sword"], Network: net}
+	obj, err = FindObjectTree(net, playerInventory.Objects["sword"].Did)
+	require.Nil(t, err)
 
-	name, err = netObj.Name()
+	name, err = obj.GetName()
 	require.Nil(t, err)
 	assert.Equal(t, "sword", name)
 
-	desc, err = netObj.Description()
+	desc, err = obj.GetDescription()
 	require.Nil(t, err)
 	assert.Equal(t, "ultimate sword", desc)
 }
@@ -150,7 +154,7 @@ func TestInventoryActor_TransferObject(t *testing.T) {
 	require.True(t, ok)
 	require.Nil(t, createObjectResponse.Error)
 
-	response, err = rootCtx.RequestFuture(inventory, &TransferObjectRequest{Name: "testTransferObject", To: homeTree.MustId()}, 1*time.Second).Result()
+	response, err = rootCtx.RequestFuture(inventory, &TransferObjectRequest{Did: createObjectResponse.Object.Did, To: homeTree.MustId()}, 1*time.Second).Result()
 	require.Nil(t, err)
 
 	transferObjectResponse, ok := response.(*TransferObjectResponse)

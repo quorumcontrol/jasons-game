@@ -13,6 +13,7 @@ FIRSTGOPATH = $(firstword $(subst :, ,$(GOPATH)))
 jsmodules = ./frontend/jasons-game/node_modules
 generated = network/messages.pb.go game/types.pb.go pb/jasonsgame/jasonsgame.pb.go frontend/jasons-game/src/js/frontend/remote/*_pb.*
 packr = packrd/packed-packr.go main-packr.go
+gosources = $(shell find . -path "./vendor/*" -prune -o -type f -name "*.go" -print)
 
 all: frontend-build $(packr) build
 
@@ -34,7 +35,7 @@ $(FIRSTGOPATH)/bin/golangci-lint:
 $(FIRSTGOPATH)/bin/gotestsum:
 	go get gotest.tools/gotestsum
 
-bin/jasonsgame: $(generated) go.mod go.sum
+bin/jasonsgame: $(gosources) $(generated) go.mod go.sum
 	mkdir -p bin
 	go build -tags=desktop -o ./bin/jasonsgame
 

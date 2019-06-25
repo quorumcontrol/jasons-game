@@ -13,3 +13,19 @@ message ChangeLocationInteraction {
   string command = 1;
   string did = 2;
 }
+
+message PickUpObjectInteraction {
+  string command = 1;
+  string did = 2;
+}
+
+message DropObjectInteraction {
+  string command = 1;
+  string did = 2;
+}
+
+message GetTreeValueInteraction {
+  string command = 1;
+  string did = 2;
+  string path = 3;
+}

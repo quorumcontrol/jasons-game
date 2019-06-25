@@ -2,7 +2,9 @@ package network
 
 import (
 	"testing"
+	"time"
 
+	"github.com/AsynkronIT/protoactor-go/actor"
 	"github.com/ethereum/go-ethereum/crypto"
 	blockservice "github.com/ipfs/go-blockservice"
 	"github.com/ipfs/go-cid"
@@ -31,6 +33,48 @@ func TestPublicTreeStore(t *testing.T) {
 	ipldstore := NewIPLDTreeStore(dag, keystore, pubsub, new(DevNullTipGetter))
 	SubtestAll(t, ipldstore)
 	SubtestTreeStore(t, ipldstore)
+}
+
+func TestRepublishAll(t *testing.T) {
+	keystore := datastore.NewMapDatastore()
+
+	bstore := blockstore.NewBlockstore(keystore)
+	bserv := blockservice.New(bstore, offline.Exchange(bstore))
+	dag := merkledag.NewDAGService(bserv)
+	pubsub := remote.NewSimulatedPubSub()
+
+	ts := NewIPLDTreeStore(dag, keystore, pubsub, new(DevNullTipGetter))
+
+	tree := createTree(t, ts)
+	err := ts.SaveTreeMetadata(tree)
+	require.Nil(t, err)
+
+	var receivedBlocks []*Block
+	ready := actor.NewFuture(1 * time.Second)
+	receiver := func(actorContext actor.Context) {
+		switch msg := actorContext.Message().(type) {
+		case *actor.Started:
+			props := pubsub.NewSubscriberProps(BlockTopic)
+			actorContext.Spawn(props)
+			actorContext.Send(ready.PID(), true)
+		case *Block:
+			receivedBlocks = append(receivedBlocks, msg)
+		}
+	}
+
+	storeAct := actor.EmptyRootContext.Spawn(actor.PropsFromFunc(receiver))
+	defer actor.EmptyRootContext.Poison(storeAct)
+	_, err = ready.Result()
+	require.Nil(t, err)
+
+	time.Sleep(100 * time.Millisecond)
+
+	err = ts.RepublishAll()
+	require.Nil(t, err)
+
+	time.Sleep(100 * time.Millisecond)
+
+	require.Len(t, receivedBlocks, 14)
 }
 
 func SubtestTreeStore(t *testing.T, ts TreeStore) {

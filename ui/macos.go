@@ -2,9 +2,11 @@
 
 package ui
 
-func SetOptions() (disableWebView bool, localnet bool) {
-	disableWebView = false
-	localnet = false
+func SetOptions() (disableWebView *bool, localnet *bool) {
+	imFalse := false
+
+	disableWebView = &imFalse
+	localnet = &imFalse
 
 	return
 }

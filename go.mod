@@ -21,6 +21,7 @@ require (
 	github.com/ipfs/go-ds-s3 v0.0.1
 	github.com/ipfs/go-ipfs-blockstore v0.0.1
 	github.com/ipfs/go-ipfs-config v0.0.2
+	github.com/ipfs/go-ipfs-ds-help v0.0.1
 	github.com/ipfs/go-ipfs-exchange-offline v0.0.1
 	github.com/ipfs/go-ipfs-http-client v0.0.1 // indirect
 	github.com/ipfs/go-ipld-cbor v1.5.1-0.20190302174746-59d816225550
