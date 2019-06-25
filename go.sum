@@ -95,6 +95,8 @@ github.com/dgraph-io/badger v2.0.0-rc.2+incompatible h1:7KPp6xv5+wymkVUbkAnZZXvm
 github.com/dgraph-io/badger v2.0.0-rc.2+incompatible/go.mod h1:VZxzAIRPHRVNRKRo6AXrX9BJegn6il06VMTZVJYCIjQ=
 github.com/dgraph-io/badger/v2 v2.0.0-20190620211019-41d170b5158f h1:vxg+rV4/+3GqzeZZdZUSjMlnbdUx0Vr65okIulvJNHk=
 github.com/dgraph-io/badger/v2 v2.0.0-20190620211019-41d170b5158f/go.mod h1:jUaIjOV835xZ/mCLG/8P/38ZxiT4bG/K1khDNZJxuwU=
+github.com/dgraph-io/badger/v2 v2.0.0-rc2 h1:Lxx0mkjYCrqiqIp75+UOwN3pwRChXZyLQMz+oidMEMs=
+github.com/dgraph-io/badger/v2 v2.0.0-rc2/go.mod h1:jUaIjOV835xZ/mCLG/8P/38ZxiT4bG/K1khDNZJxuwU=
 github.com/dgryski/go-farm v0.0.0-20180109070241-2de33835d102/go.mod h1:SqUrOPUnsFjfmXRMNPybcSiG0BgUW2AuFH8PAnS2iTw=
 github.com/dgryski/go-farm v0.0.0-20190104051053-3adb47b1fb0f h1:dDxpBYafY/GYpcl+LS4Bn3ziLPuEdGRkRjYAbSlWxSA=
 github.com/dgryski/go-farm v0.0.0-20190104051053-3adb47b1fb0f/go.mod h1:SqUrOPUnsFjfmXRMNPybcSiG0BgUW2AuFH8PAnS2iTw=
@@ -971,6 +973,8 @@ github.com/quorumcontrol/chaintree v0.0.0-20190624152451-31c150abdde2 h1:ZbnL5Db
 github.com/quorumcontrol/chaintree v0.0.0-20190624152451-31c150abdde2/go.mod h1:aAqx2t9x1SUz3efN6apqiGk31xtMJ6tt2ctLPGGXCOA=
 github.com/quorumcontrol/community v0.0.0-20190604190628-e8c8dfd0222d h1:2uxfLt0gcPRNQGiF4wmELnV2UBOqToDpsoZ4jS3JNsM=
 github.com/quorumcontrol/community v0.0.0-20190604190628-e8c8dfd0222d/go.mod h1:dE/XURkposSDL1/F02jh0yFGYOKGa0vsLp/k2ql0z00=
+github.com/quorumcontrol/community v0.0.0-20190625170635-a94e9554b7e4 h1:r4saSiIepFKqpRTjVuKCB2nIp3dBY6Yy93Ac6/LtgtE=
+github.com/quorumcontrol/community v0.0.0-20190625170635-a94e9554b7e4/go.mod h1:G7Yj33qJOC5QDT+dUzHC64lsfzFMGZUWJF1kTRKxCUE=
 github.com/quorumcontrol/go-libp2p-pubsub v0.0.4-0.20190528094025-e4e719f73e7a h1:XDXN6yY9PODqRMHFupyf44BQOTvCetoTG0ypXPOQzqs=
 github.com/quorumcontrol/go-libp2p-pubsub v0.0.4-0.20190528094025-e4e719f73e7a/go.mod h1:ZwlKzRSe1eGvSIdU5bD7+8RZN/Uzw0t1Bp9R1znpR/Q=
 github.com/quorumcontrol/messages/build/go v0.0.0-20190530182608-30c127bffefb/go.mod h1:b8jDN8PulcGcRJ2pQc0lbC3tPaOspGHoBIbPxfB7Jqg=
@@ -989,6 +993,8 @@ github.com/quorumcontrol/tupelo-go-sdk v0.4.0 h1:8nZACj/WVQkJqhosxwPsJV+0vmemkSC
 github.com/quorumcontrol/tupelo-go-sdk v0.4.0/go.mod h1:k2FOFbCxKFmgNTgMykLXtCwAB+8xWNneglml9C31phw=
 github.com/quorumcontrol/tupelo-go-sdk v0.4.1-0.20190625140232-c62ee14e4884 h1:JhxWqdYpP4GhvDbKtnyUETqkNlQ/CO3zbLYTPcE+RH8=
 github.com/quorumcontrol/tupelo-go-sdk v0.4.1-0.20190625140232-c62ee14e4884/go.mod h1:qOQ1vmVhP32oPHFfqRf4EOJ/0y5lugFBcShlSlA76f8=
+github.com/quorumcontrol/tupelo-go-sdk v0.4.1-0.20190625154334-2f189e91f596 h1:QkoeKhOcnLYbnFq9z389bNkU94Ce4kDPlzlgFuZurQ0=
+github.com/quorumcontrol/tupelo-go-sdk v0.4.1-0.20190625154334-2f189e91f596/go.mod h1:qOQ1vmVhP32oPHFfqRf4EOJ/0y5lugFBcShlSlA76f8=
 github.com/rcrowley/go-metrics v0.0.0-20181016184325-3113b8401b8a/go.mod h1:bCqnVzQkZxMG4s8nGwiZ5l3QUCyqpo9Y+/ZMZ9VjZe4=
 github.com/rogpeppe/go-internal v1.1.0/go.mod h1:M8bDsm7K2OlrFYOpmOWEs/qY81heoFRclV5y23lUDJ4=
 github.com/rogpeppe/go-internal v1.3.0 h1:RR9dF3JtopPvtkroDZuVD7qquD0bnHlKSqaQhgwt8yk=
