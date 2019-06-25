@@ -179,6 +179,10 @@ func (ln *LocalNetwork) ChangeChainTreeOwner(tree *consensus.SignedChainTree, ne
 	return ln.playTransactions(tree, []*transactions.Transaction{transaction})
 }
 
+func (ln *LocalNetwork) GetChainTreeOwners(tip cid.Cid) ([]string, error) {
+	return nil, fmt.Errorf("unimplemented")
+}
+
 func (ln *LocalNetwork) playTransactions(tree *consensus.SignedChainTree, transactions []*transactions.Transaction) (*consensus.SignedChainTree, error) {
 	unmarshaledRoot, err := tree.ChainTree.Dag.Get(tree.Tip())
 	if unmarshaledRoot == nil || err != nil {

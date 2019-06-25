@@ -48,6 +48,7 @@ type Network interface {
 	GetChainTreeByName(name string) (*consensus.SignedChainTree, error)
 	GetTreeByTip(tip cid.Cid) (*consensus.SignedChainTree, error)
 	GetTree(did string) (*consensus.SignedChainTree, error)
+	GetChainTreeOwners(tip cid.Cid) ([]string, error)
 	UpdateChainTree(tree *consensus.SignedChainTree, path string, value interface{}) (*consensus.SignedChainTree, error)
 	StartDiscovery(string) error
 	StopDiscovery(string)
@@ -287,6 +288,31 @@ func (n *RemoteNetwork) ChangeChainTreeOwner(tree *consensus.SignedChainTree, ne
 		return nil, errors.Wrap(err, "error updating chaintree")
 	}
 	return tree, n.TreeStore.SaveTreeMetadata(tree)
+}
+
+// TODO: move to tupleo go sdk as helper in consensus.SignedChainTree
+func (n *RemoteNetwork) GetChainTreeOwners(tip cid.Cid) ([]string, error) {
+	log.Debug("GetChainTreeOwners", tip.String())
+
+	tree, err := n.GetTreeByTip(tip)
+	if err != nil {
+		return nil, errors.Wrap(err, "error fetching chaintree")
+	}
+
+	authsUncasted, remainingPath, err := tree.ChainTree.Dag.Resolve(strings.Split("tree/"+consensus.TreePathForAuthentications, "/"))
+	if err != nil {
+		return nil, err
+	}
+	if len(remainingPath) > 0 {
+		return nil, fmt.Errorf("error resolving chaintree auths: path elements remaining: %v", remainingPath)
+	}
+
+	auths := make([]string, len(authsUncasted.([]interface{})))
+	for i, storedAddr := range authsUncasted.([]interface{}) {
+		auths[i] = storedAddr.(string)
+	}
+
+	return auths, nil
 }
 
 func TupeloBootstrappers() []string {

@@ -93,19 +93,47 @@ func (l *LocationTree) GetPortal() (*jasonsgame.Portal, error) {
 	return castedPortal, nil
 }
 
+func (l *LocationTree) SetHandler(handlerDid string) error {
+	locationAuths, err := l.network.GetChainTreeOwners(l.Tip())
+	if err != nil {
+		return errors.Wrap(err, "error fetching location auths")
+	}
+
+	handlerTree, err := l.network.GetTree(handlerDid)
+	if err != nil {
+		return errors.Wrap(err, "error fetching home tree auths")
+	}
+
+	handlerAuths, err := l.network.GetChainTreeOwners(handlerTree.Tip())
+	if err != nil {
+		return errors.Wrap(err, "error fetching handler tree auths")
+	}
+
+	newTree, err := l.network.ChangeChainTreeOwner(l.tree, append(locationAuths, handlerAuths...))
+	if err != nil {
+		return errors.Wrap(err, "error setting new handler owners")
+	}
+	l.tree = newTree
+
+	newTree, err = l.network.UpdateChainTree(l.tree, "jasons-game-handler", handlerDid)
+	if err != nil {
+		return errors.Wrap(err, "error setting new handler attr")
+	}
+	l.tree = newTree
+
+	return nil
+}
+
 func (l *LocationTree) IsOwnedBy(keyAddrs []string) (bool, error) {
-	authsUncasted, remainingPath, err := l.tree.ChainTree.Dag.Resolve(strings.Split("tree/"+consensus.TreePathForAuthentications, "/"))
+	auths, err := l.network.GetChainTreeOwners(l.Tip())
 	if err != nil {
 		return false, err
 	}
-	if len(remainingPath) > 0 {
-		return false, fmt.Errorf("error resolving tree: path elements remaining: %v", remainingPath)
-	}
 
-	for _, storedAddr := range authsUncasted.([]interface{}) {
+	for _, storedAddr := range auths {
 		found := false
 		for _, check := range keyAddrs {
-			found = found || (storedAddr.(string) == check)
+			found = found || (storedAddr == check)
 		}
 		if !found {
 			return false, nil

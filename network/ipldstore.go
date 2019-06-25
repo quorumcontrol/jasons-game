@@ -69,10 +69,12 @@ func NewIPLDTreeStore(
 func (ts *IPLDTreeStore) GetTree(did string) (*consensus.SignedChainTree, error) {
 	log.Debugf("get local tip")
 	var remote bool
-	tip, err := ts.getLocalTip(did)
-	if err != nil {
-		return nil, errors.Wrap(err, "error getting local tip")
-	}
+	// tip, err := ts.getLocalTip(did)
+	// if err != nil {
+	// 	return nil, errors.Wrap(err, "error getting local tip")
+	// }
+	var err error
+	tip := cid.Undef
 
 	if tip.Equals(cid.Undef) {
 		remote = true

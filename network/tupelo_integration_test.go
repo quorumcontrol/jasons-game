@@ -67,7 +67,7 @@ func setupRemote(ctx context.Context, group *types.NotaryGroup) (p2p.Node, error
 	return p2pHost, nil
 }
 
-func setupNotaryGroup(ctx context.Context) (*types.NotaryGroup, error) {
+func SetupTupeloNotaryGroup(ctx context.Context) (*types.NotaryGroup, error) {
 	keys, err := loadSignerKeys()
 	if err != nil {
 		return nil, err
@@ -91,7 +91,7 @@ func TestCreateChainTree(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	group, err := setupNotaryGroup(ctx)
+	group, err := SetupTupeloNotaryGroup(ctx)
 	require.Nil(t, err)
 
 	node, err := setupRemote(ctx, group)
@@ -116,7 +116,7 @@ func TestGetTip(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	group, err := setupNotaryGroup(ctx)
+	group, err := SetupTupeloNotaryGroup(ctx)
 	require.Nil(t, err)
 
 	node, err := setupRemote(ctx, group)

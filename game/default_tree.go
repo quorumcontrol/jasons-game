@@ -15,6 +15,11 @@ func createHome(n network.Network) (*LocationTree, error) {
 
 	homeLocation := NewLocationTree(n, homeTree)
 
+	err = homeLocation.SetHandler("did:tupelo:0x29ABb6160752013f5ce3Ed977842ADfFAaC7DACE")
+	if err != nil {
+		return nil, errors.Wrap(err, "error updating home tree handlers")
+	}
+
 	err = homeLocation.SetDescription("hi, welcome")
 	if err != nil {
 		return nil, errors.Wrap(err, "error updating home tree")

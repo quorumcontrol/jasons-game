@@ -9,8 +9,8 @@ import (
 	"github.com/pkg/errors"
 	"github.com/quorumcontrol/jasons-game/network"
 	"github.com/quorumcontrol/jasons-game/pb/jasonsgame"
-	"github.com/quorumcontrol/tupelo-go-sdk/consensus"
 	"github.com/quorumcontrol/tupelo-go-sdk/gossip3/middleware"
+	"github.com/ipfs/go-cid"
 )
 
 type LocationActor struct {
@@ -75,22 +75,7 @@ func (l *LocationActor) Receive(actorCtx actor.Context) {
 			Network: l.network,
 		}))
 	case *GetLocation:
-		desc, err := l.location.GetDescription()
-		if err != nil {
-			panic(errors.Wrap(err, "error getting description"))
-		}
-
-		portal, err := l.location.GetPortal()
-		if err != nil {
-			panic(errors.Wrap(err, "error getting portal"))
-		}
-
-		actorCtx.Respond(&jasonsgame.Location{
-			Did:         l.location.MustId(),
-			Tip:         l.location.Tip().String(),
-			Description: desc,
-			Portal:      portal,
-		})
+		l.handleGetLocation(actorCtx, msg)
 	case *SetLocationDescriptionRequest:
 		err := l.location.SetDescription(msg.Description)
 		actorCtx.Respond(&SetLocationDescriptionResponse{Error: err})
@@ -107,6 +92,38 @@ func (l *LocationActor) Receive(actorCtx actor.Context) {
 	case *ListInteractionsRequest:
 		l.handleListInteractionsRequest(actorCtx, msg)
 	}
+}
+
+func (l *LocationActor) handleTipChange(actorCtx actor.Context, msg *jasonsgame.TipChange) {
+	tip, err := cid.Decode(msg.Tip)
+	if err != nil {
+		panic(errors.Wrap(err, "error casting tip"))
+	}
+
+	tree, err := l.network.GetTreeByTip(tip)
+	if err != nil {
+		panic("could not find location")
+	}
+	l.location = NewLocationTree(l.network, tree)
+}
+
+func (l *LocationActor) handleGetLocation(actorCtx actor.Context, msg *GetLocation) {
+	desc, err := l.location.GetDescription()
+	if err != nil {
+		panic(errors.Wrap(err, "error getting description"))
+	}
+
+	portal, err := l.location.GetPortal()
+	if err != nil {
+		panic(errors.Wrap(err, "error getting portal"))
+	}
+
+	actorCtx.Respond(&jasonsgame.Location{
+		Did:         l.location.MustId(),
+		Tip:         l.location.Tip().String(),
+		Description: desc,
+		Portal:      portal,
+	})
 }
 
 func (l *LocationActor) handleListInteractionsRequest(actorCtx actor.Context, msg *ListInteractionsRequest) {
@@ -170,12 +187,4 @@ func (l *LocationActor) handleBuildPortal(actorCtx actor.Context, msg *BuildPort
 	}
 
 	actorCtx.Respond(&BuildPortalResponse{})
-}
-
-func (l *LocationActor) SignedTree() *consensus.SignedChainTree {
-	tree, err := l.network.GetTree(l.did)
-	if err != nil {
-		panic(fmt.Errorf("could not find chaintree with did %v", l.did))
-	}
-	return tree
 }

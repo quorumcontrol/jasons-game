@@ -51,7 +51,7 @@ func loadSignerKeys() ([]*publicKeySet, error) {
 	return keySet, nil
 }
 
-func setupNotaryGroup(ctx context.Context) (*types.NotaryGroup, error) {
+func SetupTupeloNotaryGroup(ctx context.Context) (*types.NotaryGroup, error) {
 	keys, err := loadSignerKeys()
 	if err != nil {
 		return nil, err
@@ -75,7 +75,7 @@ func TestFullIntegration(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	group, err := setupNotaryGroup(ctx)
+	group, err := SetupTupeloNotaryGroup(ctx)
 	require.Nil(t, err)
 
 	path := "/tmp/test-full-game"

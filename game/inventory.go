@@ -243,16 +243,16 @@ func (inv *InventoryActor) handleTransferObject(context actor.Context, msg *Tran
 		sourceAuths[k] = v.(string)
 	}
 
+	found := false
 	for _, storedKey := range targetAuths {
-		found := false
 		for _, checkKey := range sourceAuths {
 			found = found || storedKey == checkKey
 		}
-		if !found {
-			err = fmt.Errorf("WIP: objects can currently only be dropped & picked up in your own land")
-			context.Respond(&TransferObjectResponse{Error: err})
-			return
-		}
+	}
+	if !found {
+		err = fmt.Errorf("WIP: objects can currently only be dropped & picked up in your own land")
+		context.Respond(&TransferObjectResponse{Error: err})
+		return
 	}
 	// END TODO
 
@@ -279,7 +279,25 @@ func (inv *InventoryActor) handleTransferObject(context actor.Context, msg *Tran
 		return
 	}
 
-	if err := inv.network.Community().Send(inventoryTopicFrom(targetTree.MustId()), &jasonsgame.TransferredObjectMessage{
+	// if handler is set, use it
+	// check jasons-game/handles contains jasonsgame.TransferredObjectMessage
+
+	targetHandlerUncasted, _, err := targetTree.ChainTree.Dag.Resolve(append([]string{"tree", "data", "jasons-game-handler"}))
+	if err != nil {
+		err = fmt.Errorf("error fetching target chaintree handler %s; error: %v", msg.To, err)
+		inv.Log.Error(err)
+		context.Respond(&TransferObjectResponse{Error: err})
+		return
+	}
+
+	var targetHandler []byte
+	if targetHandlerUncasted != nil {
+		targetHandler = []byte(targetHandlerUncasted.(string))
+	} else {
+		targetHandler = inventoryTopicFrom(targetTree.MustId())
+	}
+
+	if err := inv.network.Community().Send(targetHandler, &jasonsgame.TransferredObjectMessage{
 		From:   sourceTree.MustId(),
 		To:     targetTree.MustId(),
 		Object: existingObj.MustId(),
@@ -379,10 +397,17 @@ func (inv *InventoryActor) handleTransferredObject(context actor.Context, msg *j
 
 	objects[objName] = objDid
 
-	_, err = inv.network.UpdateChainTree(tree, ObjectsPath, objects)
+	newTree, err := inv.network.UpdateChainTree(tree, ObjectsPath, objects)
 	if err != nil {
 		panic(fmt.Errorf("error updating objects in chaintree: %v", err))
 	}
+
+	fmt.Printf("inventory changed, objects %v", objects)
+
+	inv.network.Community().Send(topicFor(inv.did), &jasonsgame.TipChange{
+		Did: inv.did,
+		Tip: newTree.Tip().String(),
+	})
 }
 
 func (inv *InventoryActor) handleListInteractionsRequest(actorCtx actor.Context, msg *ListInteractionsRequest) {
