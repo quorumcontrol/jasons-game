@@ -111,6 +111,25 @@ func (t *InventoryTree) Authentications() ([]string, error) {
 	return t.tree.Authentications()
 }
 
+func (t *InventoryTree) IsOwnedBy(keyAddrs []string) (bool, error) {
+	auths, err := t.Authentications()
+	if err != nil {
+		return false, err
+	}
+
+	for _, storedAddr := range auths {
+		found := false
+		for _, check := range keyAddrs {
+			found = found || (storedAddr == check)
+		}
+		if !found {
+			return false, nil
+		}
+	}
+
+	return true, nil
+}
+
 func (t *InventoryTree) updateObjects(objects map[string]string) error {
 	reversed := make(map[string]string, len(objects))
 

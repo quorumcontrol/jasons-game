@@ -20,10 +20,6 @@ func (h *NoopHandler) Supports(msg proto.Message) bool {
 	return false
 }
 
-func (h *NoopHandler) SupportsType(msgType string) bool {
-	return false
-}
-
 func (h *NoopHandler) SupportedMessages() []string {
 	return []string{}
 }

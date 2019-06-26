@@ -26,10 +26,6 @@ func (h *TopicBroadcastHandler) Supports(msg proto.Message) bool {
 	return true
 }
 
-func (h *TopicBroadcastHandler) SupportsType(msgType string) bool {
-	return true
-}
-
 func (h *TopicBroadcastHandler) SupportedMessages() []string {
 	return []string{}
 }

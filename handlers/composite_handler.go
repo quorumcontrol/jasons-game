@@ -52,10 +52,6 @@ func (h *CompositHandler) Supports(msg proto.Message) bool {
 	return h.messages.Contains(msg)
 }
 
-func (h *CompositHandler) SupportsType(msgType string) bool {
-	return h.messages.ContainsType(msgType)
-}
-
 func (h *CompositHandler) SupportedMessages() []string {
 	return h.messages
 }

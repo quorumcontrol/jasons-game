@@ -11,10 +11,9 @@ import (
 
 	"github.com/quorumcontrol/jasons-game/game/trees"
 	"github.com/quorumcontrol/jasons-game/handlers"
+	inventoryHandlers "github.com/quorumcontrol/jasons-game/handlers/inventory"
 	"github.com/quorumcontrol/jasons-game/network"
 	"github.com/quorumcontrol/jasons-game/pb/jasonsgame"
-
-	inventoryHandlers "github.com/quorumcontrol/jasons-game/handlers/inventory"
 )
 
 type Object struct {
@@ -26,6 +25,7 @@ type InventoryActor struct {
 	did        string
 	network    network.Network
 	subscriber *actor.PID
+	handler    handlers.Handler
 }
 
 type InventoryActorConfig struct {
@@ -81,30 +81,54 @@ func NewInventoryActorProps(cfg *InventoryActorConfig) *actor.Props {
 func (inv *InventoryActor) Receive(actorCtx actor.Context) {
 	switch msg := actorCtx.Message().(type) {
 	case *actor.Started:
-		inventoryTree, err := trees.FindInventoryTree(inv.network, inv.did)
-		if err != nil {
-			panic(fmt.Sprintf("error finding inventory tree: %v", err))
-		}
-		inv.subscriber = actorCtx.Spawn(inv.network.Community().NewSubscriberProps(inventoryTree.BroadcastTopic()))
+		inv.initialize(actorCtx)
 	case *CreateObjectRequest:
 		inv.Log.Debugf("Received CreateObjectRequest: %+v\n", msg)
 		inv.handleCreateObject(actorCtx, msg)
 	case *TransferObjectRequest:
 		inv.Log.Debugf("Received TransferObjectRequest: %+v\n", msg)
 		inv.handleTransferObject(actorCtx, msg)
-	case *InventoryListRequest:
-		inv.Log.Debugf("Received InventoryListRequest: %+v\n", msg)
-		inv.handleListObjects(actorCtx, msg)
-	case *ListInteractionsRequest:
-		inv.Log.Debugf("Received ListInteractionsRequest: %+v\n", msg)
-		inv.handleListInteractionsRequest(actorCtx, msg)
 	case *jasonsgame.TransferredObjectMessage:
 		err := inventoryHandlers.NewUnrestrictedAddHandler(inv.network).Handle(msg)
 		if err != nil {
 			inv.Log.Errorf("Error on TransferredObjectMessage: %+v\n", err)
 		}
-	default:
-		fmt.Printf("unkonwn inventory message received %v", msg)
+	case *InventoryListRequest:
+		inv.Log.Debugf("Received InventoryListRequest: %+v\n", msg)
+		inv.handleListObjects(actorCtx, msg)
+	case *ListInteractionsRequest:
+		inv.handleListInteractionsRequest(actorCtx, msg)
+	}
+}
+
+func (inv *InventoryActor) initialize(actorCtx actor.Context) {
+	inventoryTree, err := trees.FindInventoryTree(inv.network, inv.did)
+	if err != nil {
+		panic(fmt.Sprintf("error finding inventory tree: %v", err))
+	}
+
+	inv.subscriber = actorCtx.Spawn(inv.network.Community().NewSubscriberProps(inventoryTree.BroadcastTopic()))
+
+	chaintreeHandler, err := handlers.FindHandlerForTree(inv.network, inv.did)
+	if err != nil {
+		panic(fmt.Sprintf("error finding handler for inventory: %v", err))
+	}
+	if chaintreeHandler != nil {
+		inv.handler = chaintreeHandler
+	}
+
+	if inv.handler == nil {
+		localKeyAddr := consensus.DidToAddr(consensus.EcdsaPubkeyToDid(*inv.network.PublicKey()))
+		isLocal, err := inventoryTree.IsOwnedBy([]string{localKeyAddr})
+		if err != nil {
+			panic(fmt.Sprintf("error check owner for inventory: %v", err))
+		}
+
+		if isLocal {
+			inv.handler = inventoryHandlers.NewUnrestrictedRemoveHandler(inv.network)
+		} else {
+			inv.handler = handlers.NewNoopHandler()
+		}
 	}
 }
 
@@ -199,26 +223,12 @@ func (inv *InventoryActor) handleTransferObject(context actor.Context, msg *Tran
 		return
 	}
 
-	remoteSourceHandler, err := handlers.FindHandlerForTree(inv.network, inv.did)
-	if err != nil {
-		err = fmt.Errorf("error fetching handler for %v", inv.did)
-		inv.Log.Error(err)
-		context.Respond(&TransferObjectResponse{Error: err})
-		return
-	}
-	var sourceHandler handlers.Handler
-	if remoteSourceHandler != nil {
-		sourceHandler = remoteSourceHandler
-	} else {
-		sourceHandler = inventoryHandlers.NewUnrestrictedRemoveHandler(inv.network)
-	}
-
 	transferObjectMessage := &jasonsgame.TransferObjectMessage{
 		From:   inv.did,
 		To:     msg.To,
 		Object: objectDid,
 	}
-	if !sourceHandler.Supports(transferObjectMessage) {
+	if !inv.handler.Supports(transferObjectMessage) {
 		err = fmt.Errorf("transfer from inventory %v is not supported", inv.did)
 		inv.Log.Error(err)
 		context.Respond(&TransferObjectResponse{Error: err})
@@ -232,14 +242,14 @@ func (inv *InventoryActor) handleTransferObject(context actor.Context, msg *Tran
 		context.Respond(&TransferObjectResponse{Error: err})
 		return
 	}
-	if remoteTargetHandler != nil && !remoteTargetHandler.SupportsType("jasonsgame.TransferredObjectMessage") {
+	if remoteTargetHandler != nil && !remoteTargetHandler.Supports((*jasonsgame.TransferredObjectMessage)(nil)) {
 		err = fmt.Errorf("transfer to inventory %v is not supported", inv.did)
 		inv.Log.Error(err)
 		context.Respond(&TransferObjectResponse{Error: err})
 		return
 	}
 
-	if err := sourceHandler.Handle(transferObjectMessage); err != nil {
+	if err := inv.handler.Handle(transferObjectMessage); err != nil {
 		inv.Log.Error(err)
 		return
 	}
@@ -315,8 +325,4 @@ func (inv *InventoryActor) handleListInteractionsRequest(actorCtx actor.Context,
 	}
 
 	actorCtx.Respond(&ListInteractionsResponse{Interactions: interactions})
-}
-
-func (inv *InventoryActor) handleTransferredObjectMessage(actorCtx actor.Context, msg *jasonsgame.TransferredObjectMessage) {
-
 }

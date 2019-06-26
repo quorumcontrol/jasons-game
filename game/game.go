@@ -291,12 +291,6 @@ func (g *Game) handlePickUpObject(actorCtx actor.Context, interaction *trees.Pic
 		To:  g.playerTree.Did(),
 	}, 10*time.Second).Result()
 
-	// given location is some remote lcoation with a service running
-	// a transfer gets sent to location actor, targeting player tree
-	// location actor changes owner of object, removes it from its inventory
-	// then the location actor needs to contact the game and game needs to add to players inventory
-	//
-
 	if err != nil {
 		return err
 	}

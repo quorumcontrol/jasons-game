@@ -6,9 +6,9 @@ import (
 	"github.com/golang/protobuf/proto"
 	"github.com/quorumcontrol/jasons-game/game/trees"
 	"github.com/quorumcontrol/jasons-game/handlers"
+	broadcastHandlers "github.com/quorumcontrol/jasons-game/handlers/broadcast"
 	"github.com/quorumcontrol/jasons-game/network"
 	"github.com/quorumcontrol/jasons-game/pb/jasonsgame"
-	broadcastHandlers "github.com/quorumcontrol/jasons-game/handlers/broadcast"
 )
 
 type UnrestrictedRemoveHandler struct {
@@ -93,10 +93,6 @@ func (h *UnrestrictedRemoveHandler) Handle(msg proto.Message) error {
 
 func (h *UnrestrictedRemoveHandler) Supports(msg proto.Message) bool {
 	return UnrestrictedRemoveHandlerMessages.Contains(msg)
-}
-
-func (h *UnrestrictedRemoveHandler) SupportsType(msgType string) bool {
-	return UnrestrictedRemoveHandlerMessages.ContainsType(msgType)
 }
 
 func (h *UnrestrictedRemoveHandler) SupportedMessages() []string {

@@ -54,10 +54,6 @@ func (h *UnrestrictedAddHandler) Supports(msg proto.Message) bool {
 	return UnrestrictedAddHandlerMessages.Contains(msg)
 }
 
-func (h *UnrestrictedAddHandler) SupportsType(msgType string) bool {
-	return UnrestrictedAddHandlerMessages.ContainsType(msgType)
-}
-
 func (h *UnrestrictedAddHandler) SupportedMessages() []string {
 	return UnrestrictedAddHandlerMessages
 }

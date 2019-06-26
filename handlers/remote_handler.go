@@ -24,10 +24,6 @@ func (h *RemoteHandler) Supports(msg proto.Message) bool {
 	return h.supportedMessages.Contains(msg)
 }
 
-func (h *RemoteHandler) SupportsType(msgType string) bool {
-	return h.supportedMessages.ContainsType(msgType)
-}
-
 func (h *RemoteHandler) SupportedMessages() []string {
 	return h.supportedMessages
 }
