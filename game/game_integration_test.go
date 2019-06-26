@@ -99,7 +99,7 @@ func TestFullIntegration(t *testing.T) {
 	require.Nil(t, err)
 	defer rootCtx.Stop(uiActor)
 
-	playerTree, err := GetOrCreatePlayerTree(net)
+	playerTree, err := trees.GetOrCreatePlayerTree(net)
 	require.Nil(t, err)
 	gameActor, err := rootCtx.SpawnNamed(NewGameProps(playerTree, uiActor, net),
 		"test-integration-game")

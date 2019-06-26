@@ -1,4 +1,4 @@
-package game
+package trees 
 
 import (
 	"fmt"
@@ -22,7 +22,7 @@ type PlayerTree struct {
 	did          string
 }
 
-func NewPlayerTree(net network.Network, tree *consensus.SignedChainTree) *PlayerTree {
+func NewPlayerTree(net network.Network, tree *consensus.SignedChainTree) (*PlayerTree, error) {
 	pt := &PlayerTree{
 		network: net,
 	}
@@ -30,19 +30,18 @@ func NewPlayerTree(net network.Network, tree *consensus.SignedChainTree) *Player
 
 	homeTree, err := net.GetChainTreeByName("home")
 	if err != nil {
-		panic(err)
+		return nil, err
 	}
 	if homeTree == nil {
 		pt.HomeLocation, err = createHome(net)
 		if err != nil {
-			log.Error("error creating home", err)
-			panic(err)
+			return nil, fmt.Errorf("error creating home", err)
 		}
 	} else {
 		pt.HomeLocation = NewLocationTree(net, homeTree)
 	}
 
-	return pt
+	return pt, nil
 }
 
 func (pt *PlayerTree) Did() string {
@@ -141,15 +140,20 @@ func GetOrCreatePlayerTree(net network.Network) (*PlayerTree, error) {
 			return nil, err
 		}
 
-		playerTree := NewPlayerTree(net, playerChain)
-		if err := playerTree.SetPlayer(&jasonsgame.Player{
+		playerTree, err := NewPlayerTree(net, playerChain)
+		if err != nil {
+			return nil, err
+		}
+
+		err = playerTree.SetPlayer(&jasonsgame.Player{
 			Name: fmt.Sprintf("newb (%s)", playerChain.MustId()),
-		}); err != nil {
+		})
+		if err != nil {
 			return nil, err
 		}
 
 		return playerTree, nil
 	}
 
-	return NewPlayerTree(net, playerChain), nil
+	return NewPlayerTree(net, playerChain) 
 }

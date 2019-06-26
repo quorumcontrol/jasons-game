@@ -10,13 +10,14 @@ import (
 	"github.com/quorumcontrol/jasons-game/network"
 	"github.com/quorumcontrol/jasons-game/pb/jasonsgame"
 	"github.com/quorumcontrol/tupelo-go-sdk/gossip3/middleware"
+	"github.com/quorumcontrol/jasons-game/game/trees"
 	"github.com/ipfs/go-cid"
 )
 
 type LocationActor struct {
 	middleware.LogAwareHolder
 	did            string
-	location       *LocationTree
+	location       *trees.LocationTree
 	network        network.Network
 	inventoryActor *actor.PID
 }
@@ -63,7 +64,7 @@ func (l *LocationActor) Receive(actorCtx actor.Context) {
 		if err != nil {
 			panic("could not find location")
 		}
-		l.location = NewLocationTree(l.network, tree)
+		l.location = trees.NewLocationTree(l.network, tree)
 
 		_, err = l.network.Community().SubscribeActor(actorCtx.Self(), topicFor(l.did))
 		if err != nil {
@@ -104,7 +105,7 @@ func (l *LocationActor) handleTipChange(actorCtx actor.Context, msg *jasonsgame.
 	if err != nil {
 		panic("could not find location")
 	}
-	l.location = NewLocationTree(l.network, tree)
+	l.location = trees.NewLocationTree(l.network, tree)
 }
 
 func (l *LocationActor) handleGetLocation(actorCtx actor.Context, msg *GetLocation) {
@@ -141,7 +142,7 @@ func (l *LocationActor) handleListInteractionsRequest(actorCtx actor.Context, ms
 	}
 
 	if portal != nil {
-		interactions = append(interactions, &ChangeLocationInteraction{
+		interactions = append(interactions, &trees.ChangeLocationInteraction{
 			Command: "go through portal",
 			Did:     portal.To,
 		})

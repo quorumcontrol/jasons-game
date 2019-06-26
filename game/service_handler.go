@@ -7,6 +7,7 @@ import (
 	"github.com/golang/protobuf/proto"
 	"github.com/quorumcontrol/jasons-game/network"
 	"github.com/quorumcontrol/jasons-game/pb/jasonsgame"
+	"github.com/quorumcontrol/jasons-game/game/trees"
 )
 
 const HandlerPath = "jasons-game-handler"
@@ -28,7 +29,7 @@ func NewLocalHandler(net network.Network) *LocalHandler {
 func (h *LocalHandler) Send(msg proto.Message) error {
 	switch msg := msg.(type) {
 	case *jasonsgame.TransferObjectMessage:
-		sourceInventory, err := FindInventoryTree(h.network, msg.From)
+		sourceInventory, err := trees.FindInventoryTree(h.network, msg.From)
 		if err != nil {
 			return fmt.Errorf("error fetching source chaintree: %v", err)
 		}
@@ -43,7 +44,7 @@ func (h *LocalHandler) Send(msg proto.Message) error {
 			return fmt.Errorf("error fetching target chaintree authentications %s; error: %v", msg.To, err)
 		}
 
-		objectTree, err := FindObjectTree(h.network, msg.Object)
+		objectTree, err := trees.FindObjectTree(h.network, msg.Object)
 		if err != nil {
 			return fmt.Errorf("error fetching object chaintree %s: %v", msg.Object, err)
 		}

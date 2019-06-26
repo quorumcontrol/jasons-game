@@ -11,17 +11,17 @@ import (
 
 	"github.com/quorumcontrol/jasons-game/network"
 	"github.com/quorumcontrol/jasons-game/pb/jasonsgame"
+	"github.com/quorumcontrol/jasons-game/game/trees"
 )
 
-func inventoryTopicFrom(did string) []byte {
-	return topicFor(did + inventorySuffix)
+type Object struct {
+	Did string
 }
 
 type InventoryActor struct {
 	middleware.LogAwareHolder
 	did        string
 	network    network.Network
-	subscriber *actor.PID
 }
 
 type InventoryActorConfig struct {
@@ -77,7 +77,6 @@ func NewInventoryActorProps(cfg *InventoryActorConfig) *actor.Props {
 func (inv *InventoryActor) Receive(actorCtx actor.Context) {
 	switch msg := actorCtx.Message().(type) {
 	case *actor.Started:
-		inv.subscriber = actorCtx.Spawn(inv.network.Community().NewSubscriberProps(inventoryTopicFrom(inv.did)))
 	case *CreateObjectRequest:
 		inv.Log.Debugf("Received CreateObjectRequest: %+v\n", msg)
 		inv.handleCreateObject(actorCtx, msg)
@@ -99,7 +98,7 @@ func (inv *InventoryActor) handleCreateObject(context actor.Context, msg *Create
 	var err error
 	name := msg.Name
 
-	object, err := CreateObjectTree(inv.network, name)
+	object, err := trees.CreateObjectTree(inv.network, name)
 
 	if err != nil {
 		err = fmt.Errorf("error creating object chaintree: %v", err)
@@ -115,7 +114,7 @@ func (inv *InventoryActor) handleCreateObject(context actor.Context, msg *Create
 		}
 	}
 
-	objectsPath, _ := consensus.DecodePath(ObjectsPath)
+	objectsPath, _ := consensus.DecodePath(trees.ObjectsPath)
 
 	newObjectPath := strings.Join(append(objectsPath, name), "/")
 
@@ -156,7 +155,7 @@ func (inv *InventoryActor) handleTransferObject(context actor.Context, msg *Tran
 		return
 	}
 
-	sourceInventory, err := FindInventoryTree(inv.network, inv.did)
+	sourceInventory, err := trees.FindInventoryTree(inv.network, inv.did)
 	if err != nil {
 		err = fmt.Errorf("error fetching source chaintree: %v", err)
 		inv.Log.Error(err)
@@ -178,7 +177,7 @@ func (inv *InventoryActor) handleTransferObject(context actor.Context, msg *Tran
 		return
 	}
 
-	_, err = FindObjectTree(inv.network, objectDid)
+	_, err = trees.FindObjectTree(inv.network, objectDid)
 	if err != nil {
 		err = fmt.Errorf("error fetching object chaintree %s: %v", objectDid, err)
 		inv.Log.Error(err)
@@ -260,7 +259,7 @@ func (inv *InventoryActor) listObjects(context actor.Context) (map[string]*Objec
 		return nil, err
 	}
 
-	treeObjectsPath, _ := consensus.DecodePath(fmt.Sprintf("tree/data/%s", ObjectsPath))
+	treeObjectsPath, _ := consensus.DecodePath(fmt.Sprintf("tree/data/%s", trees.ObjectsPath))
 	objectsUncasted, _, err := tree.ChainTree.Dag.Resolve(treeObjectsPath)
 
 	if err != nil {
@@ -284,7 +283,7 @@ func (inv *InventoryActor) listObjects(context actor.Context) (map[string]*Objec
 func (inv *InventoryActor) handleTransferredObject(context actor.Context, msg *jasonsgame.TransferredObjectMessage) {
 	objDid := msg.Object
 
-	obj, err := FindObjectTree(inv.network, objDid)
+	obj, err := trees.FindObjectTree(inv.network, objDid)
 	if err != nil {
 		panic(fmt.Errorf("error fetching object %v: %v", objDid, err))
 	}
@@ -299,7 +298,7 @@ func (inv *InventoryActor) handleTransferredObject(context actor.Context, msg *j
 		panic(fmt.Errorf("error fetching source chaintree: %v", err))
 	}
 
-	treeObjectsPath, _ := consensus.DecodePath(fmt.Sprintf("tree/data/%s", ObjectsPath))
+	treeObjectsPath, _ := consensus.DecodePath(fmt.Sprintf("tree/data/%s", trees.ObjectsPath))
 	objectsUncasted, _, err := tree.ChainTree.Dag.Resolve(treeObjectsPath)
 	if err != nil {
 		panic(fmt.Errorf("error fetching inventory: %v", err))
@@ -320,7 +319,7 @@ func (inv *InventoryActor) handleTransferredObject(context actor.Context, msg *j
 
 	objects[objName] = objDid
 
-	newTree, err := inv.network.UpdateChainTree(tree, ObjectsPath, objects)
+	newTree, err := inv.network.UpdateChainTree(tree, trees.ObjectsPath, objects)
 	if err != nil {
 		panic(fmt.Errorf("error updating objects in chaintree: %v", err))
 	}
@@ -341,10 +340,10 @@ func (inv *InventoryActor) handleListInteractionsRequest(actorCtx actor.Context,
 		return
 	}
 
-	interactions := []Interaction{}
+	interactions := []trees.Interaction{}
 
 	for _, object := range objects {
-		obj, err := FindObjectTree(inv.network, object.Did)
+		obj, err := trees.FindObjectTree(inv.network, object.Did)
 
 		if err != nil {
 			actorCtx.Respond(&ListInteractionsResponse{Error: err})

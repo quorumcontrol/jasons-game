@@ -2,6 +2,7 @@ package game
 
 import (
 	"strings"
+	"github.com/quorumcontrol/jasons-game/game/trees"
 )
 
 type commandList []command
@@ -53,7 +54,7 @@ func newCommand(name, parse string) *basicCommand {
 
 type interactionCommand struct {
 	parse       string
-	interaction Interaction
+	interaction trees.Interaction
 }
 
 func (c *interactionCommand) Name() string {

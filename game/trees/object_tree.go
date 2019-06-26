@@ -1,4 +1,4 @@
-package game
+package trees 
 
 import (
 	"fmt"
@@ -10,10 +10,6 @@ import (
 
 	"github.com/quorumcontrol/jasons-game/network"
 )
-
-type Object struct {
-	Did string
-}
 
 type ObjectTree struct {
 	tree    *consensus.SignedChainTree

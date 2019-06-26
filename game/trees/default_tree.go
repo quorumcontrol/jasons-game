@@ -1,4 +1,4 @@
-package game
+package trees 
 
 import (
 	"github.com/pkg/errors"
@@ -6,8 +6,6 @@ import (
 )
 
 func createHome(n network.Network) (*LocationTree, error) {
-	log.Debug("creating new home")
-
 	homeTree, err := n.CreateNamedChainTree("home")
 	if err != nil {
 		return nil, errors.Wrap(err, "error creating tree")

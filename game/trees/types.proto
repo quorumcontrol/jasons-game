@@ -2,7 +2,7 @@ syntax = "proto3";
 
 package jasonsgame;
 
-option go_package = "game";
+option go_package = "trees";
 
 message RespondInteraction {
   string command = 1;

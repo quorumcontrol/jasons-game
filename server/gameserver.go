@@ -10,6 +10,7 @@ import (
 	logging "github.com/ipfs/go-log"
 	"github.com/pkg/errors"
 	"github.com/quorumcontrol/jasons-game/game"
+	"github.com/quorumcontrol/jasons-game/game/trees"
 
 	"github.com/quorumcontrol/jasons-game/network"
 	"github.com/quorumcontrol/jasons-game/pb/jasonsgame"
@@ -107,7 +108,7 @@ func (gs *GameServer) getOrCreateSession(sess *jasonsgame.Session, stream jasons
 		uiActor = actor.EmptyRootContext.Spawn(ui.NewUIProps(stream, net))
 		gs.sessions[sess.Uuid] = uiActor
 
-		playerTree, err := game.GetOrCreatePlayerTree(net)
+		playerTree, err := trees.GetOrCreatePlayerTree(net)
 		if err != nil {
 			panic(errors.Wrap(err, "error creating player tree"))
 		}

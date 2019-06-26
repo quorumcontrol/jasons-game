@@ -20,7 +20,8 @@ func TestInventoryActor_CreateObject(t *testing.T) {
 	playerChainTree, err := net.CreateNamedChainTree("player")
 	require.Nil(t, err)
 
-	testPlayer := NewPlayerTree(net, playerChainTree)
+	testPlayer, err := trees.NewPlayerTree(net, playerChainTree)
+	require.Nil(t, err)
 
 	createObject, err := context.SpawnNamed(NewInventoryActorProps(&InventoryActorConfig{
 		Did:     testPlayer.Did(),
@@ -46,7 +47,7 @@ func TestInventoryActor_CreateObject(t *testing.T) {
 	require.Nil(t, playerInventory.Error)
 	require.Equal(t, len(playerInventory.Objects), 1)
 
-	obj, err := FindObjectTree(net, playerInventory.Objects["test"].Did)
+	obj, err := trees.FindObjectTree(net, playerInventory.Objects["test"].Did)
 	require.Nil(t, err)
 
 	name, err := obj.GetName()
@@ -74,7 +75,7 @@ func TestInventoryActor_CreateObject(t *testing.T) {
 	require.Nil(t, playerInventory.Error)
 	require.Equal(t, len(playerInventory.Objects), 2)
 
-	obj, err = FindObjectTree(net, playerInventory.Objects["sword"].Did)
+	obj, err = trees.FindObjectTree(net, playerInventory.Objects["sword"].Did)
 	require.Nil(t, err)
 
 	name, err = obj.GetName()
@@ -95,7 +96,8 @@ func TestInventoryActor_Receive_NamesMustBeUnique(t *testing.T) {
 	playerChainTree, err := net.CreateNamedChainTree("player")
 	require.Nil(t, err)
 
-	testPlayer := NewPlayerTree(net, playerChainTree)
+	testPlayer, err := trees.NewPlayerTree(net, playerChainTree)
+	require.Nil(t, err)
 
 	createObject, err := context.SpawnNamed(NewInventoryActorProps(&InventoryActorConfig{
 		Did:     testPlayer.Did(),
@@ -129,7 +131,8 @@ func TestInventoryActor_TransferObject(t *testing.T) {
 
 	playerChainTree, err := net.CreateNamedChainTree("player")
 	require.Nil(t, err)
-	testPlayer := NewPlayerTree(net, playerChainTree)
+	testPlayer, err := trees.NewPlayerTree(net, playerChainTree)
+	require.Nil(t, err)
 
 	inventory, err := rootCtx.SpawnNamed(NewInventoryActorProps(&InventoryActorConfig{
 		Did:     testPlayer.Did(),

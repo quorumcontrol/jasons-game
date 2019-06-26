@@ -20,7 +20,7 @@ func setupUiAndGame(t *testing.T, stream *ui.TestStream, net network.Network) (s
 	simulatedUI, err := rootCtx.SpawnNamed(ui.NewUIProps(stream, net), t.Name()+"-ui")
 	require.Nil(t, err)
 
-	playerTree, err := GetOrCreatePlayerTree(net)
+	playerTree, err := trees.GetOrCreatePlayerTree(net)
 	require.Nil(t, err)
 	game, err = rootCtx.SpawnNamed(NewGameProps(playerTree, simulatedUI, net), t.Name()+"-game")
 	require.Nil(t, err)
@@ -82,7 +82,7 @@ func TestCallMe(t *testing.T) {
 	require.Nil(t, err)
 	defer rootCtx.Stop(simulatedUI)
 
-	playerTree, err := GetOrCreatePlayerTree(net)
+	playerTree, err := trees.GetOrCreatePlayerTree(net)
 	require.Nil(t, err)
 	game, err := rootCtx.SpawnNamed(NewGameProps(playerTree, simulatedUI, net), "test-callme-game")
 	require.Nil(t, err)
@@ -96,7 +96,8 @@ func TestCallMe(t *testing.T) {
 	tree, err := net.GetChainTreeByName("player")
 	require.Nil(t, err)
 
-	pt := NewPlayerTree(net, tree)
+	pt, err := trees.NewPlayerTree(net, tree)
+	require.Nil(t, err)
 	player, err := pt.Player()
 	require.Nil(t, err)
 	require.Equal(t, newName, player.Name)
@@ -116,7 +117,7 @@ func TestBuildPortal(t *testing.T) {
 
 	tree, err := net.GetChainTreeByName("home")
 	require.Nil(t, err)
-	loc := NewLocationTree(net, tree)
+	loc := trees.NewLocationTree(net, tree)
 	portal, err := loc.GetPortal()
 	require.Nil(t, err)
 	require.Equal(t, portal.To, did)
@@ -145,7 +146,7 @@ func TestGoThroughPortal(t *testing.T) {
 
 	remoteTree, err := net.CreateChainTree()
 	require.Nil(t, err)
-	loc := NewLocationTree(net, remoteTree)
+	loc := trees.NewLocationTree(net, remoteTree)
 	remoteDescription := "a remote foreign land"
 	err = loc.SetDescription(remoteDescription)
 	require.Nil(t, err)

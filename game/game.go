@@ -16,6 +16,7 @@ import (
 	"github.com/quorumcontrol/jasons-game/pb/jasonsgame"
 	"github.com/quorumcontrol/jasons-game/ui"
 	"github.com/quorumcontrol/tupelo-go-sdk/consensus"
+	"github.com/quorumcontrol/jasons-game/game/trees"
 )
 
 var log = logging.Logger("game")
@@ -27,7 +28,7 @@ type ping struct{}
 type Game struct {
 	ui              *actor.PID
 	network         network.Network
-	playerTree      *PlayerTree
+	playerTree      *trees.PlayerTree
 	commands        commandList
 	messageSequence uint64
 	locationDid     string
@@ -37,7 +38,7 @@ type Game struct {
 	shoutActor      *actor.PID
 }
 
-func NewGameProps(playerTree *PlayerTree, ui *actor.PID, network network.Network) *actor.Props {
+func NewGameProps(playerTree *trees.PlayerTree, ui *actor.PID, network network.Network) *actor.Props {
 	return actor.PropsFromProducer(func() actor.Actor {
 		return &Game{
 			ui:         ui,
@@ -215,16 +216,16 @@ func (g *Game) handleInteractionInput(actorCtx actor.Context, cmd *interactionCo
 	var err error
 
 	switch interaction := cmd.interaction.(type) {
-	case *RespondInteraction:
+	case *trees.RespondInteraction:
 		g.sendUIMessage(actorCtx, interaction.Response)
-	case *ChangeLocationInteraction:
+	case *trees.ChangeLocationInteraction:
 		g.setLocation(actorCtx, interaction.Did)
 		g.sendUILocation(actorCtx)
-	case *DropObjectInteraction:
+	case *trees.DropObjectInteraction:
 		err = g.handleDropObject(actorCtx, interaction)
-	case *PickUpObjectInteraction:
+	case *trees.PickUpObjectInteraction:
 		err = g.handlePickUpObject(actorCtx, interaction)
-	case *GetTreeValueInteraction:
+	case *trees.GetTreeValueInteraction:
 		err = g.handleGetTreeValueInteraction(actorCtx, interaction)
 	default:
 		g.sendUIMessage(actorCtx, fmt.Sprintf("no interaction matching %s, type %v", cmd.Parse(), reflect.TypeOf(interaction)))
@@ -233,7 +234,7 @@ func (g *Game) handleInteractionInput(actorCtx actor.Context, cmd *interactionCo
 	return err
 }
 
-func (g *Game) handleGetTreeValueInteraction(actorCtx actor.Context, interaction *GetTreeValueInteraction) error {
+func (g *Game) handleGetTreeValueInteraction(actorCtx actor.Context, interaction *trees.GetTreeValueInteraction) error {
 	tree, err := g.network.GetTree(interaction.Did)
 	if err != nil {
 		return errors.Wrap(err, "error fetching tree")
@@ -256,7 +257,7 @@ func (g *Game) handleGetTreeValueInteraction(actorCtx actor.Context, interaction
 	return nil
 }
 
-func (g *Game) handleDropObject(actorCtx actor.Context, interaction *DropObjectInteraction) error {
+func (g *Game) handleDropObject(actorCtx actor.Context, interaction *trees.DropObjectInteraction) error {
 	response, err := actorCtx.RequestFuture(g.inventoryActor, &TransferObjectRequest{
 		Did: interaction.Did,
 		To:  g.locationDid,
@@ -284,7 +285,7 @@ func (g *Game) handleDropObject(actorCtx actor.Context, interaction *DropObjectI
 	return nil
 }
 
-func (g *Game) handlePickUpObject(actorCtx actor.Context, interaction *PickUpObjectInteraction) error {
+func (g *Game) handlePickUpObject(actorCtx actor.Context, interaction *trees.PickUpObjectInteraction) error {
 	response, err := actorCtx.RequestFuture(g.locationActor, &TransferObjectRequest{
 		Did: interaction.Did,
 		To:  g.playerTree.Did(),
@@ -424,7 +425,7 @@ func (g *Game) handleConnectLocation(actorCtx actor.Context, args string) error 
 		return fmt.Errorf("could not find target location")
 	}
 
-	loc := NewLocationTree(g.network, targetTree)
+	loc := trees.NewLocationTree(g.network, targetTree)
 
 	auths, err := g.playerTree.Authentications()
 	if err != nil {
@@ -435,7 +436,7 @@ func (g *Game) handleConnectLocation(actorCtx actor.Context, args string) error 
 		return fmt.Errorf("can't connect a location that you don't own")
 	}
 
-	interaction := &ChangeLocationInteraction{
+	interaction := &trees.ChangeLocationInteraction{
 		Command: interactionCommand,
 		Did:     toDid,
 	}
