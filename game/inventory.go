@@ -13,10 +13,6 @@ import (
 	"github.com/quorumcontrol/jasons-game/pb/jasonsgame"
 )
 
-const ObjectsPath = "jasons-game/inventory"
-
-const inventorySuffix = "/inventory"
-
 func inventoryTopicFrom(did string) []byte {
 	return topicFor(did + inventorySuffix)
 }
@@ -143,6 +139,13 @@ func (inv *InventoryActor) handleCreateObject(context actor.Context, msg *Create
 }
 
 func (inv *InventoryActor) handleTransferObject(context actor.Context, msg *TransferObjectRequest) {
+	// if source tree has handler with transfer out message then execute
+	// else if source tree is owned by current network (default handler?) then
+	//    if target tree has handler with transfer in message then execute
+	//    else if target tree is owned by current network then execute locally (default handler?)
+	//    else error
+	// else error
+
 	var err error
 
 	objectDid := msg.Did
@@ -160,7 +163,7 @@ func (inv *InventoryActor) handleTransferObject(context actor.Context, msg *Tran
 		return
 	}
 
-	tree, err := inv.network.GetTree(inv.did)
+	sourceInventory, err := FindInventoryTree(inv.network, inv.did)
 	if err != nil {
 		err = fmt.Errorf("error fetching source chaintree: %v", err)
 		inv.Log.Error(err)
@@ -168,34 +171,16 @@ func (inv *InventoryActor) handleTransferObject(context actor.Context, msg *Tran
 		return
 	}
 
-	treeObjectsPath, _ := consensus.DecodePath(fmt.Sprintf("tree/data/%s", ObjectsPath))
-
-	objectsUncasted, _, err := tree.ChainTree.Dag.Resolve(treeObjectsPath)
+	exists, err := sourceInventory.Exists(objectDid)
 	if err != nil {
-		err = fmt.Errorf("error fetching inventory: %v", err)
 		inv.Log.Error(err)
 		context.Respond(&TransferObjectResponse{Error: err})
 		return
 	}
 
-	if objectsUncasted == nil {
-		err = fmt.Errorf("the inventory is empty")
-		context.Respond(&TransferObjectResponse{Error: err})
-		return
-	}
-
-	var objectName string
-	objects := make(map[string]string, len(objectsUncasted.(map[string]interface{})))
-	for k, v := range objectsUncasted.(map[string]interface{}) {
-		objects[k] = v.(string)
-
-		if objectDid == objects[k] {
-			objectName = k
-		}
-	}
-
-	if objectName == "" {
-		err = fmt.Errorf("object %v is not in the inventory", objectDid)
+	if !exists {
+		err = fmt.Errorf("object %v does not exist in inventory", objectDid)
+		inv.Log.Error(err)
 		context.Respond(&TransferObjectResponse{Error: err})
 		return
 	}
@@ -306,9 +291,7 @@ func (inv *InventoryActor) handleTransferObject(context actor.Context, msg *Tran
 		return
 	}
 
-	delete(objects, objectName)
-
-	_, err = inv.network.UpdateChainTree(sourceTree, ObjectsPath, objects)
+	err = sourceInventory.Remove(objectDid)
 	if err != nil {
 		err = fmt.Errorf("error updating objects in inventory: %v", err)
 		inv.Log.Error(err)
