@@ -43,7 +43,7 @@ func (s *Service) Receive(actorCtx actor.Context) {
 		pid := actorCtx.Spawn(msg.HandlerProps)
 		s.handlerRegistry.Add(pid)
 
-		newTree, err := s.network.UpdateChainTree(s.tree, "jasons-game/handles", s.handlerRegistry.AllMessages())
+		newTree, err := s.network.UpdateChainTree(s.tree, "jasons-game/supports", s.handlerRegistry.AllMessages())
 		if err != nil {
 			panic(err)
 		}
