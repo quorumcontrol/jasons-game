@@ -34,7 +34,7 @@ func doIt(ctx context.Context) error {
 
 	group, err := setupNotaryGroup(ctx, false)
 	if err != nil {
-		panic(errors.Wrap(err, "setting up notary group"))
+		return errors.Wrap(err, "setting up notary group")
 	}
 
 	configDirs := configdir.New("tupelo", "jasons-game")
@@ -42,7 +42,7 @@ func doIt(ctx context.Context) error {
 	folder := configDirs.QueryFolderContainsFile(sessionStorageDir)
 	if folder == nil {
 		if err := folders[0].CreateParentDir(sessionStorageDir); err != nil {
-			panic(err)
+			return err
 		}
 	}
 
@@ -50,16 +50,16 @@ func doIt(ctx context.Context) error {
 
 	statePath := filepath.Join(sessionPath, filepath.Base("12345"))
 	if err := os.MkdirAll(statePath, 0750); err != nil {
-		panic(errors.Wrap(err, "error creating session storage"))
+		return errors.Wrap(err, "error creating session storage")
 	}
 	net, err := network.NewRemoteNetwork(ctx, group, statePath)
 	if err != nil {
-		panic(errors.Wrap(err, "setting up network"))
+		return errors.Wrap(err, "setting up network")
 	}
 
 	err = net.(*network.RemoteNetwork).RepublishAll()
 	if err != nil {
-		panic(errors.Wrap(err, "error on publish"))
+		return errors.Wrap(err, "error on publish")
 	}
 	time.Sleep(5 * time.Second)
 	return nil
