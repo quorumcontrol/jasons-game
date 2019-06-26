@@ -19,11 +19,10 @@ func EnsureExists(name string) *configdir.Config {
 		if err := folders[0].CreateParentDir(name); err != nil {
 			panic(err)
 		}
-		return &configdir.Config{
-			Path: filepath.Join(folders[0].Path, name),
-			Type: configdir.Global,
-		}
 	}
 
-	return folder
+	return &configdir.Config{
+		Path: filepath.Join(folders[0].Path, name),
+		Type: configdir.Global,
+	}
 }
