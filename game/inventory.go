@@ -9,9 +9,10 @@ import (
 	"github.com/quorumcontrol/tupelo-go-sdk/consensus"
 	"github.com/quorumcontrol/tupelo-go-sdk/gossip3/middleware"
 
+	"github.com/quorumcontrol/jasons-game/game/trees"
+	"github.com/quorumcontrol/jasons-game/handlers"
 	"github.com/quorumcontrol/jasons-game/network"
 	"github.com/quorumcontrol/jasons-game/pb/jasonsgame"
-	"github.com/quorumcontrol/jasons-game/game/trees"
 )
 
 type Object struct {
@@ -20,8 +21,8 @@ type Object struct {
 
 type InventoryActor struct {
 	middleware.LogAwareHolder
-	did        string
-	network    network.Network
+	did     string
+	network network.Network
 }
 
 type InventoryActorConfig struct {
@@ -83,14 +84,13 @@ func (inv *InventoryActor) Receive(actorCtx actor.Context) {
 	case *TransferObjectRequest:
 		inv.Log.Debugf("Received TransferObjectRequest: %+v\n", msg)
 		inv.handleTransferObject(actorCtx, msg)
-	case *jasonsgame.TransferredObjectMessage:
-		inv.Log.Debugf("Received TransferredObjectRequest: %+v\n", msg)
-		inv.handleTransferredObject(actorCtx, msg)
 	case *InventoryListRequest:
 		inv.Log.Debugf("Received InventoryListRequest: %+v\n", msg)
 		inv.handleListObjects(actorCtx, msg)
 	case *ListInteractionsRequest:
 		inv.handleListInteractionsRequest(actorCtx, msg)
+	default:
+		fmt.Printf("unkonwn inventory message received %v", msg)
 	}
 }
 
@@ -185,18 +185,18 @@ func (inv *InventoryActor) handleTransferObject(context actor.Context, msg *Tran
 		return
 	}
 
-	remoteSourceHandler, err := FindHandlerForTree(inv.network, inv.did)
+	remoteSourceHandler, err := handlers.FindHandlerForTree(inv.network, inv.did)
 	if err != nil {
 		err = fmt.Errorf("error fetching handler for %v", inv.did)
 		inv.Log.Error(err)
 		context.Respond(&TransferObjectResponse{Error: err})
 		return
 	}
-	var sourceHandler Handler
+	var sourceHandler handlers.Handler
 	if remoteSourceHandler != nil {
 		sourceHandler = remoteSourceHandler
 	} else {
-		sourceHandler = NewLocalHandler(inv.network)
+		sourceHandler = inv.localOrNoopHandler(context, inv.did)
 	}
 
 	transferObjectMessage := &jasonsgame.TransferObjectMessage{
@@ -211,18 +211,18 @@ func (inv *InventoryActor) handleTransferObject(context actor.Context, msg *Tran
 		return
 	}
 
-	remoteTargetHandler, err := FindHandlerForTree(inv.network, msg.To)
+	remoteTargetHandler, err := handlers.FindHandlerForTree(inv.network, msg.To)
 	if err != nil {
 		err = fmt.Errorf("error fetching handler for %v", msg.To)
 		inv.Log.Error(err)
 		context.Respond(&TransferObjectResponse{Error: err})
 		return
 	}
-	var targetHandler Handler
+	var targetHandler handlers.Handler
 	if remoteTargetHandler != nil {
 		targetHandler = remoteTargetHandler
 	} else {
-		targetHandler = NewLocalHandler(inv.network)
+		targetHandler = handlers.NewLocalHandler(context.Self())
 	}
 
 	if !targetHandler.SupportsType("jasonsgame.TransferredObjectMessage") {
@@ -278,58 +278,6 @@ func (inv *InventoryActor) listObjects(context actor.Context) (map[string]*Objec
 	}
 
 	return objects, nil
-}
-
-func (inv *InventoryActor) handleTransferredObject(context actor.Context, msg *jasonsgame.TransferredObjectMessage) {
-	objDid := msg.Object
-
-	obj, err := trees.FindObjectTree(inv.network, objDid)
-	if err != nil {
-		panic(fmt.Errorf("error fetching object %v: %v", objDid, err))
-	}
-
-	objName, err := obj.GetName()
-	if err != nil {
-		panic(fmt.Errorf("error fetching object name %v: %v", objDid, err))
-	}
-
-	tree, err := inv.network.GetTree(inv.did)
-	if err != nil {
-		panic(fmt.Errorf("error fetching source chaintree: %v", err))
-	}
-
-	treeObjectsPath, _ := consensus.DecodePath(fmt.Sprintf("tree/data/%s", trees.ObjectsPath))
-	objectsUncasted, _, err := tree.ChainTree.Dag.Resolve(treeObjectsPath)
-	if err != nil {
-		panic(fmt.Errorf("error fetching inventory: %v", err))
-	}
-
-	if objectsUncasted == nil {
-		objectsUncasted = make(map[string]interface{})
-	}
-
-	objects := make(map[string]string, len(objectsUncasted.(map[string]interface{})))
-	for k, v := range objectsUncasted.(map[string]interface{}) {
-		objects[k] = v.(string)
-	}
-
-	if _, ok := objects[objName]; ok {
-		panic(fmt.Errorf("object with %v already exists in inventory", objName))
-	}
-
-	objects[objName] = objDid
-
-	newTree, err := inv.network.UpdateChainTree(tree, trees.ObjectsPath, objects)
-	if err != nil {
-		panic(fmt.Errorf("error updating objects in chaintree: %v", err))
-	}
-
-	fmt.Printf("inventory changed, objects %v", objects)
-
-	inv.network.Community().Send(topicFor(inv.did), &jasonsgame.TipChange{
-		Did: inv.did,
-		Tip: newTree.Tip().String(),
-	})
 }
 
 func (inv *InventoryActor) handleListInteractionsRequest(actorCtx actor.Context, msg *ListInteractionsRequest) {

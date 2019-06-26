@@ -13,7 +13,7 @@ import (
 	"github.com/quorumcontrol/jasons-game/network"
 	"github.com/quorumcontrol/jasons-game/server"
 	"github.com/quorumcontrol/jasons-game/services"
-	"github.com/quorumcontrol/jasons-game/services/handlers/inventory"
+	"github.com/quorumcontrol/jasons-game/handlers/inventory"
 	"github.com/shibukawa/configdir"
 	"github.com/spf13/cobra"
 )
@@ -41,8 +41,11 @@ func main() {
 			actorCtx := actor.EmptyRootContext
 			servicePID := actorCtx.Spawn(services.NewServiceProps(net))
 
-			inventoryProps := inventory.NewHandlerProps(net)
-			actorCtx.Send(servicePID, &services.AttachHandler{HandlerProps: inventoryProps})
+			inventoryAddProps := inventory.NewUnrestrictedAddHandler(net)
+			actorCtx.Send(servicePID, &services.AttachHandler{HandlerProps: inventoryAddProps})
+
+			inventoryRemoveProps := inventory.NewUnrestrictedRemoveHandler(net)
+			actorCtx.Send(servicePID, &services.AttachHandler{HandlerProps: inventoryRemoveProps})
 
 			stopOnSignal(servicePID)
 		},

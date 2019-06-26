@@ -6,7 +6,6 @@ import (
 	logging "github.com/ipfs/go-log"
 	"github.com/pkg/errors"
 	"github.com/quorumcontrol/jasons-game/network"
-	"github.com/quorumcontrol/jasons-game/services/handlers"
 	"github.com/quorumcontrol/tupelo-go-sdk/consensus"
 )
 
@@ -20,7 +19,7 @@ type Service struct {
 	tree            *consensus.SignedChainTree
 	network         network.Network
 	subscriber      *actor.PID
-	handlerRegistry *handlers.Registry
+	handlerRegistry *HandlerRegistry
 }
 
 type AttachHandler struct {
@@ -81,6 +80,6 @@ func (s *Service) initialize(actorCtx actor.Context) {
 	s.tree = serviceTree
 	s.subscriber = actorCtx.Spawn(s.network.Community().NewSubscriberProps([]byte(s.tree.MustId())))
 
-	s.handlerRegistry = handlers.NewRegistry()
+	s.handlerRegistry = NewHandlerRegistry()
 	log.Infof("Starting listener with ChainTree id %v", s.tree.MustId())
 }

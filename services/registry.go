@@ -1,26 +1,28 @@
-package handlers
+package services
 
 import (
 	"time"
 
 	"github.com/AsynkronIT/protoactor-go/actor"
+	"github.com/quorumcontrol/jasons-game/handlers"
+
 )
 
-type Registry struct {
+type HandlerRegistry struct {
 	byPid        map[*actor.PID][]string
 	byMessage    map[string][]*actor.PID
 	uniqMessages []string
 }
 
-func NewRegistry() *Registry {
-	return &Registry{
+func NewHandlerRegistry() *HandlerRegistry {
+	return &HandlerRegistry{
 		byPid:     make(map[*actor.PID][]string),
 		byMessage: make(map[string][]*actor.PID),
 	}
 }
 
-func (r *Registry) Add(pid *actor.PID) error {
-	response, err := actor.EmptyRootContext.RequestFuture(pid, &GetSupportedMessages{}, 5*time.Second).Result()
+func (r *HandlerRegistry) Add(pid *actor.PID) error {
+	response, err := actor.EmptyRootContext.RequestFuture(pid, &handlers.GetSupportedMessages{}, 5*time.Second).Result()
 	if err != nil {
 		return err
 	}
@@ -41,10 +43,10 @@ func (r *Registry) Add(pid *actor.PID) error {
 	return nil
 }
 
-func (r *Registry) AllMessages() []string {
+func (r *HandlerRegistry) AllMessages() []string {
 	return r.uniqMessages
 }
 
-func (r *Registry) ForMessage(messageType string) []*actor.PID {
+func (r *HandlerRegistry) ForMessage(messageType string) []*actor.PID {
 	return r.byMessage[messageType]
 }

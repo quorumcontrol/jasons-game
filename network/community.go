@@ -36,6 +36,10 @@ func NewJasonCommunity(ctx context.Context, key *ecdsa.PrivateKey, p2pHost *p2p.
 	}
 }
 
+func (c *Community) TopicFor(str string) []byte {
+	return []byte(str)
+}
+
 func (c *Community) Send(topicOrTo []byte, msg proto.Message) error {
 	env := &messages.Envelope{To: topicOrTo}
 	return c.client.SendProtobuf(env, msg)

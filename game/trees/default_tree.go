@@ -1,4 +1,4 @@
-package trees 
+package trees
 
 import (
 	"github.com/pkg/errors"

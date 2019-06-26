@@ -1,10 +1,11 @@
-package trees 
+package trees
 
 import (
 	"fmt"
+
 	"github.com/pkg/errors"
-	"github.com/quorumcontrol/tupelo-go-sdk/consensus"
 	"github.com/quorumcontrol/jasons-game/network"
+	"github.com/quorumcontrol/tupelo-go-sdk/consensus"
 )
 
 const ObjectsPath = "jasons-game/inventory"
@@ -58,8 +59,7 @@ func (t *InventoryTree) All() (map[string]string, error) {
 	return objects, nil
 }
 
-
-func (t *InventoryTree) Remove(did string) (error) {
+func (t *InventoryTree) Remove(did string) error {
 	allObjects, err := t.All()
 	if err != nil {
 		return err
@@ -75,7 +75,33 @@ func (t *InventoryTree) Remove(did string) (error) {
 	return err
 }
 
-func (t *InventoryTree) updateObjects(objects map[string]string) (error) {
+func (t *InventoryTree) Add(did string) error {
+	allObjects, err := t.All()
+	if err != nil {
+		return err
+	}
+
+	_, ok := allObjects[did]
+	if ok {
+		return nil
+	}
+
+	objectTree, err := FindObjectTree(t.network, did)
+	if err != nil {
+		return err
+	}
+
+	name, err := objectTree.GetName()
+	if err != nil {
+		return err
+	}
+
+	allObjects[did] = name
+	err = t.updateObjects(allObjects)
+	return err
+}
+
+func (t *InventoryTree) updateObjects(objects map[string]string) error {
 	reversed := make(map[string]string, len(objects))
 
 	for did, name := range objects {
