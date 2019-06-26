@@ -8,6 +8,7 @@ import (
 	"github.com/quorumcontrol/jasons-game/handlers"
 	"github.com/quorumcontrol/jasons-game/network"
 	"github.com/quorumcontrol/jasons-game/pb/jasonsgame"
+	broadcastHandlers "github.com/quorumcontrol/jasons-game/handlers/broadcast"
 )
 
 type UnrestrictedRemoveHandler struct {
@@ -32,12 +33,12 @@ func (h *UnrestrictedRemoveHandler) Handle(msg proto.Message) error {
 			return fmt.Errorf("error fetching source chaintree: %v", err)
 		}
 
-		targetTree, err := h.network.GetTree(msg.To)
+		targetInventory, err := trees.FindInventoryTree(h.network, msg.To)
 		if err != nil {
-			return err
+			return fmt.Errorf("error fetching target chaintree: %v", err)
 		}
 
-		targetAuths, err := targetTree.Authentications()
+		targetAuths, err := targetInventory.Authentications()
 		if err != nil {
 			return fmt.Errorf("error fetching target chaintree authentications %s; error: %v", msg.To, err)
 		}
@@ -55,7 +56,7 @@ func (h *UnrestrictedRemoveHandler) Handle(msg proto.Message) error {
 		if remoteTargetHandler != nil {
 			targetHandler = remoteTargetHandler
 		} else {
-			targetHandler = NewUnrestrictedAddHandler(h.network)
+			targetHandler = broadcastHandlers.NewTopicBroadcastHandler(h.network, targetInventory.BroadcastTopic())
 		}
 
 		transferredObjectMessage := &jasonsgame.TransferredObjectMessage{
@@ -78,6 +79,8 @@ func (h *UnrestrictedRemoveHandler) Handle(msg proto.Message) error {
 			return fmt.Errorf("error updating objects in inventory: %v", err)
 		}
 
+		// this runs in some external service, and needs to send to the player some
+		// transferredObjectMessage
 		if err := targetHandler.Handle(transferredObjectMessage); err != nil {
 			return err
 		}

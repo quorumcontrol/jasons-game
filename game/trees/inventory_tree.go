@@ -10,8 +10,6 @@ import (
 
 const ObjectsPath = "jasons-game/inventory"
 
-const inventorySuffix = "/inventory"
-
 type InventoryTree struct {
 	tree    *consensus.SignedChainTree
 	network network.Network
@@ -31,6 +29,10 @@ func FindInventoryTree(net network.Network, did string) (*InventoryTree, error) 
 	}
 
 	return NewInventoryTree(net, objTree), nil
+}
+
+func (t *InventoryTree) BroadcastTopic() []byte {
+	return t.network.Community().TopicFor(t.tree.MustId() + "/inventory")
 }
 
 func (t *InventoryTree) Exists(did string) (bool, error) {
@@ -103,6 +105,10 @@ func (t *InventoryTree) Add(did string) error {
 	allObjects[did] = name
 	err = t.updateObjects(allObjects)
 	return err
+}
+
+func (t *InventoryTree) Authentications() ([]string, error) {
+	return t.tree.Authentications()
 }
 
 func (t *InventoryTree) updateObjects(objects map[string]string) error {

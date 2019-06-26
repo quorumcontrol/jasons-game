@@ -23,8 +23,9 @@ type Object struct {
 
 type InventoryActor struct {
 	middleware.LogAwareHolder
-	did     string
-	network network.Network
+	did        string
+	network    network.Network
+	subscriber *actor.PID
 }
 
 type InventoryActorConfig struct {
@@ -80,6 +81,11 @@ func NewInventoryActorProps(cfg *InventoryActorConfig) *actor.Props {
 func (inv *InventoryActor) Receive(actorCtx actor.Context) {
 	switch msg := actorCtx.Message().(type) {
 	case *actor.Started:
+		inventoryTree, err := trees.FindInventoryTree(inv.network, inv.did)
+		if err != nil {
+			panic(fmt.Sprintf("error finding inventory tree: %v", err))
+		}
+		inv.subscriber = actorCtx.Spawn(inv.network.Community().NewSubscriberProps(inventoryTree.BroadcastTopic()))
 	case *CreateObjectRequest:
 		inv.Log.Debugf("Received CreateObjectRequest: %+v\n", msg)
 		inv.handleCreateObject(actorCtx, msg)
@@ -90,7 +96,13 @@ func (inv *InventoryActor) Receive(actorCtx actor.Context) {
 		inv.Log.Debugf("Received InventoryListRequest: %+v\n", msg)
 		inv.handleListObjects(actorCtx, msg)
 	case *ListInteractionsRequest:
+		inv.Log.Debugf("Received ListInteractionsRequest: %+v\n", msg)
 		inv.handleListInteractionsRequest(actorCtx, msg)
+	case *jasonsgame.TransferredObjectMessage:
+		err := inventoryHandlers.NewUnrestrictedAddHandler(inv.network).Handle(msg)
+		if err != nil {
+			inv.Log.Errorf("Error on TransferredObjectMessage: %+v\n", err)
+		}
 	default:
 		fmt.Printf("unkonwn inventory message received %v", msg)
 	}
@@ -220,14 +232,7 @@ func (inv *InventoryActor) handleTransferObject(context actor.Context, msg *Tran
 		context.Respond(&TransferObjectResponse{Error: err})
 		return
 	}
-	var targetHandler handlers.Handler
-	if remoteTargetHandler != nil {
-		targetHandler = remoteTargetHandler
-	} else {
-		targetHandler = inventoryHandlers.NewUnrestrictedAddHandler(inv.network)
-	}
-
-	if !targetHandler.SupportsType("jasonsgame.TransferredObjectMessage") {
+	if remoteTargetHandler != nil && !remoteTargetHandler.SupportsType("jasonsgame.TransferredObjectMessage") {
 		err = fmt.Errorf("transfer to inventory %v is not supported", inv.did)
 		inv.Log.Error(err)
 		context.Respond(&TransferObjectResponse{Error: err})
@@ -310,4 +315,8 @@ func (inv *InventoryActor) handleListInteractionsRequest(actorCtx actor.Context,
 	}
 
 	actorCtx.Respond(&ListInteractionsResponse{Interactions: interactions})
+}
+
+func (inv *InventoryActor) handleTransferredObjectMessage(actorCtx actor.Context, msg *jasonsgame.TransferredObjectMessage) {
+
 }
