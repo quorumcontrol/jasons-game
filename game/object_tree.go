@@ -150,6 +150,15 @@ func (o *ObjectTree) IsOwnedBy(keyAddrs []string) (bool, error) {
 	return true, nil
 }
 
+func (o *ObjectTree) ChangeOwner(keyAddrs []string) error {
+	newTree, err := o.network.ChangeChainTreeOwner(o.tree, keyAddrs)
+	if err != nil {
+		return fmt.Errorf("error changing object owner: %v", err)
+	}
+	o.tree = newTree
+	return nil
+}
+
 func (o *ObjectTree) getProp(prop string) (string, error) {
 	uncastVal, err := o.getPath([]string{prop})
 	if err != nil {

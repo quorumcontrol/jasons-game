@@ -77,11 +77,16 @@ message OpenPortalResponseMessage {
     int64 location_y = 7;
 }
 
+message TransferObjectMessage {
+    string from = 1;
+    string to = 2;
+    string object = 3;
+}
+
 message TransferredObjectMessage {
     string from = 1;
     string to = 2;
     string object = 3;
-    repeated int64 loc = 4;
 }
 
 message TipChange {

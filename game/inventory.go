@@ -139,13 +139,6 @@ func (inv *InventoryActor) handleCreateObject(context actor.Context, msg *Create
 }
 
 func (inv *InventoryActor) handleTransferObject(context actor.Context, msg *TransferObjectRequest) {
-	// if source tree has handler with transfer out message then execute
-	// else if source tree is owned by current network (default handler?) then
-	//    if target tree has handler with transfer in message then execute
-	//    else if target tree is owned by current network then execute locally (default handler?)
-	//    else error
-	// else error
-
 	var err error
 
 	objectDid := msg.Did
@@ -185,63 +178,7 @@ func (inv *InventoryActor) handleTransferObject(context actor.Context, msg *Tran
 		return
 	}
 
-	targetTree, err := inv.network.GetTree(msg.To)
-	if err != nil {
-		err = fmt.Errorf("error fetching target chaintree: %v", err)
-		inv.Log.Error(err)
-		context.Respond(&TransferObjectResponse{Error: err})
-		return
-	}
-
-	targetAuthsUncasted, _, err := targetTree.ChainTree.Dag.Resolve(strings.Split("tree/"+consensus.TreePathForAuthentications, "/"))
-	if err != nil {
-		err = fmt.Errorf("error fetching target chaintree authentications %s; error: %v", msg.To, err)
-		inv.Log.Error(err)
-		context.Respond(&TransferObjectResponse{Error: err})
-		return
-	}
-
-	targetAuths := make([]string, len(targetAuthsUncasted.([]interface{})))
-	for k, v := range targetAuthsUncasted.([]interface{}) {
-		targetAuths[k] = v.(string)
-	}
-
-	sourceTree, err := inv.network.GetTree(inv.did)
-	if err != nil {
-		err = fmt.Errorf("error fetching source chaintree: %v", err)
-		inv.Log.Error(err)
-		context.Respond(&TransferObjectResponse{Error: err})
-		return
-	}
-
-	// TODO: remove me. Checks that you can only drop in your own location. Need global broadcast first
-	sourceAuthsUncasted, _, err := sourceTree.ChainTree.Dag.Resolve(strings.Split("tree/"+consensus.TreePathForAuthentications, "/"))
-	if err != nil {
-		err = fmt.Errorf("error fetching source chaintree authentications %s; error: %v", msg.To, err)
-		inv.Log.Error(err)
-		context.Respond(&TransferObjectResponse{Error: err})
-		return
-	}
-
-	sourceAuths := make([]string, len(sourceAuthsUncasted.([]interface{})))
-	for k, v := range sourceAuthsUncasted.([]interface{}) {
-		sourceAuths[k] = v.(string)
-	}
-
-	found := false
-	for _, storedKey := range targetAuths {
-		for _, checkKey := range sourceAuths {
-			found = found || storedKey == checkKey
-		}
-	}
-	if !found {
-		err = fmt.Errorf("WIP: objects can currently only be dropped & picked up in your own land")
-		context.Respond(&TransferObjectResponse{Error: err})
-		return
-	}
-	// END TODO
-
-	existingObj, err := inv.network.GetTree(objectDid)
+	_, err = FindObjectTree(inv.network, objectDid)
 	if err != nil {
 		err = fmt.Errorf("error fetching object chaintree %s: %v", objectDid, err)
 		inv.Log.Error(err)
@@ -249,51 +186,54 @@ func (inv *InventoryActor) handleTransferObject(context actor.Context, msg *Tran
 		return
 	}
 
-	if existingObj == nil {
-		err = fmt.Errorf("object %s does not exist", objectDid)
-		inv.Log.Error(err)
-		context.Respond(&TransferObjectResponse{Error: err})
-		return
-	}
-
-	existingObj, err = inv.network.ChangeChainTreeOwner(existingObj, targetAuths)
+	remoteSourceHandler, err := FindHandlerForTree(inv.network, inv.did)
 	if err != nil {
-		err = fmt.Errorf("error changing owner for object %s; error: %v", objectDid, err)
+		err = fmt.Errorf("error fetching handler for %v", inv.did)
 		inv.Log.Error(err)
 		context.Respond(&TransferObjectResponse{Error: err})
 		return
 	}
-
-	// if handler is set, use it
-	// check jasons-game/handles contains jasonsgame.TransferredObjectMessage
-
-	targetHandlerUncasted, _, err := targetTree.ChainTree.Dag.Resolve(append([]string{"tree", "data", "jasons-game-handler"}))
-	if err != nil {
-		err = fmt.Errorf("error fetching target chaintree handler %s; error: %v", msg.To, err)
-		inv.Log.Error(err)
-		context.Respond(&TransferObjectResponse{Error: err})
-		return
-	}
-
-	var targetHandler []byte
-	if targetHandlerUncasted != nil {
-		targetHandler = []byte(targetHandlerUncasted.(string))
+	var sourceHandler Handler
+	if remoteSourceHandler != nil {
+		sourceHandler = remoteSourceHandler
 	} else {
-		targetHandler = inventoryTopicFrom(targetTree.MustId())
+		sourceHandler = NewLocalHandler(inv.network)
 	}
 
-	if err := inv.network.Community().Send(targetHandler, &jasonsgame.TransferredObjectMessage{
-		From:   sourceTree.MustId(),
-		To:     targetTree.MustId(),
-		Object: existingObj.MustId(),
-	}); err != nil {
+	transferObjectMessage := &jasonsgame.TransferObjectMessage{
+		From:   inv.did,
+		To:     msg.To,
+		Object: objectDid,
+	}
+	if !sourceHandler.Supports(transferObjectMessage) {
+		err = fmt.Errorf("transfer from inventory %v is not supported", inv.did)
 		inv.Log.Error(err)
+		context.Respond(&TransferObjectResponse{Error: err})
 		return
 	}
 
-	err = sourceInventory.Remove(objectDid)
+	remoteTargetHandler, err := FindHandlerForTree(inv.network, msg.To)
 	if err != nil {
-		err = fmt.Errorf("error updating objects in inventory: %v", err)
+		err = fmt.Errorf("error fetching handler for %v", msg.To)
+		inv.Log.Error(err)
+		context.Respond(&TransferObjectResponse{Error: err})
+		return
+	}
+	var targetHandler Handler
+	if remoteTargetHandler != nil {
+		targetHandler = remoteTargetHandler
+	} else {
+		targetHandler = NewLocalHandler(inv.network)
+	}
+
+	if !targetHandler.SupportsType("jasonsgame.TransferredObjectMessage") {
+		err = fmt.Errorf("transfer to inventory %v is not supported", inv.did)
+		inv.Log.Error(err)
+		context.Respond(&TransferObjectResponse{Error: err})
+		return
+	}
+
+	if err := sourceHandler.Send(transferObjectMessage); err != nil {
 		inv.Log.Error(err)
 		return
 	}

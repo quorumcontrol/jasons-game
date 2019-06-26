@@ -39,6 +39,7 @@ require (
 	github.com/quorumcontrol/tupelo-go-sdk v0.4.1-0.20190625154334-2f189e91f596
 	github.com/shibukawa/configdir v0.0.0-20170330084843-e180dbdc8da0
 	github.com/sirupsen/logrus v1.4.2 // indirect
+	github.com/spf13/cobra v0.0.3
 	github.com/stretchr/testify v1.3.0
 	github.com/zserge/webview v0.0.0-20190123072648-16c93bcaeaeb
 	golang.org/x/tools v0.0.0-20190523174634-38d8bcfa38af // indirect
