@@ -13,6 +13,8 @@ import (
 	"github.com/quorumcontrol/jasons-game/handlers"
 	"github.com/quorumcontrol/jasons-game/network"
 	"github.com/quorumcontrol/jasons-game/pb/jasonsgame"
+
+	inventoryHandlers "github.com/quorumcontrol/jasons-game/handlers/inventory"
 )
 
 type Object struct {
@@ -196,7 +198,7 @@ func (inv *InventoryActor) handleTransferObject(context actor.Context, msg *Tran
 	if remoteSourceHandler != nil {
 		sourceHandler = remoteSourceHandler
 	} else {
-		sourceHandler = inv.localOrNoopHandler(context, inv.did)
+		sourceHandler = inventoryHandlers.NewUnrestrictedRemoveHandler(inv.network)
 	}
 
 	transferObjectMessage := &jasonsgame.TransferObjectMessage{
@@ -222,7 +224,7 @@ func (inv *InventoryActor) handleTransferObject(context actor.Context, msg *Tran
 	if remoteTargetHandler != nil {
 		targetHandler = remoteTargetHandler
 	} else {
-		targetHandler = handlers.NewLocalHandler(context.Self())
+		targetHandler = inventoryHandlers.NewUnrestrictedAddHandler(inv.network)
 	}
 
 	if !targetHandler.SupportsType("jasonsgame.TransferredObjectMessage") {
@@ -232,7 +234,7 @@ func (inv *InventoryActor) handleTransferObject(context actor.Context, msg *Tran
 		return
 	}
 
-	if err := sourceHandler.Send(transferObjectMessage); err != nil {
+	if err := sourceHandler.Handle(transferObjectMessage); err != nil {
 		inv.Log.Error(err)
 		return
 	}

@@ -52,6 +52,10 @@ func (t *InventoryTree) All() (map[string]string, error) {
 		return nil, errors.Wrap(err, "error fetching inventory")
 	}
 
+	if objectsUncasted == nil {
+		return make(map[string]string), nil
+	}
+
 	objects := make(map[string]string, len(objectsUncasted.(map[string]interface{})))
 	for name, did := range objectsUncasted.(map[string]interface{}) {
 		objects[did.(string)] = name

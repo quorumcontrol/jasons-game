@@ -1,8 +1,6 @@
 package handlers
 
 import (
-	"fmt"
-
 	"github.com/golang/protobuf/proto"
 )
 
@@ -14,8 +12,8 @@ func NewNoopHandler() *NoopHandler {
 	return &NoopHandler{}
 }
 
-func (h *NoopHandler) Send(msg proto.Message) error {
-	return fmt.Errorf("Can not send to noop handler")
+func (h *NoopHandler) Handle(msg proto.Message) error {
+	return ErrUnsupportedMessageType
 }
 
 func (h *NoopHandler) Supports(msg proto.Message) bool {
@@ -24,4 +22,8 @@ func (h *NoopHandler) Supports(msg proto.Message) bool {
 
 func (h *NoopHandler) SupportsType(msgType string) bool {
 	return false
+}
+
+func (h *NoopHandler) SupportedMessages() []string {
+	return []string{}
 }

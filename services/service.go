@@ -1,10 +1,13 @@
 package services
 
 import (
+	"fmt"
+
 	"github.com/AsynkronIT/protoactor-go/actor"
 	"github.com/golang/protobuf/proto"
 	logging "github.com/ipfs/go-log"
 	"github.com/pkg/errors"
+	"github.com/quorumcontrol/jasons-game/handlers"
 	"github.com/quorumcontrol/jasons-game/network"
 	"github.com/quorumcontrol/tupelo-go-sdk/consensus"
 )
@@ -16,20 +19,17 @@ func init() {
 }
 
 type Service struct {
-	tree            *consensus.SignedChainTree
-	network         network.Network
-	subscriber      *actor.PID
-	handlerRegistry *HandlerRegistry
+	tree       *consensus.SignedChainTree
+	network    network.Network
+	subscriber *actor.PID
+	handler    handlers.Handler
 }
 
-type AttachHandler struct {
-	HandlerProps *actor.Props
-}
-
-func NewServiceProps(network network.Network) *actor.Props {
+func NewServiceProps(network network.Network, handler handlers.Handler) *actor.Props {
 	return actor.PropsFromProducer(func() actor.Actor {
 		return &Service{
 			network: network,
+			handler: handler,
 		}
 	})
 }
@@ -38,25 +38,11 @@ func (s *Service) Receive(actorCtx actor.Context) {
 	switch msg := actorCtx.Message().(type) {
 	case *actor.Started:
 		s.initialize(actorCtx)
-	case *AttachHandler:
-		pid := actorCtx.Spawn(msg.HandlerProps)
-		s.handlerRegistry.Add(pid)
-
-		newTree, err := s.network.UpdateChainTree(s.tree, "jasons-game/supports", s.handlerRegistry.AllMessages())
-		if err != nil {
-			panic(err)
-		}
-		s.tree = newTree
 	case proto.Message:
-		handlerActors := s.handlerRegistry.ForMessage(proto.MessageName(msg))
-
-		if len(handlerActors) == 0 {
-			log.Errorf("Unhandled message %v", msg)
-			return
-		}
-
-		for _, pid := range handlerActors {
-			actorCtx.Forward(pid)
+		log.Infof("Received message %v", msg)
+		err := s.handler.Handle(msg)
+		if err != nil {
+			log.Errorf(fmt.Sprintf("error handling %v: %v", proto.MessageName(msg), err))
 		}
 	default:
 		log.Errorf("Unhandled message %v", msg)
@@ -77,9 +63,15 @@ func (s *Service) initialize(actorCtx actor.Context) {
 		}
 	}
 
-	s.tree = serviceTree
-	s.subscriber = actorCtx.Spawn(s.network.Community().NewSubscriberProps([]byte(s.tree.MustId())))
+	serviceTree, err = s.network.UpdateChainTree(serviceTree, "jasons-game/supports", s.handler.SupportedMessages())
+	if err != nil {
+		panic(err)
+	}
 
-	s.handlerRegistry = NewHandlerRegistry()
+	s.tree = serviceTree
+
+	topic := s.network.Community().TopicFor(s.tree.MustId())
+	s.subscriber = actorCtx.Spawn(s.network.Community().NewSubscriberProps(topic))
+
 	log.Infof("Starting listener with ChainTree id %v", s.tree.MustId())
 }

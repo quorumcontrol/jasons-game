@@ -10,10 +10,11 @@ import (
 
 	"github.com/AsynkronIT/protoactor-go/actor"
 	"github.com/pkg/errors"
+	"github.com/quorumcontrol/jasons-game/handlers"
+	"github.com/quorumcontrol/jasons-game/handlers/inventory"
 	"github.com/quorumcontrol/jasons-game/network"
 	"github.com/quorumcontrol/jasons-game/server"
 	"github.com/quorumcontrol/jasons-game/services"
-	"github.com/quorumcontrol/jasons-game/handlers/inventory"
 	"github.com/shibukawa/configdir"
 	"github.com/spf13/cobra"
 )
@@ -38,15 +39,12 @@ func main() {
 				panic(errors.Wrap(err, "setting up network"))
 			}
 
-			actorCtx := actor.EmptyRootContext
-			servicePID := actorCtx.Spawn(services.NewServiceProps(net))
+			serviceHandler := handlers.NewCompositHandler([]handlers.Handler{
+				inventory.NewUnrestrictedAddHandler(net),
+				inventory.NewUnrestrictedRemoveHandler(net),
+			})
 
-			inventoryAddProps := inventory.NewUnrestrictedAddHandler(net)
-			actorCtx.Send(servicePID, &services.AttachHandler{HandlerProps: inventoryAddProps})
-
-			inventoryRemoveProps := inventory.NewUnrestrictedRemoveHandler(net)
-			actorCtx.Send(servicePID, &services.AttachHandler{HandlerProps: inventoryRemoveProps})
-
+			servicePID := actor.EmptyRootContext.Spawn(services.NewServiceProps(net, serviceHandler))
 			stopOnSignal(servicePID)
 		},
 	}

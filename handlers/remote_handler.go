@@ -1,8 +1,6 @@
 package handlers
 
 import (
-	"fmt"
-
 	"github.com/golang/protobuf/proto"
 	"github.com/quorumcontrol/jasons-game/network"
 )
@@ -11,25 +9,27 @@ type RemoteHandler struct {
 	Handler
 	did               string
 	net               network.Network
-	supportedMessages map[string]bool
+	supportedMessages HandlerMessageList
 }
 
-func (h *RemoteHandler) Send(msg proto.Message) error {
+func (h *RemoteHandler) Handle(msg proto.Message) error {
 	if !h.Supports(msg) {
-		return fmt.Errorf("handler does not support message %v", msg)
+		return ErrUnsupportedMessageType
 	}
-
 	topic := h.net.Community().TopicFor(h.did)
 	return h.net.Community().Send(topic, msg)
 }
 
 func (h *RemoteHandler) Supports(msg proto.Message) bool {
-	msgType := proto.MessageName(msg)
-	return h.SupportsType(msgType)
+	return h.supportedMessages.Contains(msg)
 }
 
 func (h *RemoteHandler) SupportsType(msgType string) bool {
-	return h.supportedMessages[msgType] || false
+	return h.supportedMessages.ContainsType(msgType)
+}
+
+func (h *RemoteHandler) SupportedMessages() []string {
+	return h.supportedMessages
 }
 
 func FindHandlerForTree(net network.Network, did string) (*RemoteHandler, error) {
@@ -60,9 +60,9 @@ func FindHandlerForTree(net network.Network, did string) (*RemoteHandler, error)
 		supports = []interface{}{}
 	}
 
-	supportedMessages := make(map[string]bool, len(supports.([]interface{})))
-	for _, typeString := range supports.([]interface{}) {
-		supportedMessages[typeString.(string)] = true
+	supportedMessages := make(HandlerMessageList, len(supports.([]interface{})))
+	for i, typeString := range supports.([]interface{}) {
+		supportedMessages[i] = typeString.(string)
 	}
 
 	return &RemoteHandler{
