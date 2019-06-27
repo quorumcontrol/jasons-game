@@ -84,6 +84,12 @@ message TransferredObjectMessage {
     repeated int64 loc = 4;
 }
 
+message RequestTransferObjectMessage {
+    string from = 1;
+    string to = 2;
+    string object = 3;
+}
+
 service GameService {
     rpc SendCommand(UserInput) returns (CommandReceived) {}
     rpc ReceiveUserMessages(Session) returns (stream MessageToUser) {}
