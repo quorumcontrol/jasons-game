@@ -9,6 +9,7 @@ require (
 	github.com/gobuffalo/packr/v2 v2.5.3-0.20190708182234-662c20c19dde
 	github.com/gogo/protobuf v1.2.1
 	github.com/golang/protobuf v1.3.1
+	github.com/google/uuid v1.1.1
 	github.com/gorilla/mux v1.7.1
 	github.com/improbable-eng/grpc-web v0.9.5
 	github.com/ipfs/go-blockservice v0.1.1

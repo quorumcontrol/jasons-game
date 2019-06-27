@@ -82,12 +82,27 @@ services:
       - .:/app:delegated
       - ./devdocker/.tmp:/root/.cache:delegated
       - $GOPATH/pkg/mod:/go/pkg/mod:delegated
+      - ./devdocker/devink_state:/root/.config/tupelo:delegated
     environment:
       GOPATH: /go
       TUPELO_BOOTSTRAP_NODES: /ip4/172.16.239.10/tcp/34001/ipfs/16Uiu2HAm3TGSEKEjagcCojSJeaT5rypaeJMKejijvYSnAjviWwV5
       JASON_BOOTSTRAP_NODES: /ip4/172.16.239.100/tcp/34001/ipfs/16Uiu2HAmBL6Xz9ichyunCexiqomcHyzVpKKmxAMgUusksBZzzM3K
       # TODO: Stand up a dev-only service that creates a chaintree, establishes and mints some ink in it, and use its DID here
+      # TODO: Also have that dev-only service send its ink to the ink-source chaintree
       INK_DID: fake-did
+
+  devink:
+    build: ./devdocker
+    command: ["go", "run", "devink/main.go", "${INK_SOURCE_DID}"]
+    volumes:
+      - .:/app:delegated
+      - ./devdocker/.tmp:/root/.cache:delegated
+      - $GOPATH/pkg/mod:/go/pkg/mod:delegated
+      - ./devdocker/devink_state:/root/.config/tupelo:delegated
+    environment:
+      GOPATH: /go
+      TUPELO_BOOTSTRAP_NODES: /ip4/172.16.239.10/tcp/34001/ipfs/16Uiu2HAm3TGSEKEjagcCojSJeaT5rypaeJMKejijvYSnAjviWwV5
+      INK_SOURCE_DID:
 
   game-testnet:
     build: ./devdocker

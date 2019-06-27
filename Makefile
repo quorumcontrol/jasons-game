@@ -10,8 +10,8 @@ export GO111MODULE = on
 
 FIRSTGOPATH = $(firstword $(subst :, ,$(GOPATH)))
 
-jsmodules = ./frontend/jasons-game/node_modules
-generated = network/messages.pb.go game/types.pb.go pb/jasonsgame/jasonsgame.pb.go frontend/jasons-game/src/js/frontend/remote/*_pb.*
+jsmodules = frontend/jasons-game/node_modules
+generated = network/messages.pb.go game/types.pb.go pb/jasonsgame/jasonsgame.pb.go frontend/jasons-game/src/js/frontend/remote/*_pb.* inkwell/inkwell/messages.pb.go
 packr = packrd/packed-packr.go main-packr.go
 gosources = $(shell find . -path "./vendor/*" -prune -o -type f -name "*.go" -print)
 
@@ -20,10 +20,11 @@ all: frontend-build $(packr) build
 ${FIRSTGOPATH}/src/github.com/gogo/protobuf/protobuf:
 	go get github.com/gogo/protobuf/...
 
-
-$(generated): ${FIRSTGOPATH}/src/github.com/gogo/protobuf/protobuf $(jsmodules)
+%.pb.go: %.proto $(FIRSTGOPATH)/src/github.com/gogo/protobuf/protobuf
 	./scripts/protogen.sh
 
+generated: $(generated)
+	
 $(jsmodules):
 	cd frontend/jasons-game && npm install
 
@@ -84,6 +85,9 @@ jason: $(generated) go.mod go.sum
 inkwell: $(generated) go.mod go.sum
 	docker-compose -f docker-compose-dev.yml up --force-recreate inkwell
 
+devink: $(generated) go.mod go.sum
+	env INK_SOURCE_DID=$(INK_SOURCE_DID) docker-compose -f docker-compose-dev.yml up --force-recreate devink
+
 frontend-build: $(generated) $(jsmodules)
 	cd frontend/jasons-game && ./node_modules/.bin/shadow-cljs release app
 
@@ -112,4 +116,4 @@ clean: $(FIRSTGOPATH)/bin/packr2
 	rm -rf bin
 	rm -rf JasonsGame.app/Contents/MacOS
 
-.PHONY: all build test integration-test localnet clean lint game-server jason inkwell game2 mac-app prepare
+.PHONY: all build test integration-test localnet clean lint game-server jason inkwell devink game2 mac-app prepare generated

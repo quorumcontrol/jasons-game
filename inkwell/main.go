@@ -2,12 +2,15 @@ package main
 
 import (
 	"context"
+	"encoding/base64"
 	"flag"
 	"fmt"
 	"os"
 
+	"github.com/gogo/protobuf/proto"
 	logging "github.com/ipfs/go-log"
 	"github.com/pkg/errors"
+	"github.com/quorumcontrol/messages/build/go/transactions"
 
 	"github.com/quorumcontrol/jasons-game/inkwell/server"
 )
@@ -29,6 +32,7 @@ func main() {
 	mustSetLogLevel("inkwell", "debug")
 
 	local := flag.Bool("local", false, "connect to localnet & use localstack S3 instead of testnet & real S3")
+	deposit := flag.String("deposit", "", "token payload for ink deposit")
 	flag.Parse()
 
 	var s3Region, s3Bucket string
@@ -55,13 +59,34 @@ func main() {
 		S3Bucket: s3Bucket,
 	}
 
+	if deposit != nil && *deposit != "" {
+		marshalledTokenPayload, err := base64.StdEncoding.DecodeString(*deposit)
+		if err != nil {
+			panic(fmt.Errorf("error base64 decoding ink deposit token payload: %v", err))
+		}
+
+		tokenPayload := transactions.TokenPayload{}
+		err = proto.Unmarshal(marshalledTokenPayload, &tokenPayload)
+		if err != nil {
+			panic(fmt.Errorf("error unmarshalling ink deposit token payload: %v", err))
+		}
+
+
+
+		return
+	}
+
+
+
 	inkwell, err := server.NewServer(ctx, serverCfg)
 	if err != nil {
 		panic(errors.Wrap(err, "error creating new inkwell server"))
 	}
 
-	// TODO: Call some kind of inkwell.Start() to make it listen for player invites on a topic
-	fmt.Printf("Started inkwell %+v\n", inkwell)
+	err = inkwell.Start()
+	if err != nil {
+		panic(errors.Wrap(err, "error starting inkwell service"))
+	}
 
 	<-make(chan struct{})
 }
