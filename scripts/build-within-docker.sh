@@ -14,7 +14,7 @@ go mod download || true
 export GOPROXY='https://proxy.golang.org'
 go mod download github.com/dgraph-io/badger/v2@v2.0.0-rc2 || true
 
-export GOPROXY=$GOPATH/pkg/mod/cache/download
+export GOPROXY=file://$GOPATH/pkg/mod/cache/download 
 
 make lint
 if [[ "${CI}" == "true" ]]; then
