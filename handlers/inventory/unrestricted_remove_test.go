@@ -43,7 +43,7 @@ func TestUnrestrictedRemoveHandler(t *testing.T) {
 	require.Nil(t, err)
 	require.False(t, existsBeforeInTo)
 
-	msg := &jasonsgame.RequestTransferObjectMessage{
+	msg := &jasonsgame.RequestObjectTransferMessage{
 		From:   fromTree.MustId(),
 		To:     toTree.MustId(),
 		Object: objectTree.MustId(),

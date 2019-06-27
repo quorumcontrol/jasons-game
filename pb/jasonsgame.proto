@@ -81,10 +81,9 @@ message TransferredObjectMessage {
     string from = 1;
     string to = 2;
     string object = 3;
-    repeated int64 loc = 4;
 }
 
-message RequestTransferObjectMessage {
+message RequestObjectTransferMessage {
     string from = 1;
     string to = 2;
     string object = 3;
