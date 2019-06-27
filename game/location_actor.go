@@ -65,7 +65,7 @@ func (l *LocationActor) Receive(actorCtx actor.Context) {
 		}
 		l.location = NewLocationTree(l.network, tree)
 
-		_, err = l.network.Community().SubscribeActor(actorCtx.Self(), topicFor(l.did))
+		_, err = l.network.Community().SubscribeActor(actorCtx.Self(), l.network.Community().TopicFor(l.did))
 		if err != nil {
 			panic(errors.Wrap(err, "error spawning land actor subscription"))
 		}

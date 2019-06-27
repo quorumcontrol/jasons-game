@@ -15,11 +15,7 @@ import (
 
 const ObjectsPath = "jasons-game/inventory"
 
-const inventorySuffix = "/inventory"
-
-func inventoryTopicFrom(did string) []byte {
-	return topicFor(did + inventorySuffix)
-}
+const inventoryTopicSuffix = "/inventory"
 
 type InventoryActor struct {
 	middleware.LogAwareHolder
@@ -78,10 +74,14 @@ func NewInventoryActorProps(cfg *InventoryActorConfig) *actor.Props {
 	)
 }
 
+func (inv *InventoryActor) inventoryTopicFor(did string) []byte {
+	return inv.network.Community().TopicFor(did + inventoryTopicSuffix)
+}
+
 func (inv *InventoryActor) Receive(actorCtx actor.Context) {
 	switch msg := actorCtx.Message().(type) {
 	case *actor.Started:
-		inv.subscriber = actorCtx.Spawn(inv.network.Community().NewSubscriberProps(inventoryTopicFrom(inv.did)))
+		inv.subscriber = actorCtx.Spawn(inv.network.Community().NewSubscriberProps(inv.inventoryTopicFor(inv.did)))
 	case *CreateObjectRequest:
 		inv.Log.Debugf("Received CreateObjectRequest: %+v\n", msg)
 		inv.handleCreateObject(actorCtx, msg)
@@ -279,7 +279,7 @@ func (inv *InventoryActor) handleTransferObject(context actor.Context, msg *Tran
 		return
 	}
 
-	if err := inv.network.Community().Send(inventoryTopicFrom(targetTree.MustId()), &jasonsgame.TransferredObjectMessage{
+	if err := inv.network.Community().Send(inv.inventoryTopicFor(targetTree.MustId()), &jasonsgame.TransferredObjectMessage{
 		From:   sourceTree.MustId(),
 		To:     targetTree.MustId(),
 		Object: existingObj.MustId(),
