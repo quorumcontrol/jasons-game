@@ -11,9 +11,12 @@ if [[ "${CI}" == "true" ]]; then
 fi
 
 go mod download || true
+go get -u github.com/golang/protobuf/protoc-gen-go
+go get -u github.com/favadi/protoc-go-inject-tag
+go get -u github.com/gobuffalo/packr/v2/packr2
+go get -u github.com/goware/modvendor
 export GOPROXY='https://proxy.golang.org'
 go mod download github.com/dgraph-io/badger/v2@v2.0.0-rc2 || true
-
 export GOPROXY=file://$GOPATH/pkg/mod/cache/download 
 
 make lint
