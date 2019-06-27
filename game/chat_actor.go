@@ -9,11 +9,7 @@ import (
 	"github.com/quorumcontrol/tupelo-go-sdk/gossip3/middleware"
 )
 
-const chatSuffix = "/chat"
-
-func chatTopicFromDid(did string) []byte {
-	return topicFor(did + chatSuffix)
-}
+const chatTopicSuffix = "/chat"
 
 type ChatActor struct {
 	middleware.LogAwareHolder
@@ -39,12 +35,16 @@ func NewChatActorProps(cfg *ChatActorConfig) *actor.Props {
 	)
 }
 
+func (c *ChatActor) chatTopic() []byte {
+	return c.community.TopicFor(c.did)
+}
+
 func (c *ChatActor) Receive(actorCtx actor.Context) {
 	switch msg := actorCtx.Message().(type) {
 	case *actor.Started:
-		c.subscriber = actorCtx.Spawn(c.community.NewSubscriberProps(chatTopicFromDid(c.did)))
+		c.subscriber = actorCtx.Spawn(c.community.NewSubscriberProps(c.chatTopic()))
 	case string:
-		err := c.community.Send(chatTopicFromDid(c.did), &jasonsgame.ChatMessage{Message: msg})
+		err := c.community.Send(c.chatTopic(), &jasonsgame.ChatMessage{Message: msg})
 		if err != nil {
 			panic(errors.Wrap(err, "failed to broadcast ChatMessage"))
 		}

@@ -462,10 +462,6 @@ func (g *Game) handleConnectLocation(actorCtx actor.Context, args string) error 
 	return nil
 }
 
-func topicFor(str string) []byte {
-	return []byte(str)
-}
-
 func (g *Game) sendUILocation(actorCtx actor.Context) {
 	l, err := g.getCurrentLocation(actorCtx)
 
