@@ -1,4 +1,4 @@
-package trees 
+package trees
 
 import (
 	"fmt"
@@ -155,5 +155,5 @@ func GetOrCreatePlayerTree(net network.Network) (*PlayerTree, error) {
 		return playerTree, nil
 	}
 
-	return NewPlayerTree(net, playerChain) 
+	return NewPlayerTree(net, playerChain)
 }

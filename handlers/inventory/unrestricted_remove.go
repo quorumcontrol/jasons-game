@@ -79,8 +79,6 @@ func (h *UnrestrictedRemoveHandler) Handle(msg proto.Message) error {
 			return fmt.Errorf("error updating objects in inventory: %v", err)
 		}
 
-		// this runs in some external service, and needs to send to the player some
-		// transferredObjectMessage
 		if err := targetHandler.Handle(transferredObjectMessage); err != nil {
 			return err
 		}
