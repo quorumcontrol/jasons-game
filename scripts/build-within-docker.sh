@@ -10,11 +10,10 @@ if [[ "${CI}" == "true" ]]; then
   sudo ./scripts/install-node.sh
 fi
 
-go mod download || true
 export GOPROXY='https://proxy.golang.org'
-go mod download || true
+go mod download github.com/dgraph-io/badger/v2@v2.0.0-rc2
 unset GOPROXY
-go mod download
+go mod download 
 
 make lint
 if [[ "${CI}" == "true" ]]; then
