@@ -30,7 +30,7 @@ type GameServer struct {
 }
 
 func NewGameServer(ctx context.Context, connectToLocalnet bool) *GameServer {
-	group, err := setupNotaryGroup(ctx, connectToLocalnet)
+	group, err := SetupTupeloNotaryGroup(ctx, connectToLocalnet)
 	if err != nil {
 		panic(errors.Wrap(err, "setting up notary group"))
 	}

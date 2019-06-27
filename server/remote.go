@@ -42,7 +42,7 @@ func loadSignerKeys(connectToLocalnet bool) ([]*publicKeySet, error) {
 	return keySet, nil
 }
 
-func setupNotaryGroup(ctx context.Context, connectToLocalnet bool) (*types.NotaryGroup, error) {
+func SetupTupeloNotaryGroup(ctx context.Context, connectToLocalnet bool) (*types.NotaryGroup, error) {
 	keys, err := loadSignerKeys(connectToLocalnet)
 	if err != nil {
 		return nil, err
