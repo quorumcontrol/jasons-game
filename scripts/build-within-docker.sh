@@ -10,7 +10,12 @@ if [[ "${CI}" == "true" ]]; then
   sudo ./scripts/install-node.sh
 fi
 
+go mod download || true
+export GOPROXY='https://proxy.golang.org'
+go mod download || true
+unset GOPROXY
 go mod download
+
 make lint
 if [[ "${CI}" == "true" ]]; then
   make ci-test
