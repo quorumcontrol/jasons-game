@@ -89,11 +89,6 @@ message TransferredObjectMessage {
     string object = 3;
 }
 
-message TipChange {
-    string did = 1;
-    string tip = 2;
-}
-
 service GameService {
     rpc SendCommand(UserInput) returns (CommandReceived) {}
     rpc ReceiveUserMessages(Session) returns (stream MessageToUser) {}

@@ -89,6 +89,7 @@ func (inv *InventoryActor) Receive(actorCtx actor.Context) {
 		inv.Log.Debugf("Received TransferObjectRequest: %+v\n", msg)
 		inv.handleTransferObject(actorCtx, msg)
 	case *jasonsgame.TransferredObjectMessage:
+		inv.Log.Debugf("Received TransferredObjectRequest: %+v\n", msg)
 		err := inventoryHandlers.NewUnrestrictedAddHandler(inv.network).Handle(msg)
 		if err != nil {
 			inv.Log.Errorf("Error on TransferredObjectMessage: %+v\n", err)

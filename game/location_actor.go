@@ -7,11 +7,10 @@ import (
 	"github.com/AsynkronIT/protoactor-go/actor"
 	"github.com/AsynkronIT/protoactor-go/plugin"
 	"github.com/pkg/errors"
+	"github.com/quorumcontrol/jasons-game/game/trees"
 	"github.com/quorumcontrol/jasons-game/network"
 	"github.com/quorumcontrol/jasons-game/pb/jasonsgame"
 	"github.com/quorumcontrol/tupelo-go-sdk/gossip3/middleware"
-	"github.com/quorumcontrol/jasons-game/game/trees"
-	"github.com/ipfs/go-cid"
 )
 
 type LocationActor struct {
@@ -93,19 +92,6 @@ func (l *LocationActor) Receive(actorCtx actor.Context) {
 	case *ListInteractionsRequest:
 		l.handleListInteractionsRequest(actorCtx, msg)
 	}
-}
-
-func (l *LocationActor) handleTipChange(actorCtx actor.Context, msg *jasonsgame.TipChange) {
-	tip, err := cid.Decode(msg.Tip)
-	if err != nil {
-		panic(errors.Wrap(err, "error casting tip"))
-	}
-
-	tree, err := l.network.GetTreeByTip(tip)
-	if err != nil {
-		panic("could not find location")
-	}
-	l.location = trees.NewLocationTree(l.network, tree)
 }
 
 func (l *LocationActor) handleGetLocation(actorCtx actor.Context, msg *GetLocation) {
