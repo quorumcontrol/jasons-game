@@ -7,7 +7,7 @@
             ["react-terminal-component" :refer [ReactTerminalStateless]]))
 
 (defn new-state []
-  (.create EmulatorState (clj->js {:commandMapping commands/mapping})))
+  (.create EmulatorState (clj->js {:commandMapping commands/default-mapping})))
 
 (defn text->output [txt]
   (.makeTextOutput OutputFactory txt))

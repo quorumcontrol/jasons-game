@@ -31,7 +31,7 @@
     (.setCommand CommandMapping
                  commands new-command-name command-fn {})))
 
-(def mapping
+(def default-mapping
   (-> (.create CommandMapping)
       (add-command "call-me")
       (add-command "create-location")
