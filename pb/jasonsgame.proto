@@ -1,11 +1,10 @@
-
 syntax = "proto3";
 
 package jasonsgame;
 
 message UserInput {
     string message = 1;
-    Session session = 2; 
+    Session session = 2;
 }
 
 message MessageToUser {
@@ -15,8 +14,23 @@ message MessageToUser {
     bool heartbeat = 4;
 }
 
+message CommandUpdate {
+    string command = 1;
+    repeated string args = 2;
+    Location location = 3;
+    uint64 sequence = 4;
+    bool heartbeat = 5;
+}
+
 message Stats {
     string message = 1;
+}
+
+message UserInterfaceMessage {
+  oneof ui_message {
+    MessageToUser user_message = 1;
+    CommandUpdate command_update = 2;
+  }
 }
 
 message Exit {};
@@ -92,6 +106,6 @@ message RequestTransferObjectMessage {
 
 service GameService {
     rpc SendCommand(UserInput) returns (CommandReceived) {}
-    rpc ReceiveUserMessages(Session) returns (stream MessageToUser) {}
+    rpc ReceiveUIMessages(Session) returns (stream UserInterfaceMessage) {}
     rpc ReceiveStatMessages(Session) returns (stream Stats) {}
 }

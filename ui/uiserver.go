@@ -1,10 +1,12 @@
 package ui
 
 import (
+	"fmt"
 	"reflect"
 	"time"
 
 	"github.com/AsynkronIT/protoactor-go/actor"
+	"github.com/gogo/protobuf/proto"
 	logging "github.com/ipfs/go-log"
 	"github.com/quorumcontrol/jasons-game/network"
 	"github.com/quorumcontrol/jasons-game/pb/jasonsgame"
@@ -13,23 +15,23 @@ import (
 var log = logging.Logger("uiserver")
 
 type remoteStream interface {
-	Send(*jasonsgame.MessageToUser) error
+	Send(*jasonsgame.UserInterfaceMessage) error
 }
 
 type TestStream struct {
-	messages []*jasonsgame.MessageToUser
+	messages []*jasonsgame.UserInterfaceMessage
 }
 
 func NewTestStream() *TestStream {
 	return &TestStream{}
 }
 
-func (ts *TestStream) Send(msg *jasonsgame.MessageToUser) error {
+func (ts *TestStream) Send(msg *jasonsgame.UserInterfaceMessage) error {
 	ts.messages = append(ts.messages, msg)
 	return nil
 }
 
-func (ts *TestStream) GetMessages() []*jasonsgame.MessageToUser {
+func (ts *TestStream) GetMessages() []*jasonsgame.UserInterfaceMessage {
 	return ts.messages
 }
 
@@ -65,6 +67,26 @@ type SetStream struct {
 	DoneChan doneChan
 }
 
+func buildUIMessage(msg proto.Message) (*jasonsgame.UserInterfaceMessage, error) {
+	switch msg.(type) {
+	case *jasonsgame.MessageToUser:
+		userMsg := msg.(*jasonsgame.MessageToUser)
+		uiMsg := &jasonsgame.UserInterfaceMessage{
+			UiMessage: &jasonsgame.UserInterfaceMessage_UserMessage{userMsg},
+		}
+
+		return uiMsg, nil
+	case *jasonsgame.CommandUpdate:
+		cmdUpdate := msg.(*jasonsgame.CommandUpdate)
+		uiMsg := &jasonsgame.UserInterfaceMessage{
+			UiMessage: &jasonsgame.UserInterfaceMessage_CommandUpdate{cmdUpdate},
+		}
+		return uiMsg, nil
+	default:
+		return nil, fmt.Errorf("Unrecognized user interface message: %v", msg)
+	}
+}
+
 func (us *UIServer) Receive(actorCtx actor.Context) {
 	switch msg := actorCtx.Message().(type) {
 	case *actor.Stopping:
@@ -92,7 +114,33 @@ func (us *UIServer) Receive(actorCtx actor.Context) {
 			log.Errorf("no valid stream for %v", msg.Message)
 			return
 		}
-		err := us.stream.Send(msg)
+
+		uiMsg, err := buildUIMessage(msg)
+		if err != nil {
+			panic(err)
+		}
+
+		err = us.stream.Send(uiMsg)
+		if err != nil {
+			us.stream = nil
+			us.sendDone()
+			log.Errorf("error sending message to stream: %v", err)
+		}
+
+	case *jasonsgame.CommandUpdate:
+		actorCtx.SetReceiveTimeout(5 * time.Second)
+		log.Debugf("command update: %s", msg.Command)
+		if us.stream == nil {
+			log.Errorf("no valid stream for %v", msg.Command)
+			return
+		}
+
+		uiMsg, err := buildUIMessage(msg)
+		if err != nil {
+			panic(err)
+		}
+
+		err = us.stream.Send(uiMsg)
 		if err != nil {
 			us.stream = nil
 			us.sendDone()

@@ -17,7 +17,10 @@
 (def invoke (.-invoke grpc))
 
 (def game-send-command (.-SendCommand GameService))
-(def game-receive-usermessages (.-ReceiveUserMessages GameService))
+(def game-receive-usermessages (.-ReceiveUIMessages GameService))
+
+(def ui-message-types
+  (-> game-lib/UserInterfaceMessage .-UiMessageCase js->clj keywordize-keys))
 
 (defn new-session [id]
   (doto (game-lib/Session.)
@@ -43,14 +46,25 @@
       js->clj
       keywordize-keys))
 
-(defn handle-game-message [resp]
+(defn handle-user-message [resp]
   (if (not (.getHeartbeat resp))
-    (do
-      (.log js/console "game message" (.toObject resp))
-      (let [game-msg (-> resp
-                         resp->message
-                         (assoc :user false))]
-        (re-frame/dispatch [:game-message game-msg])))))
+      (do
+        (.log js/console "game message" (.toObject resp))
+        (let [game-msg (-> resp
+                           resp->message
+                           (assoc :user false))]
+          (re-frame/dispatch [:game-message game-msg])))))
+
+(defn handle-command-update [resp])
+
+(defn handle-game-message [resp]
+  (let [msg-type (.getUiMessageCase resp)]
+    (.log js/console (str "ui-message-types ==" ui-message-types))
+    (cond
+      (= msg-type (:USER_MESSAGE ui-message-types)) (-> resp
+                                                        .getUserMessage
+                                                        handle-user-message)
+      :default (.log js/console "unrecognized message type" msg-type))))
 
 (defn handle-game-end [resp]
   (.log js/console "game end, redoing" resp)
