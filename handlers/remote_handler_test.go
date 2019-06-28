@@ -41,9 +41,10 @@ func TestRemoteHandler(t *testing.T) {
 	require.Equal(t, remoteHandler.SupportedMessages(), []string{proto.MessageName(chatMessage)})
 
 	received := make(chan *jasonsgame.ChatMessage, 1)
-	net.Community().Subscribe(net.Community().TopicFor(handlerTree.MustId()), func(ctx context.Context, _ *messages.Envelope, msg proto.Message) {
+	_, err = net.Community().Subscribe(net.Community().TopicFor(handlerTree.MustId()), func(ctx context.Context, _ *messages.Envelope, msg proto.Message) {
 		received <- msg.(*jasonsgame.ChatMessage)
 	})
+	require.Nil(t, err)
 
 	err = remoteHandler.Handle(chatMessage)
 	require.Nil(t, err)

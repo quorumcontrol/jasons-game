@@ -26,10 +26,11 @@ func TestTopicBroadcastHandler(t *testing.T) {
 	require.True(t, supports)
 
 	received := make(chan *jasonsgame.ChatMessage, 1)
-	net.Community().Subscribe(topic, func(ctx context.Context, _ *messages.Envelope, msg proto.Message) {
+	_, err := net.Community().Subscribe(topic, func(ctx context.Context, _ *messages.Envelope, msg proto.Message) {
 		received <- msg.(*jasonsgame.ChatMessage)
 	})
-	err := h.Handle(chatMessage)
+	require.Nil(t, err)
+	err = h.Handle(chatMessage)
 	require.Nil(t, err)
 
 	select {

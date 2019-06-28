@@ -5,11 +5,12 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
+	"time"
 
 	"github.com/quorumcontrol/jasons-game/network"
 
-	"github.com/pkg/errors"
 	logging "github.com/ipfs/go-log"
+	"github.com/pkg/errors"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/crypto"
@@ -21,15 +22,19 @@ import (
 
 const sessionStorageDir = "session-storage"
 
+var log = logging.Logger("gamenetwork")
+
 func doIt(ctx context.Context) error {
 	err := logging.SetLogLevel("gamenetwork", "info")
 	if err != nil {
 		return errors.Wrap(err, "error setting log level")
 	}
 
+	log.Infof("Starting republisher")
+
 	group, err := setupNotaryGroup(ctx, false)
 	if err != nil {
-		panic(errors.Wrap(err, "setting up notary group"))
+		return errors.Wrap(err, "setting up notary group")
 	}
 
 	configDirs := configdir.New("tupelo", "jasons-game")
@@ -37,7 +42,7 @@ func doIt(ctx context.Context) error {
 	folder := configDirs.QueryFolderContainsFile(sessionStorageDir)
 	if folder == nil {
 		if err := folders[0].CreateParentDir(sessionStorageDir); err != nil {
-			panic(err)
+			return err
 		}
 	}
 
@@ -45,14 +50,19 @@ func doIt(ctx context.Context) error {
 
 	statePath := filepath.Join(sessionPath, filepath.Base("12345"))
 	if err := os.MkdirAll(statePath, 0750); err != nil {
-		panic(errors.Wrap(err, "error creating session storage"))
+		return errors.Wrap(err, "error creating session storage")
 	}
 	net, err := network.NewRemoteNetwork(ctx, group, statePath)
 	if err != nil {
-		panic(errors.Wrap(err, "setting up network"))
+		return errors.Wrap(err, "setting up network")
 	}
 
-	return net.(*network.RemoteNetwork).RepublishAll()
+	err = net.(*network.RemoteNetwork).RepublishAll()
+	if err != nil {
+		return errors.Wrap(err, "error on publish")
+	}
+	time.Sleep(5 * time.Second)
+	return nil
 }
 
 func main() {

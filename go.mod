@@ -17,7 +17,7 @@ require (
 	github.com/ipfs/go-blockservice v0.1.0
 	github.com/ipfs/go-cid v0.0.2
 	github.com/ipfs/go-datastore v0.0.5
-	github.com/ipfs/go-ds-badger v0.0.4
+	github.com/ipfs/go-ds-badger v0.0.5
 	github.com/ipfs/go-ds-s3 v0.0.1
 	github.com/ipfs/go-ipfs-blockstore v0.0.1
 	github.com/ipfs/go-ipfs-config v0.0.6
@@ -28,19 +28,19 @@ require (
 	github.com/ipfs/go-log v0.0.1
 	github.com/ipfs/go-merkledag v0.1.0
 	github.com/karrick/godirwalk v1.10.3 // indirect
-	github.com/libp2p/go-libp2p v0.1.1
+	github.com/libp2p/go-libp2p v0.2.0
 	github.com/libp2p/go-libp2p-connmgr v0.1.0
-	github.com/libp2p/go-libp2p-core v0.0.4
+	github.com/libp2p/go-libp2p-core v0.0.6
 	github.com/libp2p/go-libp2p-pubsub v0.1.0
 	github.com/pkg/errors v0.8.1
-	github.com/quorumcontrol/chaintree v0.0.0-20190624152451-31c150abdde2
-	github.com/quorumcontrol/community v0.0.0-20190625180222-bf8f4bd66cc7
+	github.com/quorumcontrol/chaintree v0.0.0-20190628111909-7fcc00a16764
+	github.com/quorumcontrol/community v0.0.1
 	github.com/quorumcontrol/messages/build/go v0.0.0-20190604083406-7ee8fa6b39eb
-	github.com/quorumcontrol/storage v1.1.3
-	github.com/quorumcontrol/tupelo-go-sdk v0.4.1-0.20190625154334-2f189e91f596
+	github.com/quorumcontrol/storage v1.1.4
+	github.com/quorumcontrol/tupelo-go-sdk v0.4.1
 	github.com/shibukawa/configdir v0.0.0-20170330084843-e180dbdc8da0
 	github.com/sirupsen/logrus v1.4.2 // indirect
-	github.com/spf13/cobra v0.0.3
+	github.com/spf13/cobra v0.0.5
 	github.com/stretchr/testify v1.3.0
 	github.com/zserge/webview v0.0.0-20190123072648-16c93bcaeaeb
 	golang.org/x/net v0.0.0-20190611141213-3f473d35a33a
@@ -50,8 +50,6 @@ require (
 )
 
 replace github.com/libp2p/go-libp2p-pubsub v0.1.0 => github.com/quorumcontrol/go-libp2p-pubsub v0.0.4-0.20190528094025-e4e719f73e7a
-
-replace github.com/libp2p/go-libp2p-core => github.com/libp2p/go-libp2p-core v0.0.3
 
 // use our fork of packr until https://github.com/gobuffalo/packr/issues/198 is fixed
 replace github.com/gobuffalo/packr/v2 v2.2.0 => github.com/quorumcontrol/packr/v2 v2.2.1-0.20190523180755-1b8140a3b2d5
