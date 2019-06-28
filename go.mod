@@ -32,11 +32,11 @@ require (
 	github.com/libp2p/go-libp2p-core v0.0.6
 	github.com/libp2p/go-libp2p-pubsub v0.1.0
 	github.com/pkg/errors v0.8.1
-	github.com/quorumcontrol/chaintree v0.0.0-20190628000000-b70655f124a85dd1f698bb22ee36b77e16893380
-	github.com/quorumcontrol/community v0.0.0-20190628000000-251c65eeb68725c0a9f55c7be2203955e4323245
+	github.com/quorumcontrol/chaintree v0.0.0-20190628111909-7fcc00a16764
+	github.com/quorumcontrol/community v0.0.1
 	github.com/quorumcontrol/messages/build/go v0.0.0-20190604083406-7ee8fa6b39eb
-	github.com/quorumcontrol/storage v0.0.0-20190628000000-71102a21e424195893b1090e7cf4867ad64bdeca
-	github.com/quorumcontrol/tupelo-go-sdk v0.0.0-20190628000000-70ec450fd51042f39d2edb07808652559f45714f
+	github.com/quorumcontrol/storage v1.1.4
+	github.com/quorumcontrol/tupelo-go-sdk v0.4.1
 	github.com/shibukawa/configdir v0.0.0-20170330084843-e180dbdc8da0
 	github.com/sirupsen/logrus v1.4.2 // indirect
 	github.com/spf13/cobra v0.0.5
