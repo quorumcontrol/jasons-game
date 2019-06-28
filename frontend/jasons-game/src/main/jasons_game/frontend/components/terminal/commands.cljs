@@ -31,20 +31,16 @@
     (.setCommand CommandMapping
                  commands new-command-name command-fn {})))
 
+(defn empty-mapping []
+  (.create CommandMapping))
+
+(defn add-all [mapping commands]
+  (if (empty? commands)
+    mapping
+    (recur (add-command mapping (first commands))
+           (rest commands))))
+
 (def default-mapping
-  (-> (.create CommandMapping)
-      (add-command "call")
-      (add-command "create")
-      (add-command "connect")
-      (add-command "set")
-      (add-command "go")
-      (add-command "build")
-      (add-command "exit")
-      (add-command "say")
-      (add-command "shout")
-      (add-command "drop")
-      (add-command "pick")
-      (add-command "look")
-      (add-command "help")
-      (add-command "open")
-      (add-command "refresh")))
+  (add-all (empty-mapping) ["call" "create" "connect" "set" "go" "build" "exit"
+                            "say" "shout" "drop" "pick" "look" "help" "open"
+                            "refresh"]))

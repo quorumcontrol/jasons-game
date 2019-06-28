@@ -64,7 +64,7 @@
         (let [game-msg (-> msg
                            resp->message
                            (assoc :user false))]
-          (re-frame/dispatch [:user-message game-msg]))))))
+          (re-frame/dispatch [:user/message game-msg]))))))
 
 (defn handle-command-update [resp]
   (let [msg (.getCommandUpdate resp)]))
