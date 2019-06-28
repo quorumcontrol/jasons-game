@@ -107,6 +107,17 @@ func (us *UIServer) Receive(actorCtx actor.Context) {
 		us.stream = msg.Stream
 		us.doneChan = msg.DoneChan
 		actorCtx.Send(actorCtx.Self(), &jasonsgame.MessageToUser{Message: "missed you while you were gone"})
+
+		if us.game != nil {
+			cmdUpdate := &jasonsgame.CommandUpdate{}
+			fut := actorCtx.RequestFuture(us.game, cmdUpdate, 5*time.Second)
+			res, err := fut.Result()
+			if err != nil {
+				log.Errorf("error waiting for future: %v", err)
+			}
+			log.Debugf("received response from game: %v", res)
+		}
+
 	case *jasonsgame.MessageToUser:
 		actorCtx.SetReceiveTimeout(5 * time.Second)
 		log.Debugf("message to user: %s", msg.Message)

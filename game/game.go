@@ -54,6 +54,8 @@ func (g *Game) Receive(actorCtx actor.Context) {
 		g.initialize(actorCtx)
 	case *jasonsgame.UserInput:
 		g.handleUserInput(actorCtx, msg)
+	case *jasonsgame.CommandUpdate:
+		g.sendCommandUpdate(actorCtx)
 	case *jasonsgame.ChatMessage, *jasonsgame.ShoutMessage:
 		g.sendUserMessage(actorCtx, msg)
 	case *ping:
@@ -493,6 +495,17 @@ func (g *Game) sendUserMessage(actorCtx actor.Context, mesgInter interface{}) {
 	g.messageSequence++
 }
 
+func (g *Game) sendCommandUpdate(actorCtx actor.Context) {
+	parsedCommands := make([]string, len(g.commands))
+	for i, c := range g.commands {
+		parsedCommands[i] = c.Parse()
+	}
+
+	cmdUpdate := &jasonsgame.CommandUpdate{Commands: parsedCommands}
+
+	actorCtx.Send(g.ui, cmdUpdate)
+}
+
 func (g *Game) setLocation(actorCtx actor.Context, locationDid string) {
 	if g.locationActor != nil {
 		actorCtx.Stop(g.locationActor)
@@ -519,6 +532,7 @@ func (g *Game) setLocation(actorCtx actor.Context, locationDid string) {
 
 func (g *Game) setCommands(actorCtx actor.Context, newCommands commandList) {
 	g.commands = newCommands
+	g.sendCommandUpdate(actorCtx)
 }
 
 func (g *Game) refreshInteractions(actorCtx actor.Context) error {

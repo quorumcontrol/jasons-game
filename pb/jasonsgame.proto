@@ -15,11 +15,8 @@ message MessageToUser {
 }
 
 message CommandUpdate {
-    string command = 1;
-    repeated string args = 2;
-    Location location = 3;
-    uint64 sequence = 4;
-    bool heartbeat = 5;
+    repeated string commands = 1;
+    Location location = 2;
 }
 
 message Stats {

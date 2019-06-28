@@ -41,6 +41,4 @@
            (rest commands))))
 
 (def default-mapping
-  (add-all (empty-mapping) ["call" "create" "connect" "set" "go" "build" "exit"
-                            "say" "shout" "drop" "pick" "look" "help" "open"
-                            "refresh"]))
+  (empty-mapping))
