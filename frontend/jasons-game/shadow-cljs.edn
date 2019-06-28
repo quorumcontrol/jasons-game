@@ -19,9 +19,9 @@
                  :modules    {:base {:entries [jasons-game.frontend.app]}}
                  :output-dir "public/js/compiled"
                  :asset-path "/js/compiled"
-                 :dev        {:compiler-options {:closure-defines {jasons-game.frontend.events.dev-host "http://localhost:8080"
-                                                                   re_frame.trace.trace_enabled?        true
-                                                                   day8.re-frame.tracing.trace-enabled? true}}}
+                 :dev        {:compiler-options {:closure-defines {jasons-game.frontend.remote/dev-host "http://localhost:8080"
+                                                                   re_frame.trace/trace_enabled?        true
+                                                                   day8.re-frame.tracing/trace-enabled? true}}}
                  :devtools   {:http-root    "public"
                               :http-handler shadow.http.push-state/handle
                               :http-port    8280

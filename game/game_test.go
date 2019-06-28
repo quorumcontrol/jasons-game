@@ -27,6 +27,17 @@ func setupUiAndGame(t *testing.T, stream *ui.TestStream, net network.Network) (s
 	return simulatedUI, game
 }
 
+func filterUserMessages(t *testing.T, msgs []*jasonsgame.UserInterfaceMessage) []*jasonsgame.MessageToUser {
+	usrMsgs := make([]*jasonsgame.MessageToUser, 0)
+	for _, m := range msgs {
+		if um := m.GetUserMessage(); um != nil {
+			usrMsgs = append(usrMsgs, um)
+		}
+	}
+
+	return usrMsgs
+}
+
 func TestNavigation(t *testing.T) {
 	net := network.NewLocalNetwork()
 	stream := ui.NewTestStream()
@@ -41,14 +52,19 @@ func TestNavigation(t *testing.T) {
 	rootCtx.Send(game, &jasonsgame.UserInput{Message: fmt.Sprintf("connect location %s as enter dungeon", someTree.MustId())})
 	time.Sleep(100 * time.Millisecond)
 	msgs := stream.GetMessages()
-	require.Len(t, msgs, 3)
+
+	usrMsgs := filterUserMessages(t, msgs)
+
+	require.Len(t, usrMsgs, 3)
 
 	rootCtx.Send(game, &jasonsgame.UserInput{Message: "enter dungeon"})
 	time.Sleep(100 * time.Millisecond)
 	msgs = stream.GetMessages()
 
-	require.Len(t, msgs, 4)
-	assert.NotNil(t, msgs[3].GetLocation())
+	usrMsgs = filterUserMessages(t, msgs)
+
+	require.Len(t, usrMsgs, 4)
+	assert.NotNil(t, usrMsgs[3].GetLocation())
 }
 
 func TestSetDescription(t *testing.T) {
@@ -66,8 +82,10 @@ func TestSetDescription(t *testing.T) {
 
 	respondedWithDescription := false
 	for _, msg := range stream.GetMessages() {
-		if strings.Contains(msg.Message, newDescription) {
-			respondedWithDescription = true
+		if userMessage := msg.GetUserMessage(); userMessage != nil {
+			if strings.Contains(msg.GetUserMessage().Message, newDescription) {
+				respondedWithDescription = true
+			}
 		}
 	}
 	require.True(t, respondedWithDescription)
@@ -128,7 +146,7 @@ func TestBuildPortal(t *testing.T) {
 
 	respondedWithPortal := false
 	for _, msg := range stream.GetMessages() {
-		if strings.Contains(msg.Message, did) {
+		if strings.Contains(msg.GetUserMessage().Message, did) {
 			respondedWithPortal = true
 		}
 	}
@@ -151,7 +169,7 @@ func TestGoThroughPortal(t *testing.T) {
 	require.Nil(t, err)
 
 	did := remoteTree.MustId()
-	rootCtx.Send(game, &jasonsgame.UserInput{Message: "build portal to " + did})
+	rootCtx.Send(game, &jasonsgame.UserInput{Message: "build portal to" + did})
 	time.Sleep(100 * time.Millisecond)
 
 	err = stream.ClearMessages()
@@ -161,5 +179,5 @@ func TestGoThroughPortal(t *testing.T) {
 
 	msgs := stream.GetMessages()
 	lastMsg := msgs[len(msgs)-1]
-	assert.Equal(t, remoteDescription, lastMsg.Message)
+	assert.Equal(t, remoteDescription, lastMsg.GetUserMessage().Message)
 }

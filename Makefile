@@ -25,7 +25,7 @@ $(FIRSTGOPATH)/bin/protoc-go-inject-tag:
 
 $(generated): $(FIRSTGOPATH)/bin/protoc-gen-go $(FIRSTGOPATH)/bin/protoc-go-inject-tag $(jsmodules)
 	./scripts/protogen.sh
-	
+
 $(jsmodules):
 	cd frontend/jasons-game && npm install
 

@@ -9,6 +9,7 @@ require (
 	github.com/gobuffalo/genny v0.1.1 // indirect
 	github.com/gobuffalo/gogen v0.1.1 // indirect
 	github.com/gobuffalo/packr/v2 v2.2.0
+	github.com/gogo/protobuf v1.2.1
 	github.com/golang/protobuf v1.3.1
 	github.com/gorilla/mux v1.7.1
 	github.com/improbable-eng/grpc-web v0.9.5
@@ -43,6 +44,7 @@ require (
 	github.com/stretchr/testify v1.3.0
 	github.com/zserge/webview v0.0.0-20190123072648-16c93bcaeaeb
 	golang.org/x/crypto v0.0.0-20190618222545-ea8f1a30c443
+	golang.org/x/net v0.0.0-20190620200207-3b0461eec859
 	golang.org/x/tools v0.0.0-20190523174634-38d8bcfa38af // indirect
 	google.golang.org/genproto v0.0.0-20190418145605-e7d98fc518a7 // indirect
 	google.golang.org/grpc v1.20.0

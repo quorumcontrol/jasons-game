@@ -68,7 +68,7 @@ func (gs *GameServer) SendCommand(ctx context.Context, inp *jasonsgame.UserInput
 	return res.(*jasonsgame.CommandReceived), nil
 }
 
-func (gs *GameServer) ReceiveUserMessages(sess *jasonsgame.Session, stream jasonsgame.GameService_ReceiveUserMessagesServer) error {
+func (gs *GameServer) ReceiveUIMessages(sess *jasonsgame.Session, stream jasonsgame.GameService_ReceiveUIMessagesServer) error {
 	log.Debugf("receive user messages %v", sess)
 
 	act := gs.getOrCreateSession(sess, stream)
@@ -84,7 +84,7 @@ func (gs *GameServer) ReceiveStatMessages(sess *jasonsgame.Session, stream jason
 	return nil
 }
 
-func (gs *GameServer) getOrCreateSession(sess *jasonsgame.Session, stream jasonsgame.GameService_ReceiveUserMessagesServer) *actor.PID {
+func (gs *GameServer) getOrCreateSession(sess *jasonsgame.Session, stream jasonsgame.GameService_ReceiveUIMessagesServer) *actor.PID {
 	uiActor, ok := gs.sessions[sess.Uuid]
 	if !ok {
 		// use filepath.Base as a "cleaner" here to not allow setting arbitrary directors with, for example, uuid: "../../etc/passwd"

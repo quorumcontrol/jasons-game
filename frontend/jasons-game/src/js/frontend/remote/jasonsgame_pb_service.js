@@ -19,13 +19,13 @@ GameService.SendCommand = {
   responseType: jasonsgame_pb.CommandReceived
 };
 
-GameService.ReceiveUserMessages = {
-  methodName: "ReceiveUserMessages",
+GameService.ReceiveUIMessages = {
+  methodName: "ReceiveUIMessages",
   service: GameService,
   requestStream: false,
   responseStream: true,
   requestType: jasonsgame_pb.Session,
-  responseType: jasonsgame_pb.MessageToUser
+  responseType: jasonsgame_pb.UserInterfaceMessage
 };
 
 GameService.ReceiveStatMessages = {
@@ -75,13 +75,13 @@ GameServiceClient.prototype.sendCommand = function sendCommand(requestMessage, m
   };
 };
 
-GameServiceClient.prototype.receiveUserMessages = function receiveUserMessages(requestMessage, metadata) {
+GameServiceClient.prototype.receiveUIMessages = function receiveUIMessages(requestMessage, metadata) {
   var listeners = {
     data: [],
     end: [],
     status: []
   };
-  var client = grpc.invoke(GameService.ReceiveUserMessages, {
+  var client = grpc.invoke(GameService.ReceiveUIMessages, {
     request: requestMessage,
     host: this.serviceHost,
     metadata: metadata,
