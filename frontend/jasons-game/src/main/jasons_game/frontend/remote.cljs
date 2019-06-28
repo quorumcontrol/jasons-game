@@ -22,6 +22,16 @@
 (def ui-message-types
   (-> game-lib/UserInterfaceMessage .-UiMessageCase js->clj keywordize-keys))
 
+(defn user-message? [msg]
+  (-> msg
+      .getUiMessageCase
+      (= (:USER_MESSAGE ui-message-types))))
+
+(defn command-update? [msg]
+  (-> msg
+      .getUiMessageCase
+      (= (:COMMAND_UPDATE ui-message-types))))
+
 (defn new-session [id]
   (doto (game-lib/Session.)
     (.setUuid id)))
@@ -47,23 +57,23 @@
       keywordize-keys))
 
 (defn handle-user-message [resp]
-  (if (not (.getHeartbeat resp))
+  (let [msg (.getUserMessage resp)]
+    (if (not (.getHeartbeat msg))
       (do
-        (.log js/console "game message" (.toObject resp))
-        (let [game-msg (-> resp
+        (.log js/console "user message" (.toObject msg))
+        (let [game-msg (-> msg
                            resp->message
                            (assoc :user false))]
-          (re-frame/dispatch [:game-message game-msg])))))
+          (re-frame/dispatch [:user-message game-msg]))))))
 
-(defn handle-command-update [resp])
+(defn handle-command-update [resp]
+  (let [msg (.getCommandUpdate resp)]))
 
 (defn handle-game-message [resp]
   (let [msg-type (.getUiMessageCase resp)]
-    (.log js/console (str "ui-message-types ==" ui-message-types))
     (cond
-      (= msg-type (:USER_MESSAGE ui-message-types)) (-> resp
-                                                        .getUserMessage
-                                                        handle-user-message)
+      (user-message? resp) (handle-user-message resp)
+      (command-update? resp) (handle-command-update resp)
       :default (.log js/console "unrecognized message type" msg-type))))
 
 (defn handle-game-end [resp]

@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/AsynkronIT/protoactor-go/actor"
+	cid "github.com/ipfs/go-cid"
 	logging "github.com/ipfs/go-log"
 	"github.com/pkg/errors"
 
@@ -54,7 +55,7 @@ func (g *Game) Receive(actorCtx actor.Context) {
 	case *jasonsgame.UserInput:
 		g.handleUserInput(actorCtx, msg)
 	case *jasonsgame.ChatMessage, *jasonsgame.ShoutMessage:
-		g.sendUIMessage(actorCtx, msg)
+		g.sendUserMessage(actorCtx, msg)
 	case *ping:
 		actorCtx.Respond(true)
 	default:
@@ -74,7 +75,7 @@ func (g *Game) initialize(actorCtx actor.Context) {
 
 	g.setLocation(actorCtx, g.playerTree.HomeLocation.MustId())
 
-	g.sendUIMessage(
+	g.sendUserMessage(
 		actorCtx,
 		fmt.Sprintf("Created Player %s \n( %s )\nHome: %s \n( %s )",
 			g.playerTree.Did(),
@@ -89,7 +90,7 @@ func (g *Game) initialize(actorCtx actor.Context) {
 		panic(err)
 	}
 
-	g.sendUIMessage(actorCtx, l)
+	g.sendUserMessage(actorCtx, l)
 }
 
 func (g *Game) handleUserInput(actorCtx actor.Context, input *jasonsgame.UserInput) {
@@ -101,7 +102,7 @@ func (g *Game) handleUserInput(actorCtx actor.Context, input *jasonsgame.UserInp
 
 	cmd, args := g.commands.findCommand(input.Message)
 	if cmd == nil {
-		g.sendUIMessage(actorCtx, "I'm sorry I don't understand.")
+		g.sendUserMessage(actorCtx, "I'm sorry I don't understand.")
 		return
 	}
 
@@ -109,7 +110,7 @@ func (g *Game) handleUserInput(actorCtx actor.Context, input *jasonsgame.UserInp
 	log.Debugf("received command %v", cmd.Name())
 	switch cmd.Name() {
 	case "exit":
-		g.sendUIMessage(actorCtx, "exit is unsupported in the browser")
+		g.sendUserMessage(actorCtx, "exit is unsupported in the browser")
 	case "set-description":
 		err = g.handleSetDescription(actorCtx, args)
 	case "tip-zoom":
@@ -135,9 +136,9 @@ func (g *Game) handleUserInput(actorCtx actor.Context, input *jasonsgame.UserInp
 	case "connect-location":
 		err = g.handleConnectLocation(actorCtx, args)
 	case "help":
-		g.sendUIMessage(actorCtx, "available commands:")
+		g.sendUserMessage(actorCtx, "available commands:")
 		for _, c := range g.commands {
-			g.sendUIMessage(actorCtx, c.Parse())
+			g.sendUserMessage(actorCtx, c.Parse())
 		}
 	case "name":
 		err = g.handleName(args)
@@ -147,7 +148,7 @@ func (g *Game) handleUserInput(actorCtx actor.Context, input *jasonsgame.UserInp
 		log.Error("unhandled but matched command", cmd.Name())
 	}
 	if err != nil {
-		g.sendUIMessage(actorCtx, fmt.Sprintf("error with your command: %v", err))
+		g.sendUserMessage(actorCtx, fmt.Sprintf("error with your command: %v", err))
 	}
 }
 
@@ -173,14 +174,14 @@ func (g *Game) handleBuildPortal(actorCtx actor.Context, toDid string) error {
 		log.Errorf("error refreshing interactions: %v", err)
 	}
 
-	g.sendUIMessage(actorCtx, fmt.Sprintf("successfully built a portal to %s", toDid))
+	g.sendUserMessage(actorCtx, fmt.Sprintf("successfully built a portal to %s", toDid))
 	return nil
 }
 
 func (g *Game) handleTipZoom(actorCtx actor.Context, tip string) error {
 	tipCid, err := cid.Parse(tip)
 	if err != nil {
-		g.sendUIMessage(actorCtx, fmt.Sprintf("error parsing tip (%s): %v", tip, err))
+		g.sendUserMessage(actorCtx, fmt.Sprintf("error parsing tip (%s): %v", tip, err))
 		return errors.Wrap(err, fmt.Sprintf("error parsing tip (%s)", tip))
 	}
 	tree, err := g.network.GetTreeByTip(tipCid)
@@ -215,7 +216,7 @@ func (g *Game) handleInteractionInput(actorCtx actor.Context, cmd *interactionCo
 
 	switch interaction := cmd.interaction.(type) {
 	case *RespondInteraction:
-		g.sendUIMessage(actorCtx, interaction.Response)
+		g.sendUserMessage(actorCtx, interaction.Response)
 	case *ChangeLocationInteraction:
 		g.setLocation(actorCtx, interaction.Did)
 		g.sendUILocation(actorCtx)
@@ -226,7 +227,7 @@ func (g *Game) handleInteractionInput(actorCtx actor.Context, cmd *interactionCo
 	case *GetTreeValueInteraction:
 		err = g.handleGetTreeValueInteraction(actorCtx, interaction)
 	default:
-		g.sendUIMessage(actorCtx, fmt.Sprintf("no interaction matching %s, type %v", cmd.Parse(), reflect.TypeOf(interaction)))
+		g.sendUserMessage(actorCtx, fmt.Sprintf("no interaction matching %s, type %v", cmd.Parse(), reflect.TypeOf(interaction)))
 	}
 
 	return err
@@ -251,7 +252,7 @@ func (g *Game) handleGetTreeValueInteraction(actorCtx actor.Context, interaction
 		return errors.Wrap(err, fmt.Sprintf("error fetching value for %v", pathSlice))
 	}
 
-	g.sendUIMessage(actorCtx, value)
+	g.sendUserMessage(actorCtx, value)
 	return nil
 }
 
@@ -279,7 +280,7 @@ func (g *Game) handleDropObject(actorCtx actor.Context, interaction *DropObjectI
 		log.Errorf("error refreshing interactions: %v", err)
 	}
 
-	g.sendUIMessage(actorCtx, "object has been dropped into your current location")
+	g.sendUserMessage(actorCtx, "object has been dropped into your current location")
 	return nil
 }
 
@@ -307,7 +308,7 @@ func (g *Game) handlePickUpObject(actorCtx actor.Context, interaction *PickUpObj
 		log.Errorf("error refreshing interactions: %v", err)
 	}
 
-	g.sendUIMessage(actorCtx, "object has been picked up")
+	g.sendUserMessage(actorCtx, "object has been picked up")
 	return nil
 }
 
@@ -332,7 +333,7 @@ func (g *Game) handleCreateObject(actorCtx actor.Context, args string) error {
 		log.Errorf("error refreshing interactions: %v", err)
 	}
 
-	g.sendUIMessage(actorCtx, fmt.Sprintf("%s has been created with DID %s and is in your bag of hodling", objName, newObject.Object.Did))
+	g.sendUserMessage(actorCtx, fmt.Sprintf("%s has been created with DID %s and is in your bag of hodling", objName, newObject.Object.Did))
 	return nil
 }
 
@@ -347,13 +348,13 @@ func (g *Game) handlePlayerInventoryList(actorCtx actor.Context) error {
 	}
 
 	if len(inventoryList.Objects) == 0 {
-		g.sendUIMessage(actorCtx, "your bag of hodling appears to be empty")
+		g.sendUserMessage(actorCtx, "your bag of hodling appears to be empty")
 		return nil
 	}
 
-	g.sendUIMessage(actorCtx, "inside of your bag of hodling you find:")
+	g.sendUserMessage(actorCtx, "inside of your bag of hodling you find:")
 	for objName, obj := range inventoryList.Objects {
-		g.sendUIMessage(actorCtx, fmt.Sprintf("%s (%s)", objName, obj.Did))
+		g.sendUserMessage(actorCtx, fmt.Sprintf("%s (%s)", objName, obj.Did))
 	}
 	return nil
 }
@@ -377,19 +378,19 @@ func (g *Game) handleLocationInventoryList(actorCtx actor.Context) error {
 
 	if len(inventoryList.Objects) > 0 {
 		sawSomething = true
-		g.sendUIMessage(actorCtx, "you see the following objects around you:")
+		g.sendUserMessage(actorCtx, "you see the following objects around you:")
 		for objName, obj := range inventoryList.Objects {
-			g.sendUIMessage(actorCtx, fmt.Sprintf("%s (%s)", objName, obj.Did))
+			g.sendUserMessage(actorCtx, fmt.Sprintf("%s (%s)", objName, obj.Did))
 		}
 	}
 
 	if l.Portal != nil {
 		sawSomething = true
-		g.sendUIMessage(actorCtx, fmt.Sprintf("you see a mysterious portal leading to %s", l.Portal.To))
+		g.sendUserMessage(actorCtx, fmt.Sprintf("you see a mysterious portal leading to %s", l.Portal.To))
 	}
 
 	if !sawSomething {
-		g.sendUIMessage(actorCtx, "you look around but don't see anything")
+		g.sendUserMessage(actorCtx, "you look around but don't see anything")
 	}
 	return nil
 }
@@ -400,7 +401,7 @@ func (g *Game) handleCreateLocation(actorCtx actor.Context, args string) error {
 		return err
 	}
 
-	g.sendUIMessage(actorCtx, "new location created "+newLocation.MustId())
+	g.sendUserMessage(actorCtx, "new location created "+newLocation.MustId())
 	return nil
 }
 
@@ -457,7 +458,7 @@ func (g *Game) handleConnectLocation(actorCtx actor.Context, args string) error 
 		log.Errorf("error refreshing interactions: %v", err)
 	}
 
-	g.sendUIMessage(actorCtx, fmt.Sprintf("added a connection to %s as %s", toDid, interactionCommand))
+	g.sendUserMessage(actorCtx, fmt.Sprintf("added a connection to %s as %s", toDid, interactionCommand))
 	return nil
 }
 
@@ -465,13 +466,13 @@ func (g *Game) sendUILocation(actorCtx actor.Context) {
 	l, err := g.getCurrentLocation(actorCtx)
 
 	if err != nil {
-		g.sendUIMessage(actorCtx, fmt.Errorf("error getting current location: %v", err))
+		g.sendUserMessage(actorCtx, fmt.Errorf("error getting current location: %v", err))
 	}
 
-	g.sendUIMessage(actorCtx, l)
+	g.sendUserMessage(actorCtx, l)
 }
 
-func (g *Game) sendUIMessage(actorCtx actor.Context, mesgInter interface{}) {
+func (g *Game) sendUserMessage(actorCtx actor.Context, mesgInter interface{}) {
 	msgToUser := &jasonsgame.MessageToUser{
 		Sequence: g.messageSequence,
 	}

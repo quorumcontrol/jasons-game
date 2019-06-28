@@ -17,7 +17,7 @@
     :dispatch [::terminal/disable-input]}))
 
 (re-frame/reg-event-fx
- :game-message
+ :user-message
  (fn [{:keys [db]} [_ message-to-user]]
    {:db (update db ::terminal/state terminal/add-text-message message-to-user)
     :dispatch [::terminal/enable-input]}))
