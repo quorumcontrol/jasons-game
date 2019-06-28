@@ -27,9 +27,10 @@ func TestServiceActor(t *testing.T) {
 	}
 
 	received := make(chan *jasonsgame.ChatMessage, 1)
-	net.Community().Subscribe(topic, func(ctx context.Context, _ *messages.Envelope, msg proto.Message) {
+	_, err := net.Community().Subscribe(topic, func(ctx context.Context, _ *messages.Envelope, msg proto.Message) {
 		received <- msg.(*jasonsgame.ChatMessage)
 	})
+	require.Nil(t, err)
 
 	serviceDid, err := actorCtx.RequestFuture(pid, &GetServiceDid{}, 1 * time.Second).Result()
 	require.Nil(t, err)

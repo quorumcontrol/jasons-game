@@ -69,7 +69,7 @@ func (h *UnrestrictedRemoveHandler) Handle(msg proto.Message) error {
 			return fmt.Errorf("transfer to inventory %v is not supported", msg.To)
 		}
 
-		objectTree, err = h.network.ChangeChainTreeOwner(objectTree, targetAuths)
+		_, err = h.network.ChangeChainTreeOwner(objectTree, targetAuths)
 		if err != nil {
 			return fmt.Errorf("error changing object owner: %v", err)
 		}

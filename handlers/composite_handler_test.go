@@ -47,10 +47,12 @@ func TestCompositeHandler(t *testing.T) {
 	}
 
 	compositeHandler := NewCompositeHandler([]Handler{handler1, handler2})
-	compositeHandler.Handle(handler1Msg)
+	err := compositeHandler.Handle(handler1Msg)
+	require.Nil(t, err)
 	require.Equal(t, expected1, handler1Msg)
 	require.Nil(t, expected2)
 
-	compositeHandler.Handle(handler2Msg)
+	err = compositeHandler.Handle(handler2Msg)
+	require.Nil(t, err)
 	require.Equal(t, expected2, handler2Msg)
 }
