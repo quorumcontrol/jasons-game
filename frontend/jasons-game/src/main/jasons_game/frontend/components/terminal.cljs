@@ -42,6 +42,17 @@
       [:> ReactTerminalStateless {:emulatorState state
                                   :acceptInput (not read-only?)
                                   :inputStr @current-input
+                                  :theme  {:background "#141313"
+                                           :promptSymbolColor "#6effe6"
+                                           :commandColor "#fcfcfc"
+                                           :outputColor "#fcfcfc"
+                                           :errorOutputColor "#ff89bd"
+                                           :fontSize "1.1rem"
+                                           :spacing "1%"
+                                           :fontFamily "monospace"
+                                           :height "100vh"
+                                           :width "100vw"}
+                                  :promptSymbol "$ >"
                                   :onInputChange (fn [new-input]
                                                    (reset! current-input new-input))
                                   :onStateChange (fn [new-state]
