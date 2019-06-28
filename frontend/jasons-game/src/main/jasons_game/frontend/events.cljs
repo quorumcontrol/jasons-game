@@ -21,3 +21,8 @@
  (fn [{:keys [db]} [_ message-to-user]]
    {:db (update db ::terminal/state terminal/add-text-message message-to-user)
     :dispatch [::terminal/enable-input]}))
+
+(re-frame/reg-event-db
+ :command/update
+ (fn [db [_ command-update]]
+   (update db ::terminal/state terminal/update-commands command-update)))

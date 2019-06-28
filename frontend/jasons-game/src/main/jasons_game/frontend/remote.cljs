@@ -67,7 +67,11 @@
           (re-frame/dispatch [:user/message game-msg]))))))
 
 (defn handle-command-update [resp]
-  (let [msg (.getCommandUpdate resp)]))
+  (let [msg (.getCommandUpdate resp)]
+    (let [cmd-update (-> msg
+                         resp->message
+                         :commandsList)]
+      (re-frame/dispatch [:command/update cmd-update]))))
 
 (defn handle-game-message [resp]
   (let [msg-type (.getUiMessageCase resp)]

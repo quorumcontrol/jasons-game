@@ -1,6 +1,7 @@
 (ns jasons-game.frontend.components.terminal
   (:require [jasons-game.frontend.remote :as remote]
             [jasons-game.frontend.components.terminal.commands :as commands]
+            [clojure.string :as string]
             [reagent.core :as r]
             [re-frame.core :as re-frame]
             ["javascript-terminal" :as jsterm :refer [EmulatorState Outputs OutputFactory]]
@@ -27,6 +28,13 @@
         .getOutputs
         (add-output msg-output)
         (as-> new-outputs (.setOutputs state new-outputs)))))
+
+(defn update-commands [state commands]
+  (let [new-mapping (->> commands
+                         (map #(string/split % #" "))
+                         (map first)
+                         (commands/add-all (commands/empty-mapping)))]
+    (.setCommandMapping state new-mapping)))
 
 (defn show [state read-only?]
   (let [current-input (r/atom "")]
