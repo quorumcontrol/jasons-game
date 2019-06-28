@@ -228,6 +228,16 @@ func (g *Game) handleInteractionInput(actorCtx actor.Context, cmd *interactionCo
 		err = g.handlePickUpObject(actorCtx, interaction)
 	case *GetTreeValueInteraction:
 		err = g.handleGetTreeValueInteraction(actorCtx, interaction)
+	case *CipherInteraction:
+		nextInteraction, _, err := interaction.Unseal(args)
+		if err != nil {
+			return err
+		}
+		nextCmd := &interactionCommand{
+			parse:       nextInteraction.GetCommand(),
+			interaction: nextInteraction,
+		}
+		return g.handleInteractionInput(actorCtx, nextCmd, "")
 	default:
 		g.sendUserMessage(actorCtx, fmt.Sprintf("no interaction matching %s, type %v", cmd.Parse(), reflect.TypeOf(interaction)))
 	}
