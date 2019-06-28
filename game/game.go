@@ -546,23 +546,43 @@ func (g *Game) setCommands(actorCtx actor.Context, newCommands commandList) {
 }
 
 func (g *Game) refreshInteractions(actorCtx actor.Context) error {
-	newCommands := defaultCommandList
+	// FIXME: this is quick temporary hack to fix a race condition where
+	// help text isn't refreshed due to inventory transfers happening async
+	doIt := func() error {
+		newCommands := defaultCommandList
 
-	locationCommands, err := g.interactionCommandsFor(actorCtx, g.locationActor)
-	if err != nil {
-		return errors.Wrap(err, "location interactions")
+		locationCommands, err := g.interactionCommandsFor(actorCtx, g.locationActor)
+		if err != nil {
+			return errors.Wrap(err, "location interactions")
+		}
+		newCommands = append(newCommands, locationCommands...)
+
+		inventoryCommands, err := g.interactionCommandsFor(actorCtx, g.inventoryActor)
+		if err != nil {
+			return errors.Wrap(err, "inventory interactions")
+		}
+		newCommands = append(newCommands, inventoryCommands...)
+
+		g.setCommands(actorCtx, newCommands)
+		return nil
 	}
-	newCommands = append(newCommands, locationCommands...)
 
-	inventoryCommands, err := g.interactionCommandsFor(actorCtx, g.inventoryActor)
-	if err != nil {
-		return errors.Wrap(err, "inventory interactions")
-	}
-	newCommands = append(newCommands, inventoryCommands...)
+	go func() {
+		time.Sleep(1 * time.Second)
+		err := doIt()
+		if err != nil {
+			log.Error(err)
+		}
+		time.Sleep(10 * time.Second)
+		err = doIt()
+		if err != nil {
+			log.Error(err)
+		}
+	}()
 
-	g.setCommands(actorCtx, newCommands)
-	return nil
+	return doIt()
 }
+
 
 func (g *Game) interactionCommandsFor(actorCtx actor.Context, pid *actor.PID) (commandList, error) {
 	response, err := actorCtx.RequestFuture(pid, &ListInteractionsRequest{}, 5*time.Second).Result()
