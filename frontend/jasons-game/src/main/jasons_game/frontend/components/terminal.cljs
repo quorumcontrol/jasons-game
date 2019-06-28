@@ -52,7 +52,7 @@
                                            :fontFamily "monospace"
                                            :height "100vh"
                                            :width "100vw"}
-                                  :promptSymbol "$ > "
+                                  :promptSymbol "$ >"
                                   :onInputChange (fn [new-input]
                                                    (reset! current-input new-input))
                                   :onStateChange (fn [new-state]
