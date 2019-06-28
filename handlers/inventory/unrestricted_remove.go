@@ -16,7 +16,7 @@ type UnrestrictedRemoveHandler struct {
 }
 
 var UnrestrictedRemoveHandlerMessages = handlers.HandlerMessageList{
-	proto.MessageName((*jasonsgame.RequestTransferObjectMessage)(nil)),
+	proto.MessageName((*jasonsgame.RequestObjectTransferMessage)(nil)),
 }
 
 func NewUnrestrictedRemoveHandler(network network.Network) handlers.Handler {
@@ -27,7 +27,7 @@ func NewUnrestrictedRemoveHandler(network network.Network) handlers.Handler {
 
 func (h *UnrestrictedRemoveHandler) Handle(msg proto.Message) error {
 	switch msg := msg.(type) {
-	case *jasonsgame.RequestTransferObjectMessage:
+	case *jasonsgame.RequestObjectTransferMessage:
 		sourceInventory, err := trees.FindInventoryTree(h.network, msg.From)
 		if err != nil {
 			return fmt.Errorf("error fetching source chaintree: %v", err)

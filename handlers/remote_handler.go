@@ -28,6 +28,10 @@ func (h *RemoteHandler) SupportedMessages() []string {
 	return h.supportedMessages
 }
 
+func (h *RemoteHandler) Did() string {
+	return h.did
+}
+
 func FindHandlerForTree(net network.Network, did string) (*RemoteHandler, error) {
 	tree, err := net.GetTree(did)
 	if err != nil {

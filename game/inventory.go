@@ -9,19 +9,19 @@ import (
 	"github.com/quorumcontrol/tupelo-go-sdk/consensus"
 	"github.com/quorumcontrol/tupelo-go-sdk/gossip3/middleware"
 
+	"github.com/quorumcontrol/jasons-game/game/trees"
+	"github.com/quorumcontrol/jasons-game/handlers"
+	inventoryHandlers "github.com/quorumcontrol/jasons-game/handlers/inventory"
 	"github.com/quorumcontrol/jasons-game/network"
 	"github.com/quorumcontrol/jasons-game/pb/jasonsgame"
 )
-
-const ObjectsPath = "jasons-game/inventory"
-
-const inventoryTopicSuffix = "/inventory"
 
 type InventoryActor struct {
 	middleware.LogAwareHolder
 	did        string
 	network    network.Network
 	subscriber *actor.PID
+	handler    handlers.Handler
 }
 
 type InventoryActorConfig struct {
@@ -74,14 +74,10 @@ func NewInventoryActorProps(cfg *InventoryActorConfig) *actor.Props {
 	)
 }
 
-func (inv *InventoryActor) inventoryTopicFor(did string) []byte {
-	return inv.network.Community().TopicFor(did + inventoryTopicSuffix)
-}
-
 func (inv *InventoryActor) Receive(actorCtx actor.Context) {
 	switch msg := actorCtx.Message().(type) {
 	case *actor.Started:
-		inv.subscriber = actorCtx.Spawn(inv.network.Community().NewSubscriberProps(inv.inventoryTopicFor(inv.did)))
+		inv.initialize(actorCtx)
 	case *CreateObjectRequest:
 		inv.Log.Debugf("Received CreateObjectRequest: %+v\n", msg)
 		inv.handleCreateObject(actorCtx, msg)
@@ -90,12 +86,47 @@ func (inv *InventoryActor) Receive(actorCtx actor.Context) {
 		inv.handleTransferObject(actorCtx, msg)
 	case *jasonsgame.TransferredObjectMessage:
 		inv.Log.Debugf("Received TransferredObjectRequest: %+v\n", msg)
-		inv.handleTransferredObject(actorCtx, msg)
+		err := inventoryHandlers.NewUnrestrictedAddHandler(inv.network).Handle(msg)
+		if err != nil {
+			inv.Log.Errorf("Error on TransferredObjectMessage: %+v\n", err)
+		}
 	case *InventoryListRequest:
 		inv.Log.Debugf("Received InventoryListRequest: %+v\n", msg)
 		inv.handleListObjects(actorCtx, msg)
 	case *ListInteractionsRequest:
 		inv.handleListInteractionsRequest(actorCtx, msg)
+	}
+}
+
+func (inv *InventoryActor) initialize(actorCtx actor.Context) {
+	inventoryTree, err := trees.FindInventoryTree(inv.network, inv.did)
+	if err != nil {
+		panic(fmt.Sprintf("error finding inventory tree: %v", err))
+	}
+
+	inv.subscriber = actorCtx.Spawn(inv.network.Community().NewSubscriberProps(inventoryTree.BroadcastTopic()))
+	inv.handler = inv.pickHandler(actorCtx, inventoryTree)
+}
+
+func (inv *InventoryActor) pickHandler(actorCtx actor.Context, inventoryTree *trees.InventoryTree) handlers.Handler {
+	chaintreeHandler, err := handlers.FindHandlerForTree(inv.network, inventoryTree.MustId())
+	if err != nil {
+		panic(fmt.Sprintf("error finding handler for inventory: %v", err))
+	}
+	if chaintreeHandler != nil {
+		return chaintreeHandler
+	}
+
+	localKeyAddr := consensus.DidToAddr(consensus.EcdsaPubkeyToDid(*inv.network.PublicKey()))
+	isLocal, err := inventoryTree.IsOwnedBy([]string{localKeyAddr})
+	if err != nil {
+		panic(fmt.Sprintf("error check owner for inventory: %v", err))
+	}
+
+	if isLocal {
+		return inventoryHandlers.NewUnrestrictedRemoveHandler(inv.network)
+	} else {
+		return handlers.NewNoopHandler()
 	}
 }
 
@@ -119,7 +150,7 @@ func (inv *InventoryActor) handleCreateObject(context actor.Context, msg *Create
 		}
 	}
 
-	objectsPath, _ := consensus.DecodePath(ObjectsPath)
+	objectsPath, _ := consensus.DecodePath(trees.ObjectsPath)
 
 	newObjectPath := strings.Join(append(objectsPath, name), "/")
 
@@ -160,7 +191,7 @@ func (inv *InventoryActor) handleTransferObject(context actor.Context, msg *Tran
 		return
 	}
 
-	tree, err := inv.network.GetTree(inv.did)
+	sourceInventory, err := trees.FindInventoryTree(inv.network, inv.did)
 	if err != nil {
 		err = fmt.Errorf("error fetching source chaintree: %v", err)
 		inv.Log.Error(err)
@@ -168,95 +199,21 @@ func (inv *InventoryActor) handleTransferObject(context actor.Context, msg *Tran
 		return
 	}
 
-	treeObjectsPath, _ := consensus.DecodePath(fmt.Sprintf("tree/data/%s", ObjectsPath))
-
-	objectsUncasted, _, err := tree.ChainTree.Dag.Resolve(treeObjectsPath)
+	exists, err := sourceInventory.Exists(objectDid)
 	if err != nil {
-		err = fmt.Errorf("error fetching inventory: %v", err)
 		inv.Log.Error(err)
 		context.Respond(&TransferObjectResponse{Error: err})
 		return
 	}
 
-	if objectsUncasted == nil {
-		err = fmt.Errorf("the inventory is empty")
-		context.Respond(&TransferObjectResponse{Error: err})
-		return
-	}
-
-	var objectName string
-	objects := make(map[string]string, len(objectsUncasted.(map[string]interface{})))
-	for k, v := range objectsUncasted.(map[string]interface{}) {
-		objects[k] = v.(string)
-
-		if objectDid == objects[k] {
-			objectName = k
-		}
-	}
-
-	if objectName == "" {
-		err = fmt.Errorf("object %v is not in the inventory", objectDid)
-		context.Respond(&TransferObjectResponse{Error: err})
-		return
-	}
-
-	targetTree, err := inv.network.GetTree(msg.To)
-	if err != nil {
-		err = fmt.Errorf("error fetching target chaintree: %v", err)
+	if !exists {
+		err = fmt.Errorf("object %v does not exist in inventory", objectDid)
 		inv.Log.Error(err)
 		context.Respond(&TransferObjectResponse{Error: err})
 		return
 	}
 
-	targetAuthsUncasted, _, err := targetTree.ChainTree.Dag.Resolve(strings.Split("tree/"+consensus.TreePathForAuthentications, "/"))
-	if err != nil {
-		err = fmt.Errorf("error fetching target chaintree authentications %s; error: %v", msg.To, err)
-		inv.Log.Error(err)
-		context.Respond(&TransferObjectResponse{Error: err})
-		return
-	}
-
-	targetAuths := make([]string, len(targetAuthsUncasted.([]interface{})))
-	for k, v := range targetAuthsUncasted.([]interface{}) {
-		targetAuths[k] = v.(string)
-	}
-
-	sourceTree, err := inv.network.GetTree(inv.did)
-	if err != nil {
-		err = fmt.Errorf("error fetching source chaintree: %v", err)
-		inv.Log.Error(err)
-		context.Respond(&TransferObjectResponse{Error: err})
-		return
-	}
-
-	// TODO: remove me. Checks that you can only drop in your own location. Need global broadcast first
-	sourceAuthsUncasted, _, err := sourceTree.ChainTree.Dag.Resolve(strings.Split("tree/"+consensus.TreePathForAuthentications, "/"))
-	if err != nil {
-		err = fmt.Errorf("error fetching source chaintree authentications %s; error: %v", msg.To, err)
-		inv.Log.Error(err)
-		context.Respond(&TransferObjectResponse{Error: err})
-		return
-	}
-
-	sourceAuths := make([]string, len(sourceAuthsUncasted.([]interface{})))
-	for k, v := range sourceAuthsUncasted.([]interface{}) {
-		sourceAuths[k] = v.(string)
-	}
-
-	for _, storedKey := range targetAuths {
-		found := false
-		for _, checkKey := range sourceAuths {
-			found = found || storedKey == checkKey
-		}
-		if !found {
-			err = fmt.Errorf("WIP: objects can currently only be dropped & picked up in your own land")
-			context.Respond(&TransferObjectResponse{Error: err})
-			return
-		}
-	}
-	// END TODO
-
-	existingObj, err := inv.network.GetTree(objectDid)
+	_, err = FindObjectTree(inv.network, objectDid)
 	if err != nil {
 		err = fmt.Errorf("error fetching object chaintree %s: %v", objectDid, err)
 		inv.Log.Error(err)
@@ -264,35 +221,33 @@ func (inv *InventoryActor) handleTransferObject(context actor.Context, msg *Tran
 		return
 	}
 
-	if existingObj == nil {
-		err = fmt.Errorf("object %s does not exist", objectDid)
+	transferObjectMessage := &jasonsgame.RequestObjectTransferMessage{
+		From:   inv.did,
+		To:     msg.To,
+		Object: objectDid,
+	}
+	if !inv.handler.Supports(transferObjectMessage) {
+		err = fmt.Errorf("transfer from inventory %v is not supported", inv.did)
 		inv.Log.Error(err)
 		context.Respond(&TransferObjectResponse{Error: err})
 		return
 	}
 
-	existingObj, err = inv.network.ChangeChainTreeOwner(existingObj, targetAuths)
+	remoteTargetHandler, err := handlers.FindHandlerForTree(inv.network, msg.To)
 	if err != nil {
-		err = fmt.Errorf("error changing owner for object %s; error: %v", objectDid, err)
+		err = fmt.Errorf("error fetching handler for %v", msg.To)
+		inv.Log.Error(err)
+		context.Respond(&TransferObjectResponse{Error: err})
+		return
+	}
+	if remoteTargetHandler != nil && !remoteTargetHandler.Supports((*jasonsgame.TransferredObjectMessage)(nil)) {
+		err = fmt.Errorf("transfer to inventory %v is not supported", inv.did)
 		inv.Log.Error(err)
 		context.Respond(&TransferObjectResponse{Error: err})
 		return
 	}
 
-	if err := inv.network.Community().Send(inv.inventoryTopicFor(targetTree.MustId()), &jasonsgame.TransferredObjectMessage{
-		From:   sourceTree.MustId(),
-		To:     targetTree.MustId(),
-		Object: existingObj.MustId(),
-	}); err != nil {
-		inv.Log.Error(err)
-		return
-	}
-
-	delete(objects, objectName)
-
-	_, err = inv.network.UpdateChainTree(sourceTree, ObjectsPath, objects)
-	if err != nil {
-		err = fmt.Errorf("error updating objects in inventory: %v", err)
+	if err := inv.handler.Handle(transferObjectMessage); err != nil {
 		inv.Log.Error(err)
 		return
 	}
@@ -319,7 +274,7 @@ func (inv *InventoryActor) listObjects(context actor.Context) (map[string]*Objec
 		return nil, err
 	}
 
-	treeObjectsPath, _ := consensus.DecodePath(fmt.Sprintf("tree/data/%s", ObjectsPath))
+	treeObjectsPath, _ := consensus.DecodePath(fmt.Sprintf("tree/data/%s", trees.ObjectsPath))
 	objectsUncasted, _, err := tree.ChainTree.Dag.Resolve(treeObjectsPath)
 
 	if err != nil {
@@ -338,51 +293,6 @@ func (inv *InventoryActor) listObjects(context actor.Context) (map[string]*Objec
 	}
 
 	return objects, nil
-}
-
-func (inv *InventoryActor) handleTransferredObject(context actor.Context, msg *jasonsgame.TransferredObjectMessage) {
-	objDid := msg.Object
-
-	obj, err := FindObjectTree(inv.network, objDid)
-	if err != nil {
-		panic(fmt.Errorf("error fetching object %v: %v", objDid, err))
-	}
-
-	objName, err := obj.GetName()
-	if err != nil {
-		panic(fmt.Errorf("error fetching object name %v: %v", objDid, err))
-	}
-
-	tree, err := inv.network.GetTree(inv.did)
-	if err != nil {
-		panic(fmt.Errorf("error fetching source chaintree: %v", err))
-	}
-
-	treeObjectsPath, _ := consensus.DecodePath(fmt.Sprintf("tree/data/%s", ObjectsPath))
-	objectsUncasted, _, err := tree.ChainTree.Dag.Resolve(treeObjectsPath)
-	if err != nil {
-		panic(fmt.Errorf("error fetching inventory: %v", err))
-	}
-
-	if objectsUncasted == nil {
-		objectsUncasted = make(map[string]interface{})
-	}
-
-	objects := make(map[string]string, len(objectsUncasted.(map[string]interface{})))
-	for k, v := range objectsUncasted.(map[string]interface{}) {
-		objects[k] = v.(string)
-	}
-
-	if _, ok := objects[objName]; ok {
-		panic(fmt.Errorf("object with %v already exists in inventory", objName))
-	}
-
-	objects[objName] = objDid
-
-	_, err = inv.network.UpdateChainTree(tree, ObjectsPath, objects)
-	if err != nil {
-		panic(fmt.Errorf("error updating objects in chaintree: %v", err))
-	}
 }
 
 func (inv *InventoryActor) handleListInteractionsRequest(actorCtx actor.Context, msg *ListInteractionsRequest) {

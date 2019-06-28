@@ -59,6 +59,37 @@ func (l *LocationTree) InteractionsList() ([]Interaction, error) {
 	return l.interactionsListFromTree(l)
 }
 
+func (l *LocationTree) SetHandler(handlerDid string) error {
+	locationAuths, err := l.tree.Authentications()
+	if err != nil {
+		return errors.Wrap(err, "error fetching location auths")
+	}
+
+	handlerTree, err := l.network.GetTree(handlerDid)
+	if err != nil {
+		return errors.Wrap(err, "error fetching handler tree")
+	}
+
+	handlerAuths, err := handlerTree.Authentications()
+	if err != nil {
+		return errors.Wrap(err, "error fetching handler auths")
+	}
+
+	newTree, err := l.network.UpdateChainTree(l.tree, "jasons-game-handler", handlerDid)
+	if err != nil {
+		return errors.Wrap(err, "error setting new handler attr")
+	}
+	l.tree = newTree
+
+	newTree, err = l.network.ChangeChainTreeOwner(l.tree, append(locationAuths, handlerAuths...))
+	if err != nil {
+		return errors.Wrap(err, "error setting new handler auths")
+	}
+	l.tree = newTree
+
+	return nil
+}
+
 func (l *LocationTree) BuildPortal(toDid string) error {
 	currentPortal, err := l.GetPortal()
 

@@ -49,6 +49,7 @@ type Network interface {
 	GetTreeByTip(tip cid.Cid) (*consensus.SignedChainTree, error)
 	GetTree(did string) (*consensus.SignedChainTree, error)
 	UpdateChainTree(tree *consensus.SignedChainTree, path string, value interface{}) (*consensus.SignedChainTree, error)
+	PublicKey() *ecdsa.PublicKey
 	StartDiscovery(string) error
 	StopDiscovery(string)
 	WaitForDiscovery(ns string, num int, dur time.Duration) error
@@ -141,6 +142,10 @@ func NewRemoteNetwork(ctx context.Context, group *types.NotaryGroup, path string
 	log.Infof("connected to game bootstrappers")
 
 	return net, nil
+}
+
+func (rn *RemoteNetwork) PublicKey() *ecdsa.PublicKey {
+	return &rn.mustPrivateKey().PublicKey
 }
 
 func (rn *RemoteNetwork) RepublishAll() error {
