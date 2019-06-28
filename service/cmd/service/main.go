@@ -73,8 +73,14 @@ func main() {
 	rootCmd.Flags().BoolVar(&localNetworkFlag, "local", false, "should this use local tupelo/jason, defaults to false")
 	rootCmd.Flags().StringVar(&serviceName, "name", "defaultService", "uniquee name of this service")
 	rootCmd.Flags().StringArrayVar(&handlersFlag, "handlers", []string{}, "what handlers to use for this service")
-	rootCmd.MarkFlagRequired("handlers")
-	rootCmd.Execute()
+	err := rootCmd.MarkFlagRequired("handlers")
+	if err != nil {
+		panic(err)
+	}
+	err = rootCmd.Execute()
+	if err != nil {
+		panic(err)
+	}
 }
 
 func storageDirFor(name string) string {

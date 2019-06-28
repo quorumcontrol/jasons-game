@@ -54,9 +54,10 @@ func TestUnrestrictedRemoveHandler(t *testing.T) {
 
 	t.Run("without handler on target inventory", func(t *testing.T) {
 		received := make(chan *jasonsgame.TransferredObjectMessage, 1)
-		net.Community().Subscribe(toInventory.BroadcastTopic(), func(ctx context.Context, _ *messages.Envelope, msg proto.Message) {
+		_, err = net.Community().Subscribe(toInventory.BroadcastTopic(), func(ctx context.Context, _ *messages.Envelope, msg proto.Message) {
 			received <- msg.(*jasonsgame.TransferredObjectMessage)
 		})
+		require.Nil(t, err)
 
 		err = h.Handle(msg)
 		require.Nil(t, err)
@@ -82,9 +83,10 @@ func TestUnrestrictedRemoveHandler(t *testing.T) {
 		require.Nil(t, err)
 
 		received := make(chan *jasonsgame.TransferredObjectMessage, 1)
-		net.Community().Subscribe(net.Community().TopicFor(handlerTree.MustId()), func(ctx context.Context, _ *messages.Envelope, msg proto.Message) {
+		_, err =net.Community().Subscribe(net.Community().TopicFor(handlerTree.MustId()), func(ctx context.Context, _ *messages.Envelope, msg proto.Message) {
 			received <- msg.(*jasonsgame.TransferredObjectMessage)
 		})
+		require.Nil(t, err)
 
 		err = h.Handle(msg)
 		require.Nil(t, err)

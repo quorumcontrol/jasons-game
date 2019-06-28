@@ -36,7 +36,7 @@ func NewChatActorProps(cfg *ChatActorConfig) *actor.Props {
 }
 
 func (c *ChatActor) chatTopic() []byte {
-	return c.community.TopicFor(c.did)
+	return c.community.TopicFor(c.did + chatTopicSuffix)
 }
 
 func (c *ChatActor) Receive(actorCtx actor.Context) {
