@@ -8,7 +8,6 @@ import (
 	"time"
 
 	"github.com/AsynkronIT/protoactor-go/actor"
-	"github.com/ipfs/go-cid"
 	logging "github.com/ipfs/go-log"
 	"github.com/pkg/errors"
 
@@ -517,6 +516,10 @@ func (g *Game) setLocation(actorCtx actor.Context, locationDid string) {
 	}))
 }
 
+func (g *Game) setCommands(actorCtx actor.Context, newCommands commandList) {
+	g.commands = newCommands
+}
+
 func (g *Game) refreshInteractions(actorCtx actor.Context) error {
 	newCommands := defaultCommandList
 
@@ -532,7 +535,7 @@ func (g *Game) refreshInteractions(actorCtx actor.Context) error {
 	}
 	newCommands = append(newCommands, inventoryCommands...)
 
-	g.commands = newCommands
+	g.setCommands(actorCtx, newCommands)
 	return nil
 }
 
