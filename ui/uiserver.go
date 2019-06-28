@@ -68,18 +68,16 @@ type SetStream struct {
 }
 
 func buildUIMessage(msg proto.Message) (*jasonsgame.UserInterfaceMessage, error) {
-	switch msg.(type) {
+	switch msg := msg.(type) {
 	case *jasonsgame.MessageToUser:
-		userMsg := msg.(*jasonsgame.MessageToUser)
 		uiMsg := &jasonsgame.UserInterfaceMessage{
-			UiMessage: &jasonsgame.UserInterfaceMessage_UserMessage{userMsg},
+			UiMessage: &jasonsgame.UserInterfaceMessage_UserMessage{UserMessage: msg},
 		}
 
 		return uiMsg, nil
 	case *jasonsgame.CommandUpdate:
-		cmdUpdate := msg.(*jasonsgame.CommandUpdate)
 		uiMsg := &jasonsgame.UserInterfaceMessage{
-			UiMessage: &jasonsgame.UserInterfaceMessage_CommandUpdate{cmdUpdate},
+			UiMessage: &jasonsgame.UserInterfaceMessage_CommandUpdate{CommandUpdate: msg},
 		}
 		return uiMsg, nil
 	default:
