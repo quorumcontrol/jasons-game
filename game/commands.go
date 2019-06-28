@@ -21,7 +21,7 @@ var defaultCommandList = commandList{
 	newCommand("player-inventory-list", "look in bag"),
 	newCommand("location-inventory-list", "look around"),
 	newCommand("help", "help"),
-	newCommand("open-portal", "open-portal"),
+	newCommand("open-portal", "open portal"),
 	newCommand("refresh", "refresh"),
 }
 

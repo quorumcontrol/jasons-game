@@ -18,14 +18,12 @@ import (
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/quorumcontrol/jasons-game/network"
+	"github.com/quorumcontrol/jasons-game/pb/jasonsgame"
 	"github.com/quorumcontrol/jasons-game/ui"
 	"github.com/quorumcontrol/tupelo-go-sdk/bls"
 	"github.com/quorumcontrol/tupelo-go-sdk/gossip3/types"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"github.com/quorumcontrol/jasons-game/pb/jasonsgame"
-	
-
 )
 
 type publicKeySet struct {
@@ -81,10 +79,10 @@ func TestFullIntegration(t *testing.T) {
 	path := "/tmp/test-full-game"
 
 	err = os.RemoveAll(path)
-	require.Nil(t,err)
+	require.Nil(t, err)
 
 	err = os.MkdirAll(path, 0755)
-	require.Nil(t,err)
+	require.Nil(t, err)
 
 	defer os.RemoveAll(path)
 
@@ -106,10 +104,10 @@ func TestFullIntegration(t *testing.T) {
 	require.Nil(t, err)
 	defer rootCtx.Stop(gameActor)
 
-	readyFut := rootCtx.RequestFuture(gameActor, &ping{}, 15 * time.Second)
+	readyFut := rootCtx.RequestFuture(gameActor, &ping{}, 15*time.Second)
 	// wait on the game actor being ready
-	_,err = readyFut.Result()
-	require.Nil(t,err)
+	_, err = readyFut.Result()
+	require.Nil(t, err)
 
 	rootCtx.Send(gameActor, &jasonsgame.UserInput{Message: "north"})
 
@@ -118,6 +116,6 @@ func TestFullIntegration(t *testing.T) {
 	msgs := stream.GetMessages()
 
 	require.Len(t, msgs, 3)
-	assert.NotNil(t, msgs[1].Location)
-	assert.NotNil(t, msgs[2].Location)
+	assert.NotNil(t, msgs[1].GetUserMessage().Location)
+	assert.NotNil(t, msgs[2].GetUserMessage().Location)
 }

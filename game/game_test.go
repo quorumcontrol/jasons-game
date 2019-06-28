@@ -48,7 +48,7 @@ func TestNavigation(t *testing.T) {
 	msgs = stream.GetMessages()
 
 	require.Len(t, msgs, 4)
-	assert.NotNil(t, msgs[3].GetLocation())
+	assert.NotNil(t, msgs[3].GetUserMessage().GetLocation())
 }
 
 func TestSetDescription(t *testing.T) {
@@ -66,7 +66,7 @@ func TestSetDescription(t *testing.T) {
 
 	respondedWithDescription := false
 	for _, msg := range stream.GetMessages() {
-		if strings.Contains(msg.Message, newDescription) {
+		if strings.Contains(msg.GetUserMessage().Message, newDescription) {
 			respondedWithDescription = true
 		}
 	}
@@ -128,7 +128,7 @@ func TestBuildPortal(t *testing.T) {
 
 	respondedWithPortal := false
 	for _, msg := range stream.GetMessages() {
-		if strings.Contains(msg.Message, did) {
+		if strings.Contains(msg.GetUserMessage().Message, did) {
 			respondedWithPortal = true
 		}
 	}
@@ -161,5 +161,5 @@ func TestGoThroughPortal(t *testing.T) {
 
 	msgs := stream.GetMessages()
 	lastMsg := msgs[len(msgs)-1]
-	assert.Equal(t, remoteDescription, lastMsg.Message)
+	assert.Equal(t, remoteDescription, lastMsg.GetUserMessage().Message)
 }

@@ -111,7 +111,7 @@ func (us *UIServer) Receive(actorCtx actor.Context) {
 		actorCtx.SetReceiveTimeout(5 * time.Second)
 		log.Debugf("message to user: %s", msg.Message)
 		if us.stream == nil {
-			log.Errorf("no valid stream for %v", msg.Message)
+			log.Errorf("no valid stream for user message: %v", msg.Message)
 			return
 		}
 
@@ -129,9 +129,9 @@ func (us *UIServer) Receive(actorCtx actor.Context) {
 
 	case *jasonsgame.CommandUpdate:
 		actorCtx.SetReceiveTimeout(5 * time.Second)
-		log.Debugf("command update: %s", msg.Command)
+		log.Debugf("command update: %s", msg.Commands)
 		if us.stream == nil {
-			log.Errorf("no valid stream for %v", msg.Command)
+			log.Errorf("no valid stream for command update: %v", msg.Commands)
 			return
 		}
 
