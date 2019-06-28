@@ -18,16 +18,18 @@
 (defmulti dispatch-command
   (fn [command-name args] command-name))
 
-(defmethod dispatch-command :default [command-name arg-string]
-  (let [command (->> [command-name arg-string]
+(defmethod dispatch-command :default [command-name arg-list]
+  (let [command (->> arg-list
+                     js->clj
+                     (concat [command-name])
                      (string/join " ")
                      string/trim)]
     (re-frame/dispatch [:user/input command])
     {}))
 
 (defn add-command [commands new-command-name]
-  (let [command-fn (fn [_ arg-string]
-                     (dispatch-command new-command-name arg-string))]
+  (let [command-fn (fn [_ arg-list]
+                     (dispatch-command new-command-name arg-list))]
     (.setCommand CommandMapping
                  commands new-command-name command-fn {})))
 

@@ -11,7 +11,7 @@
 (defonce default-host
   (if dev-host
     dev-host
-    (-> js/window (.-location) (.-origin))))
+    (-> js/window .-location .-origin)))
 
 (def unary (.-unary grpc))
 (def invoke (.-invoke grpc))
