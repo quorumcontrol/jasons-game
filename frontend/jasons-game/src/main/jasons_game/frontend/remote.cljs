@@ -17,7 +17,7 @@
 (def invoke (.-invoke grpc))
 
 (def game-send-command (.-SendCommand GameService))
-(def game-receive-usermessages (.-ReceiveUIMessages GameService))
+(def game-receive-ui-messages (.-ReceiveUIMessages GameService))
 
 (def ui-message-cases
   (-> game-lib/UserInterfaceMessage .-UiMessageCase js->clj keywordize-keys))
@@ -49,7 +49,7 @@
                                        :onEnd callback}))))
 
 (defn start-game-listener [host session on-message on-end]
-  (invoke game-receive-usermessages (clj->js {:request session
+  (invoke game-receive-ui-messages (clj->js {:request session
                                               :host host
                                               :onMessage on-message
                                               :onEnd on-end})))
