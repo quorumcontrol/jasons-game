@@ -11,7 +11,6 @@ message MessageToUser {
     string message = 1;
     Location location = 2;
     uint64 sequence = 3;
-    bool heartbeat = 4;
 }
 
 message CommandUpdate {
@@ -19,15 +18,18 @@ message CommandUpdate {
     Location location = 2;
 }
 
+message Heartbeat {}
+
 message Stats {
     string message = 1;
 }
 
 message UserInterfaceMessage {
-  oneof ui_message {
-    MessageToUser user_message = 1;
-    CommandUpdate command_update = 2;
-  }
+    oneof ui_message {
+      MessageToUser user_message = 1;
+      CommandUpdate command_update = 2;
+      Heartbeat heartbeat = 3;
+    }
 }
 
 message Exit {};

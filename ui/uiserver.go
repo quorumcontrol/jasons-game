@@ -95,7 +95,7 @@ func (us *UIServer) Receive(actorCtx actor.Context) {
 			us.doneChan <- struct{}{}
 		}
 	case *actor.ReceiveTimeout:
-		actorCtx.Send(actorCtx.Self(), &jasonsgame.MessageToUser{Heartbeat: true})
+		actorCtx.Send(actorCtx.Self(), &jasonsgame.Heartbeat{})
 	case *SetGame:
 		us.game = msg.Game
 	case *SetStream:
