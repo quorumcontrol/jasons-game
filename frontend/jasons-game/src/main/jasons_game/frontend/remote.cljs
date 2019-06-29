@@ -92,9 +92,9 @@
   (.log js/console "game end, redoing" resp)
   (re-frame/dispatch [::listen]))
 
-(re-frame/reg-fx
+(re-frame/reg-event-db
  ::listen
- (fn [{:keys [host session]}]
+ (fn [{::keys [host session]} _]
    (let [req (start-game-listener host session
                                   handle-game-message handle-game-end)]
      (swap! app-db assoc ::current-listener req))))

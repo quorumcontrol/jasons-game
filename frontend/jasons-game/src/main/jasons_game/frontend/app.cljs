@@ -2,6 +2,7 @@
  (:require [reagent.core :as reagent]
            [re-frame.core :as re-frame]
            [jasons-game.frontend.db :as db]
+           [jasons-game.frontend.remote :as remote]
            [jasons-game.frontend.views :as views]
            [jasons-game.frontend.events :as events]))
 
@@ -12,5 +13,5 @@
 
 (defn ^:export init []
   (re-frame/dispatch-sync [::db/initialize])
-  (re-frame/dispatch [:initialize])
+  (re-frame/dispatch [::remote/listen])
   (mount-root))
