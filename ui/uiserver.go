@@ -80,6 +80,11 @@ func buildUIMessage(msg proto.Message) (*jasonsgame.UserInterfaceMessage, error)
 			UiMessage: &jasonsgame.UserInterfaceMessage_CommandUpdate{CommandUpdate: msg},
 		}
 		return uiMsg, nil
+	case *jasonsgame.Heartbeat:
+		uiMsg := &jasonsgame.UserInterfaceMessage{
+			UiMessage: &jasonsgame.UserInterfaceMessage_Heartbeat{Heartbeat: msg},
+		}
+		return uiMsg, nil
 	default:
 		return nil, fmt.Errorf("Unrecognized user interface message: %v", msg)
 	}
@@ -172,6 +177,25 @@ func (us *UIServer) Receive(actorCtx actor.Context) {
 			return
 		}
 		log.Debugf("user input has no game to go to %v", msg)
+	case *jasonsgame.Heartbeat:
+		actorCtx.SetReceiveTimeout(5 * time.Second)
+		log.Debugf("heartbeat: %s", msg)
+		if us.stream == nil {
+			log.Errorf("no valid stream for heartbeat: %v", msg)
+			return
+		}
+
+		uiMsg, err := buildUIMessage(msg)
+		if err != nil {
+			panic(err)
+		}
+
+		err = us.stream.Send(uiMsg)
+		if err != nil {
+			us.stream = nil
+			us.sendDone()
+			log.Errorf("error sending message to stream: %v", err)
+		}
 	default:
 		log.Debugf("received unknown message: %v (%s)", msg, reflect.TypeOf(msg).String())
 	}
