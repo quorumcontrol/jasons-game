@@ -19,18 +19,19 @@
 (def game-send-command (.-SendCommand GameService))
 (def game-receive-usermessages (.-ReceiveUIMessages GameService))
 
-(def ui-message-types
+(def ui-message-cases
   (-> game-lib/UserInterfaceMessage .-UiMessageCase js->clj keywordize-keys))
 
+(defn same-message-case? [msg case-key]
+  msg
+  .getUiMessageCase
+  (= (get ui-message-cases case-key)))
+
 (defn user-message? [msg]
-  (-> msg
-      .getUiMessageCase
-      (= (:USER_MESSAGE ui-message-types))))
+  (same-message-case? msg :USER_MESSAGE))
 
 (defn command-update? [msg]
-  (-> msg
-      .getUiMessageCase
-      (= (:COMMAND_UPDATE ui-message-types))))
+  (same-message-case? msg :COMMAND_UPDATE))
 
 (defn new-session [id]
   (doto (game-lib/Session.)
