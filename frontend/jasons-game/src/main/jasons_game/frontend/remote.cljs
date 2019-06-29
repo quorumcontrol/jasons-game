@@ -4,7 +4,8 @@
             [re-frame.db :refer [app-db]]
             ["@improbable-eng/grpc-web" :as grpc-lib :refer [grpc]]
             ["/frontend/remote/jasonsgame_pb" :as game-lib]
-            ["/frontend/remote/jasonsgame_pb_service" :as game-service :refer [GameService]]))
+            ["/frontend/remote/jasonsgame_pb_service"
+             :as game-service :refer [GameService]]))
 
 (goog-define dev-host false)
 
@@ -19,13 +20,14 @@
 (def game-send-command (.-SendCommand GameService))
 (def game-receive-ui-messages (.-ReceiveUIMessages GameService))
 
+
 (def ui-message-cases
   (-> game-lib/UserInterfaceMessage .-UiMessageCase js->clj keywordize-keys))
 
 (defn same-message-case? [msg case-key]
-  msg
-  .getUiMessageCase
-  (= (get ui-message-cases case-key)))
+  (-> msg
+      .getUiMessageCase
+      (= (get ui-message-cases case-key))))
 
 (defn user-message? [msg]
   (same-message-case? msg :USER_MESSAGE))
@@ -75,11 +77,15 @@
                          :commandsList)]
       (re-frame/dispatch [:command/update cmd-update]))))
 
+(defn handle-heartbeat [resp]
+  (.log js/console "received heartbeat message:" resp))
+
 (defn handle-game-message [resp]
   (let [msg-type (.getUiMessageCase resp)]
     (cond
       (user-message? resp) (handle-user-message resp)
       (command-update? resp) (handle-command-update resp)
+      (heartbeat? resp) (handle-heartbeat resp)
       :default (.log js/console "unrecognized message type" msg-type))))
 
 (defn handle-game-end [resp]
