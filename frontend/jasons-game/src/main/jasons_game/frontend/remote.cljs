@@ -33,6 +33,9 @@
 (defn command-update? [msg]
   (same-message-case? msg :COMMAND_UPDATE))
 
+(defn heartbeat? [msg]
+  (same-message-case? msg :HEARTBEAT))
+
 (defn new-session [id]
   (doto (game-lib/Session.)
     (.setUuid id)))
