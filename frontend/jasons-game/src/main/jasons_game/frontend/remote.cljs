@@ -2,6 +2,7 @@
   (:require [clojure.walk :refer [keywordize-keys]]
             [re-frame.core :as re-frame]
             [re-frame.db :refer [app-db]]
+            [jasons-game.frontend.components.terminal :as terminal]
             ["@improbable-eng/grpc-web" :as grpc-lib :refer [grpc]]
             ["/frontend/remote/jasonsgame_pb" :as game-lib]
             ["/frontend/remote/jasonsgame_pb_service"
@@ -68,7 +69,7 @@
     (let [game-msg (-> msg
                        resp->message
                        (assoc :user false))]
-      (re-frame/dispatch [:user/message game-msg]))))
+      (re-frame/dispatch [::terminal/display-message game-msg]))))
 
 (defn handle-command-update [resp]
   (let [msg (.getCommandUpdate resp)]

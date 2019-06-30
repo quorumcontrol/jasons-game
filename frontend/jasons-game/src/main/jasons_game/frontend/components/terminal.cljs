@@ -1,6 +1,5 @@
 (ns jasons-game.frontend.components.terminal
-  (:require [jasons-game.frontend.remote :as remote]
-            [jasons-game.frontend.components.terminal.commands :as commands]
+  (:require [jasons-game.frontend.components.terminal.commands :as commands]
             [clojure.string :as string]
             [reagent.core :as r]
             [re-frame.core :as re-frame]
@@ -83,3 +82,9 @@
  ::enable-input
  (fn [db _]
    (assoc db ::read-only? false)))
+
+(re-frame/reg-event-fx
+ ::display-message
+ (fn [{:keys [db]} [_ message-to-user]]
+   {:db (update db ::state add-text-message message-to-user)
+    :dispatch [::enable-input]}))

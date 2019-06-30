@@ -1,6 +1,5 @@
 (ns jasons-game.frontend.components.terminal.commands
-  (:require [jasons-game.frontend.remote :as remote]
-            [clojure.string :as string]
+  (:require [clojure.string :as string]
             [clojure.walk :refer [keywordize-keys]]
             [reagent.core :as r]
             [re-frame.core :as re-frame]

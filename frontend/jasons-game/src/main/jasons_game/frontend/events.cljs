@@ -11,12 +11,6 @@
    {::remote/send-input {:host host, :session session, :command user-command}
     :dispatch [::terminal/disable-input]}))
 
-(re-frame/reg-event-fx
- :user/message
- (fn [{:keys [db]} [_ message-to-user]]
-   {:db (update db ::terminal/state terminal/add-text-message message-to-user)
-    :dispatch [::terminal/enable-input]}))
-
 (re-frame/reg-event-db
  :command/update
  (fn [db [_ command-update]]

@@ -177,6 +177,7 @@ func (us *UIServer) Receive(actorCtx actor.Context) {
 			return
 		}
 		log.Debugf("user input has no game to go to %v", msg)
+
 	case *jasonsgame.Heartbeat:
 		actorCtx.SetReceiveTimeout(5 * time.Second)
 		log.Debugf("heartbeat: %s", msg)
