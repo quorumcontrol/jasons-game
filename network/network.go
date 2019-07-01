@@ -9,6 +9,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/crypto"
 	cid "github.com/ipfs/go-cid"
 	"github.com/ipfs/go-datastore"
@@ -173,10 +174,22 @@ func (rn *RemoteNetwork) WaitForDiscovery(ns string, num int, dur time.Duration)
 	return rn.ipldp2pHost.WaitForDiscovery(ns, num, dur)
 }
 
-func (n *RemoteNetwork) getOrCreatePrivateKey() (*ecdsa.PrivateKey, error) {
-	var key *ecdsa.PrivateKey
-
+func (n *RemoteNetwork) getOrCreatePrivateKey() (key *ecdsa.PrivateKey, err error) {
 	storeKey := datastore.NewKey("privateKey")
+
+	if privateKeyHex, ok := os.LookupEnv("JASONS_GAME_ECDSA_KEY_HEX"); ok {
+		_, err = n.KeyValueStore.Get(storeKey)
+		if err == nil {
+			return nil, fmt.Errorf("A game private key has already been established which conflicts with setting JASONS_GAME_ECDSA_KEY_HEX - either unset JASONS_GAME_ECDSA_KEY_HEX or clear local state")
+		}
+
+		key, err = crypto.ToECDSA(hexutil.MustDecode(privateKeyHex))
+		if err != nil {
+			return nil, errors.Wrap(err, "error decoding ecdsa key")
+		}
+		return key, nil
+	}
+
 	stored, err := n.KeyValueStore.Get(storeKey)
 	if err == nil {
 		reconstituted, err := crypto.ToECDSA(stored)
