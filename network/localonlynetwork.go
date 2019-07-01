@@ -34,7 +34,7 @@ func (dntg *DevNullTipGetter) GetTip(_ string) (cid.Cid, error) {
 type LocalNetwork struct {
 	key           *ecdsa.PrivateKey
 	KeyValueStore datastore.Batching
-	TreeStore     TreeStore
+	treeStore     TreeStore
 	pubsub        remote.PubSub
 	community     *Community
 }
@@ -64,10 +64,14 @@ func NewLocalNetwork() Network {
 	return &LocalNetwork{
 		key:           key,
 		KeyValueStore: keystore,
-		TreeStore:     ipldstore,
+		treeStore:     ipldstore,
 		pubsub:        pubsub,
 		community:     NewJasonCommunity(context.Background(), key, ipldNetHost),
 	}
+}
+
+func (ln *LocalNetwork) TreeStore() TreeStore {
+	return ln.treeStore
 }
 
 func (ln *LocalNetwork) PublicKey() *ecdsa.PublicKey {
@@ -102,7 +106,7 @@ func (ln *LocalNetwork) CreateNamedChainTree(name string) (*consensus.SignedChai
 		return nil, errors.Wrap(err, "error creating key")
 	}
 
-	tree, err := consensus.NewSignedChainTree(ephemeralPrivate.PublicKey, ln.TreeStore)
+	tree, err := consensus.NewSignedChainTree(ephemeralPrivate.PublicKey, ln.TreeStore())
 	if err != nil {
 		return nil, errors.Wrap(err, "error creating tree")
 	}
@@ -113,7 +117,7 @@ func (ln *LocalNetwork) CreateNamedChainTree(name string) (*consensus.SignedChai
 	}
 	tree = newTree
 
-	err = ln.TreeStore.SaveTreeMetadata(tree)
+	err = ln.TreeStore().SaveTreeMetadata(tree)
 	if err != nil {
 		return nil, errors.Wrap(err, "error saving tree metadata")
 	}
@@ -127,7 +131,7 @@ func (ln *LocalNetwork) CreateChainTree() (*consensus.SignedChainTree, error) {
 		return nil, errors.Wrap(err, "error creating key")
 	}
 
-	tree, err := consensus.NewSignedChainTree(ephemeralPrivate.PublicKey, ln.TreeStore)
+	tree, err := consensus.NewSignedChainTree(ephemeralPrivate.PublicKey, ln.TreeStore())
 	if err != nil {
 		return nil, errors.Wrap(err, "error creating tree")
 	}
@@ -138,7 +142,7 @@ func (ln *LocalNetwork) CreateChainTree() (*consensus.SignedChainTree, error) {
 	}
 	tree = newTree
 
-	err = ln.TreeStore.SaveTreeMetadata(tree)
+	err = ln.TreeStore().SaveTreeMetadata(tree)
 	if err != nil {
 		return nil, errors.Wrap(err, "error saving tree metadata")
 	}
@@ -149,7 +153,7 @@ func (ln *LocalNetwork) CreateChainTree() (*consensus.SignedChainTree, error) {
 func (ln *LocalNetwork) GetChainTreeByName(name string) (*consensus.SignedChainTree, error) {
 	did, err := ln.KeyValueStore.Get(datastore.NewKey("-n-" + name))
 	if err == nil {
-		return ln.TreeStore.GetTree(string(did))
+		return ln.TreeStore().GetTree(string(did))
 	}
 
 	if err == datastore.ErrNotFound {
@@ -159,7 +163,7 @@ func (ln *LocalNetwork) GetChainTreeByName(name string) (*consensus.SignedChainT
 }
 
 func (ln *LocalNetwork) GetTree(did string) (*consensus.SignedChainTree, error) {
-	return ln.TreeStore.GetTree(did)
+	return ln.TreeStore().GetTree(did)
 }
 
 func (ln *LocalNetwork) GetTreeByTip(tip cid.Cid) (*consensus.SignedChainTree, error) {
@@ -227,5 +231,5 @@ func (ln *LocalNetwork) playTransactions(tree *consensus.SignedChainTree, transa
 		return nil, fmt.Errorf("error invalid transaction")
 	}
 
-	return tree, ln.TreeStore.SaveTreeMetadata(tree)
+	return tree, ln.TreeStore().SaveTreeMetadata(tree)
 }

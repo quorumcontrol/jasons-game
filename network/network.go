@@ -49,6 +49,7 @@ type Network interface {
 	GetTreeByTip(tip cid.Cid) (*consensus.SignedChainTree, error)
 	GetTree(did string) (*consensus.SignedChainTree, error)
 	UpdateChainTree(tree *consensus.SignedChainTree, path string, value interface{}) (*consensus.SignedChainTree, error)
+	TreeStore() TreeStore
 	PublicKey() *ecdsa.PublicKey
 	StartDiscovery(string) error
 	StopDiscovery(string)
@@ -61,7 +62,7 @@ type RemoteNetwork struct {
 	Tupelo        *Tupelo
 	Ipld          *p2p.BitswapPeer
 	KeyValueStore datastore.Batching
-	TreeStore     TreeStore
+	treeStore     TreeStore
 	ipldp2pHost   *p2p.LibP2PHost
 	community     *Community
 }
@@ -125,7 +126,7 @@ func NewRemoteNetwork(ctx context.Context, group *types.NotaryGroup, path string
 	net.Tupelo = tup
 
 	store := NewIPLDTreeStore(lite, ds, pubSubSystem, tup)
-	net.TreeStore = store
+	net.treeStore = store
 	tup.Store = store
 
 	// now all that setup is done, wait for the tupelo and game bootstrappers
@@ -144,12 +145,16 @@ func NewRemoteNetwork(ctx context.Context, group *types.NotaryGroup, path string
 	return net, nil
 }
 
+func (rn *RemoteNetwork) TreeStore() TreeStore {
+	return rn.treeStore
+}
+
 func (rn *RemoteNetwork) PublicKey() *ecdsa.PublicKey {
 	return &rn.mustPrivateKey().PublicKey
 }
 
 func (rn *RemoteNetwork) RepublishAll() error {
-	return rn.TreeStore.(*IPLDTreeStore).RepublishAll()
+	return rn.treeStore.(*IPLDTreeStore).RepublishAll()
 }
 
 func (rn *RemoteNetwork) Community() *Community {
@@ -214,7 +219,7 @@ func (n *RemoteNetwork) CreateNamedChainTree(name string) (*consensus.SignedChai
 	}
 	log.Debug("CreateNamedChainTree - created", name)
 
-	err = n.TreeStore.SaveTreeMetadata(tree)
+	err = n.TreeStore().SaveTreeMetadata(tree)
 	if err != nil {
 		return nil, errors.Wrap(err, "error saving tree")
 	}
@@ -230,7 +235,7 @@ func (n *RemoteNetwork) CreateChainTree() (*consensus.SignedChainTree, error) {
 	}
 	log.Debug("CreateChainTree - created", tree.MustId())
 
-	err = n.TreeStore.SaveTreeMetadata(tree)
+	err = n.TreeStore().SaveTreeMetadata(tree)
 	if err != nil {
 		return nil, errors.Wrap(err, "error saving tree")
 	}
@@ -243,7 +248,7 @@ func (n *RemoteNetwork) GetChainTreeByName(name string) (*consensus.SignedChainT
 	log.Debugf("getchaintree by name")
 	did, err := n.KeyValueStore.Get(datastore.NewKey("-n-" + name))
 	if err == nil {
-		return n.TreeStore.GetTree(string(did))
+		return n.TreeStore().GetTree(string(did))
 	}
 
 	if len(did) == 0 || err == datastore.ErrNotFound {
@@ -253,11 +258,11 @@ func (n *RemoteNetwork) GetChainTreeByName(name string) (*consensus.SignedChainT
 }
 
 func (n *RemoteNetwork) GetTree(did string) (*consensus.SignedChainTree, error) {
-	return n.TreeStore.GetTree(did)
+	return n.TreeStore().GetTree(did)
 }
 
 func (n *RemoteNetwork) GetTreeByTip(tip cid.Cid) (*consensus.SignedChainTree, error) {
-	storedTree := dag.NewDag(tip, n.TreeStore)
+	storedTree := dag.NewDag(tip, n.TreeStore())
 
 	tree, err := chaintree.NewChainTree(storedTree, nil, consensus.DefaultTransactors)
 	if err != nil {
@@ -276,7 +281,7 @@ func (n *RemoteNetwork) UpdateChainTree(tree *consensus.SignedChainTree, path st
 	if err != nil {
 		return nil, errors.Wrap(err, "error updating chaintree")
 	}
-	return tree, n.TreeStore.SaveTreeMetadata(tree)
+	return tree, n.TreeStore().SaveTreeMetadata(tree)
 }
 
 func (n *RemoteNetwork) ChangeChainTreeOwner(tree *consensus.SignedChainTree, newKeys []string) (*consensus.SignedChainTree, error) {
@@ -291,7 +296,7 @@ func (n *RemoteNetwork) ChangeChainTreeOwner(tree *consensus.SignedChainTree, ne
 	if err != nil {
 		return nil, errors.Wrap(err, "error updating chaintree")
 	}
-	return tree, n.TreeStore.SaveTreeMetadata(tree)
+	return tree, n.TreeStore().SaveTreeMetadata(tree)
 }
 
 func TupeloBootstrappers() []string {
