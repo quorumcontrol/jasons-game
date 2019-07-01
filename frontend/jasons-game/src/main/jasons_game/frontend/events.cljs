@@ -6,9 +6,9 @@
             [day8.re-frame.tracing :refer-macros [fn-traced]]))
 
 (re-frame/reg-event-fx
- :user/input
+ :user/submit
  (fn-traced [{{::remote/keys [host session]} :db} [_ user-command]]
-   {::remote/send-input {:host host, :session session, :command user-command}
+   {::remote/submit-command {:host host, :session session, :command user-command}
     :dispatch [::terminal/disable-input]}))
 
 (re-frame/reg-event-db

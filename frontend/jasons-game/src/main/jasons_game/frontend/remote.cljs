@@ -101,7 +101,7 @@
      (swap! app-db assoc ::current-listener req))))
 
 (re-frame/reg-fx
- ::send-input
+ ::submit-command
  (fn [{:keys [host session command]}]
    (send-user-input host session command
                     (fn [resp] (.log js/console resp)))))

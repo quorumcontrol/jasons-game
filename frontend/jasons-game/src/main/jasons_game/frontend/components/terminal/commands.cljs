@@ -23,7 +23,7 @@
                      (concat [command-name])
                      (string/join " ")
                      string/trim)]
-    (re-frame/dispatch [:user/input command])
+    (re-frame/dispatch [:user/submit command])
     {}))
 
 (defn add-command [commands new-command-name]
