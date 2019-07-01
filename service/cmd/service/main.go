@@ -60,7 +60,7 @@ func main() {
 			}
 
 			servicePID := actor.EmptyRootContext.Spawn(service.NewServiceActorProps(net, handlers.NewCompositeHandler(serviceHandlers)))
-			serviceDid, err := actor.EmptyRootContext.RequestFuture(servicePID, &service.GetServiceDid{}, 5 * time.Second).Result()
+			serviceDid, err := actor.EmptyRootContext.RequestFuture(servicePID, &service.GetServiceDid{}, 10*time.Second).Result()
 			if err != nil {
 				panic(err)
 			}
