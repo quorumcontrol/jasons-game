@@ -105,8 +105,3 @@
  (fn [{:keys [host session command]}]
    (send-user-input host session command
                     (fn [resp] (.log js/console resp)))))
-
-(re-frame/reg-sub
- ::messages
- (fn [{::keys [messages] :as db} _]
-   messages))
