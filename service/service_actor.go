@@ -59,7 +59,10 @@ func (s *ServiceActor) initialize(actorCtx actor.Context) {
 
 	did := consensus.EcdsaPubkeyToDid(*s.network.PublicKey())
 
-	serviceTree, _ = s.network.GetTree(did)
+	serviceTree, err = s.network.GetTree(did)
+	if err != nil {
+		panic(fmt.Sprintf("err searching for tree %v\n", err))
+	}
 	if serviceTree == nil {
 		serviceTree, err = consensus.NewSignedChainTree(*s.network.PublicKey(), s.network.TreeStore())
 		if err != nil {
