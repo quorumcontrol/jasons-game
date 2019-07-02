@@ -26,7 +26,7 @@ import (
 type DevNullTipGetter struct{}
 
 func (dntg *DevNullTipGetter) GetTip(_ string) (cid.Cid, error) {
-	return cid.Undef, fmt.Errorf("tip not found")
+	return cid.Undef, nil
 }
 
 // LocalNetwork implements the Network interface but doesn't require

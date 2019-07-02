@@ -82,6 +82,11 @@ func (ts *IPLDTreeStore) GetTree(did string) (*consensus.SignedChainTree, error)
 			return nil, errors.Wrap(err, "error getting remote tip")
 		}
 	}
+
+	if tip.Equals(cid.Undef) {
+		return nil, nil
+	}
+
 	log.Debugf("new dag")
 
 	storedTree := dag.NewDag(tip, ts)
