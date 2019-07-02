@@ -1,7 +1,6 @@
 package network
 
 import (
-	"fmt"
 	"crypto/ecdsa"
 
 	"github.com/ethereum/go-ethereum/crypto"
@@ -33,7 +32,7 @@ func (t *Tupelo) GetTip(did string) (cid.Cid, error) {
 		return cid.Undef, errors.Wrap(err, "error getting tip")
 	}
 	if currState.Signature == nil {
-		return cid.Undef, fmt.Errorf("tip does not exist")
+		return cid.Undef, nil
 	}
 
 	tip, err := cid.Cast(currState.Signature.NewTip)
