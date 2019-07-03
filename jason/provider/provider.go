@@ -7,7 +7,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/AsynkronIT/protoactor-go/actor"
 	"github.com/ipfs/go-datastore"
 	"github.com/libp2p/go-libp2p"
 	connmgr "github.com/libp2p/go-libp2p-connmgr"
@@ -33,7 +32,6 @@ type Provider struct {
 	p2pHost           *p2p.LibP2PHost
 	swapper           *p2p.BitswapPeer
 	pubsubSystem      remote.PubSub
-	handler           *actor.PID
 	connectionManager ifconnmgr.ConnManager
 	parentCtx         context.Context
 	communityHub      *communityhub.Hub
@@ -104,18 +102,6 @@ func (p *Provider) Start() error {
 		return errors.Wrap(err, "could not start community hub")
 	}
 
-	// subscribe with the block getter
-	act := actor.EmptyRootContext.Spawn(actor.PropsFromProducer(func() actor.Actor {
-		return &distributer{
-			provider: p,
-		}
-	}))
-	p.handler = act
-
-	go func() {
-		<-p.parentCtx.Done()
-		actor.EmptyRootContext.Stop(act)
-	}()
 	log.Infof("serving a provider now")
 
 	return nil

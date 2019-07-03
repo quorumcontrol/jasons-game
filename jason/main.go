@@ -12,6 +12,7 @@ import (
 
 	logging "github.com/ipfs/go-log"
 
+	"github.com/AsynkronIT/protoactor-go/actor"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/crypto"
 	s3ds "github.com/ipfs/go-ds-s3"
@@ -45,6 +46,8 @@ func main() {
 	ip := flag.String("ip", "0.0.0.0", "The IP address to bind jason to")
 	port := flag.Int("port", 0, "Port to listen on, 0 means random port")
 	isLocal := flag.Bool("local", false, "turn on localmode config for s3")
+	enableBlockstore := flag.Bool("enable-blockstore", false, "enable storage of blocks on this node")
+
 	flag.Parse()
 	fmt.Printf("ip %s port %d\n", *ip, *port)
 
@@ -131,6 +134,11 @@ func main() {
 	err = p.Start()
 	if err != nil {
 		panic(errors.Wrap(err, "error starting provider"))
+	}
+
+	if *enableBlockstore {
+		storageActor := actor.EmptyRootContext.Spawn(provider.NewBlockStoreProps(p))
+		defer actor.EmptyRootContext.Stop(storageActor)
 	}
 
 	<-make(chan struct{})
