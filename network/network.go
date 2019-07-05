@@ -274,9 +274,10 @@ func (n *RemoteNetwork) GetTree(did string) (*consensus.SignedChainTree, error) 
 }
 
 func (n *RemoteNetwork) GetTreeByTip(tip cid.Cid) (*consensus.SignedChainTree, error) {
-	storedTree := dag.NewDag(tip, n.TreeStore())
+	ctx := context.TODO()
+	storedTree := dag.NewDag(ctx, tip, n.TreeStore())
 
-	tree, err := chaintree.NewChainTree(storedTree, nil, consensus.DefaultTransactors)
+	tree, err := chaintree.NewChainTree(ctx, storedTree, nil, consensus.DefaultTransactors)
 	if err != nil {
 		return nil, errors.Wrap(err, "error creating chaintree")
 	}

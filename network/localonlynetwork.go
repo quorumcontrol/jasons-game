@@ -188,7 +188,8 @@ func (ln *LocalNetwork) ChangeChainTreeOwner(tree *consensus.SignedChainTree, ne
 }
 
 func (ln *LocalNetwork) playTransactions(tree *consensus.SignedChainTree, transactions []*transactions.Transaction) (*consensus.SignedChainTree, error) {
-	unmarshaledRoot, err := tree.ChainTree.Dag.Get(tree.Tip())
+	ctx := context.TODO()
+	unmarshaledRoot, err := tree.ChainTree.Dag.Get(ctx, tree.Tip())
 	if unmarshaledRoot == nil || err != nil {
 		return nil, fmt.Errorf("error,missing root: %v", err)
 	}
@@ -222,7 +223,7 @@ func (ln *LocalNetwork) playTransactions(tree *consensus.SignedChainTree, transa
 		return nil, fmt.Errorf("error signing root: %v", err)
 	}
 
-	isValid, err := tree.ChainTree.ProcessBlock(blockWithHeaders)
+	isValid, err := tree.ChainTree.ProcessBlock(ctx, blockWithHeaders)
 	if err != nil {
 		return nil, fmt.Errorf("error processing block: %v", err)
 	}

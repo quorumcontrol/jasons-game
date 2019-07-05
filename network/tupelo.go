@@ -17,7 +17,7 @@ import (
 )
 
 type Tupelo struct {
-	Store        nodestore.NodeStore
+	Store        nodestore.DagStore
 	NotaryGroup  *types.NotaryGroup
 	PubSubSystem remote.PubSub
 }

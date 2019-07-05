@@ -1,6 +1,7 @@
 package game
 
 import (
+	"context"
 	"fmt"
 	"strings"
 
@@ -64,7 +65,8 @@ func (pt *PlayerTree) Player() (*jasonsgame.Player, error) {
 }
 
 func (pt *PlayerTree) Authentications() ([]string, error) {
-	authsUncasted, remain, err := pt.tree.ChainTree.Dag.Resolve(strings.Split("tree/"+consensus.TreePathForAuthentications, "/"))
+	ctx := context.TODO()
+	authsUncasted, remain, err := pt.tree.ChainTree.Dag.Resolve(ctx, strings.Split("tree/"+consensus.TreePathForAuthentications, "/"))
 	if err != nil {
 		return nil, errors.Wrap(err, "error resolving")
 	}
@@ -105,7 +107,8 @@ func (pt *PlayerTree) setTree(tree *consensus.SignedChainTree) {
 }
 
 func (pt *PlayerTree) refresh() error {
-	ret, remain, err := pt.tree.ChainTree.Dag.Resolve(strings.Split("tree/data/"+playerTreePath, "/"))
+	ctx := context.TODO()
+	ret, remain, err := pt.tree.ChainTree.Dag.Resolve(ctx, strings.Split("tree/data/"+playerTreePath, "/"))
 	if err != nil {
 		return errors.Wrap(err, "error resolving")
 	}

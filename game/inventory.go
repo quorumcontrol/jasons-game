@@ -1,6 +1,7 @@
 package game
 
 import (
+	"context"
 	"fmt"
 	"strings"
 
@@ -130,7 +131,7 @@ func (inv *InventoryActor) pickHandler(actorCtx actor.Context, inventoryTree *tr
 	}
 }
 
-func (inv *InventoryActor) handleCreateObject(context actor.Context, msg *CreateObjectRequest) {
+func (inv *InventoryActor) handleCreateObject(actorCtx actor.Context, msg *CreateObjectRequest) {
 	var err error
 	name := msg.Name
 
@@ -139,7 +140,7 @@ func (inv *InventoryActor) handleCreateObject(context actor.Context, msg *Create
 	if err != nil {
 		err = fmt.Errorf("error creating object chaintree: %v", err)
 		inv.Log.Error(err)
-		context.Respond(&CreateObjectResponse{Error: err})
+		actorCtx.Respond(&CreateObjectResponse{Error: err})
 		return
 	}
 
@@ -158,7 +159,7 @@ func (inv *InventoryActor) handleCreateObject(context actor.Context, msg *Create
 	if err != nil {
 		err = fmt.Errorf("error fetching source chaintree: %v", err)
 		inv.Log.Error(err)
-		context.Respond(&CreateObjectResponse{Error: err})
+		actorCtx.Respond(&CreateObjectResponse{Error: err})
 		return
 	}
 
@@ -166,28 +167,28 @@ func (inv *InventoryActor) handleCreateObject(context actor.Context, msg *Create
 	if err != nil {
 		err = fmt.Errorf("error updating objects in chaintree: %v", err)
 		inv.Log.Error(err)
-		context.Respond(&CreateObjectResponse{Error: err})
+		actorCtx.Respond(&CreateObjectResponse{Error: err})
 		return
 	}
 
-	context.Respond(&CreateObjectResponse{Object: &Object{Did: object.MustId()}})
+	actorCtx.Respond(&CreateObjectResponse{Object: &Object{Did: object.MustId()}})
 }
 
-func (inv *InventoryActor) handleTransferObject(context actor.Context, msg *TransferObjectRequest) {
+func (inv *InventoryActor) handleTransferObject(actorCtx actor.Context, msg *TransferObjectRequest) {
 	var err error
 
 	objectDid := msg.Did
 	if objectDid == "" {
 		err = fmt.Errorf("Did is required to transfer an object")
 		inv.Log.Error(err)
-		context.Respond(&TransferObjectResponse{Error: err})
+		actorCtx.Respond(&TransferObjectResponse{Error: err})
 		return
 	}
 
 	if msg.To == "" {
 		err = fmt.Errorf("To is required to transfer an object")
 		inv.Log.Error(err)
-		context.Respond(&TransferObjectResponse{Error: err})
+		actorCtx.Respond(&TransferObjectResponse{Error: err})
 		return
 	}
 
@@ -195,21 +196,21 @@ func (inv *InventoryActor) handleTransferObject(context actor.Context, msg *Tran
 	if err != nil {
 		err = fmt.Errorf("error fetching source chaintree: %v", err)
 		inv.Log.Error(err)
-		context.Respond(&TransferObjectResponse{Error: err})
+		actorCtx.Respond(&TransferObjectResponse{Error: err})
 		return
 	}
 
 	exists, err := sourceInventory.Exists(objectDid)
 	if err != nil {
 		inv.Log.Error(err)
-		context.Respond(&TransferObjectResponse{Error: err})
+		actorCtx.Respond(&TransferObjectResponse{Error: err})
 		return
 	}
 
 	if !exists {
 		err = fmt.Errorf("object %v does not exist in inventory", objectDid)
 		inv.Log.Error(err)
-		context.Respond(&TransferObjectResponse{Error: err})
+		actorCtx.Respond(&TransferObjectResponse{Error: err})
 		return
 	}
 
@@ -217,7 +218,7 @@ func (inv *InventoryActor) handleTransferObject(context actor.Context, msg *Tran
 	if err != nil {
 		err = fmt.Errorf("error fetching object chaintree %s: %v", objectDid, err)
 		inv.Log.Error(err)
-		context.Respond(&TransferObjectResponse{Error: err})
+		actorCtx.Respond(&TransferObjectResponse{Error: err})
 		return
 	}
 
@@ -229,7 +230,7 @@ func (inv *InventoryActor) handleTransferObject(context actor.Context, msg *Tran
 	if !inv.handler.Supports(transferObjectMessage) {
 		err = fmt.Errorf("transfer from inventory %v is not supported", inv.did)
 		inv.Log.Error(err)
-		context.Respond(&TransferObjectResponse{Error: err})
+		actorCtx.Respond(&TransferObjectResponse{Error: err})
 		return
 	}
 
@@ -237,13 +238,13 @@ func (inv *InventoryActor) handleTransferObject(context actor.Context, msg *Tran
 	if err != nil {
 		err = fmt.Errorf("error fetching handler for %v", msg.To)
 		inv.Log.Error(err)
-		context.Respond(&TransferObjectResponse{Error: err})
+		actorCtx.Respond(&TransferObjectResponse{Error: err})
 		return
 	}
 	if remoteTargetHandler != nil && !remoteTargetHandler.Supports((*jasonsgame.TransferredObjectMessage)(nil)) {
 		err = fmt.Errorf("transfer to inventory %v is not supported", inv.did)
 		inv.Log.Error(err)
-		context.Respond(&TransferObjectResponse{Error: err})
+		actorCtx.Respond(&TransferObjectResponse{Error: err})
 		return
 	}
 
@@ -252,20 +253,21 @@ func (inv *InventoryActor) handleTransferObject(context actor.Context, msg *Tran
 		return
 	}
 
-	context.Respond(&TransferObjectResponse{})
+	actorCtx.Respond(&TransferObjectResponse{})
 }
 
-func (inv *InventoryActor) handleListObjects(context actor.Context, msg *InventoryListRequest) {
-	objects, err := inv.listObjects(context)
+func (inv *InventoryActor) handleListObjects(actorCtx actor.Context, msg *InventoryListRequest) {
+	objects, err := inv.listObjects(actorCtx)
 	if err != nil {
-		context.Respond(&InventoryListResponse{Error: err})
+		actorCtx.Respond(&InventoryListResponse{Error: err})
 		return
 	}
-	context.Respond(&InventoryListResponse{Objects: objects})
+	actorCtx.Respond(&InventoryListResponse{Objects: objects})
 }
 
-func (inv *InventoryActor) listObjects(context actor.Context) (map[string]*Object, error) {
+func (inv *InventoryActor) listObjects(actorCtx actor.Context) (map[string]*Object, error) {
 	var err error
+	ctx := context.TODO()
 
 	tree, err := inv.network.GetTree(inv.did)
 	if err != nil {
@@ -275,7 +277,7 @@ func (inv *InventoryActor) listObjects(context actor.Context) (map[string]*Objec
 	}
 
 	treeObjectsPath, _ := consensus.DecodePath(fmt.Sprintf("tree/data/%s", trees.ObjectsPath))
-	objectsUncasted, _, err := tree.ChainTree.Dag.Resolve(treeObjectsPath)
+	objectsUncasted, _, err := tree.ChainTree.Dag.Resolve(ctx, treeObjectsPath)
 
 	if err != nil {
 		err = fmt.Errorf("error fetching inventory; error: %v", err)
