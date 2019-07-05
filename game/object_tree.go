@@ -1,6 +1,7 @@
 package game
 
 import (
+	"context"
 	"fmt"
 	"strings"
 
@@ -129,7 +130,8 @@ func (o *ObjectTree) InteractionsList() ([]Interaction, error) {
 }
 
 func (o *ObjectTree) IsOwnedBy(keyAddrs []string) (bool, error) {
-	authsUncasted, remainingPath, err := o.tree.ChainTree.Dag.Resolve(strings.Split("tree/"+consensus.TreePathForAuthentications, "/"))
+	ctx := context.TODO()
+	authsUncasted, remainingPath, err := o.tree.ChainTree.Dag.Resolve(ctx, strings.Split("tree/"+consensus.TreePathForAuthentications, "/"))
 	if err != nil {
 		return false, err
 	}
@@ -174,7 +176,8 @@ func (o *ObjectTree) updatePath(path []string, val interface{}) error {
 }
 
 func (o *ObjectTree) getPath(path []string) (interface{}, error) {
-	resp, _, err := o.tree.ChainTree.Dag.Resolve(append([]string{"tree", "data", "jasons-game"}, path...))
+	ctx := context.TODO()
+	resp, _, err := o.tree.ChainTree.Dag.Resolve(ctx, append([]string{"tree", "data", "jasons-game"}, path...))
 	if err != nil {
 		return nil, fmt.Errorf("error resolving %v on object: %v", strings.Join(path, "/"), resp)
 	}
