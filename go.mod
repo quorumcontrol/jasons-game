@@ -39,7 +39,7 @@ require (
 	github.com/quorumcontrol/messages/build/go v0.0.0-20190604083406-7ee8fa6b39eb
 	github.com/quorumcontrol/namedlocker v0.0.0-20180808140020-3f797c8b12b1 // indirect
 	github.com/quorumcontrol/storage v1.1.4
-	github.com/quorumcontrol/tupelo-go-sdk v0.5.1-0.20190705150850-609cdf01168c
+	github.com/quorumcontrol/tupelo-go-sdk v0.5.1-0.20190705184618-ce22a53817ff
 	github.com/shibukawa/configdir v0.0.0-20170330084843-e180dbdc8da0
 	github.com/sirupsen/logrus v1.4.2 // indirect
 	github.com/spf13/cobra v0.0.5
