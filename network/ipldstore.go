@@ -2,7 +2,6 @@ package network
 
 import (
 	"context"
-	"fmt"
 	"strings"
 	"time"
 
@@ -11,7 +10,6 @@ import (
 	"github.com/ipfs/go-datastore/query"
 
 	"github.com/AsynkronIT/protoactor-go/actor"
-	blocks "github.com/ipfs/go-block-format"
 	cid "github.com/ipfs/go-cid"
 	"github.com/ipfs/go-datastore"
 	blockstore "github.com/ipfs/go-ipfs-blockstore"
@@ -31,10 +29,8 @@ import (
 // block service on its own and also provide a TreeService to make
 // getting/setting trees easier
 
-const defaultTimeout = 30 * time.Second
-
 type TreeStore interface {
-	nodestore.NodeStore
+	nodestore.DagStore
 
 	GetTree(did string) (*consensus.SignedChainTree, error)
 	SaveTreeMetadata(*consensus.SignedChainTree) error
@@ -67,6 +63,7 @@ func NewIPLDTreeStore(
 }
 
 func (ts *IPLDTreeStore) GetTree(did string) (*consensus.SignedChainTree, error) {
+	ctx := context.TODO()
 	log.Debugf("get local tip")
 	var remote bool
 	tip, err := ts.getLocalTip(did)
@@ -82,12 +79,17 @@ func (ts *IPLDTreeStore) GetTree(did string) (*consensus.SignedChainTree, error)
 			return nil, errors.Wrap(err, "error getting remote tip")
 		}
 	}
+
+	if tip.Equals(cid.Undef) {
+		return nil, nil
+	}
+
 	log.Debugf("new dag")
 
-	storedTree := dag.NewDag(tip, ts)
+	storedTree := dag.NewDag(ctx, tip, ts)
 	log.Debugf("new tree")
 
-	tree, err := chaintree.NewChainTree(storedTree, nil, consensus.DefaultTransactors)
+	tree, err := chaintree.NewChainTree(ctx, storedTree, nil, consensus.DefaultTransactors)
 	if err != nil {
 		return nil, errors.Wrap(err, "error creating chaintree")
 	}
@@ -122,117 +124,45 @@ func (ts *IPLDTreeStore) SaveTreeMetadata(tree *consensus.SignedChainTree) error
 	return ts.keyValueApi.Put(didStoreKey(did), tree.Tip().Bytes())
 }
 
-func (ts *IPLDTreeStore) GetNode(nodeCid cid.Cid) (*cbornode.Node, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), defaultTimeout)
-	defer cancel()
-	blk, err := ts.blockApi.Get(ctx, nodeCid)
-	if err == nil {
-		return blockToCborNode(blk)
-	}
-
-	if err == format.ErrNotFound {
-		return nil, nil
-	}
-	return nil, errors.Wrap(err, "error getting node")
+func (ts *IPLDTreeStore) Get(ctx context.Context, nodeCid cid.Cid) (format.Node, error) {
+	return ts.blockApi.Get(ctx, nodeCid)
 }
 
-func (ts *IPLDTreeStore) CreateNode(obj interface{}) (*cbornode.Node, error) {
-	n, err := objToCbor(obj)
-	if err != nil {
-		return nil, errors.Wrap(err, "error converting to CBOR")
-	}
-	return n, ts.StoreNode(n)
+func (ts *IPLDTreeStore) GetMany(ctx context.Context, nodeCids []cid.Cid) <-chan *format.NodeOption {
+	return ts.blockApi.GetMany(ctx, nodeCids)
 }
 
-func (ts *IPLDTreeStore) CreateNodeFromBytes(nodeBytes []byte) (*cbornode.Node, error) {
-	sw := safewrap.SafeWrap{}
-	n := sw.Decode(nodeBytes)
-	if sw.Err != nil {
-		return nil, errors.Wrap(sw.Err, "error decoding")
-	}
-	return n, ts.StoreNode(n)
-}
-
-func (ts *IPLDTreeStore) StoreNode(node *cbornode.Node) error {
-	ctx, cancel := context.WithTimeout(context.Background(), defaultTimeout)
-	defer cancel()
+func (ts *IPLDTreeStore) Add(ctx context.Context, node format.Node) error {
 	err := ts.blockApi.Add(ctx, node)
 	if err != nil {
 		return errors.Wrap(err, "error adding blocks")
 	}
-
-	actor.EmptyRootContext.Send(ts.publisher, node)
-
+	if ts.publisher != nil {
+		actor.EmptyRootContext.Send(ts.publisher, node)
+	}
 	return err
 }
 
-func (ts *IPLDTreeStore) DeleteNode(nodeCid cid.Cid) error {
-	ctx, cancel := context.WithTimeout(context.Background(), defaultTimeout)
-	defer cancel()
+func (ts *IPLDTreeStore) AddMany(ctx context.Context, nodes []format.Node) error {
+	err := ts.blockApi.AddMany(ctx, nodes)
+	if err != nil {
+		return err
+	}
+
+	if ts.publisher != nil {
+		for _, n := range nodes {
+			actor.EmptyRootContext.Send(ts.publisher, n)
+		}
+	}
+	return nil
+}
+
+func (ts *IPLDTreeStore) Remove(ctx context.Context, nodeCid cid.Cid) error {
 	return ts.blockApi.Remove(ctx, nodeCid)
 }
 
-func (ts *IPLDTreeStore) DeleteTree(tip cid.Cid) error {
-	tipNode, err := ts.GetNode(tip)
-	if err != nil {
-		return fmt.Errorf("error getting tip: %v", err)
-	}
-	links := tipNode.Links()
-
-	for _, link := range links {
-		err := ts.DeleteTree(link.Cid)
-		if err != nil {
-			return fmt.Errorf("error deleting: %v", err)
-		}
-	}
-	return ts.DeleteNode(tip)
-}
-
-func (ts *IPLDTreeStore) Resolve(tip cid.Cid, path []string) (val interface{}, remaining []string, err error) {
-	node, err := ts.GetNode(tip)
-	if err != nil {
-		return nil, nil, errors.Wrap(err, fmt.Sprintf("error getting node (%s)", tip.String()))
-	}
-	val, remaining, err = node.Resolve(path)
-	if err != nil {
-		switch err {
-		case cbornode.ErrNoSuchLink:
-			// If the link is just missing, then just return the whole path as remaining, with a nil value
-			// instead of an error
-			return nil, path, nil
-		case cbornode.ErrNoLinks:
-			// this means there was a simple value somewhere along the path
-			// try resolving less of the path to find the existing boundary
-			var err error
-			for i := 1; i < len(path); i++ {
-				val, _, err = node.Resolve(path[:len(path)-i])
-				if err != nil {
-					continue
-				} else {
-					// return the simple value and the rest of the path as remaining
-					return val, path[len(path)-i:], nil
-				}
-			}
-			if err != nil {
-				return nil, nil, err
-			}
-		}
-		return nil, nil, err
-	}
-
-	switch val := val.(type) {
-	case *format.Link:
-		linkNode, err := ts.GetNode(val.Cid)
-		if err != nil {
-			return nil, nil, errors.Wrap(err, fmt.Sprintf("error getting linked node (%s)", val.Cid.String()))
-		}
-		if linkNode != nil {
-			return ts.Resolve(linkNode.Cid(), remaining)
-		}
-		return nil, remaining, nil
-	default:
-		return val, remaining, err
-	}
+func (ts *IPLDTreeStore) RemoveMany(ctx context.Context, nodeCids []cid.Cid) error {
+	return ts.blockApi.RemoveMany(ctx, nodeCids)
 }
 
 func (ts *IPLDTreeStore) RepublishAll() error {
@@ -252,7 +182,7 @@ func (ts *IPLDTreeStore) RepublishAll() error {
 			return errors.Wrap(err, "error getting cid")
 		}
 
-		node, err := ts.GetNode(cid)
+		node, err := ts.Get(context.TODO(), cid)
 		if err != nil {
 			return errors.Wrap(err, "error getting CID")
 		}
@@ -261,23 +191,6 @@ func (ts *IPLDTreeStore) RepublishAll() error {
 		time.Sleep(15 * time.Millisecond)
 	}
 	return nil
-}
-
-func blockToCborNode(blk blocks.Block) (*cbornode.Node, error) {
-	n, err := cbornode.DecodeBlock(blk)
-	if err != nil {
-		return nil, errors.Wrap(err, "error decoding")
-	}
-	return n.(*cbornode.Node), nil
-}
-
-func objToCbor(obj interface{}) (node *cbornode.Node, err error) {
-	sw := safewrap.SafeWrap{}
-	node = sw.WrapObject(obj)
-	if sw.Err != nil {
-		return nil, fmt.Errorf("error wrapping: %v", sw.Err)
-	}
-	return
 }
 
 func (ts *IPLDTreeStore) getLocalTip(did string) (cid.Cid, error) {

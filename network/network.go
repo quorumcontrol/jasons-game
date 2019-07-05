@@ -49,6 +49,7 @@ type Network interface {
 	GetTreeByTip(tip cid.Cid) (*consensus.SignedChainTree, error)
 	GetTree(did string) (*consensus.SignedChainTree, error)
 	UpdateChainTree(tree *consensus.SignedChainTree, path string, value interface{}) (*consensus.SignedChainTree, error)
+	TreeStore() TreeStore
 	PublicKey() *ecdsa.PublicKey
 	StartDiscovery(string) error
 	StopDiscovery(string)
@@ -61,35 +62,37 @@ type RemoteNetwork struct {
 	Tupelo        *Tupelo
 	Ipld          *p2p.BitswapPeer
 	KeyValueStore datastore.Batching
-	TreeStore     TreeStore
+	treeStore     TreeStore
 	ipldp2pHost   *p2p.LibP2PHost
 	community     *Community
+	signingKey    *ecdsa.PrivateKey
+	networkKey    *ecdsa.PrivateKey
 }
 
-func NewRemoteNetwork(ctx context.Context, group *types.NotaryGroup, path string) (Network, error) {
+type RemoteNetworkConfig struct {
+	NotaryGroup   *types.NotaryGroup
+	KeyValueStore datastore.Batching
+	SigningKey    *ecdsa.PrivateKey
+	NetworkKey    *ecdsa.PrivateKey
+}
+
+func NewRemoteNetworkWithConfig(ctx context.Context, config *RemoteNetworkConfig) (Network, error) {
 	remote.Start()
 
-	ds, err := badger.NewDatastore(path, &badger.DefaultOptions)
-	if err != nil {
-		return nil, errors.Wrap(err, "error creating store")
-	}
 	net := &RemoteNetwork{
-		KeyValueStore: ds,
+		KeyValueStore: config.KeyValueStore,
+		signingKey: config.SigningKey,
+		networkKey: config.NetworkKey,
 	}
+	group := config.NotaryGroup
 
-	// TODO: keep the keys in a separate KeyStore
-	key, err := net.getOrCreatePrivateKey()
-	if err != nil {
-		return nil, errors.Wrap(err, "error getting private key")
-	}
-
-	ipldNetHost, lite, err := NewIPLDClient(ctx, key, ds, p2p.WithClientOnlyDHT(true))
+	ipldNetHost, lite, err := NewIPLDClient(ctx, net.networkKey, net.KeyValueStore, p2p.WithClientOnlyDHT(true))
 	if err != nil {
 		return nil, errors.Wrap(err, "error creating IPLD client")
 	}
 	net.Ipld = lite
 	net.ipldp2pHost = ipldNetHost
-	net.community = NewJasonCommunity(ctx, key, ipldNetHost)
+	net.community = NewJasonCommunity(ctx, net.networkKey, ipldNetHost)
 	pubSubSystem := remote.NewNetworkPubSub(ipldNetHost)
 
 	// bootstrap to the game async so we can also setup the tupelo node, etc
@@ -108,13 +111,13 @@ func NewRemoteNetwork(ctx context.Context, group *types.NotaryGroup, path string
 		}
 	}()
 
-	tupeloP2PHost, err := p2p.NewLibP2PHost(ctx, key, 0)
+	tupeloP2PHost, err := p2p.NewLibP2PHost(ctx, net.networkKey, 0)
 	if err != nil {
 		return nil, fmt.Errorf("error setting up p2p host: %s", err)
 	}
 
 	remote.NewRouter(tupeloP2PHost)
-	group.SetupAllRemoteActors(&key.PublicKey)
+	group.SetupAllRemoteActors(&net.networkKey.PublicKey)
 
 	tupeloPubSub := remote.NewNetworkPubSub(tupeloP2PHost)
 
@@ -124,8 +127,8 @@ func NewRemoteNetwork(ctx context.Context, group *types.NotaryGroup, path string
 	}
 	net.Tupelo = tup
 
-	store := NewIPLDTreeStore(lite, ds, pubSubSystem, tup)
-	net.TreeStore = store
+	store := NewIPLDTreeStore(lite, net.KeyValueStore, pubSubSystem, tup)
+	net.treeStore = store
 	tup.Store = store
 
 	// now all that setup is done, wait for the tupelo and game bootstrappers
@@ -144,12 +147,36 @@ func NewRemoteNetwork(ctx context.Context, group *types.NotaryGroup, path string
 	return net, nil
 }
 
+func NewRemoteNetwork(ctx context.Context, group *types.NotaryGroup, path string) (Network, error) {
+	ds, err := badger.NewDatastore(path, &badger.DefaultOptions)
+	if err != nil {
+		return nil, errors.Wrap(err, "error creating store")
+	}
+
+	// TODO: keep the keys in a separate KeyStore
+	key, err := getOrCreateStoredPrivateKey(ds)
+	if err != nil {
+		return nil, errors.Wrap(err, "error getting private key")
+	}
+
+	return NewRemoteNetworkWithConfig(ctx, &RemoteNetworkConfig{
+		NotaryGroup: group,
+		SigningKey: key,
+		NetworkKey: key,
+		KeyValueStore: ds,
+	})
+}
+
+func (rn *RemoteNetwork) TreeStore() TreeStore {
+	return rn.treeStore
+}
+
 func (rn *RemoteNetwork) PublicKey() *ecdsa.PublicKey {
-	return &rn.mustPrivateKey().PublicKey
+	return &rn.signingKey.PublicKey
 }
 
 func (rn *RemoteNetwork) RepublishAll() error {
-	return rn.TreeStore.(*IPLDTreeStore).RepublishAll()
+	return rn.treeStore.(*IPLDTreeStore).RepublishAll()
 }
 
 func (rn *RemoteNetwork) Community() *Community {
@@ -168,11 +195,9 @@ func (rn *RemoteNetwork) WaitForDiscovery(ns string, num int, dur time.Duration)
 	return rn.ipldp2pHost.WaitForDiscovery(ns, num, dur)
 }
 
-func (n *RemoteNetwork) getOrCreatePrivateKey() (*ecdsa.PrivateKey, error) {
-	var key *ecdsa.PrivateKey
-
+func getOrCreateStoredPrivateKey(ds datastore.Batching) (key *ecdsa.PrivateKey, err error) {
 	storeKey := datastore.NewKey("privateKey")
-	stored, err := n.KeyValueStore.Get(storeKey)
+	stored, err := ds.Get(storeKey)
 	if err == nil {
 		reconstituted, err := crypto.ToECDSA(stored)
 		if err != nil {
@@ -188,7 +213,7 @@ func (n *RemoteNetwork) getOrCreatePrivateKey() (*ecdsa.PrivateKey, error) {
 		if err != nil {
 			return nil, errors.Wrap(err, "error generating key")
 		}
-		err = n.KeyValueStore.Put(storeKey, crypto.FromECDSA(newKey))
+		err = ds.Put(storeKey, crypto.FromECDSA(newKey))
 		if err != nil {
 			return nil, errors.Wrap(err, "error putting key")
 		}
@@ -198,23 +223,15 @@ func (n *RemoteNetwork) getOrCreatePrivateKey() (*ecdsa.PrivateKey, error) {
 	return key, nil
 }
 
-func (n *RemoteNetwork) mustPrivateKey() *ecdsa.PrivateKey {
-	key, err := n.getOrCreatePrivateKey()
-	if err != nil || key == nil {
-		panic(errors.Wrap(err, "error getting or creating private key"))
-	}
-	return key
-}
-
 func (n *RemoteNetwork) CreateNamedChainTree(name string) (*consensus.SignedChainTree, error) {
 	log.Debug("CreateNamedChainTree", name)
-	tree, err := n.Tupelo.CreateChainTree(n.mustPrivateKey())
+	tree, err := n.Tupelo.CreateChainTree(n.signingKey)
 	if err != nil {
 		return nil, errors.Wrap(err, "error creating tree")
 	}
 	log.Debug("CreateNamedChainTree - created", name)
 
-	err = n.TreeStore.SaveTreeMetadata(tree)
+	err = n.TreeStore().SaveTreeMetadata(tree)
 	if err != nil {
 		return nil, errors.Wrap(err, "error saving tree")
 	}
@@ -224,13 +241,13 @@ func (n *RemoteNetwork) CreateNamedChainTree(name string) (*consensus.SignedChai
 }
 
 func (n *RemoteNetwork) CreateChainTree() (*consensus.SignedChainTree, error) {
-	tree, err := n.Tupelo.CreateChainTree(n.mustPrivateKey())
+	tree, err := n.Tupelo.CreateChainTree(n.signingKey)
 	if err != nil {
 		return nil, errors.Wrap(err, "error creating tree")
 	}
 	log.Debug("CreateChainTree - created", tree.MustId())
 
-	err = n.TreeStore.SaveTreeMetadata(tree)
+	err = n.TreeStore().SaveTreeMetadata(tree)
 	if err != nil {
 		return nil, errors.Wrap(err, "error saving tree")
 	}
@@ -243,7 +260,7 @@ func (n *RemoteNetwork) GetChainTreeByName(name string) (*consensus.SignedChainT
 	log.Debugf("getchaintree by name")
 	did, err := n.KeyValueStore.Get(datastore.NewKey("-n-" + name))
 	if err == nil {
-		return n.TreeStore.GetTree(string(did))
+		return n.TreeStore().GetTree(string(did))
 	}
 
 	if len(did) == 0 || err == datastore.ErrNotFound {
@@ -253,13 +270,14 @@ func (n *RemoteNetwork) GetChainTreeByName(name string) (*consensus.SignedChainT
 }
 
 func (n *RemoteNetwork) GetTree(did string) (*consensus.SignedChainTree, error) {
-	return n.TreeStore.GetTree(did)
+	return n.TreeStore().GetTree(did)
 }
 
 func (n *RemoteNetwork) GetTreeByTip(tip cid.Cid) (*consensus.SignedChainTree, error) {
-	storedTree := dag.NewDag(tip, n.TreeStore)
+	ctx := context.TODO()
+	storedTree := dag.NewDag(ctx, tip, n.TreeStore())
 
-	tree, err := chaintree.NewChainTree(storedTree, nil, consensus.DefaultTransactors)
+	tree, err := chaintree.NewChainTree(ctx, storedTree, nil, consensus.DefaultTransactors)
 	if err != nil {
 		return nil, errors.Wrap(err, "error creating chaintree")
 	}
@@ -272,11 +290,11 @@ func (n *RemoteNetwork) GetTreeByTip(tip cid.Cid) (*consensus.SignedChainTree, e
 
 func (n *RemoteNetwork) UpdateChainTree(tree *consensus.SignedChainTree, path string, value interface{}) (*consensus.SignedChainTree, error) {
 	log.Debug("updateTree", tree.MustId(), path, value)
-	err := n.Tupelo.UpdateChainTree(tree, n.mustPrivateKey(), path, value)
+	err := n.Tupelo.UpdateChainTree(tree, n.signingKey, path, value)
 	if err != nil {
 		return nil, errors.Wrap(err, "error updating chaintree")
 	}
-	return tree, n.TreeStore.SaveTreeMetadata(tree)
+	return tree, n.TreeStore().SaveTreeMetadata(tree)
 }
 
 func (n *RemoteNetwork) ChangeChainTreeOwner(tree *consensus.SignedChainTree, newKeys []string) (*consensus.SignedChainTree, error) {
@@ -287,11 +305,11 @@ func (n *RemoteNetwork) ChangeChainTreeOwner(tree *consensus.SignedChainTree, ne
 		return nil, errors.Wrap(err, "error updating chaintree")
 	}
 
-	err = n.Tupelo.PlayTransactions(tree, n.mustPrivateKey(), []*transactions.Transaction{transaction})
+	err = n.Tupelo.PlayTransactions(tree, n.signingKey, []*transactions.Transaction{transaction})
 	if err != nil {
 		return nil, errors.Wrap(err, "error updating chaintree")
 	}
-	return tree, n.TreeStore.SaveTreeMetadata(tree)
+	return tree, n.TreeStore().SaveTreeMetadata(tree)
 }
 
 func TupeloBootstrappers() []string {

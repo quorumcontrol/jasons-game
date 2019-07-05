@@ -54,25 +54,28 @@ func (s *ServiceActor) Receive(actorCtx actor.Context) {
 }
 
 func (s *ServiceActor) initialize(actorCtx actor.Context) {
-	serviceTree, err := s.network.GetChainTreeByName("serviceTree")
+	var serviceTree *consensus.SignedChainTree
+	var err error
+
+	did := consensus.EcdsaPubkeyToDid(*s.network.PublicKey())
+
+	serviceTree, err = s.network.GetTree(did)
 	if err != nil {
-		panic(errors.Wrap(err, "fetching service chain"))
+		panic(fmt.Sprintf("err searching for tree %v\n", err))
 	}
-
 	if serviceTree == nil {
-		serviceTree, err = s.network.CreateNamedChainTree("serviceTree")
-
+		serviceTree, err = consensus.NewSignedChainTree(*s.network.PublicKey(), s.network.TreeStore())
 		if err != nil {
-			panic(errors.Wrap(err, "creating service chain"))
+			panic(errors.Wrap(err, "error creating new signed chaintree"))
 		}
 	}
 
 	serviceTree, err = s.network.UpdateChainTree(serviceTree, "jasons-game/handler/supports", s.handler.SupportedMessages())
 	if err != nil {
-		panic(err)
+		panic(errors.Wrap(err, "error updating handler/supports on service tree"))
 	}
-	s.tree = serviceTree
 
+	s.tree = serviceTree
 	topic := s.network.Community().TopicFor(s.tree.MustId())
 	s.subscriber = actorCtx.Spawn(s.network.Community().NewSubscriberProps(topic))
 }

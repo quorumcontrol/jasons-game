@@ -17,7 +17,7 @@ import (
 )
 
 type Tupelo struct {
-	Store        nodestore.NodeStore
+	Store        nodestore.DagStore
 	NotaryGroup  *types.NotaryGroup
 	PubSubSystem remote.PubSub
 }
@@ -30,6 +30,9 @@ func (t *Tupelo) GetTip(did string) (cid.Cid, error) {
 	currState, err := cli.TipRequest()
 	if err != nil {
 		return cid.Undef, errors.Wrap(err, "error getting tip")
+	}
+	if currState.Signature == nil {
+		return cid.Undef, nil
 	}
 
 	tip, err := cid.Cast(currState.Signature.NewTip)

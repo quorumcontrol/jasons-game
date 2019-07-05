@@ -32,9 +32,9 @@ func TestServiceActor(t *testing.T) {
 	})
 	require.Nil(t, err)
 
-	serviceDid, err := actorCtx.RequestFuture(pid, &GetServiceDid{}, 1 * time.Second).Result()
+	serviceDid, err := actorCtx.RequestFuture(pid, &GetServiceDid{}, 5*time.Second).Result()
 	require.Nil(t, err)
-	
+
 	err = net.Community().Send(net.Community().TopicFor(serviceDid.(string)), chatMessage)
 	require.Nil(t, err)
 

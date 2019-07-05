@@ -14,9 +14,8 @@ import (
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/crypto"
-	"github.com/quorumcontrol/tupelo-go-sdk/bls"
 	"github.com/quorumcontrol/chaintree/nodestore"
-	"github.com/quorumcontrol/storage"
+	"github.com/quorumcontrol/tupelo-go-sdk/bls"
 	"github.com/quorumcontrol/tupelo-go-sdk/gossip3/remote"
 	"github.com/quorumcontrol/tupelo-go-sdk/gossip3/types"
 	"github.com/quorumcontrol/tupelo-go-sdk/p2p"
@@ -101,15 +100,15 @@ func TestCreateChainTree(t *testing.T) {
 	require.Nil(t, err)
 
 	ps := remote.NewNetworkPubSub(node)
-	
+
 	tup := &Tupelo{
-		Store: nodestore.NewStorageBasedStore(storage.NewMemStorage()),
-		NotaryGroup: group,
+		Store:        nodestore.MustMemoryStore(ctx),
+		NotaryGroup:  group,
 		PubSubSystem: ps,
 	}
 
-	_,err = tup.CreateChainTree(key)
-	require.Nil(t,err)
+	_, err = tup.CreateChainTree(key)
+	require.Nil(t, err)
 }
 
 func TestGetTip(t *testing.T) {
@@ -126,19 +125,19 @@ func TestGetTip(t *testing.T) {
 	require.Nil(t, err)
 
 	ps := remote.NewNetworkPubSub(node)
-	
+
 	tup := &Tupelo{
-		Store: nodestore.NewStorageBasedStore(storage.NewMemStorage()),
-		NotaryGroup: group,
+		Store:        nodestore.MustMemoryStore(ctx),
+		NotaryGroup:  group,
 		PubSubSystem: ps,
 	}
 
-	tree,err := tup.CreateChainTree(key)
-	require.Nil(t,err)
+	tree, err := tup.CreateChainTree(key)
+	require.Nil(t, err)
 
 	time.Sleep(100 * time.Millisecond)
-	tip,err := tup.GetTip(tree.MustId())
-	require.Nil(t,err)
+	tip, err := tup.GetTip(tree.MustId())
+	require.Nil(t, err)
 
 	require.Equal(t, tree.Tip(), tip)
 }

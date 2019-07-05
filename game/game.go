@@ -1,6 +1,7 @@
 package game
 
 import (
+	"context"
 	"fmt"
 	"reflect"
 	"regexp"
@@ -246,6 +247,8 @@ func (g *Game) handleInteractionInput(actorCtx actor.Context, cmd *interactionCo
 }
 
 func (g *Game) handleGetTreeValueInteraction(actorCtx actor.Context, interaction *GetTreeValueInteraction) error {
+	ctx := context.TODO()
+
 	tree, err := g.network.GetTree(interaction.Did)
 	if err != nil {
 		return errors.Wrap(err, "error fetching tree")
@@ -259,7 +262,7 @@ func (g *Game) handleGetTreeValueInteraction(actorCtx actor.Context, interaction
 		return errors.Wrap(err, "error casting path")
 	}
 
-	value, _, err := tree.ChainTree.Dag.Resolve(append([]string{"tree", "data", "jasons-game"}, pathSlice...))
+	value, _, err := tree.ChainTree.Dag.Resolve(ctx, append([]string{"tree", "data", "jasons-game"}, pathSlice...))
 	if err != nil {
 		return errors.Wrap(err, fmt.Sprintf("error fetching value for %v", pathSlice))
 	}
@@ -582,7 +585,6 @@ func (g *Game) refreshInteractions(actorCtx actor.Context) error {
 
 	return doIt()
 }
-
 
 func (g *Game) interactionCommandsFor(actorCtx actor.Context, pid *actor.PID) (commandList, error) {
 	response, err := actorCtx.RequestFuture(pid, &ListInteractionsRequest{}, 5*time.Second).Result()

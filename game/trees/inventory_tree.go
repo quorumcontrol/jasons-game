@@ -1,6 +1,7 @@
 package trees
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/pkg/errors"
@@ -51,9 +52,11 @@ func (t *InventoryTree) Exists(did string) (bool, error) {
 }
 
 func (t *InventoryTree) All() (map[string]string, error) {
+	ctx := context.TODO()
+
 	resolveObjectsPath, _ := consensus.DecodePath(fmt.Sprintf("tree/data/%s", ObjectsPath))
 
-	objectsUncasted, _, err := t.tree.ChainTree.Dag.Resolve(resolveObjectsPath)
+	objectsUncasted, _, err := t.tree.ChainTree.Dag.Resolve(ctx, resolveObjectsPath)
 	if err != nil {
 		return nil, errors.Wrap(err, "error fetching inventory")
 	}
@@ -86,6 +89,8 @@ func (t *InventoryTree) Remove(did string) error {
 }
 
 func (t *InventoryTree) Add(did string) error {
+	ctx := context.TODO()
+
 	allObjects, err := t.All()
 	if err != nil {
 		return err
@@ -101,7 +106,7 @@ func (t *InventoryTree) Add(did string) error {
 		return err
 	}
 
-	uncastObjectName, _, err := objectTree.ChainTree.Dag.Resolve([]string{"tree", "data", "jasons-game", "name"})
+	uncastObjectName, _, err := objectTree.ChainTree.Dag.Resolve(ctx, []string{"tree", "data", "jasons-game", "name"})
 	if err != nil {
 		return err
 	}

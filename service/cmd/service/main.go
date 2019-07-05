@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"crypto/ecdsa"
 	"fmt"
 	"os"
 	"os/signal"
@@ -10,6 +11,9 @@ import (
 	"time"
 
 	"github.com/AsynkronIT/protoactor-go/actor"
+	"github.com/ethereum/go-ethereum/crypto"
+	"github.com/ethereum/go-ethereum/common/hexutil"
+	badger "github.com/ipfs/go-ds-badger"
 	"github.com/pkg/errors"
 	"github.com/quorumcontrol/jasons-game/handlers"
 	"github.com/quorumcontrol/jasons-game/handlers/inventory"
@@ -32,12 +36,44 @@ func main() {
 			ctx, cancel := context.WithCancel(context.Background())
 			defer cancel()
 
+			var signingKey *ecdsa.PrivateKey
+			var err error
+			privateKeyHex, ok := os.LookupEnv("JASONS_GAME_ECDSA_KEY_HEX")
+			if ok {
+				signingKey, err = crypto.ToECDSA(hexutil.MustDecode(privateKeyHex))
+				if err != nil {
+					panic(errors.Wrap(err, "error decoding ecdsa key"))
+				}
+			} else {
+				signingKey, err = crypto.GenerateKey()
+				if err != nil {
+					panic(errors.Wrap(err, "error generate key"))
+				}
+			}
+
 			notaryGroup, err := server.SetupTupeloNotaryGroup(ctx, localNetworkFlag)
 			if err != nil {
 				panic(errors.Wrap(err, "error setting up tupelo notary group"))
 			}
 
-			net, err := network.NewRemoteNetwork(ctx, notaryGroup, storageDirFor(serviceName))
+			networkKey, err := crypto.GenerateKey()
+			if err != nil {
+				panic(errors.Wrap(err, "error generate key"))
+			}
+
+			ds, err := badger.NewDatastore(storageDirFor(serviceName), &badger.DefaultOptions)
+			if err != nil {
+				panic(errors.Wrap(err, "error creating store"))
+			}
+
+			config := &network.RemoteNetworkConfig{
+				NotaryGroup: notaryGroup,
+				KeyValueStore: ds,
+				SigningKey: signingKey,
+				NetworkKey: networkKey,
+			}
+
+			net, err := network.NewRemoteNetworkWithConfig(ctx, config)
 			if err != nil {
 				panic(errors.Wrap(err, "setting up network"))
 			}
@@ -60,7 +96,7 @@ func main() {
 			}
 
 			servicePID := actor.EmptyRootContext.Spawn(service.NewServiceActorProps(net, handlers.NewCompositeHandler(serviceHandlers)))
-			serviceDid, err := actor.EmptyRootContext.RequestFuture(servicePID, &service.GetServiceDid{}, 5 * time.Second).Result()
+			serviceDid, err := actor.EmptyRootContext.RequestFuture(servicePID, &service.GetServiceDid{}, 30*time.Second).Result()
 			if err != nil {
 				panic(err)
 			}

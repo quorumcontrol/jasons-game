@@ -96,6 +96,8 @@ vendor: go.mod go.sum $(FIRSTGOPATH)/bin/modvendor
 	go mod vendor
 	modvendor -copy="**/*.c **/*.h"
 
+prepare: $(gosources) $(generated) $(packr) $(vendor)
+
 $(FIRSTGOPATH)/bin/packr2:
 	go get -u github.com/gobuffalo/packr/v2/packr2
 
@@ -109,4 +111,4 @@ clean: $(FIRSTGOPATH)/bin/packr2
 	rm -rf bin
 	rm -rf JasonsGame.app/Contents/MacOS
 
-.PHONY: all build test integration-test localnet clean lint game-server jason game2 mac-app
+.PHONY: all build test integration-test localnet clean lint game-server jason game2 mac-app prepare

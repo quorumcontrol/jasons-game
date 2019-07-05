@@ -1,6 +1,8 @@
 package handlers
 
 import (
+	"context"
+
 	"github.com/golang/protobuf/proto"
 	"github.com/quorumcontrol/jasons-game/network"
 )
@@ -33,12 +35,14 @@ func (h *RemoteHandler) Did() string {
 }
 
 func FindHandlerForTree(net network.Network, did string) (*RemoteHandler, error) {
+	ctx := context.TODO()
+
 	tree, err := net.GetTree(did)
 	if err != nil {
 		return nil, err
 	}
 
-	handlerDid, _, err := tree.ChainTree.Dag.Resolve([]string{"tree", "data", HandlerPath})
+	handlerDid, _, err := tree.ChainTree.Dag.Resolve(ctx, []string{"tree", "data", HandlerPath})
 	if err != nil {
 		return nil, err
 	}
@@ -52,7 +56,7 @@ func FindHandlerForTree(net network.Network, did string) (*RemoteHandler, error)
 		return nil, err
 	}
 
-	supports, _, err := handlerTree.ChainTree.Dag.Resolve([]string{"tree", "data", "jasons-game", "handler", "supports"})
+	supports, _, err := handlerTree.ChainTree.Dag.Resolve(ctx, []string{"tree", "data", "jasons-game", "handler", "supports"})
 	if err != nil {
 		return nil, err
 	}
