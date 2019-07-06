@@ -20,7 +20,7 @@ func newRemoteNetwork(t *testing.T, ctx context.Context, path string) Network {
 
 	ds, err := config.LocalDataStore(path)
 	if err != nil {
-		return nil, errors.Wrap(err, "error getting store")
+		return nil
 	}
 
 	net,err := NewRemoteNetwork(ctx, group, ds)
@@ -40,6 +40,7 @@ func TestNewNetwork(t *testing.T) {
 	// just to test it doesn't error here
 	newRemoteNetwork(t, ctx, testPath)
 }
+
 func TestCreateNamedChainTree(t *testing.T) {
 	ctx,cancel := context.WithCancel(context.Background())
 	defer cancel()
@@ -54,6 +55,7 @@ func TestCreateNamedChainTree(t *testing.T) {
 	_,err = net.CreateNamedChainTree("test-create-named-tree")
 	require.Nil(t,err)
 }
+
 func TestUpdateChainTree(t *testing.T) {
 	ctx,cancel := context.WithCancel(context.Background())
 	defer cancel()
@@ -80,6 +82,7 @@ func TestUpdateChainTree(t *testing.T) {
 	require.Nil(t,err)
 
 }
+
 func TestGetChainTreeByName(t *testing.T) {
 	err := logging.SetLogLevel("gamenetwork", "debug")
 	require.Nil(t, err)

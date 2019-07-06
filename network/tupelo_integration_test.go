@@ -4,11 +4,7 @@ package network
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
-	"io/ioutil"
-	"path"
-	"runtime"
 	"testing"
 	"time"
 
@@ -21,29 +17,6 @@ import (
 	"github.com/quorumcontrol/tupelo-go-sdk/p2p"
 	"github.com/stretchr/testify/require"
 )
-
-type publicKeySet struct {
-	BlsHexPublicKey   string `json:"blsHexPublicKey,omitempty"`
-	EcdsaHexPublicKey string `json:"ecdsaHexPublicKey,omitempty"`
-	PeerIDBase58Key   string `json:"peerIDBase58Key,omitempty"`
-}
-
-func loadSignerKeys() ([]*publicKeySet, error) {
-	_, filename, _, ok := runtime.Caller(0)
-	if !ok {
-		return nil, fmt.Errorf("No caller information")
-	}
-	jsonBytes, err := ioutil.ReadFile(path.Join(path.Dir(filename), "../devdocker/localkeys/public-keys.json"))
-	if err != nil {
-		return nil, err
-	}
-	var keySet []*publicKeySet
-	if err := json.Unmarshal(jsonBytes, &keySet); err != nil {
-		return nil, err
-	}
-
-	return keySet, nil
-}
 
 func setupRemote(ctx context.Context, group *types.NotaryGroup) (p2p.Node, error) {
 	remote.Start()
@@ -67,7 +40,7 @@ func setupRemote(ctx context.Context, group *types.NotaryGroup) (p2p.Node, error
 }
 
 func setupNotaryGroup(ctx context.Context) (*types.NotaryGroup, error) {
-	keys, err := loadSignerKeys()
+	keys, err := loadSignerKeys(true)
 	if err != nil {
 		return nil, err
 	}
