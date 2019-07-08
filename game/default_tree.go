@@ -25,23 +25,9 @@ func createHome(n network.Network) (*LocationTree, error) {
 		return nil, errors.Wrap(err, "error creating headmasters tree")
 	}
 	headmastersChambersLocation := NewLocationTree(n, headmastersChambersTree)
-	err = headmastersChambersLocation.SetDescription("The gargoyle slides aside and you enter the headmaster's chambers. Upon entering, you see a giant dragon staring you down.")
+	err = headmastersChambersLocation.SetDescription("The gargoyle vanishes and you enter the headmaster's chambers. Upon entering, you see a giant dragon staring you down.")
 	if err != nil {
 		return nil, errors.Wrap(err, "error updating headmasters tree")
-	}
-	err = headmastersChambersLocation.AddInteraction(&ChangeLocationInteraction{
-		Command: "run away",
-		Did:     homeLocation.MustId(),
-	})
-	if err != nil {
-		return nil, errors.Wrap(err, "error adding interaction to headmasters tree")
-	}
-	err = headmastersChambersLocation.AddInteraction(&ChangeLocationInteraction{
-		Command: "return to Hogwarts' main hall",
-		Did:     homeLocation.MustId(),
-	})
-	if err != nil {
-		return nil, errors.Wrap(err, "error adding interaction to headmasters tree")
 	}
 	headmastersChambersInventory := trees.NewInventoryTree(n, headmastersChambersTree)
 
@@ -49,12 +35,12 @@ func createHome(n network.Network) (*LocationTree, error) {
 	if err != nil {
 		return nil, errors.Wrap(err, "error creating gargoyle tree")
 	}
-  gargoyleObj := NewObjectTree(n, gargoyleTree)
-  err = gargoyleObj.SetName("gargoyle-statue")
-  if err != nil {
+	gargoyleObj := NewObjectTree(n, gargoyleTree)
+	err = gargoyleObj.SetName("gargoyle-statue")
+	if err != nil {
 		return nil, errors.Wrap(err, "error setting name of new object")
-  }
-  gargoyleWhisperInteraction, err := NewCipherInteraction(
+	}
+	gargoyleWhisperInteraction, err := NewCipherInteraction(
 		"whisper to the gargoyle", "sherbert lemon",
 		&ChangeLocationInteraction{
 			Did: headmastersChambersLocation.MustId(),
@@ -68,10 +54,67 @@ func createHome(n network.Network) (*LocationTree, error) {
 		return nil, errors.Wrap(err, "cipher tree error")
 	}
 
-  homeInventory := trees.NewInventoryTree(n, homeTree)
-  err = homeInventory.Add(gargoyleObj.MustId())
-  if err != nil {
+	homeInventory := trees.NewInventoryTree(n, homeTree)
+	err = homeInventory.Add(gargoyleObj.MustId())
+	if err != nil {
 		return nil, errors.Wrap(err, "error adding gargoyle to home")
+	}
+
+	headmastersChambersState2Tree, err := n.CreateChainTree()
+	if err != nil {
+		return nil, errors.Wrap(err, "error creating headmasters tree")
+	}
+	headmastersChambersState2Location := NewLocationTree(n, headmastersChambersState2Tree)
+	err = headmastersChambersState2Location.SetDescription("Upon entering, you see the giant dragon staring you down, ready for another battle.")
+	if err != nil {
+		return nil, errors.Wrap(err, "error updating headmasters tree")
+	}
+	headmastersChambersState2Inventory := trees.NewInventoryTree(n, headmastersChambersState2Tree)
+
+	homeState2Tree, err := n.CreateChainTree()
+	if err != nil {
+		return nil, errors.Wrap(err, "error creating home2 tree")
+	}
+	homeState2Location := NewLocationTree(n, homeState2Tree)
+	err = homeState2Location.SetDescription("You are back in the main hall of Hogwarts. Where the gargoyle once sat remains an open passage to the headmaster's chambers.")
+	if err != nil {
+		return nil, errors.Wrap(err, "error updating home2 tree")
+	}
+	err = homeState2Location.AddInteraction(&ChangeLocationInteraction{
+		Command: "go through passage",
+		Did:     headmastersChambersState2Tree.MustId(),
+	})
+	if err != nil {
+		return nil, errors.Wrap(err, "error adding interaction to home2 tree")
+	}
+
+	err = headmastersChambersState2Location.AddInteraction(&ChangeLocationInteraction{
+		Command: "run away",
+		Did:     homeState2Location.MustId(),
+	})
+	if err != nil {
+		return nil, errors.Wrap(err, "error adding interaction to headmasters tree")
+	}
+	err = headmastersChambersState2Location.AddInteraction(&ChangeLocationInteraction{
+		Command: "return to the main hall",
+		Did:     homeState2Location.MustId(),
+	})
+	if err != nil {
+		return nil, errors.Wrap(err, "error adding interaction to headmasters tree")
+	}
+	err = headmastersChambersLocation.AddInteraction(&ChangeLocationInteraction{
+		Command: "run away",
+		Did:     homeState2Location.MustId(),
+	})
+	if err != nil {
+		return nil, errors.Wrap(err, "error adding interaction to headmasters tree")
+	}
+	err = headmastersChambersLocation.AddInteraction(&ChangeLocationInteraction{
+		Command: "return to the main hall",
+		Did:     homeState2Location.MustId(),
+	})
+	if err != nil {
+		return nil, errors.Wrap(err, "error adding interaction to headmasters tree")
 	}
 
 	healingTempleTree, err := n.CreateChainTree()
@@ -85,10 +128,20 @@ func createHome(n network.Network) (*LocationTree, error) {
 	}
 	err = healingTempleLocation.AddInteraction(&ChangeLocationInteraction{
 		Command: "leave the temple",
-		Did:     homeLocation.MustId(),
+		Did:     homeState2Location.MustId(),
 	})
 	if err != nil {
 		return nil, errors.Wrap(err, "error adding interaction to temple tree")
+	}
+
+	homeState3Tree, err := n.CreateChainTree()
+	if err != nil {
+		return nil, errors.Wrap(err, "error creating homeState3 tree")
+	}
+	homeState3Location := NewLocationTree(n, homeState3Tree)
+	err = homeState3Location.SetDescription("You are back in the main hall of Hogwarts. Both the gargoyle and the open passage have dissappeared, and nothing but a stone wall remains")
+	if err != nil {
+		return nil, errors.Wrap(err, "error updating defeated homeState3 tree")
 	}
 
 	victoryRoomTree, err := n.CreateChainTree()
@@ -101,8 +154,8 @@ func createHome(n network.Network) (*LocationTree, error) {
 		return nil, errors.Wrap(err, "error updating defeated dragon tree")
 	}
 	err = victoryRoomLocation.AddInteraction(&ChangeLocationInteraction{
-		Command: "return to Hogwarts' main hall",
-		Did:     homeLocation.MustId(),
+		Command: "return to the main hall",
+		Did:     homeState3Location.MustId(),
 	})
 	if err != nil {
 		return nil, errors.Wrap(err, "error adding interaction to defeated dragon tree")
@@ -112,12 +165,12 @@ func createHome(n network.Network) (*LocationTree, error) {
 	if err != nil {
 		return nil, errors.Wrap(err, "error creating dragon tree")
 	}
-  dragonObj := NewObjectTree(n, dragonTree)
-  err = dragonObj.SetName("giant-dragon")
-  if err != nil {
+	dragonObj := NewObjectTree(n, dragonTree)
+	err = dragonObj.SetName("giant-dragon")
+	if err != nil {
 		return nil, errors.Wrap(err, "error setting name of new object")
-  }
-  dragonFightInteraction, err := NewCipherInteraction(
+	}
+	dragonFightInteraction, err := NewCipherInteraction(
 		"fight the dragon", "with courage",
 		&ChangeLocationInteraction{
 			Did: victoryRoomLocation.MustId(),
@@ -130,8 +183,12 @@ func createHome(n network.Network) (*LocationTree, error) {
 	if err != nil {
 		return nil, errors.Wrap(err, "cipher tree error")
 	}
-  err = headmastersChambersInventory.Add(dragonObj.MustId())
-  if err != nil {
+	err = headmastersChambersInventory.Add(dragonObj.MustId())
+	if err != nil {
+		return nil, errors.Wrap(err, "error adding dragon")
+	}
+	err = headmastersChambersState2Inventory.Add(dragonObj.MustId())
+	if err != nil {
 		return nil, errors.Wrap(err, "error adding dragon")
 	}
 
@@ -139,13 +196,13 @@ func createHome(n network.Network) (*LocationTree, error) {
 	if err != nil {
 		return nil, errors.Wrap(err, "error creating dragonsHead tree")
 	}
-  dragonsHeadObj := NewObjectTree(n, dragonsHeadTree)
-  err = dragonsHeadObj.SetName("dragons-head")
-  if err != nil {
+	dragonsHeadObj := NewObjectTree(n, dragonsHeadTree)
+	err = dragonsHeadObj.SetName("dragons-head")
+	if err != nil {
 		return nil, errors.Wrap(err, "error setting name of new object")
 	}
-  err = dragonsHeadObj.SetDescription("this dragon head displays your great courage and victory in battle")
-  if err != nil {
+	err = dragonsHeadObj.SetDescription("this dragon head displays your great courage and victory in battle")
+	if err != nil {
 		return nil, errors.Wrap(err, "error setting description of new object")
 	}
 	err = dragonsHeadObj.AddInteraction(&GetTreeValueInteraction{
@@ -164,9 +221,9 @@ func createHome(n network.Network) (*LocationTree, error) {
 		return nil, errors.Wrap(err, "error adding interactions to new object")
 	}
 
-  victoryLocationInventory := trees.NewInventoryTree(n, victoryRoomTree)
-  err = victoryLocationInventory.Add(dragonsHeadTree.MustId())
-  if err != nil {
+	victoryLocationInventory := trees.NewInventoryTree(n, victoryRoomTree)
+	err = victoryLocationInventory.Add(dragonsHeadTree.MustId())
+	if err != nil {
 		return nil, errors.Wrap(err, "error adding dragons head")
 	}
 
