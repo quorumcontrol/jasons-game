@@ -25,7 +25,7 @@ const (
 func main() {
 	ctx := context.Background()
 
-	notaryGroup, err := network.SetupNotaryGroup(true)
+	notaryGroup, err := network.SetupTupeloNotaryGroup(ctx, true)
 	if err != nil {
 		panic(fmt.Errorf("error setting up local notary group: %v", err))
 	}
@@ -42,7 +42,7 @@ func main() {
 		panic(fmt.Errorf("error setting up network: %v", err))
 	}
 
-	net := devnet.DevRemoteNetwork{RemoteNetwork: rNet}
+	net := devnet.DevRemoteNetwork{RemoteNetwork: rNet.(*network.RemoteNetwork)}
 
 	devInkSource, err := net.GetChainTreeByName("dev-ink-source")
 	if err != nil {
@@ -60,7 +60,7 @@ func main() {
 
 	fmt.Printf("INK_DID=%s\n", devInkDID)
 
-	devInkSourceTree, err := devInkSource.ChainTree.Tree()
+	devInkSourceTree, err := devInkSource.ChainTree.Tree(ctx)
 	if err != nil {
 		panic(fmt.Errorf("error getting dev-ink-source tree: %v", err))
 	}
@@ -85,7 +85,7 @@ func main() {
 			panic(fmt.Errorf("error establishing dev ink token: %v", err))
 		}
 
-		devInkSourceTree, err = devInkSource.ChainTree.Tree()
+		devInkSourceTree, err = devInkSource.ChainTree.Tree(ctx)
 		if err != nil {
 			panic(fmt.Errorf("error getting dev-ink-source tree: %v", err))
 		}

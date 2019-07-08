@@ -55,3 +55,16 @@ These are written as short hand notes and will get fleshed out.
 
 * `make game-server testnet=1` and then hit http://localhost:8080
 
+### Ink
+
+In production ink is scarce and supplied to the game manually and deliberately.
+But in dev it's convenient for the (fake) ink to flow like the salmon of Capistrano!
+
+There are a few moving parts to that and even more steps that need to happen in
+the right order. `scripts/start-dev.sh` shows the details, but you probably
+don't want to run that directly. 
+
+Running `make dev` will spin everything up for you in a Docker environment.
+
+You can run `make down` to ensure that it all gets torn down properly
+(which CTRL-c doesn't always do).

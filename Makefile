@@ -83,10 +83,20 @@ jason: $(generated) go.mod go.sum
 	docker-compose -p jasons-game -f docker-compose-dev.yml up --force-recreate jason
 
 inkwell: $(generated) go.mod go.sum
-	docker-compose -f docker-compose-dev.yml up --force-recreate inkwell
+	env TOKEN_PAYLOAD=$(TOKEN_PAYLOAD) docker-compose -f docker-compose-dev.yml run --rm inkwell
+
+inkwelldid:
+	docker-compose -f docker-compose-dev.yml run --rm inkwelldid
 
 devink: $(generated) go.mod go.sum
-	env INK_SOURCE_DID=$(INK_SOURCE_DID) docker-compose -f docker-compose-dev.yml up --force-recreate devink
+	env INKWELL_DID=$(INKWELL_DID) docker-compose -f docker-compose-dev.yml run --rm devink
+
+dev:
+	scripts/start-dev.sh
+
+down:
+	docker-compose -f docker-compose-dev.yml down
+	docker-compose -f docker-compose-localnet.yml down
 
 frontend-build: $(generated) $(jsmodules)
 	cd frontend/jasons-game && ./node_modules/.bin/shadow-cljs release app
@@ -116,4 +126,4 @@ clean: $(FIRSTGOPATH)/bin/packr2
 	rm -rf bin
 	rm -rf JasonsGame.app/Contents/MacOS
 
-.PHONY: all build test integration-test localnet clean lint game-server jason inkwell devink game2 mac-app prepare generated
+.PHONY: all build test integration-test localnet clean lint game-server jason inkwell devink game2 mac-app prepare generated dev down

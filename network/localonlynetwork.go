@@ -196,6 +196,11 @@ func (ln *LocalNetwork) SendInk(tree *consensus.SignedChainTree, tokenName *cons
 	return nil, nil
 }
 
+func (ln *LocalNetwork) ReceiveInk(tree *consensus.SignedChainTree, tokenPayload *transactions.TokenPayload) error {
+	// placeholder to fulfill the interface
+	return nil
+}
+
 func (ln *LocalNetwork) playTransactions(tree *consensus.SignedChainTree, transactions []*transactions.Transaction) (*consensus.SignedChainTree, error) {
 	ctx := context.TODO()
 	unmarshaledRoot, err := tree.ChainTree.Dag.Get(ctx, tree.Tip())

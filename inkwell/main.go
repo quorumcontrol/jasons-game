@@ -12,6 +12,9 @@ import (
 	"github.com/pkg/errors"
 	"github.com/quorumcontrol/messages/build/go/transactions"
 
+	"github.com/quorumcontrol/jasons-game/inkwell/config"
+	"github.com/quorumcontrol/jasons-game/inkwell/depositer"
+	"github.com/quorumcontrol/jasons-game/inkwell/ink"
 	"github.com/quorumcontrol/jasons-game/inkwell/server"
 )
 
@@ -32,6 +35,7 @@ func main() {
 	mustSetLogLevel("inkwell", "debug")
 
 	local := flag.Bool("local", false, "connect to localnet & use localstack S3 instead of testnet & real S3")
+	outputdid := flag.Bool("outputdid", false, "output inkwell DID and exit")
 	deposit := flag.String("deposit", "", "token payload for ink deposit")
 	flag.Parse()
 
@@ -53,32 +57,61 @@ func main() {
 		}
 	}
 
-	serverCfg := server.InkwellConfig{
+	inkwellCfg := config.InkwellConfig{
 		Local:    *local,
 		S3Region: s3Region,
 		S3Bucket: s3Bucket,
 	}
 
+	if outputdid != nil && *outputdid {
+		fmt.Println("Outputting inkwell DID")
+		ctx := context.Background()
+		iw, err := config.Setup(ctx, inkwellCfg)
+		if err != nil {
+			panic(err)
+		}
+		fmt.Println("Config is setup")
+
+		ct, err := iw.Net.GetChainTreeByName(ink.InkwellChainTreeName)
+		if err != nil {
+			panic(err)
+		}
+
+		fmt.Printf("INKWELL_DID=%s\n", ct.MustId())
+
+		os.Exit(0)
+	}
+
 	if deposit != nil && *deposit != "" {
+		fmt.Println("Making a deposit")
+
 		marshalledTokenPayload, err := base64.StdEncoding.DecodeString(*deposit)
 		if err != nil {
-			panic(fmt.Errorf("error base64 decoding ink deposit token payload: %v", err))
+			panic(errors.Wrap(err, "error base64 decoding ink deposit token payload"))
 		}
 
 		tokenPayload := transactions.TokenPayload{}
 		err = proto.Unmarshal(marshalledTokenPayload, &tokenPayload)
 		if err != nil {
-			panic(fmt.Errorf("error unmarshalling ink deposit token payload: %v", err))
+			panic(errors.Wrap(err, "error unmarshalling ink deposit token payload"))
 		}
 
+        dep, err := depositer.New(ctx, inkwellCfg)
+        if err != nil {
+        	panic(errors.Wrap(err, "error creating ink depositer"))
+		}
 
+        err = dep.Deposit(&tokenPayload)
+        if err != nil {
+        	panic(errors.Wrap(err, "error depositing ink"))
+		}
 
-		return
+        fmt.Printf("Deposited ink into inkwell\n", )
+
+        os.Exit(0)
 	}
 
-
-
-	inkwell, err := server.NewServer(ctx, serverCfg)
+	inkwell, err := server.New(ctx, inkwellCfg)
 	if err != nil {
 		panic(errors.Wrap(err, "error creating new inkwell server"))
 	}

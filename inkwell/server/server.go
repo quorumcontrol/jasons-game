@@ -12,7 +12,7 @@ import (
 	"github.com/quorumcontrol/tupelo-go-sdk/consensus"
 	"github.com/quorumcontrol/tupelo-go-sdk/gossip3/types"
 
-	"github.com/quorumcontrol/jasons-game/config"
+	iwconfig "github.com/quorumcontrol/jasons-game/inkwell/config"
 	"github.com/quorumcontrol/jasons-game/inkwell/ink"
 	"github.com/quorumcontrol/jasons-game/inkwell/inkwell"
 	"github.com/quorumcontrol/jasons-game/network"
@@ -25,53 +25,37 @@ type InkwellRouter struct {
 	group     *types.NotaryGroup
 	dataStore datastore.Batching
 	net       network.Network
-	inkSource ink.Source
+	inkSource ink.Well
 	tokenName *consensus.TokenName
 	handler   *actor.PID
 }
 
-type InkwellConfig struct {
-	Local    bool
-	S3Region string
-	S3Bucket string
-}
-
-func NewServer(ctx context.Context, cfg InkwellConfig) (*InkwellRouter, error) {
-	group, err := network.SetupTupeloNotaryGroup(ctx, cfg.Local)
+func New(ctx context.Context, cfg iwconfig.InkwellConfig) (*InkwellRouter, error) {
+	iw, err := iwconfig.Setup(ctx, cfg)
 	if err != nil {
-		return nil, errors.Wrap(err,"error setting up notary group")
-	}
-
-	ds, err := config.S3DataStore(cfg.Local, cfg.S3Region, cfg.S3Bucket)
-	if err != nil {
-		panic(errors.Wrap(err, "error getting S3 data store"))
-	}
-
-	net, err := network.NewRemoteNetwork(ctx, group, ds)
-	if err != nil {
-		panic(errors.Wrap(err, "error setting up remote network"))
+		return nil, err
 	}
 
 	inkDID := os.Getenv("INK_DID")
 
 	if inkDID == "" {
-		panic("INK_DID must be set")
+		return nil, fmt.Errorf("INK_DID must be set")
 	}
 
-	sourceCfg := ink.ChainTreeInkSourceConfig{
-		Net: net,
+	sourceCfg := ink.ChainTreeInkwellConfig{
+		Net: iw.Net,
 	}
 
-	inkSource, err := ink.NewChainTreeInkSource(sourceCfg)
+	inkSource, err := ink.NewChainTreeInkwell(sourceCfg)
 	if err != nil {
-		panic(errors.Wrap(err, "error getting ink source"))
+		return nil, errors.Wrap(err, "error getting ink source")
 	}
 
 	return &InkwellRouter{
 		parentCtx: ctx,
-		group:     group,
-		dataStore: ds,
-		net:       net,
+		group:     iw.NotaryGroup,
+		dataStore: iw.DataStore,
+		net:       iw.Net,
 		inkSource: inkSource,
 		tokenName: &consensus.TokenName{ChainTreeDID: inkDID, LocalName: "ink"},
 	}, nil
