@@ -22,7 +22,6 @@ import (
 	"github.com/quorumcontrol/jasons-game/ui"
 	"github.com/quorumcontrol/tupelo-go-sdk/bls"
 	"github.com/quorumcontrol/tupelo-go-sdk/gossip3/types"
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
@@ -109,13 +108,16 @@ func TestFullIntegration(t *testing.T) {
 	_, err = readyFut.Result()
 	require.Nil(t, err)
 
-	rootCtx.Send(gameActor, &jasonsgame.UserInput{Message: "north"})
+	someTree, err := net.CreateChainTree()
+	require.Nil(t, err)
 
-	time.Sleep(200 * time.Millisecond)
+	rootCtx.Send(gameActor, &jasonsgame.UserInput{Message: fmt.Sprintf("connect location %s as enter dungeon", someTree.MustId())})
+	time.Sleep(100 * time.Millisecond)
+	msgs := filterUserMessages(t, stream.GetMessages())
+	require.Len(t, msgs, 2)
 
-	msgs := stream.GetMessages()
-
+	rootCtx.Send(gameActor, &jasonsgame.UserInput{Message: "enter dungeon"})
+	time.Sleep(100 * time.Millisecond)
+	msgs = filterUserMessages(t, stream.GetMessages())
 	require.Len(t, msgs, 3)
-	assert.NotNil(t, msgs[1].GetUserMessage().Location)
-	assert.NotNil(t, msgs[2].GetUserMessage().Location)
 }
