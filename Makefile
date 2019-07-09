@@ -11,7 +11,13 @@ export GO111MODULE = on
 FIRSTGOPATH = $(firstword $(subst :, ,$(GOPATH)))
 
 jsmodules = frontend/jasons-game/node_modules
-generated = network/messages.pb.go game/types.pb.go pb/jasonsgame/jasonsgame.pb.go frontend/jasons-game/src/js/frontend/remote/*_pb.* inkwell/inkwell/messages.pb.go
+generated = network/messages.pb.go game/types.pb.go pb/jasonsgame/jasonsgame.pb.go \
+            inkwell/inkwell/messages.pb.go \
+            frontend/jasons-game/src/js/frontend/remote/jasonsgame_pb.d.ts \
+            frontend/jasons-game/src/js/frontend/remote/jasonsgame_pb.js \
+            frontend/jasons-game/src/js/frontend/remote/jasonsgame_pb_service.d.ts \
+            frontend/jasons-game/src/js/frontend/remote/jasonsgame_pb_service.js
+
 packr = packrd/packed-packr.go main-packr.go
 gosources = $(shell find . -path "./vendor/*" -prune -o -type f -name "*.go" -print)
 
@@ -20,7 +26,7 @@ all: frontend-build $(packr) build
 ${FIRSTGOPATH}/src/github.com/gogo/protobuf/protobuf:
 	go get github.com/gogo/protobuf/...
 
-%.pb.go: %.proto $(FIRSTGOPATH)/src/github.com/gogo/protobuf/protobuf
+%.pb.go %_pb.d.ts %_pb_service.d.ts %_pb.js %_pb_service.js: %.proto $(FIRSTGOPATH)/src/github.com/gogo/protobuf/protobuf $(jsmodules)
 	./scripts/protogen.sh
 
 generated: $(generated)
