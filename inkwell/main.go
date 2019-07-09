@@ -70,7 +70,6 @@ func main() {
 		if err != nil {
 			panic(err)
 		}
-		fmt.Println("Config is setup")
 
 		ct, err := iw.Net.GetChainTreeByName(ink.InkwellChainTreeName)
 		if err != nil {
