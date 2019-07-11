@@ -6,7 +6,10 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/gogo/protobuf/proto"
+	"github.com/hashicorp/go-uuid"
+	"github.com/pkg/errors"
 	"github.com/quorumcontrol/chaintree/chaintree"
 	"github.com/quorumcontrol/messages/build/go/transactions"
 	"github.com/quorumcontrol/tupelo-go-sdk/consensus"
@@ -18,12 +21,21 @@ import (
 
 const (
 	dataStoreDir = "dev-ink"
-	amount = 10000
-	inkInitTxId = "dev-ink-init"
+	amount       = 10000
 )
 
+func inkSendTxId() string {
+	id, err := uuid.GenerateUUID()
+	if err != nil {
+		panic(errors.Wrap(err, "error generating dev ink send transaction ID"))
+	}
+
+	return id
+}
+
 func main() {
-	ctx := context.Background()
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
 
 	notaryGroup, err := network.SetupTupeloNotaryGroup(ctx, true)
 	if err != nil {
@@ -37,7 +49,25 @@ func main() {
 		panic(fmt.Errorf("error setting up local data store: %v", err))
 	}
 
-	rNet, err := network.NewRemoteNetwork(ctx, notaryGroup, ds)
+	signingKey, err := network.GetOrCreateStoredPrivateKey(ds)
+	fmt.Println("signing key:", signingKey)
+	if err != nil {
+		panic(errors.Wrap(err, "error getting private signingKey"))
+	}
+
+	netKey, err := crypto.GenerateKey()
+	if err != nil {
+		panic(errors.Wrap(err, "error generating network key"))
+	}
+
+	netCfg := &network.RemoteNetworkConfig{
+		NotaryGroup:   notaryGroup,
+		KeyValueStore: ds,
+		SigningKey:    signingKey,
+		NetworkKey:    netKey,
+	}
+
+	rNet, err := network.NewRemoteNetworkWithConfig(ctx, netCfg)
 	if err != nil {
 		panic(fmt.Errorf("error setting up network: %v", err))
 	}
@@ -75,6 +105,8 @@ func main() {
 	}
 
 	if !devInkExists {
+		fmt.Println("establishing new dev ink token")
+
 		establishInk, err := chaintree.NewEstablishTokenTransaction("ink", 0)
 		if err != nil {
 			panic(fmt.Errorf("error creating establish_token transaction for dev ink: %v", err))
@@ -98,7 +130,11 @@ func main() {
 		panic(fmt.Errorf("error getting dev ink balance: %v", err))
 	}
 
+	fmt.Println("dev ink balance:", devInkBalance)
+
 	if devInkBalance < amount {
+		fmt.Println("devink is low; minting some more")
+
 		mintInk, err := chaintree.NewMintTokenTransaction("ink", amount)
 		if err != nil {
 			panic(fmt.Errorf("error creating mint_token transaction for dev ink: %v", err))
@@ -118,7 +154,9 @@ func main() {
 			panic(fmt.Errorf("error getting canonical token name for dev ink: %v", err))
 		}
 
-		sendInk, err := chaintree.NewSendTokenTransaction(inkInitTxId, tokenName.String(), amount, destinationChainId)
+		sendTxId := inkSendTxId()
+
+		sendInk, err := chaintree.NewSendTokenTransaction(sendTxId, tokenName.String(), amount, destinationChainId)
 		if err != nil {
 			panic(fmt.Errorf("error creating send_token transaction for dev ink to %s: %v", destinationChainId, err))
 		}
@@ -128,7 +166,7 @@ func main() {
 			panic(fmt.Errorf("error sending dev ink token to %s: %v", destinationChainId, err))
 		}
 
-		tokenSend, err := consensus.TokenPayloadForTransaction(devInkSource.ChainTree, tokenName, inkInitTxId, &txResp.Signature)
+		tokenSend, err := consensus.TokenPayloadForTransaction(devInkSource.ChainTree, tokenName, sendTxId, &txResp.Signature)
 		if err != nil {
 			panic(fmt.Errorf("error generating dev ink token payload: %v", err))
 		}

@@ -12,6 +12,7 @@ require (
 	github.com/golang/protobuf v1.3.1
 	github.com/google/uuid v1.1.1
 	github.com/gorilla/mux v1.7.1
+	github.com/hashicorp/go-uuid v1.0.1
 	github.com/improbable-eng/grpc-web v0.9.5
 	github.com/ipfs/go-blockservice v0.1.1
 	github.com/ipfs/go-cid v0.0.2
@@ -29,8 +30,6 @@ require (
 	github.com/libp2p/go-libp2p-connmgr v0.1.0
 	github.com/libp2p/go-libp2p-core v0.0.6
 	github.com/libp2p/go-libp2p-pubsub v0.1.0
-	github.com/libp2p/go-libp2p-transport v0.0.5 // indirect
-	github.com/libp2p/go-testutil v0.1.0 // indirect
 	github.com/pkg/errors v0.8.1
 	github.com/quorumcontrol/chaintree v0.0.0-20190701175144-f8f44c3e6d4b
 	github.com/quorumcontrol/community v0.0.0-20190716000000-efb332722109442e527251ae60d5a919db7ac8c6

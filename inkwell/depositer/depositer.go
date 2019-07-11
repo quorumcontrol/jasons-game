@@ -12,24 +12,24 @@ import (
 // TODO: Put this into a build tag that doesn't normally get included
 
 type InkDepositer struct {
-	iw *config.Inkwell
-	is ink.Well
+	iwconfig *config.Inkwell
+	inkwell  ink.Well
 }
 
 func New(ctx context.Context, cfg config.InkwellConfig) (*InkDepositer, error)  {
-	iw, err := config.Setup(ctx, cfg)
+	iwconfig, err := config.Setup(ctx, cfg)
 	if err != nil {
 		return nil, err
 	}
 
-	is, err := ink.NewChainTreeInkwell(ink.ChainTreeInkwellConfig{Net: iw.Net})
+	iw, err := ink.NewChainTreeInkwell(ink.ChainTreeInkwellConfig{Net: iwconfig.Net})
 	if err != nil {
 		return nil, err
 	}
 
-	return &InkDepositer{iw: iw, is: is}, nil
+	return &InkDepositer{iwconfig: iwconfig, inkwell: iw}, nil
 }
 
 func (id *InkDepositer) Deposit(tokenPayload *transactions.TokenPayload) error {
-	return id.is.DepositInk(tokenPayload)
+	return id.inkwell.DepositInk(tokenPayload)
 }

@@ -89,8 +89,8 @@ func main() {
 			panic(errors.Wrap(err, "error base64 decoding ink deposit token payload"))
 		}
 
-		tokenPayload := transactions.TokenPayload{}
-		err = proto.Unmarshal(marshalledTokenPayload, &tokenPayload)
+		tokenPayload := &transactions.TokenPayload{}
+		err = proto.Unmarshal(marshalledTokenPayload, tokenPayload)
 		if err != nil {
 			panic(errors.Wrap(err, "error unmarshalling ink deposit token payload"))
 		}
@@ -100,12 +100,12 @@ func main() {
         	panic(errors.Wrap(err, "error creating ink depositer"))
 		}
 
-        err = dep.Deposit(&tokenPayload)
+        err = dep.Deposit(tokenPayload)
         if err != nil {
         	panic(errors.Wrap(err, "error depositing ink"))
 		}
 
-        fmt.Printf("Deposited ink into inkwell\n", )
+        fmt.Println("Deposited ink into inkwell")
 
         os.Exit(0)
 	}

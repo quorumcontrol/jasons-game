@@ -54,7 +54,10 @@ type Network interface {
 	TreeStore() TreeStore
 	PublicKey() *ecdsa.PublicKey
 	SendInk(tree *consensus.SignedChainTree, tokenName *consensus.TokenName, amount uint64, destinationChainId string) (*transactions.TokenPayload, error)
+
+	// TODO: Factor this out into a separate interface
 	ReceiveInk(tree *consensus.SignedChainTree, tokenPayload *transactions.TokenPayload) error
+
 	StartDiscovery(string) error
 	StopDiscovery(string)
 	WaitForDiscovery(ns string, num int, dur time.Duration) error
@@ -176,7 +179,7 @@ func NewRemoteNetworkWithConfig(ctx context.Context, config *RemoteNetworkConfig
 
 func NewRemoteNetwork(ctx context.Context, group *types.NotaryGroup, ds datastore.Batching) (Network, error) {
 	// TODO: keep the keys in a separate KeyStore
-	key, err := getOrCreateStoredPrivateKey(ds)
+	key, err := GetOrCreateStoredPrivateKey(ds)
 	if err != nil {
 		return nil, errors.Wrap(err, "error getting private key")
 	}
@@ -213,7 +216,7 @@ func (rn *RemoteNetwork) WaitForDiscovery(ns string, num int, dur time.Duration)
 	return rn.ipldp2pHost.WaitForDiscovery(ns, num, dur)
 }
 
-func getOrCreateStoredPrivateKey(ds datastore.Batching) (key *ecdsa.PrivateKey, err error) {
+func GetOrCreateStoredPrivateKey(ds datastore.Batching) (key *ecdsa.PrivateKey, err error) {
 	storeKey := datastore.NewKey("privateKey")
 	stored, err := ds.Get(storeKey)
 	if err == nil {
