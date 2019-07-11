@@ -1,5 +1,13 @@
 #!/usr/bin/env bash
 
+function cleanup () {
+  # in theory we shouldn't need to delete this state every time; but I haven't gotten it working reliably o/w
+  rm -rf devdocker/devink_state/*
+  make down
+}
+
+trap cleanup EXIT
+
 function capture_value () {
   local command=$1
   local log_filename=$2
