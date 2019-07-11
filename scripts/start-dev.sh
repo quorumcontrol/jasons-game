@@ -60,3 +60,5 @@ echo ''
 echo "DEV: Depositing devink in inkwell: ${TOKEN_PAYLOAD}"
 echo ''
 make inkwell TOKEN_PAYLOAD=${TOKEN_PAYLOAD} 2>&1 >logs/inkwell_deposit.log
+
+tail -f logs/localnet.log
