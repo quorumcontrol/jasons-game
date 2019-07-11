@@ -25,6 +25,12 @@ All of the network (Tupelo and IPFS) is in the "network" package. This is where 
 
 ## Building
 
+NB: By default builds are "internal" builds, meaning that they have ink
+depositing code compiled in. For builds that external users will interact
+with (e.g. you're deploying it to the production servers), you should append
+`BUILD=public` to the make commands below. It's a good idea to run `make clean`
+first or make might not realize anything needs to be rebuilt.
+
 `make` - will package up the game and frontend into `bin/jasonsgame`
     - You can run it with `-localnet=true` to connect to a local network; default is to connect to Quorum Control test net.
     - You can run it with `-disablewebview=true` to just launch the server instead of the server and a webview window. Then you can point your own browser at the host and port indicated.

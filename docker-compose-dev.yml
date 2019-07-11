@@ -18,6 +18,7 @@ services:
     environment:
       PPROF_ENABLED: "true"
       GOPATH: /go
+      BUILD: internal
       TUPELO_BOOTSTRAP_NODES: /ip4/172.16.239.10/tcp/34001/ipfs/16Uiu2HAm3TGSEKEjagcCojSJeaT5rypaeJMKejijvYSnAjviWwV5
       JASON_BOOTSTRAP_NODES: /ip4/172.16.239.100/tcp/34001/ipfs/16Uiu2HAmBL6Xz9ichyunCexiqomcHyzVpKKmxAMgUusksBZzzM3K
 
@@ -38,6 +39,7 @@ services:
     environment:
       PPROF_ENABLED: "true"
       GOPATH: /go
+      BUILD: internal
       TUPELO_BOOTSTRAP_NODES: /ip4/172.16.239.10/tcp/34001/ipfs/16Uiu2HAm3TGSEKEjagcCojSJeaT5rypaeJMKejijvYSnAjviWwV5
       JASON_BOOTSTRAP_NODES: /ip4/172.16.239.100/tcp/34001/ipfs/16Uiu2HAmBL6Xz9ichyunCexiqomcHyzVpKKmxAMgUusksBZzzM3K
 
@@ -52,6 +54,7 @@ services:
     environment:
       PPROF_ENABLED: "true"
       GOPATH: /go
+      BUILD: internal
       JASON_BOOTSTRAP_NODES: /ip4/172.16.239.100/tcp/34001/ipfs/16Uiu2HAmBL6Xz9ichyunCexiqomcHyzVpKKmxAMgUusksBZzzM3K
     networks:
       default:
@@ -70,6 +73,7 @@ services:
     environment:
       PPROF_ENABLED: "true"
       GOPATH: /go
+      BUILD: internal
       TUPELO_BOOTSTRAP_NODES: /ip4/172.16.239.10/tcp/34001/ipfs/16Uiu2HAm3TGSEKEjagcCojSJeaT5rypaeJMKejijvYSnAjviWwV5
       JASON_BOOTSTRAP_NODES: /ip4/172.16.239.100/tcp/34001/ipfs/16Uiu2HAmBL6Xz9ichyunCexiqomcHyzVpKKmxAMgUusksBZzzM3K
 
@@ -85,6 +89,7 @@ services:
       - ./devdocker/devink_state:/root/.config/tupelo:delegated
     environment:
       GOPATH: /go
+      BUILD: internal
       TUPELO_BOOTSTRAP_NODES: /ip4/172.16.239.10/tcp/34001/ipfs/16Uiu2HAm3TGSEKEjagcCojSJeaT5rypaeJMKejijvYSnAjviWwV5
       JASON_BOOTSTRAP_NODES: /ip4/172.16.239.100/tcp/34001/ipfs/16Uiu2HAmBL6Xz9ichyunCexiqomcHyzVpKKmxAMgUusksBZzzM3K
       INK_DID:
@@ -102,6 +107,7 @@ services:
       - ./devdocker/devink_state:/root/.config/tupelo:delegated
     environment:
       GOPATH: /go
+      BUILD: internal
       TUPELO_BOOTSTRAP_NODES: /ip4/172.16.239.10/tcp/34001/ipfs/16Uiu2HAm3TGSEKEjagcCojSJeaT5rypaeJMKejijvYSnAjviWwV5
       JASON_BOOTSTRAP_NODES: /ip4/172.16.239.100/tcp/34001/ipfs/16Uiu2HAmBL6Xz9ichyunCexiqomcHyzVpKKmxAMgUusksBZzzM3K
 
@@ -115,6 +121,7 @@ services:
       - ./devdocker/devink_state:/root/.config/tupelo:delegated
     environment:
       GOPATH: /go
+      BUILD: internal
       TUPELO_BOOTSTRAP_NODES: /ip4/172.16.239.10/tcp/34001/ipfs/16Uiu2HAm3TGSEKEjagcCojSJeaT5rypaeJMKejijvYSnAjviWwV5
       INKWELL_DID:
 
@@ -132,6 +139,7 @@ services:
     environment:
       PPROF_ENABLED: "true"
       GOPATH: /go
+      BUILD: internal
 
   localstack:
     image: localstack/localstack
@@ -155,6 +163,7 @@ services:
       - $GOPATH/pkg/mod:/go/pkg/mod:delegated
     environment:
       GOPATH: /go
+      BUILD: internal
       TUPELO_BOOTSTRAP_NODES: /ip4/172.16.239.10/tcp/34001/ipfs/16Uiu2HAm3TGSEKEjagcCojSJeaT5rypaeJMKejijvYSnAjviWwV5
       JASON_BOOTSTRAP_NODES: /ip4/172.16.239.100/tcp/34001/ipfs/16Uiu2HAmBL6Xz9ichyunCexiqomcHyzVpKKmxAMgUusksBZzzM3K
 

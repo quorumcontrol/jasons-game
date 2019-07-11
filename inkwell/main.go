@@ -13,7 +13,7 @@ import (
 	"github.com/quorumcontrol/messages/build/go/transactions"
 
 	"github.com/quorumcontrol/jasons-game/inkwell/config"
-	"github.com/quorumcontrol/jasons-game/inkwell/depositer"
+	"github.com/quorumcontrol/jasons-game/inkwell/depositor"
 	"github.com/quorumcontrol/jasons-game/inkwell/ink"
 	"github.com/quorumcontrol/jasons-game/inkwell/server"
 )
@@ -95,7 +95,7 @@ func main() {
 			panic(errors.Wrap(err, "error unmarshalling ink deposit token payload"))
 		}
 
-        dep, err := depositer.New(ctx, inkwellCfg)
+        dep, err := depositor.New(ctx, inkwellCfg)
         if err != nil {
         	panic(errors.Wrap(err, "error creating ink depositer"))
 		}

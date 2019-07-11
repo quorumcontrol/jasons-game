@@ -42,7 +42,13 @@ var DefaultGameBootstrappers = []string{
 	"/ip4/13.57.66.151/tcp/34001/ipfs/16Uiu2HAmFsyL7pKNRYJAhsJCF9aMLajnr2DN8jskUx6bsVcumGhB",
 }
 
+type InkNetwork interface {
+	SendInk(tree *consensus.SignedChainTree, tokenName *consensus.TokenName, amount uint64, destinationChainId string) (*transactions.TokenPayload, error)
+	ReceiveInk(tree *consensus.SignedChainTree, tokenPayload *transactions.TokenPayload) error
+}
+
 type Network interface {
+	InkNetwork
 	Community() *Community
 	ChangeChainTreeOwner(tree *consensus.SignedChainTree, newKeys []string) (*consensus.SignedChainTree, error)
 	CreateChainTree() (*consensus.SignedChainTree, error)
@@ -53,11 +59,6 @@ type Network interface {
 	UpdateChainTree(tree *consensus.SignedChainTree, path string, value interface{}) (*consensus.SignedChainTree, error)
 	TreeStore() TreeStore
 	PublicKey() *ecdsa.PublicKey
-	SendInk(tree *consensus.SignedChainTree, tokenName *consensus.TokenName, amount uint64, destinationChainId string) (*transactions.TokenPayload, error)
-
-	// TODO: Factor this out into a separate interface
-	ReceiveInk(tree *consensus.SignedChainTree, tokenPayload *transactions.TokenPayload) error
-
 	StartDiscovery(string) error
 	StopDiscovery(string)
 	WaitForDiscovery(ns string, num int, dur time.Duration) error
@@ -394,30 +395,6 @@ func (n *RemoteNetwork) SendInk(tree *consensus.SignedChainTree, tokenName *cons
 	}
 
 	return tokenPayload, nil
-}
-
-func (n *RemoteNetwork) ReceiveInk(tree *consensus.SignedChainTree, tokenPayload *transactions.TokenPayload) error {
-	decodedTip, err := cid.Decode(tokenPayload.Tip)
-	if err != nil {
-		return errors.Wrap(err, fmt.Sprintf("error decoding token payload tip: %s", tokenPayload.Tip))
-	}
-
-	transaction, err := chaintree.NewReceiveTokenTransaction(tokenPayload.TransactionId, decodedTip.Bytes(), tokenPayload.Signature, tokenPayload.Leaves)
-	if err != nil {
-		return errors.Wrap(err, "error generating ink receive token transaction")
-	}
-
-	_, err = n.Tupelo.PlayTransactions(tree, n.PrivateKey(), []*transactions.Transaction{transaction})
-	if err != nil {
-		return errors.Wrap(err, "error playing ink receive token transaction")
-	}
-
-	err = n.TreeStore().SaveTreeMetadata(tree)
-	if err != nil {
-		return errors.Wrap(err, "error saving chaintree metadata after ink receive transaction")
-	}
-
-	return nil
 }
 
 func TupeloBootstrappers() []string {

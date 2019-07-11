@@ -92,8 +92,8 @@ func (iw *InkwellRouter) Start() error {
 	return nil
 }
 
-func (iw *InkwellRouter) Receive(aCtx actor.Context) {
-	switch msg := aCtx.Message().(type) {
+func (iw *InkwellRouter) Receive(actorCtx actor.Context) {
+	switch msg := actorCtx.Message().(type) {
 	case *actor.Started:
 		// ignore
 	case *inkwell.InkRequest:

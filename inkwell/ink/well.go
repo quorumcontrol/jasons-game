@@ -22,11 +22,9 @@ var log = logging.Logger("ink")
 
 type Well interface {
 	TokenName() *consensus.TokenName
-
-	// TODO: Factor this out into a separate interface
-	DepositInk(tokenPayload *transactions.TokenPayload) error
-
 	RequestInk(amount uint64, destinationChainId string) (*transactions.TokenPayload, error)
+	// only works in internal builds b/c Network.ReceiveInk just returns an error in public builds
+	DepositInk(tokenPayload *transactions.TokenPayload) error
 }
 
 type ChainTreeInkwell struct {

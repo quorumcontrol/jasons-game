@@ -42,20 +42,20 @@ $(FIRSTGOPATH)/bin/gotestsum:
 
 bin/jasonsgame: $(gosources) $(generated) go.mod go.sum
 	mkdir -p bin
-	go build -tags=desktop -o ./bin/jasonsgame
+	go build -tags='desktop $(BUILD)' -o ./bin/jasonsgame
 
 build: bin/jasonsgame
 
 JasonsGame.app/Contents/MacOS/jasonsgame: $(generated) go.mod go.sum frontend-build $(packr)
 	mkdir -p JasonsGame.app/Contents/MacOS
-	go build -tags='desktop macos_app_bundle' -o JasonsGame.app/Contents/MacOS/jasonsgame
+	go build -tags='desktop macos_app_bundle $(BUILD)' -o JasonsGame.app/Contents/MacOS/jasonsgame
 
 JasonsGame.app: JasonsGame.app/Contents/MacOS/jasonsgame
 
 mac-app: JasonsGame.app
 
 lint: $(FIRSTGOPATH)/bin/golangci-lint $(generated)
-	$(FIRSTGOPATH)/bin/golangci-lint run --build-tags integration
+	$(FIRSTGOPATH)/bin/golangci-lint run --build-tags 'integration $(BUILD)'
 
 test: $(generated) go.mod go.sum $(FIRSTGOPATH)/bin/gotestsum
 	gotestsum
@@ -127,7 +127,7 @@ $(packr): $(FIRSTGOPATH)/bin/packr2 main.go
 
 clean: $(FIRSTGOPATH)/bin/packr2
 	$(FIRSTGOPATH)/bin/packr2 clean
-	go clean ./...
+	go clean -tags='internal public' ./...
 	rm -rf vendor
 	rm -rf bin
 	rm -rf JasonsGame.app/Contents/MacOS

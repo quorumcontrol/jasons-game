@@ -1,4 +1,6 @@
-package depositer
+// +build !public
+
+package depositor
 
 import (
 	"context"
@@ -9,14 +11,12 @@ import (
 	"github.com/quorumcontrol/jasons-game/inkwell/ink"
 )
 
-// TODO: Put this into a build tag that doesn't normally get included
-
-type InkDepositer struct {
+type InkDepositor struct {
 	iwconfig *config.Inkwell
 	inkwell  ink.Well
 }
 
-func New(ctx context.Context, cfg config.InkwellConfig) (*InkDepositer, error)  {
+func New(ctx context.Context, cfg config.InkwellConfig) (*InkDepositor, error)  {
 	iwconfig, err := config.Setup(ctx, cfg)
 	if err != nil {
 		return nil, err
@@ -27,9 +27,9 @@ func New(ctx context.Context, cfg config.InkwellConfig) (*InkDepositer, error)  
 		return nil, err
 	}
 
-	return &InkDepositer{iwconfig: iwconfig, inkwell: iw}, nil
+	return &InkDepositor{iwconfig: iwconfig, inkwell: iw}, nil
 }
 
-func (id *InkDepositer) Deposit(tokenPayload *transactions.TokenPayload) error {
+func (id *InkDepositor) Deposit(tokenPayload *transactions.TokenPayload) error {
 	return id.inkwell.DepositInk(tokenPayload)
 }
