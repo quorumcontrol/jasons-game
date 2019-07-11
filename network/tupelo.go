@@ -26,15 +26,15 @@ type Tupelo struct {
 func (t *Tupelo) SubscribeToCurrentStateChanges(did string, fn func(msg *signatures.CurrentState)) (func(), error) {
 	cli := client.New(t.NotaryGroup, did, t.PubSubSystem)
 	cli.Listen()
-	cancel, err := cli.SubscribeAll(fn)
+	sub, err := cli.SubscribeAll(fn)
 
 	if err != nil {
 		return nil, err
 	}
 
 	return func() {
+		cli.Unsubscribe(sub)
 		cli.Stop()
-		cancel()
 	}, nil
 }
 

@@ -38,7 +38,7 @@ require (
 	github.com/quorumcontrol/chaintree v0.0.0-20190701175144-f8f44c3e6d4b
 	github.com/quorumcontrol/community v0.0.1
 	github.com/quorumcontrol/messages/build/go v0.0.0-20190604083406-7ee8fa6b39eb
-	github.com/quorumcontrol/tupelo-go-sdk v0.5.1-0.20190708160148-8099c336138a
+	github.com/quorumcontrol/tupelo-go-sdk v0.5.1-0.20190712212751-cd50ebcfa54c
 	github.com/shibukawa/configdir v0.0.0-20170330084843-e180dbdc8da0
 	github.com/sirupsen/logrus v1.4.2 // indirect
 	github.com/spf13/cobra v0.0.5
