@@ -35,6 +35,7 @@ func inkSendTxId() string {
 	return id
 }
 
+// TODO: Holy long main func, Batman! Refactor this into moar funcs, girl.
 func main() {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()

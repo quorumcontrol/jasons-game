@@ -13,5 +13,5 @@ message InkRequest {
 
 message InkResponse {
     string error = 1;
-    string token = 2;
+    bytes token = 2;
 }

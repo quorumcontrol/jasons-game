@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"github.com/AsynkronIT/protoactor-go/actor"
+	"github.com/gogo/protobuf/proto"
 	"github.com/ipfs/go-datastore"
 	logging "github.com/ipfs/go-log"
 	"github.com/pkg/errors"
@@ -112,15 +113,16 @@ type InkActor struct {
 	group     *types.NotaryGroup
 	dataStore datastore.Batching
 	net       network.Network
-	inkSource Well
+	inkwell   Well
 	tokenName *consensus.TokenName
+	handler   *actor.PID
 }
 
 type InkActorConfig struct {
 	Group     *types.NotaryGroup
 	DataStore datastore.Batching
 	Net       network.Network
-	InkSource Well
+	Inkwell   Well
 	TokenName *consensus.TokenName
 }
 
@@ -130,7 +132,7 @@ func NewInkActor(ctx context.Context, cfg InkActorConfig) *InkActor {
 		group:     cfg.Group,
 		dataStore: cfg.DataStore,
 		net:       cfg.Net,
-		inkSource: cfg.InkSource,
+		inkwell:   cfg.Inkwell,
 		tokenName: cfg.TokenName,
 	}
 }
@@ -140,28 +142,39 @@ func (i *InkActor) Start(arCtx *actor.RootContext) {
 		return i
 	}))
 
+	i.handler = act
+
 	go func() {
 		<-i.parentCtx.Done()
 		arCtx.Stop(act)
 	}()
 }
 
-func (i *InkActor) Receive(aCtx actor.Context) {
-	switch msg := aCtx.Message().(type) {
+func (i *InkActor) Receive(actorCtx actor.Context) {
+	switch msg := actorCtx.Message().(type) {
 	case *actor.Started:
 		log.Info("ink actor started")
 	case *inkwell.InkRequest:
 		log.Infof("ink actor received ink request: %+v", msg)
-		tokenPayload, err := i.inkSource.RequestInk(msg.Amount, msg.DestinationChainId)
+		tokenPayload, err := i.inkwell.RequestInk(msg.Amount, msg.DestinationChainId)
 		if err != nil {
-			aCtx.Respond(&inkwell.InkResponse{
+			actorCtx.Respond(&inkwell.InkResponse{
 				Error: err.Error(),
 			})
 			return
 		}
 
-		aCtx.Respond(&inkwell.InkResponse{
-			Token: tokenPayload.String(),
+		serializedTokenPayload, err := proto.Marshal(tokenPayload)
+		if err != nil {
+			panic(fmt.Errorf("error serializing dev ink token payload: %v", err))
+		}
+
+		actorCtx.Respond(&inkwell.InkResponse{
+			Token: serializedTokenPayload,
 		})
 	}
+}
+
+func (i *InkActor) PID() *actor.PID {
+	return i.handler
 }

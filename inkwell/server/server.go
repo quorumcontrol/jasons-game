@@ -25,9 +25,10 @@ type InkwellRouter struct {
 	group     *types.NotaryGroup
 	dataStore datastore.Batching
 	net       network.Network
-	inkSource ink.Well
+	inkwell   ink.Well
 	tokenName *consensus.TokenName
 	handler   *actor.PID
+	inkActor  *actor.PID
 }
 
 func New(ctx context.Context, cfg iwconfig.InkwellConfig) (*InkwellRouter, error) {
@@ -46,7 +47,7 @@ func New(ctx context.Context, cfg iwconfig.InkwellConfig) (*InkwellRouter, error
 		Net: iw.Net,
 	}
 
-	inkSource, err := ink.NewChainTreeInkwell(sourceCfg)
+	ctiw, err := ink.NewChainTreeInkwell(sourceCfg)
 	if err != nil {
 		return nil, errors.Wrap(err, "error getting ink source")
 	}
@@ -56,7 +57,7 @@ func New(ctx context.Context, cfg iwconfig.InkwellConfig) (*InkwellRouter, error
 		group:     iw.NotaryGroup,
 		dataStore: iw.DataStore,
 		net:       iw.Net,
-		inkSource: inkSource,
+		inkwell:   ctiw,
 		tokenName: &consensus.TokenName{ChainTreeDID: inkDID, LocalName: "ink"},
 	}, nil
 }
@@ -75,11 +76,13 @@ func (iw *InkwellRouter) Start() error {
 		Group:     iw.group,
 		DataStore: iw.dataStore,
 		Net:       iw.net,
-		InkSource: iw.inkSource,
+		Inkwell:   iw.inkwell,
 		TokenName: iw.tokenName,
 	})
 
 	inkAct.Start(arCtx)
+
+	iw.inkActor = inkAct.PID()
 
 	go func() {
 		<-iw.parentCtx.Done()
@@ -95,11 +98,13 @@ func (iw *InkwellRouter) Start() error {
 func (iw *InkwellRouter) Receive(actorCtx actor.Context) {
 	switch msg := actorCtx.Message().(type) {
 	case *actor.Started:
-		// ignore
+		// subscribe to community here?
 	case *inkwell.InkRequest:
 		log.Infof("Received InkRequest: %+v", msg)
+		actorCtx.Forward(iw.inkActor)
 	case *inkwell.InkResponse:
 		log.Infof("Received InkResponse: %+v", msg)
+		// Don't think these will come back to us (vs. original requestor)
 	case *inkwell.InviteRequest:
 		log.Infof("Received InviteRequest: %+v", msg)
 	default:
