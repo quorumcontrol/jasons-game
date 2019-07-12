@@ -11,6 +11,7 @@ import (
 	"github.com/quorumcontrol/messages/build/go/transactions"
 	"github.com/quorumcontrol/tupelo-go-sdk/client"
 
+	"github.com/quorumcontrol/messages/build/go/signatures"
 	"github.com/quorumcontrol/tupelo-go-sdk/consensus"
 	"github.com/quorumcontrol/tupelo-go-sdk/gossip3/remote"
 	"github.com/quorumcontrol/tupelo-go-sdk/gossip3/types"
@@ -20,6 +21,21 @@ type Tupelo struct {
 	Store        nodestore.DagStore
 	NotaryGroup  *types.NotaryGroup
 	PubSubSystem remote.PubSub
+}
+
+func (t *Tupelo) SubscribeToCurrentStateChanges(did string, fn func(msg *signatures.CurrentState)) (func(), error) {
+	cli := client.New(t.NotaryGroup, did, t.PubSubSystem)
+	cli.Listen()
+	sub, err := cli.SubscribeAll(fn)
+
+	if err != nil {
+		return nil, err
+	}
+
+	return func() {
+		cli.Unsubscribe(sub)
+		cli.Stop()
+	}, nil
 }
 
 func (t *Tupelo) GetTip(did string) (cid.Cid, error) {

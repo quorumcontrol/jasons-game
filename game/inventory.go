@@ -15,6 +15,8 @@ import (
 	inventoryHandlers "github.com/quorumcontrol/jasons-game/handlers/inventory"
 	"github.com/quorumcontrol/jasons-game/network"
 	"github.com/quorumcontrol/jasons-game/pb/jasonsgame"
+
+	"github.com/quorumcontrol/messages/build/go/signatures"
 )
 
 type InventoryActor struct {
@@ -96,6 +98,10 @@ func (inv *InventoryActor) Receive(actorCtx actor.Context) {
 		inv.handleListObjects(actorCtx, msg)
 	case *ListInteractionsRequest:
 		inv.handleListInteractionsRequest(actorCtx, msg)
+	case *signatures.CurrentState:
+		if parentPID := actorCtx.Parent(); parentPID != nil {
+			actorCtx.Send(parentPID, &StateChange{PID: actorCtx.Self()})
+		}
 	}
 }
 
@@ -104,6 +110,8 @@ func (inv *InventoryActor) initialize(actorCtx actor.Context) {
 	if err != nil {
 		panic(fmt.Sprintf("error finding inventory tree: %v", err))
 	}
+
+	actorCtx.Spawn(inv.network.NewCurrentStateSubscriptionProps(inv.did))
 
 	inv.subscriber = actorCtx.Spawn(inv.network.Community().NewSubscriberProps(inventoryTree.BroadcastTopic()))
 	inv.handler = inv.pickHandler(actorCtx, inventoryTree)

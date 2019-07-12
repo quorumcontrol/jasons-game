@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/AsynkronIT/protoactor-go/actor"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ipfs/go-blockservice"
 	cid "github.com/ipfs/go-cid"
@@ -185,6 +186,16 @@ func (ln *LocalNetwork) ChangeChainTreeOwner(tree *consensus.SignedChainTree, ne
 		return nil, err
 	}
 	return ln.playTransactions(tree, []*transactions.Transaction{transaction})
+}
+
+type nilActor struct{}
+
+func (_ *nilActor) Receive(_ actor.Context) {}
+
+func (rn *LocalNetwork) NewCurrentStateSubscriptionProps(did string) *actor.Props {
+	return actor.PropsFromProducer(func() actor.Actor {
+		return &nilActor{}
+	})
 }
 
 func (ln *LocalNetwork) playTransactions(tree *consensus.SignedChainTree, transactions []*transactions.Transaction) (*consensus.SignedChainTree, error) {

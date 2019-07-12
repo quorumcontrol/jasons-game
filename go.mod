@@ -13,7 +13,6 @@ require (
 	github.com/golang/protobuf v1.3.1
 	github.com/gorilla/mux v1.7.1
 	github.com/improbable-eng/grpc-web v0.9.5
-	github.com/ipfs/go-block-format v0.0.2
 	github.com/ipfs/go-blockservice v0.1.0
 	github.com/ipfs/go-cid v0.0.2
 	github.com/ipfs/go-datastore v0.0.5
@@ -23,23 +22,23 @@ require (
 	github.com/ipfs/go-ipfs-config v0.0.6
 	github.com/ipfs/go-ipfs-ds-help v0.0.1
 	github.com/ipfs/go-ipfs-exchange-offline v0.0.1
-	github.com/ipfs/go-ipfs-http-client v0.0.3 // indirect
 	github.com/ipfs/go-ipld-cbor v1.5.1-0.20190302174746-59d816225550
 	github.com/ipfs/go-ipld-format v0.0.2
 	github.com/ipfs/go-log v0.0.1
 	github.com/ipfs/go-merkledag v0.1.0
+	github.com/ipfs/go-unixfs v0.1.0 // indirect
 	github.com/karrick/godirwalk v1.10.3 // indirect
 	github.com/libp2p/go-libp2p v0.2.0
 	github.com/libp2p/go-libp2p-connmgr v0.1.0
 	github.com/libp2p/go-libp2p-core v0.0.6
+	github.com/libp2p/go-libp2p-net v0.1.0 // indirect
+	github.com/libp2p/go-libp2p-protocol v0.1.0 // indirect
 	github.com/libp2p/go-libp2p-pubsub v0.1.0
 	github.com/pkg/errors v0.8.1
 	github.com/quorumcontrol/chaintree v0.0.0-20190701175144-f8f44c3e6d4b
 	github.com/quorumcontrol/community v0.0.1
 	github.com/quorumcontrol/messages/build/go v0.0.0-20190604083406-7ee8fa6b39eb
-	github.com/quorumcontrol/namedlocker v0.0.0-20180808140020-3f797c8b12b1 // indirect
-	github.com/quorumcontrol/storage v1.1.4
-	github.com/quorumcontrol/tupelo-go-sdk v0.5.1-0.20190705184618-ce22a53817ff
+	github.com/quorumcontrol/tupelo-go-sdk v0.5.1-0.20190712212751-cd50ebcfa54c
 	github.com/shibukawa/configdir v0.0.0-20170330084843-e180dbdc8da0
 	github.com/sirupsen/logrus v1.4.2 // indirect
 	github.com/spf13/cobra v0.0.5

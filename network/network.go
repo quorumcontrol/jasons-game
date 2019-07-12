@@ -9,6 +9,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/AsynkronIT/protoactor-go/actor"
 	"github.com/ethereum/go-ethereum/crypto"
 	cid "github.com/ipfs/go-cid"
 	"github.com/ipfs/go-datastore"
@@ -17,6 +18,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/quorumcontrol/chaintree/chaintree"
 	"github.com/quorumcontrol/chaintree/dag"
+	"github.com/quorumcontrol/messages/build/go/signatures"
 	"github.com/quorumcontrol/messages/build/go/transactions"
 	"github.com/quorumcontrol/tupelo-go-sdk/consensus"
 	"github.com/quorumcontrol/tupelo-go-sdk/gossip3/remote"
@@ -54,6 +56,7 @@ type Network interface {
 	StartDiscovery(string) error
 	StopDiscovery(string)
 	WaitForDiscovery(ns string, num int, dur time.Duration) error
+	NewCurrentStateSubscriptionProps(did string) *actor.Props
 }
 
 // RemoteNetwork implements the Network interface. Note this is *not* considered a secure system and private keys
@@ -81,8 +84,8 @@ func NewRemoteNetworkWithConfig(ctx context.Context, config *RemoteNetworkConfig
 
 	net := &RemoteNetwork{
 		KeyValueStore: config.KeyValueStore,
-		signingKey: config.SigningKey,
-		networkKey: config.NetworkKey,
+		signingKey:    config.SigningKey,
+		networkKey:    config.NetworkKey,
 	}
 	group := config.NotaryGroup
 
@@ -160,9 +163,9 @@ func NewRemoteNetwork(ctx context.Context, group *types.NotaryGroup, path string
 	}
 
 	return NewRemoteNetworkWithConfig(ctx, &RemoteNetworkConfig{
-		NotaryGroup: group,
-		SigningKey: key,
-		NetworkKey: key,
+		NotaryGroup:   group,
+		SigningKey:    key,
+		NetworkKey:    key,
 		KeyValueStore: ds,
 	})
 }
@@ -310,6 +313,36 @@ func (n *RemoteNetwork) ChangeChainTreeOwner(tree *consensus.SignedChainTree, ne
 		return nil, errors.Wrap(err, "error updating chaintree")
 	}
 	return tree, n.TreeStore().SaveTreeMetadata(tree)
+}
+
+type currentStateSubscriptionActor struct {
+	did    string
+	tupelo *Tupelo
+	cancel func()
+}
+
+func (act *currentStateSubscriptionActor) Receive(actorContext actor.Context) {
+	switch actorContext.Message().(type) {
+	case *actor.Started:
+		var err error
+		act.cancel, err = act.tupelo.SubscribeToCurrentStateChanges(act.did, func(msg *signatures.CurrentState) {
+			actorContext.Send(actorContext.Parent(), msg)
+		})
+		if err != nil {
+			panic(errors.Wrap(err, "error starting subscription actor for current state"))
+		}
+	case *actor.Stopping:
+		act.cancel()
+	}
+}
+
+func (rn *RemoteNetwork) NewCurrentStateSubscriptionProps(did string) *actor.Props {
+	return actor.PropsFromProducer(func() actor.Actor {
+		return &currentStateSubscriptionActor{
+			did:    did,
+			tupelo: rn.Tupelo,
+		}
+	})
 }
 
 func TupeloBootstrappers() []string {
