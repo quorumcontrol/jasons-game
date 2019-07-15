@@ -4,32 +4,20 @@ import (
 	"context"
 	"flag"
 	"fmt"
-	"io/ioutil"
 	"os"
-	"path/filepath"
-	"strings"
 	"time"
 
 	logging "github.com/ipfs/go-log"
 
-	"github.com/AsynkronIT/protoactor-go/actor"
-	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/crypto"
 	s3ds "github.com/ipfs/go-ds-s3"
 	"github.com/pkg/errors"
-	"github.com/quorumcontrol/jasons-game/jason/provider"
-	"github.com/quorumcontrol/tupelo-go-sdk/p2p"
-	"github.com/shibukawa/configdir"
+	"github.com/quorumcontrol/jasons-game/jason/blockstore"
+	"github.com/quorumcontrol/jasons-game/server"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/s3"
 )
-
-func mustSetLogLevel(name, level string) {
-	if err := logging.SetLogLevel(name, level); err != nil {
-		panic(errors.Wrapf(err, "error setting log level of %s to %s", name, level))
-	}
-}
 
 const (
 	localBucketName = "tupelo-jason-blocks-local"
@@ -39,44 +27,12 @@ func main() {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
+	isLocal := flag.Bool("local", false, "turn on localmode config for s3")
+	flag.Parse()
+
 	mustSetLogLevel("*", "warning")
 	mustSetLogLevel("pubsub", "error")
 	mustSetLogLevel("jasonblocks", "debug")
-
-	ip := flag.String("ip", "0.0.0.0", "The IP address to bind jason to")
-	port := flag.Int("port", 0, "Port to listen on, 0 means random port")
-	isLocal := flag.Bool("local", false, "turn on localmode config for s3")
-	enableBlockstore := flag.Bool("enable-blockstore", false, "enable storage of blocks on this node")
-
-	flag.Parse()
-	fmt.Printf("ip %s port %d\n", *ip, *port)
-
-	configDirs := configdir.New("tupelo", "jasons-game")
-	folders := configDirs.QueryFolders(configdir.Global)
-
-	folder := configDirs.QueryFolderContainsFile("private.key")
-	if folder == nil {
-		if _, err := folders[0].Create("private.key"); err != nil {
-			panic(err)
-		}
-		fullPath := filepath.Join(folders[0].Path, "private.key")
-		key, err := crypto.GenerateKey()
-		if err != nil {
-			panic(errors.Wrap(err, "error generating key"))
-		}
-		if err := ioutil.WriteFile(fullPath, []byte(hexutil.Encode(crypto.FromECDSA(key))), 0600); err != nil {
-			panic(err)
-		}
-	}
-	folder = configDirs.QueryFolderContainsFile("private.key")
-	keyHexBytes, err := folder.ReadFile("private.key")
-	if err != nil {
-		panic(errors.Wrap(err, "error reading key"))
-	}
-	key, err := crypto.ToECDSA(hexutil.MustDecode(strings.TrimSpace(string(keyHexBytes))))
-	if err != nil {
-		panic(errors.Wrap(err, "error unmarshaling key"))
-	}
 
 	var config s3ds.Config
 	if *isLocal {
@@ -123,22 +79,23 @@ func main() {
 		}
 	}
 
-	p2pOpts := []p2p.Option{
-		p2p.WithListenIP(*ip, *port),
+	notaryGroup, err := server.SetupTupeloNotaryGroup(ctx, *isLocal)
+	if err != nil {
+		panic(errors.Wrap(err, "error setting up tupelo notary group"))
 	}
 
-	p, err := provider.New(ctx, key, ds, p2pOpts...)
+	key, err := crypto.GenerateKey()
+	if err != nil {
+		panic(errors.Wrap(err, "error generating node key"))
+	}
+
+	p, err := blockstore.New(ctx, key, ds, notaryGroup)
 	if err != nil {
 		panic(errors.Wrap(err, "error creating provider"))
 	}
 	err = p.Start()
 	if err != nil {
 		panic(errors.Wrap(err, "error starting provider"))
-	}
-
-	if *enableBlockstore {
-		storageActor := actor.EmptyRootContext.Spawn(provider.NewBlockStoreProps(p))
-		defer actor.EmptyRootContext.Stop(storageActor)
 	}
 
 	<-make(chan struct{})
@@ -150,4 +107,10 @@ func devMakeBucket(s3obj *s3.S3, bucketName string) error {
 	})
 
 	return err
+}
+
+func mustSetLogLevel(name, level string) {
+	if err := logging.SetLogLevel(name, level); err != nil {
+		panic(errors.Wrapf(err, "error setting log level of %s to %s", name, level))
+	}
 }

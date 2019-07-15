@@ -8,6 +8,7 @@ require (
 	github.com/ethereum/go-ethereum v1.8.27
 	github.com/gobuffalo/packr/v2 v2.5.3-0.20190708182234-662c20c19dde
 	github.com/gogo/protobuf v1.2.1
+	github.com/golang/protobuf v1.3.1
 	github.com/gorilla/mux v1.7.1
 	github.com/improbable-eng/grpc-web v0.9.5
 	github.com/ipfs/go-blockservice v0.1.1
@@ -17,7 +18,6 @@ require (
 	github.com/ipfs/go-ds-s3 v0.0.1
 	github.com/ipfs/go-ipfs-blockstore v0.0.1
 	github.com/ipfs/go-ipfs-config v0.0.6
-	github.com/ipfs/go-ipfs-ds-help v0.0.1
 	github.com/ipfs/go-ipfs-exchange-offline v0.0.1
 	github.com/ipfs/go-ipld-cbor v1.5.1-0.20190302174746-59d816225550
 	github.com/ipfs/go-ipld-format v0.0.2
@@ -26,7 +26,6 @@ require (
 	github.com/libp2p/go-libp2p v0.2.0
 	github.com/libp2p/go-libp2p-connmgr v0.1.0
 	github.com/libp2p/go-libp2p-core v0.0.6
-	github.com/libp2p/go-libp2p-pubsub v0.1.0
 	github.com/pkg/errors v0.8.1
 	github.com/quorumcontrol/chaintree v0.0.0-20190701175144-f8f44c3e6d4b
 	github.com/quorumcontrol/community v0.0.0-20190716000000-efb332722109442e527251ae60d5a919db7ac8c6
@@ -42,5 +41,4 @@ require (
 
 replace github.com/libp2p/go-libp2p-pubsub v0.1.0 => github.com/quorumcontrol/go-libp2p-pubsub v0.0.4-0.20190528094025-e4e719f73e7a
 
-// use our fork of packr until https://github.com/gobuffalo/packr/issues/198 is fixed
 replace github.com/gobuffalo/packr/v2 v2.5.1 => github.com/gobuffalo/packr/v2 v2.5.3-0.20190708182234-662c20c19dde

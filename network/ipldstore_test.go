@@ -3,9 +3,7 @@ package network
 import (
 	"context"
 	"testing"
-	"time"
 
-	"github.com/AsynkronIT/protoactor-go/actor"
 	"github.com/ethereum/go-ethereum/crypto"
 	blockservice "github.com/ipfs/go-blockservice"
 	"github.com/ipfs/go-datastore"
@@ -16,16 +14,15 @@ import (
 	"github.com/quorumcontrol/chaintree/safewrap"
 	"github.com/quorumcontrol/jasons-game/pb/jasonsgame"
 	"github.com/quorumcontrol/tupelo-go-sdk/consensus"
-	"github.com/quorumcontrol/tupelo-go-sdk/gossip3/remote"
 	"github.com/stretchr/testify/require"
 )
 
-func newTestIpldTreeStore(pubsub remote.PubSub) *IPLDTreeStore {
+func newTestIpldTreeStore() *IPLDTreeStore {
 	keystore := datastore.NewMapDatastore()
 	bstore := blockstore.NewBlockstore(keystore)
 	bserv := blockservice.New(bstore, offline.Exchange(bstore))
 	dag := merkledag.NewDAGService(bserv)
-	return NewIPLDTreeStore(dag, keystore, pubsub, new(DevNullTipGetter))
+	return NewIPLDTreeStore(dag, keystore, new(DevNullTipGetter))
 }
 
 func createTree(t *testing.T, ts TreeStore) *consensus.SignedChainTree {
@@ -46,46 +43,9 @@ func createTree(t *testing.T, ts TreeStore) *consensus.SignedChainTree {
 	return tree
 }
 
-func TestRepublishAll(t *testing.T) {
-	pubsub := remote.NewSimulatedPubSub()
-	ts := newTestIpldTreeStore(pubsub)
-
-	tree := createTree(t, ts)
-	err := ts.SaveTreeMetadata(tree)
-	require.Nil(t, err)
-
-	var receivedBlocks []*Block
-	ready := actor.NewFuture(1 * time.Second)
-	receiver := func(actorContext actor.Context) {
-		switch msg := actorContext.Message().(type) {
-		case *actor.Started:
-			props := pubsub.NewSubscriberProps(BlockTopic)
-			actorContext.Spawn(props)
-			actorContext.Send(ready.PID(), true)
-		case *Block:
-			receivedBlocks = append(receivedBlocks, msg)
-		}
-	}
-
-	storeAct := actor.EmptyRootContext.Spawn(actor.PropsFromFunc(receiver))
-	defer actor.EmptyRootContext.Poison(storeAct)
-	_, err = ready.Result()
-	require.Nil(t, err)
-
-	time.Sleep(100 * time.Millisecond)
-
-	err = ts.RepublishAll()
-	require.Nil(t, err)
-
-	time.Sleep(100 * time.Millisecond)
-
-	require.Len(t, receivedBlocks, 14)
-}
-
 func TestGetTree(t *testing.T) {
 	ctx := context.TODO()
-	pubsub := remote.NewSimulatedPubSub()
-	ts := newTestIpldTreeStore(pubsub)
+	ts := newTestIpldTreeStore()
 
 	tree := createTree(t, ts)
 	err := ts.SaveTreeMetadata(tree)
@@ -103,8 +63,7 @@ func TestGetTree(t *testing.T) {
 
 func TestIpldStore(t *testing.T) {
 	ctx := context.TODO()
-	pubsub := remote.NewSimulatedPubSub()
-	ts := newTestIpldTreeStore(pubsub)
+	ts := newTestIpldTreeStore()
 
 	sw := safewrap.SafeWrap{}
 	obj := map[string]string{"test": "test"}

@@ -96,7 +96,6 @@ func NewRemoteNetworkWithConfig(ctx context.Context, config *RemoteNetworkConfig
 	net.Ipld = lite
 	net.ipldp2pHost = ipldNetHost
 	net.community = NewJasonCommunity(ctx, net.networkKey, ipldNetHost)
-	pubSubSystem := remote.NewNetworkPubSub(ipldNetHost)
 
 	// bootstrap to the game async so we can also setup the tupelo node, etc
 	// while this happens.
@@ -109,7 +108,11 @@ func NewRemoteNetworkWithConfig(ctx context.Context, config *RemoteNetworkConfig
 			log.Errorf("error bootstrapping ipld host: %v", err)
 			return
 		}
-		if err := pubSubSystem.Broadcast(BlockTopic, &Join{Identity: ipldNetHost.Identity()}); err != nil {
+		if err := net.WaitForDiscovery(DiscoveryNamespace, 1, 10*time.Second); err != nil {
+			log.Errorf("waiting for discovery failed %s", err)
+			return
+		}
+		if err := net.community.Send([]byte(GeneralTopic), &Join{Identity: ipldNetHost.Identity()}); err != nil {
 			log.Errorf("broadcasting Join failed: %s", err)
 		}
 	}()
@@ -130,7 +133,7 @@ func NewRemoteNetworkWithConfig(ctx context.Context, config *RemoteNetworkConfig
 	}
 	net.Tupelo = tup
 
-	store := NewIPLDTreeStore(lite, net.KeyValueStore, pubSubSystem, tup)
+	store := NewIPLDTreeStore(lite, net.KeyValueStore, tup)
 	net.treeStore = store
 	tup.Store = store
 
@@ -176,10 +179,6 @@ func (rn *RemoteNetwork) TreeStore() TreeStore {
 
 func (rn *RemoteNetwork) PublicKey() *ecdsa.PublicKey {
 	return &rn.signingKey.PublicKey
-}
-
-func (rn *RemoteNetwork) RepublishAll() error {
-	return rn.treeStore.(*IPLDTreeStore).RepublishAll()
 }
 
 func (rn *RemoteNetwork) Community() *Community {

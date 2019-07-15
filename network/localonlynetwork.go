@@ -20,7 +20,6 @@ import (
 	"github.com/quorumcontrol/chaintree/chaintree"
 	"github.com/quorumcontrol/messages/build/go/transactions"
 	"github.com/quorumcontrol/tupelo-go-sdk/consensus"
-	"github.com/quorumcontrol/tupelo-go-sdk/gossip3/remote"
 	"github.com/quorumcontrol/tupelo-go-sdk/p2p"
 )
 
@@ -36,7 +35,6 @@ type LocalNetwork struct {
 	key           *ecdsa.PrivateKey
 	KeyValueStore datastore.Batching
 	treeStore     TreeStore
-	pubsub        remote.PubSub
 	community     *Community
 }
 
@@ -58,15 +56,12 @@ func NewLocalNetwork() Network {
 		panic(errors.Wrap(err, "error creating IPLD client"))
 	}
 
-	pubsub := remote.NewNetworkPubSub(ipldNetHost)
-
-	ipldstore := NewIPLDTreeStore(dag, keystore, pubsub, new(DevNullTipGetter))
+	ipldstore := NewIPLDTreeStore(dag, keystore, new(DevNullTipGetter))
 
 	return &LocalNetwork{
 		key:           key,
 		KeyValueStore: keystore,
 		treeStore:     ipldstore,
-		pubsub:        pubsub,
 		community:     NewJasonCommunity(context.Background(), key, ipldNetHost),
 	}
 }
@@ -81,10 +76,6 @@ func (ln *LocalNetwork) PublicKey() *ecdsa.PublicKey {
 
 func (ln *LocalNetwork) Community() *Community {
 	return ln.community
-}
-
-func (ln *LocalNetwork) PubSubSystem() remote.PubSub {
-	return ln.pubsub
 }
 
 func (ln *LocalNetwork) StartDiscovery(_ string) error {

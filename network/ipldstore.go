@@ -2,17 +2,9 @@ package network
 
 import (
 	"context"
-	"strings"
-	"time"
 
-	dshelp "github.com/ipfs/go-ipfs-ds-help"
-
-	"github.com/ipfs/go-datastore/query"
-
-	"github.com/AsynkronIT/protoactor-go/actor"
 	cid "github.com/ipfs/go-cid"
 	"github.com/ipfs/go-datastore"
-	blockstore "github.com/ipfs/go-ipfs-blockstore"
 	cbornode "github.com/ipfs/go-ipld-cbor"
 	format "github.com/ipfs/go-ipld-format"
 
@@ -22,7 +14,6 @@ import (
 	"github.com/quorumcontrol/chaintree/nodestore"
 	"github.com/quorumcontrol/chaintree/safewrap"
 	"github.com/quorumcontrol/tupelo-go-sdk/consensus"
-	"github.com/quorumcontrol/tupelo-go-sdk/gossip3/remote"
 )
 
 // This file is an experiment to see if we can use the IPLD
@@ -42,7 +33,6 @@ type tipGetter interface {
 
 type IPLDTreeStore struct {
 	TreeStore
-	publisher   *actor.PID
 	blockApi    format.DAGService
 	keyValueApi datastore.Batching
 	tipGetter   tipGetter
@@ -51,13 +41,11 @@ type IPLDTreeStore struct {
 func NewIPLDTreeStore(
 	blockApi format.DAGService,
 	keyValueApi datastore.Batching,
-	pubsubSystem remote.PubSub,
 	tipGetter tipGetter,
 ) *IPLDTreeStore {
 	return &IPLDTreeStore{
 		blockApi:    blockApi,
 		keyValueApi: keyValueApi,
-		publisher:   actor.EmptyRootContext.Spawn(newPublisherProps(pubsubSystem)),
 		tipGetter:   tipGetter,
 	}
 }
@@ -137,9 +125,6 @@ func (ts *IPLDTreeStore) Add(ctx context.Context, node format.Node) error {
 	if err != nil {
 		return errors.Wrap(err, "error adding blocks")
 	}
-	if ts.publisher != nil {
-		actor.EmptyRootContext.Send(ts.publisher, node)
-	}
 	return err
 }
 
@@ -147,12 +132,6 @@ func (ts *IPLDTreeStore) AddMany(ctx context.Context, nodes []format.Node) error
 	err := ts.blockApi.AddMany(ctx, nodes)
 	if err != nil {
 		return err
-	}
-
-	if ts.publisher != nil {
-		for _, n := range nodes {
-			actor.EmptyRootContext.Send(ts.publisher, n)
-		}
 	}
 	return nil
 }
@@ -163,34 +142,6 @@ func (ts *IPLDTreeStore) Remove(ctx context.Context, nodeCid cid.Cid) error {
 
 func (ts *IPLDTreeStore) RemoveMany(ctx context.Context, nodeCids []cid.Cid) error {
 	return ts.blockApi.RemoveMany(ctx, nodeCids)
-}
-
-func (ts *IPLDTreeStore) RepublishAll() error {
-	result, err := ts.keyValueApi.Query(query.Query{
-		Prefix:   blockstore.BlockPrefix.String(),
-		KeysOnly: true,
-	})
-	if err != nil {
-		return errors.Wrap(err, "error querying")
-	}
-	for entry := range result.Next() {
-		keyStr := entry.Key
-		key := datastore.NewKey(strings.Split(keyStr, "/")[2])
-
-		cid, err := dshelp.DsKeyToCid(key)
-		if err != nil {
-			return errors.Wrap(err, "error getting cid")
-		}
-
-		node, err := ts.Get(context.TODO(), cid)
-		if err != nil {
-			return errors.Wrap(err, "error getting CID")
-		}
-		log.Infof("publishing %s", node.Cid().String())
-		actor.EmptyRootContext.Send(ts.publisher, node)
-		time.Sleep(15 * time.Millisecond)
-	}
-	return nil
 }
 
 func (ts *IPLDTreeStore) getLocalTip(did string) (cid.Cid, error) {
