@@ -95,6 +95,10 @@ func (iw *InkwellRouter) Start() error {
 	return nil
 }
 
+func (iw *InkwellRouter) InkwellDID() string {
+	return iw.inkwell.TokenName().ChainTreeDID
+}
+
 func (iw *InkwellRouter) Receive(actorCtx actor.Context) {
 	switch msg := actorCtx.Message().(type) {
 	case *actor.Started:
