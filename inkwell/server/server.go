@@ -96,7 +96,7 @@ func (iw *InkwellRouter) Start() error {
 }
 
 func (iw *InkwellRouter) InkwellDID() string {
-	return iw.inkwell.TokenName().ChainTreeDID
+	return iw.inkwell.ChainTreeDID()
 }
 
 func (iw *InkwellRouter) Receive(actorCtx actor.Context) {

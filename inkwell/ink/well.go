@@ -23,6 +23,7 @@ var log = logging.Logger("ink")
 
 type Well interface {
 	TokenName() *consensus.TokenName
+	ChainTreeDID() string
 	RequestInk(amount uint64, destinationChainId string) (*transactions.TokenPayload, error)
 	// only works in internal builds b/c Network.ReceiveInk just returns an error in public builds
 	DepositInk(tokenPayload *transactions.TokenPayload) error
@@ -106,6 +107,10 @@ func (cti *ChainTreeInkwell) RequestInk(amount uint64, destinationChainId string
 
 func (cti *ChainTreeInkwell) TokenName() *consensus.TokenName {
 	return &consensus.TokenName{ChainTreeDID: cti.tokenOwnerId, LocalName: "ink"}
+}
+
+func (cti *ChainTreeInkwell) ChainTreeDID() string {
+	return cti.ct.MustId()
 }
 
 type InkActor struct {
