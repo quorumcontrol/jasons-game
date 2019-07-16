@@ -67,10 +67,10 @@ func main() {
 			}
 
 			config := &network.RemoteNetworkConfig{
-				NotaryGroup: notaryGroup,
+				NotaryGroup:   notaryGroup,
 				KeyValueStore: ds,
-				SigningKey: signingKey,
-				NetworkKey: networkKey,
+				SigningKey:    signingKey,
+				NetworkKey:    networkKey,
 			}
 
 			net, err := network.NewRemoteNetworkWithConfig(ctx, config)

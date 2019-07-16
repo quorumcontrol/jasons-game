@@ -115,7 +115,7 @@ func (dis *DevInkSource) EnsureToken(ctx context.Context) error {
 
 		establishInk, err := chaintree.NewEstablishTokenTransaction("ink", 0)
 		if err != nil {
-			return errors.Wrap(err,"error creating establish_token transaction for dev ink")
+			return errors.Wrap(err, "error creating establish_token transaction for dev ink")
 		}
 
 		devInkChainTree, _, err = dis.Net.PlayTransactions(devInkChainTree, []*transactions.Transaction{establishInk})

@@ -30,7 +30,7 @@ func Setup(ctx context.Context, cfg InkwellConfig) (*Inkwell, error) {
 
 	group, err := network.SetupTupeloNotaryGroup(ctx, cfg.Local)
 	if err != nil {
-		return nil, errors.Wrap(err,"error setting up notary group")
+		return nil, errors.Wrap(err, "error setting up notary group")
 	}
 	iw.NotaryGroup = group
 

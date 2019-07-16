@@ -16,7 +16,7 @@ type InkDepositor struct {
 	inkwell  ink.Well
 }
 
-func New(ctx context.Context, cfg config.InkwellConfig) (*InkDepositor, error)  {
+func New(ctx context.Context, cfg config.InkwellConfig) (*InkDepositor, error) {
 	iwconfig, err := config.Setup(ctx, cfg)
 	if err != nil {
 		return nil, err

@@ -83,7 +83,7 @@ func TestUnrestrictedRemoveHandler(t *testing.T) {
 		require.Nil(t, err)
 
 		received := make(chan *jasonsgame.TransferredObjectMessage, 1)
-		_, err =net.Community().Subscribe(net.Community().TopicFor(handlerTree.MustId()), func(ctx context.Context, _ *messages.Envelope, msg proto.Message) {
+		_, err = net.Community().Subscribe(net.Community().TopicFor(handlerTree.MustId()), func(ctx context.Context, _ *messages.Envelope, msg proto.Message) {
 			received <- msg.(*jasonsgame.TransferredObjectMessage)
 		})
 		require.Nil(t, err)

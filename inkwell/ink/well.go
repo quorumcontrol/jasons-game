@@ -90,7 +90,7 @@ func (cti *ChainTreeInkwell) DepositInk(tokenPayload *transactions.TokenPayload)
 		return errors.Wrap(err, "error depositing ink")
 	}
 
-    return cti.net.ReceiveInk(ct, tokenPayload)
+	return cti.net.ReceiveInk(ct, tokenPayload)
 }
 
 func (cti *ChainTreeInkwell) RequestInk(amount uint64, destinationChainId string) (*transactions.TokenPayload, error) {

@@ -41,8 +41,8 @@ func main() {
 
 	var s3Region, s3Bucket string
 
-    if *local {
-    	s3Bucket = localBucketName
+	if *local {
+		s3Bucket = localBucketName
 	} else {
 		var ok bool
 
@@ -98,19 +98,19 @@ func main() {
 			panic(errors.Wrap(err, "error unmarshalling ink deposit token payload"))
 		}
 
-        dep, err := depositor.New(ctx, inkwellCfg)
-        if err != nil {
-        	panic(errors.Wrap(err, "error creating ink depositer"))
+		dep, err := depositor.New(ctx, inkwellCfg)
+		if err != nil {
+			panic(errors.Wrap(err, "error creating ink depositer"))
 		}
 
-        err = dep.Deposit(tokenPayload)
-        if err != nil {
-        	panic(errors.Wrap(err, "error depositing ink"))
+		err = dep.Deposit(tokenPayload)
+		if err != nil {
+			panic(errors.Wrap(err, "error depositing ink"))
 		}
 
-        fmt.Println("Deposited ink into inkwell")
+		fmt.Println("Deposited ink into inkwell")
 
-        os.Exit(0)
+		os.Exit(0)
 	}
 
 	inkwell, err := server.New(ctx, inkwellCfg)

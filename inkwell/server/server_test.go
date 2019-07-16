@@ -71,7 +71,7 @@ func TestInkRequests(t *testing.T) {
 
 	rootContext := actor.EmptyRootContext
 
-	req := rootContext.RequestFuture(server.handler, &inkwell.InkRequest{Amount: 1, DestinationChainId: inkRecipient.MustId()}, 10 * time.Second)
+	req := rootContext.RequestFuture(server.handler, &inkwell.InkRequest{Amount: 1, DestinationChainId: inkRecipient.MustId()}, 10*time.Second)
 
 	uncastResp, err := req.Result()
 	require.Nil(t, err)
