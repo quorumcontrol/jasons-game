@@ -4,12 +4,13 @@ package server
 
 import (
 	"context"
-	"fmt"
 	"os"
 	"testing"
 	"time"
 
 	"github.com/AsynkronIT/protoactor-go/actor"
+	"github.com/gogo/protobuf/proto"
+	"github.com/quorumcontrol/messages/build/go/transactions"
 	"github.com/quorumcontrol/tupelo-go-sdk/consensus"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -24,11 +25,6 @@ func TestInkRequests(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	cfg := iwconfig.InkwellConfig{
-		Local: true,
-		S3Bucket: "test",
-	}
-
 	devInk, err := devink.NewSource(ctx, "/tmp/test-dev-ink", true)
 	defer func() {
 		err = os.RemoveAll("/tmp/test-dev-ink")
@@ -38,8 +34,11 @@ func TestInkRequests(t *testing.T) {
 	}()
 	require.Nil(t, err)
 
-	err = os.Setenv("INK_DID", devInk.ChainTree.MustId())
-	require.Nil(t, err)
+	cfg := iwconfig.InkwellConfig{
+		Local:       true,
+		S3Bucket:    "test",
+		InkOwnerDID: devInk.ChainTree.MustId(),
+	}
 
 	err = devInk.EnsureToken(ctx)
 	require.Nil(t, err)
@@ -54,7 +53,6 @@ func TestInkRequests(t *testing.T) {
 
 	assert.Equal(t, ctx, server.parentCtx)
 	assert.Equal(t, tokenName.String(), server.tokenName.String())
-	// TODO: Assert some mo' thangs.
 
 	tokenSend, err := devInk.SendInk(ctx, server.InkwellDID(), 10)
 	require.Nil(t, err)
@@ -62,16 +60,18 @@ func TestInkRequests(t *testing.T) {
 	dep, err := depositor.New(ctx, cfg)
 	require.Nil(t, err)
 
-	fmt.Printf("tokenSend: %+v\n", tokenSend)
 	err = dep.Deposit(tokenSend)
 	require.Nil(t, err)
 
 	err = server.Start()
 	require.Nil(t, err)
 
+	inkRecipient, err := devInk.Net.CreateNamedChainTree("ink-recipient")
+	require.Nil(t, err)
+
 	rootContext := actor.EmptyRootContext
 
-	req := rootContext.RequestFuture(server.handler, inkwell.InkRequest{Amount: 1, DestinationChainId: "other-did"}, 1 * time.Second)
+	req := rootContext.RequestFuture(server.handler, &inkwell.InkRequest{Amount: 1, DestinationChainId: inkRecipient.MustId()}, 10 * time.Second)
 
 	uncastResp, err := req.Result()
 	require.Nil(t, err)
@@ -79,5 +79,25 @@ func TestInkRequests(t *testing.T) {
 	resp, ok := uncastResp.(*inkwell.InkResponse)
 	require.True(t, ok)
 
-	assert.Equal(t, "foo", resp.Token)
+	require.NotEmpty(t, resp.Token)
+
+	var tokenPayload transactions.TokenPayload
+	err = proto.Unmarshal(resp.Token, &tokenPayload)
+	require.Nil(t, err)
+
+	err = devInk.Net.ReceiveInk(inkRecipient, &tokenPayload)
+	require.Nil(t, err)
+
+	recipientTree, err := inkRecipient.ChainTree.Tree(ctx)
+	require.Nil(t, err)
+
+	recipientLedger := consensus.NewTreeLedger(recipientTree, &tokenName)
+
+	recipientTokenExists, err := recipientLedger.TokenExists()
+	require.Nil(t, err)
+	assert.True(t, recipientTokenExists)
+
+	recipientTokenBalance, err := recipientLedger.Balance()
+	require.Nil(t, err)
+	assert.Equal(t, uint64(1), recipientTokenBalance)
 }
