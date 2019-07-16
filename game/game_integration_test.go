@@ -87,9 +87,7 @@ func TestFullIntegration(t *testing.T) {
 	defer os.RemoveAll(path)
 
 	ds, err := config.LocalDataStore(path)
-	if err != nil {
-		return nil, errors.Wrap(err, "error getting store")
-	}
+	require.Nil(t, err)
 
 	net, err := network.NewRemoteNetwork(ctx, group, ds)
 	require.Nil(t, err)
