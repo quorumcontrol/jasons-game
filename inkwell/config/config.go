@@ -13,9 +13,10 @@ import (
 )
 
 type InkwellConfig struct {
-	Local    bool
-	S3Region string
-	S3Bucket string
+	Local       bool
+	S3Region    string
+	S3Bucket    string
+	InkOwnerDID string
 }
 
 type Inkwell struct {

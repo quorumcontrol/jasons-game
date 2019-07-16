@@ -2,8 +2,6 @@ package server
 
 import (
 	"context"
-	"fmt"
-	"os"
 
 	"github.com/AsynkronIT/protoactor-go/actor"
 	"github.com/ipfs/go-datastore"
@@ -37,14 +35,9 @@ func New(ctx context.Context, cfg iwconfig.InkwellConfig) (*InkwellRouter, error
 		return nil, err
 	}
 
-	inkDID := os.Getenv("INK_DID")
-
-	if inkDID == "" {
-		return nil, fmt.Errorf("INK_DID must be set")
-	}
-
 	sourceCfg := ink.ChainTreeInkwellConfig{
-		Net: iw.Net,
+		Net:         iw.Net,
+		InkOwnerDID: cfg.InkOwnerDID,
 	}
 
 	ctiw, err := ink.NewChainTreeInkwell(sourceCfg)
@@ -58,12 +51,12 @@ func New(ctx context.Context, cfg iwconfig.InkwellConfig) (*InkwellRouter, error
 		dataStore: iw.DataStore,
 		net:       iw.Net,
 		inkwell:   ctiw,
-		tokenName: &consensus.TokenName{ChainTreeDID: inkDID, LocalName: "ink"},
+		tokenName: &consensus.TokenName{ChainTreeDID: cfg.InkOwnerDID, LocalName: "ink"},
 	}, nil
 }
 
 func (iw *InkwellRouter) Start() error {
-	fmt.Println("starting inkwell service")
+	log.Info("starting inkwell service")
 
 	arCtx := actor.EmptyRootContext
 
@@ -86,7 +79,7 @@ func (iw *InkwellRouter) Start() error {
 
 	go func() {
 		<-iw.parentCtx.Done()
-		actor.EmptyRootContext.Stop(act)
+		arCtx.Stop(act)
 	}()
 	log.Info("serving ink & invite requests")
 
@@ -106,12 +99,8 @@ func (iw *InkwellRouter) Receive(actorCtx actor.Context) {
 	case *inkwell.InkRequest:
 		log.Infof("Received InkRequest: %+v", msg)
 		actorCtx.Forward(iw.inkActor)
-	case *inkwell.InkResponse:
-		log.Infof("Received InkResponse: %+v", msg)
-		// Don't think these will come back to us (vs. original requestor)
 	case *inkwell.InviteRequest:
 		log.Infof("Received InviteRequest: %+v", msg)
-	default:
-		log.Warningf("Received unknown message type %T: %+v", msg, msg)
+		// TODO: Write me
 	}
 }

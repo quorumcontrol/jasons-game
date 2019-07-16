@@ -22,7 +22,12 @@ func New(ctx context.Context, cfg config.InkwellConfig) (*InkDepositor, error)  
 		return nil, err
 	}
 
-	iw, err := ink.NewChainTreeInkwell(ink.ChainTreeInkwellConfig{Net: iwconfig.Net})
+	cticonfig := ink.ChainTreeInkwellConfig{
+		Net:         iwconfig.Net,
+		InkOwnerDID: cfg.InkOwnerDID,
+	}
+
+	iw, err := ink.NewChainTreeInkwell(cticonfig)
 	if err != nil {
 		return nil, err
 	}

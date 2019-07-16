@@ -30,14 +30,14 @@ type Well interface {
 }
 
 type ChainTreeInkwell struct {
-	ct           *consensus.SignedChainTree
-	net          network.Network
-	tokenOwnerId string
+	ctDID      string
+	net        network.Network
+	inkOwnerId string
 }
 
 type ChainTreeInkwellConfig struct {
-	Net          network.Network
-	ChainTreeDid string
+	Net         network.Network
+	InkOwnerDID string
 }
 
 var _ Well = &ChainTreeInkwell{}
@@ -52,9 +52,9 @@ func NewChainTreeInkwell(cfg ChainTreeInkwellConfig) (*ChainTreeInkwell, error) 
 	fmt.Printf("INKWELL_DID=%s\n", ct.MustId())
 
 	cti := &ChainTreeInkwell{
-		ct:           ct,
-		net:          cfg.Net,
-		tokenOwnerId: cfg.ChainTreeDid,
+		ctDID:      ct.MustId(),
+		net:        cfg.Net,
+		inkOwnerId: cfg.InkOwnerDID,
 	}
 
 	return cti, nil
@@ -75,42 +75,77 @@ func ensureChainTree(net network.Network) (*consensus.SignedChainTree, error) {
 	return existing, nil
 }
 
+func (cti *ChainTreeInkwell) chainTree() (*consensus.SignedChainTree, error) {
+	ct, err := cti.net.GetTree(cti.ctDID)
+	if err != nil {
+		return nil, err
+	}
+
+	return ct, nil
+}
+
 func (cti *ChainTreeInkwell) DepositInk(tokenPayload *transactions.TokenPayload) error {
-    return cti.net.ReceiveInk(cti.ct, tokenPayload)
+	ct, err := cti.chainTree()
+	if err != nil {
+		return errors.Wrap(err, "error depositing ink")
+	}
+
+    return cti.net.ReceiveInk(ct, tokenPayload)
 }
 
 func (cti *ChainTreeInkwell) RequestInk(amount uint64, destinationChainId string) (*transactions.TokenPayload, error) {
 	tokenName := cti.TokenName()
 
-	tokenLedger := consensus.NewTreeLedger(cti.ct.ChainTree.Dag, tokenName)
+	fmt.Println("tokenName:", tokenName)
+
+	ct, err := cti.chainTree()
+	if err != nil {
+		return nil, errors.Wrap(err, "error requesting ink")
+	}
+
+	inkwellTree, err := ct.ChainTree.Tree(context.TODO())
+	if err != nil {
+		return nil, errors.Wrap(err, "error getting inkwell tree for ink request")
+	}
+
+	fmt.Println("inkwell tree:", inkwellTree.Dump(context.TODO()))
+
+	tokenLedger := consensus.NewTreeLedger(inkwellTree, tokenName)
 
 	tokenExists, err := tokenLedger.TokenExists()
 	if err != nil {
 		return nil, errors.Wrap(err, "error checking for ink token existence")
 	}
+	fmt.Printf("tokenExists: %v\n", tokenExists)
 
 	if !tokenExists {
 		return nil, errors.Wrapf(err, "ink token %s does not exist", tokenName)
 	}
+
+	fmt.Println("token exists")
 
 	tokenBalance, err := tokenLedger.Balance()
 	if err != nil {
 		return nil, errors.Wrap(err, "error getting ink token balance")
 	}
 
+	fmt.Println("token balance:", tokenBalance)
+
 	if tokenBalance < amount {
-		return nil, fmt.Errorf("ink token balance %d is insufficient to fulfill request for %d", tokenBalance, amount)
+		return nil, errors.Wrapf(err, "ink token balance %d is insufficient to fulfill request for %d", tokenBalance, amount)
 	}
 
-	return cti.net.SendInk(cti.ct, tokenName, amount, destinationChainId)
+	fmt.Println("About to call net.SendInk")
+
+	return cti.net.SendInk(ct, tokenName, amount, destinationChainId)
 }
 
 func (cti *ChainTreeInkwell) TokenName() *consensus.TokenName {
-	return &consensus.TokenName{ChainTreeDID: cti.tokenOwnerId, LocalName: "ink"}
+	return &consensus.TokenName{ChainTreeDID: cti.inkOwnerId, LocalName: "ink"}
 }
 
 func (cti *ChainTreeInkwell) ChainTreeDID() string {
-	return cti.ct.MustId()
+	return cti.ctDID
 }
 
 type InkActor struct {
@@ -169,14 +204,23 @@ func (i *InkActor) Receive(actorCtx actor.Context) {
 			return
 		}
 
+		var response *inkwell.InkResponse
+
 		serializedTokenPayload, err := proto.Marshal(tokenPayload)
 		if err != nil {
-			panic(fmt.Errorf("error serializing dev ink token payload: %v", err))
+			response := &inkwell.InkResponse{
+				Error: fmt.Sprintf("error serializing dev ink token payload: %v", err),
+			}
+
+			actorCtx.Respond(response)
+			return
 		}
 
-		actorCtx.Respond(&inkwell.InkResponse{
+		response = &inkwell.InkResponse{
 			Token: serializedTokenPayload,
-		})
+		}
+
+		actorCtx.Respond(response)
 	}
 }
 

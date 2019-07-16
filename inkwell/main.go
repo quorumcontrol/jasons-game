@@ -57,10 +57,13 @@ func main() {
 		}
 	}
 
+	inkDID := os.Getenv("INK_DID")
+
 	inkwellCfg := config.InkwellConfig{
-		Local:    *local,
-		S3Region: s3Region,
-		S3Bucket: s3Bucket,
+		Local:       *local,
+		S3Region:    s3Region,
+		S3Bucket:    s3Bucket,
+		InkOwnerDID: inkDID,
 	}
 
 	if outputdid != nil && *outputdid {
