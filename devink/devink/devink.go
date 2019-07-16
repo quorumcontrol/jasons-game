@@ -2,7 +2,6 @@ package devink
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/hashicorp/go-uuid"
@@ -47,7 +46,6 @@ func NewSource(ctx context.Context, dataStoreDir string, connectToLocalnet bool)
 	}
 
 	signingKey, err := network.GetOrCreateStoredPrivateKey(ds)
-	fmt.Println("signing key:", signingKey)
 	if err != nil {
 		return nil, errors.Wrap(err, "error getting private signingKey")
 	}
@@ -144,7 +142,7 @@ func (dis *DevInkSource) EnsureBalance(ctx context.Context, minimum uint64) erro
 		return errors.Wrap(err, "error getting dev ink balance")
 	}
 
-	fmt.Println("dev ink balance:", devInkBalance)
+	log.Debugf("devink balance: %d", devInkBalance)
 
 	if devInkBalance < minimum {
 		log.Infof("devink balance (%d) is lower than minimum (%d); minting some more", devInkBalance, minimum)
@@ -181,12 +179,12 @@ func (dis *DevInkSource) SendInk(ctx context.Context, destinationChainId string,
 
 	sendInk, err := chaintree.NewSendTokenTransaction(sendTxId, tokenName.String(), amount, destinationChainId)
 	if err != nil {
-		return nil, errors.Wrap(err, fmt.Sprintf("error creating send_token transaction for dev ink to %s", destinationChainId))
+		return nil, errors.Wrapf(err, "error creating send_token transaction for dev ink to %s", destinationChainId)
 	}
 
 	devInkSource, txResp, err := dis.Net.PlayTransactions(devInkChainTree, []*transactions.Transaction{sendInk})
 	if err != nil {
-		return nil, errors.Wrap(err, fmt.Sprintf("error sending dev ink token to %s", destinationChainId))
+		return nil, errors.Wrapf(err, "error sending dev ink token to %s", destinationChainId)
 	}
 
 	tokenSend, err := consensus.TokenPayloadForTransaction(devInkSource.ChainTree, tokenName, sendTxId, &txResp.Signature)

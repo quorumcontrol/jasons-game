@@ -3,8 +3,6 @@
 package network
 
 import (
-	"fmt"
-
 	"github.com/ipfs/go-cid"
 	"github.com/pkg/errors"
 	"github.com/quorumcontrol/chaintree/chaintree"
@@ -15,7 +13,7 @@ import (
 func (n *RemoteNetwork) ReceiveInk(tree *consensus.SignedChainTree, tokenPayload *transactions.TokenPayload) error {
 	decodedTip, err := cid.Decode(tokenPayload.Tip)
 	if err != nil {
-		return errors.Wrap(err, fmt.Sprintf("error decoding token payload tip: %s", tokenPayload.Tip))
+		return errors.Wrapf(err, "error decoding token payload tip: %s", tokenPayload.Tip)
 	}
 
 	transaction, err := chaintree.NewReceiveTokenTransaction(tokenPayload.TransactionId, decodedTip.Bytes(), tokenPayload.Signature, tokenPayload.Leaves)

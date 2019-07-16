@@ -55,7 +55,7 @@ func main() {
 
 		serializedTokenSend, err := proto.Marshal(tokenSend)
 		if err != nil {
-			panic(fmt.Errorf("error serializing dev ink token payload: %v", err))
+			panic(errors.Wrap(err, "error serializing dev ink token payload"))
 		}
 
 		encodedTokenSend := base64.StdEncoding.EncodeToString(serializedTokenSend)

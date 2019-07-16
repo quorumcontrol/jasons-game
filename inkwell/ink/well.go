@@ -49,7 +49,7 @@ func NewChainTreeInkwell(cfg ChainTreeInkwellConfig) (*ChainTreeInkwell, error) 
 		return nil, err
 	}
 
-	fmt.Printf("INKWELL_DID=%s\n", ct.MustId())
+	log.Infof("INKWELL_DID=%s", ct.MustId())
 
 	cti := &ChainTreeInkwell{
 		ctDID:      ct.MustId(),
@@ -96,8 +96,6 @@ func (cti *ChainTreeInkwell) DepositInk(tokenPayload *transactions.TokenPayload)
 func (cti *ChainTreeInkwell) RequestInk(amount uint64, destinationChainId string) (*transactions.TokenPayload, error) {
 	tokenName := cti.TokenName()
 
-	fmt.Println("tokenName:", tokenName)
-
 	ct, err := cti.chainTree()
 	if err != nil {
 		return nil, errors.Wrap(err, "error requesting ink")
@@ -108,34 +106,25 @@ func (cti *ChainTreeInkwell) RequestInk(amount uint64, destinationChainId string
 		return nil, errors.Wrap(err, "error getting inkwell tree for ink request")
 	}
 
-	fmt.Println("inkwell tree:", inkwellTree.Dump(context.TODO()))
-
 	tokenLedger := consensus.NewTreeLedger(inkwellTree, tokenName)
 
 	tokenExists, err := tokenLedger.TokenExists()
 	if err != nil {
 		return nil, errors.Wrap(err, "error checking for ink token existence")
 	}
-	fmt.Printf("tokenExists: %v\n", tokenExists)
 
 	if !tokenExists {
 		return nil, errors.Wrapf(err, "ink token %s does not exist", tokenName)
 	}
-
-	fmt.Println("token exists")
 
 	tokenBalance, err := tokenLedger.Balance()
 	if err != nil {
 		return nil, errors.Wrap(err, "error getting ink token balance")
 	}
 
-	fmt.Println("token balance:", tokenBalance)
-
 	if tokenBalance < amount {
 		return nil, errors.Wrapf(err, "ink token balance %d is insufficient to fulfill request for %d", tokenBalance, amount)
 	}
-
-	fmt.Println("About to call net.SendInk")
 
 	return cti.net.SendInk(ct, tokenName, amount, destinationChainId)
 }
