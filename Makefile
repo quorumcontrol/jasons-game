@@ -61,27 +61,27 @@ ci-test: $(generated) go.mod go.sum $(FIRSTGOPATH)/bin/gotestsum
 
 integration-test: $(generated) go.mod go.sum
 ifdef testpackage
-	TEST_PACKAGE=${testpackage} docker-compose -f docker-compose-dev.yml run --rm integration
+	TEST_PACKAGE=${testpackage} docker-compose -p jasons-game -f docker-compose-dev.yml run --rm integration
 else
-	docker-compose -f docker-compose-dev.yml run --rm integration
+	docker-compose -p jasons-game -f docker-compose-dev.yml run --rm integration
 endif
 
 localnet: $(generated) go.mod go.sum
-	docker-compose -f docker-compose-localnet.yml pull --quiet
-	docker-compose -f docker-compose-localnet.yml up --force-recreate
+	docker-compose -p jasons-game -f docker-compose-localnet.yml pull --quiet
+	docker-compose -p jasons-game -f docker-compose-localnet.yml up --force-recreate
 
 game-server: $(generated) go.mod go.sum
 ifdef testnet
-	docker-compose -f docker-compose-dev.yml run --rm --service-ports game-testnet
+	docker-compose -p jasons-game -f docker-compose-dev.yml run --rm --service-ports game-testnet
 else
-	docker-compose -f docker-compose-dev.yml run --rm --service-ports game
+	docker-compose -p jasons-game -f docker-compose-dev.yml run --rm --service-ports game
 endif
 
 game2: $(generated) go.mod go.sum
-	docker-compose -f docker-compose-dev.yml run --rm --service-ports game2
+	docker-compose -p jasons-game -f docker-compose-dev.yml run --rm --service-ports game2
 
 jason: $(generated) go.mod go.sum
-	docker-compose -f docker-compose-dev.yml up --force-recreate jason
+	docker-compose -p jasons-game -f docker-compose-dev.yml up --force-recreate jason
 
 frontend-build: $(generated) $(jsmodules)
 	cd frontend/jasons-game && ./node_modules/.bin/shadow-cljs release app
