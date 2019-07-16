@@ -33,7 +33,7 @@ require (
 	github.com/libp2p/go-libp2p-transport v0.0.5 // indirect
 	github.com/libp2p/go-testutil v0.1.0 // indirect
 	github.com/pkg/errors v0.8.1
-	github.com/quorumcontrol/chaintree v0.0.0-20190701175144-f8f44c3e6d4b
+	github.com/quorumcontrol/chaintree v0.0.0-20190709145156-03b818830f38
 	github.com/quorumcontrol/community v0.0.0-20190716000000-efb332722109442e527251ae60d5a919db7ac8c6
 	github.com/quorumcontrol/messages/build/go v0.0.0-20190716095704-9acdbae78c93
 	github.com/quorumcontrol/tupelo-go-sdk v0.5.1
