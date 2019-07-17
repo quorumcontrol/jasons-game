@@ -49,6 +49,9 @@ func main() {
 	}
 
 	ds, err := config.S3DataStore(*isLocal, region, bucket)
+	if err != nil {
+		panic(errors.Wrap(err, "error configuring S3 data store"))
+	}
 
 	notaryGroup, err := network.SetupTupeloNotaryGroup(ctx, *isLocal)
 	if err != nil {
