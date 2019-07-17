@@ -135,5 +135,6 @@ clean: $(FIRSTGOPATH)/bin/packr2
 	rm -rf vendor
 	rm -rf bin
 	rm -rf JasonsGame.app-$(BUILD)/Contents/MacOS
+	rm -f $(generated)
 
 .PHONY: all build test integration-test localnet clean lint game-server jason inkfaucet devink game2 mac-app prepare generated dev down
