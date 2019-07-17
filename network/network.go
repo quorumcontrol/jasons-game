@@ -69,7 +69,6 @@ type RemoteNetwork struct {
 	ipldp2pHost   *p2p.LibP2PHost
 	community     *Community
 	signingKey    *ecdsa.PrivateKey
-	networkKey    *ecdsa.PrivateKey
 }
 
 type RemoteNetworkConfig struct {
@@ -77,26 +76,43 @@ type RemoteNetworkConfig struct {
 	KeyValueStore datastore.Batching
 	SigningKey    *ecdsa.PrivateKey
 	NetworkKey    *ecdsa.PrivateKey
+	IpldKey       *ecdsa.PrivateKey
 }
 
 func NewRemoteNetworkWithConfig(ctx context.Context, config *RemoteNetworkConfig) (Network, error) {
+	var err error
+
 	remote.Start()
 
 	net := &RemoteNetwork{
 		KeyValueStore: config.KeyValueStore,
 		signingKey:    config.SigningKey,
-		networkKey:    config.NetworkKey,
 	}
 	group := config.NotaryGroup
 
-	ipldNetHost, lite, err := NewIPLDClient(ctx, net.networkKey, net.KeyValueStore, p2p.WithClientOnlyDHT(true))
+	networkKey := config.NetworkKey
+	if networkKey == nil {
+		networkKey, err = crypto.GenerateKey()
+		if err != nil {
+			return nil, errors.Wrap(err, "error generating network key")
+		}
+	}
+
+	ipldKey := config.IpldKey
+	if ipldKey == nil {
+		ipldKey, err = crypto.GenerateKey()
+		if err != nil {
+			return nil, errors.Wrap(err, "error generating ipld key")
+		}
+	}
+
+	ipldNetHost, lite, err := NewIPLDClient(ctx, ipldKey, net.KeyValueStore, p2p.WithClientOnlyDHT(true))
 	if err != nil {
 		return nil, errors.Wrap(err, "error creating IPLD client")
 	}
 	net.Ipld = lite
 	net.ipldp2pHost = ipldNetHost
-	net.community = NewJasonCommunity(ctx, net.networkKey, ipldNetHost)
-	pubSubSystem := remote.NewNetworkPubSub(ipldNetHost)
+	net.community = NewJasonCommunity(ctx, ipldKey, ipldNetHost)
 
 	// bootstrap to the game async so we can also setup the tupelo node, etc
 	// while this happens.
@@ -109,18 +125,22 @@ func NewRemoteNetworkWithConfig(ctx context.Context, config *RemoteNetworkConfig
 			log.Errorf("error bootstrapping ipld host: %v", err)
 			return
 		}
-		if err := pubSubSystem.Broadcast(BlockTopic, &Join{Identity: ipldNetHost.Identity()}); err != nil {
+		if err := net.WaitForDiscovery(DiscoveryNamespace, 1, 10*time.Second); err != nil {
+			log.Errorf("waiting for discovery failed %s", err)
+			return
+		}
+		if err := net.community.Send([]byte(GeneralTopic), &Join{Identity: ipldNetHost.Identity()}); err != nil {
 			log.Errorf("broadcasting Join failed: %s", err)
 		}
 	}()
 
-	tupeloP2PHost, err := p2p.NewLibP2PHost(ctx, net.networkKey, 0)
+	tupeloP2PHost, err := p2p.NewLibP2PHost(ctx, networkKey, 0)
 	if err != nil {
 		return nil, fmt.Errorf("error setting up p2p host: %s", err)
 	}
 
 	remote.NewRouter(tupeloP2PHost)
-	group.SetupAllRemoteActors(&net.networkKey.PublicKey)
+	group.SetupAllRemoteActors(&networkKey.PublicKey)
 
 	tupeloPubSub := remote.NewNetworkPubSub(tupeloP2PHost)
 
@@ -130,7 +150,7 @@ func NewRemoteNetworkWithConfig(ctx context.Context, config *RemoteNetworkConfig
 	}
 	net.Tupelo = tup
 
-	store := NewIPLDTreeStore(lite, net.KeyValueStore, pubSubSystem, tup)
+	store := NewIPLDTreeStore(lite, net.KeyValueStore, tup)
 	net.treeStore = store
 	tup.Store = store
 
@@ -176,10 +196,6 @@ func (rn *RemoteNetwork) TreeStore() TreeStore {
 
 func (rn *RemoteNetwork) PublicKey() *ecdsa.PublicKey {
 	return &rn.signingKey.PublicKey
-}
-
-func (rn *RemoteNetwork) RepublishAll() error {
-	return rn.treeStore.(*IPLDTreeStore).RepublishAll()
 }
 
 func (rn *RemoteNetwork) Community() *Community {

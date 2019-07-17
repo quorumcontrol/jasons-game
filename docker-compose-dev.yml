@@ -39,30 +39,12 @@ services:
       TUPELO_BOOTSTRAP_NODES: /ip4/172.16.239.10/tcp/34001/ipfs/16Uiu2HAm3TGSEKEjagcCojSJeaT5rypaeJMKejijvYSnAjviWwV5
       JASON_BOOTSTRAP_NODES: /ip4/172.16.239.100/tcp/34001/ipfs/16Uiu2HAmBL6Xz9ichyunCexiqomcHyzVpKKmxAMgUusksBZzzM3K
 
-  jasonblock:
-    build: ./devdocker
-    command: ["go", "run", "jason/main.go", "-port=34001", "-local=true", "-enable-blockstore=true"]
-    depends_on:
-      - localstack
-    volumes:
-      - .:/app:delegated
-      - ./devdocker/.tmp:/root/.cache:delegated
-      - ./devdocker/testnetkeys:/app/devdocker/localkeys:delegated
-      - $GOPATH/pkg/mod:/go/pkg/mod:delegated
-    environment:
-      PPROF_ENABLED: "true"
-      GOPATH: /go
-      JASON_BOOTSTRAP_NODES: /ip4/172.16.239.100/tcp/34001/ipfs/16Uiu2HAmBL6Xz9ichyunCexiqomcHyzVpKKmxAMgUusksBZzzM3K
-
   jason:
     build: ./devdocker
-    command: ["go", "run", "jason/main.go", "-port=34001", "-local=true"]
-    depends_on:
-      - localstack
+    command: ["go", "run", "jason/cmd/bootstrap/main.go", "-ip=172.16.239.100", "-port=34001"]
     volumes:
       - .:/app:delegated
       - ./devdocker/.tmp:/root/.cache:delegated
-      - ./devdocker/testnetkeys:/app/devdocker/localkeys:delegated
       - $GOPATH/pkg/mod:/go/pkg/mod:delegated
       - ./devdocker/jason/private.key:/root/.config/tupelo/jasons-game/private.key
     environment:
@@ -72,6 +54,22 @@ services:
     networks:
       default:
         ipv4_address: 172.16.239.100
+
+  jasonblock:
+    build: ./devdocker
+    command: ["go", "run", "jason/cmd/blockstore/main.go", "-local=true"]
+    depends_on:
+      - localstack
+      - jason
+    volumes:
+      - .:/app:delegated
+      - ./devdocker/.tmp:/root/.cache:delegated
+      - $GOPATH/pkg/mod:/go/pkg/mod:delegated
+    environment:
+      PPROF_ENABLED: "true"
+      GOPATH: /go
+      TUPELO_BOOTSTRAP_NODES: /ip4/172.16.239.10/tcp/34001/ipfs/16Uiu2HAm3TGSEKEjagcCojSJeaT5rypaeJMKejijvYSnAjviWwV5
+      JASON_BOOTSTRAP_NODES: /ip4/172.16.239.100/tcp/34001/ipfs/16Uiu2HAmBL6Xz9ichyunCexiqomcHyzVpKKmxAMgUusksBZzzM3K
 
   game-testnet:
     build: ./devdocker
@@ -87,7 +85,7 @@ services:
     environment:
       PPROF_ENABLED: "true"
       GOPATH: /go
-  
+
   localstack:
     image: localstack/localstack
     environment:
