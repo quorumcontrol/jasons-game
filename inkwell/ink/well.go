@@ -65,10 +65,11 @@ func NewChainTreeInkwell(cfg ChainTreeInkwellConfig) (*ChainTreeInkwell, error) 
 // that was sent to it.
 func ensureChainTree(net network.Network) (*consensus.SignedChainTree, error) {
 	existing, err := net.GetChainTreeByName(InkwellChainTreeName)
+	if err != nil {
+		return nil, errors.Wrap(err, "error checking for existing inkwell chaintree")
+	}
+
 	if existing == nil {
-		if err != nil {
-			return nil, errors.Wrap(err, "error checking for existing inkwell chaintree")
-		}
 		return net.CreateNamedChainTree(InkwellChainTreeName)
 	}
 
