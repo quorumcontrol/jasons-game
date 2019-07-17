@@ -13,6 +13,7 @@ var defaultCommandList = commandList{
 	newCommand("connect-location", "connect location"),
 	newCommand("set-description", "set description"),
 	newCommand("tip-zoom", "go to tip"),
+	newCommand("location-zoom", "go to location"),
 	newCommand("build-portal", "build portal to"),
 	newCommand("exit", "exit"),
 	newCommand("say", "say"),

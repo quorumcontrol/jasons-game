@@ -179,6 +179,8 @@ func (g *Game) handleUserInput(actorCtx actor.Context, input *jasonsgame.UserInp
 		err = g.handleSetDescription(actorCtx, args)
 	case "tip-zoom":
 		err = g.handleTipZoom(actorCtx, args)
+	case "location-zoom":
+		err = g.handleLocationZoom(actorCtx, args)
 	case "refresh":
 		g.sendUILocation(actorCtx)
 	case "build-portal":
@@ -251,6 +253,20 @@ func (g *Game) handleTipZoom(actorCtx actor.Context, tip string) error {
 	tree, err := g.network.GetTreeByTip(tipCid)
 	if err != nil {
 		return errors.Wrap(err, fmt.Sprintf("error getting tip (%s)", tip))
+	}
+
+	g.setLocation(actorCtx, tree.MustId())
+	g.sendUILocation(actorCtx)
+	return nil
+}
+
+func (g *Game) handleLocationZoom(actorCtx actor.Context, did string) error {
+	tree, err := g.network.GetTree(did)
+	if err != nil {
+		return fmt.Errorf("error fetching target location: %v", err)
+	}
+	if tree == nil {
+		return fmt.Errorf("could not find target location")
 	}
 
 	g.setLocation(actorCtx, tree.MustId())
