@@ -30,5 +30,17 @@
 
 (re-frame/reg-event-fx
  ::file-picker/load
- (fn [{{::remote/keys [host session]} :db} [_ file-contents]]
-   {::remote/import {:host host, :session session, :spec file-contents}}))
+ (fn [{{::remote/keys [host session] :as db} :db} [_ {:keys [objects locations]}]]
+   (let [status {:pending-objects objects
+                 :created-objects []
+                 :pending-locations locations
+                 :created-locations []
+                 :populated-locations []
+                 :linked-locations []
+                 :current nil}]
+     {:db (assoc db
+                 ::remote/importing true
+                 ::remote/import-status status)
+      :dispatch [::remote/import {:host host,
+                                  :session session,
+                                  :status status}]})))

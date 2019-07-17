@@ -123,7 +123,7 @@ func (g *Game) handleImportObject(actorCtx actor.Context, input *jasonsgame.Obje
 
 	did := newObject.Object.Did
 
-	g.sendUserMessage(actorCtx, fmt.Sprintf("%s has been imported with DID %s", input.Name, did))
+	g.sendUserMessage(actorCtx, fmt.Sprintf("new object %s imported with DID %s", input.Name, did))
 
 	input.Did = did
 	g.sendImportResult(actorCtx, input)

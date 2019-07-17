@@ -33,6 +33,11 @@
       .getUiMessageCase
       (= (:COMMAND_UPDATE ui-message-types))))
 
+(defn import-result? [msg]
+  (-> msg
+      .getUiMessageCase
+      (= (:IMPORT_RESULT ui-message-types))))
+
 (defn new-session [id]
   (doto (game-lib/Session.)
     (.setUuid id)))
@@ -77,13 +82,24 @@
   (doto (game-lib/ImportRequest.)
     (.setSession session)))
 
+(defn loc-spec->proto [{:keys [name] :as obj-spec}]
+  (doto (game-lib/LocationSpec.)
+    (.setName name)))
+
 (defn new-import-location-request [session location-spec]
-  (doto (new-import-request session)
-    (.setLocation (clj->js location-spec))))
+  (let [obj-spec-proto (loc-spec->proto location-spec)]
+    (doto (new-import-request session)
+      (.setLocation obj-spec-proto))))
+
+(defn obj-spec->proto [{:keys [name description] :as obj-spec}]
+  (doto (game-lib/ObjectSpec.)
+    (.setName name)
+    (.setDescription description)))
 
 (defn new-import-object-request [session object-spec]
-  (doto (new-import-request session)
-    (.setObject (clj->js object-spec))))
+  (let [obj-spec-proto (obj-spec->proto object-spec)]
+    (doto (new-import-request session)
+      (.setObject obj-spec-proto))))
 
 (defn send-import-request [host req callback]
   (unary game-import-command (clj->js {:request req
@@ -119,11 +135,19 @@
                          :commandsList)]
       (re-frame/dispatch [:command/update cmd-update]))))
 
+(defn handle-import-result [resp]
+  (let [msg (.getImportResult resp)]
+    (let [import-result (-> msg
+                            resp->message)]
+      (.log js/console (str "import-result: " import-result))
+      (re-frame/dispatch [::import-result import-result]))))
+
 (defn handle-game-message [resp]
   (let [msg-type (.getUiMessageCase resp)]
     (cond
       (user-message? resp) (handle-user-message resp)
       (command-update? resp) (handle-command-update resp)
+      (import-result? resp) (handle-import-result resp)
       :default (.log js/console "unrecognized message type" msg-type))))
 
 (defn handle-game-end [resp]
@@ -156,3 +180,75 @@
    (.log js/console (str "sending import location request with spec: " spec))
    (let [req (new-import-location-request session spec)]
      (send-import-request host req (fn [resp] (.log js/console resp))))))
+
+(defn import-next-object [{::keys [host session import-status] :as db}]
+  (let [{:keys [pending-objects]} import-status
+        next (first pending-objects)
+        current [::import-object next]
+        new-pending-objects (rest pending-objects)
+        new-status (-> import-status
+                       (assoc :pending-objects new-pending-objects)
+                       (assoc :current current))]
+    {:db (assoc db ::import-status new-status)
+     ::import-object {:host host, :session session, :spec next}}))
+
+(defn import-next-location [{::keys [host session import-status] :as db}]
+  (let [{:keys [pending-locations]} import-status
+        next (first pending-locations)
+        current [::import-location next]
+        new-pending-locations (rest pending-locations)
+        new-status (-> import-status
+                       (assoc :pending-locations new-pending-locations)
+                       (assoc :current current))]
+    {:db (assoc db ::import-status new-status)
+     ::import-location {:host host, :session session, :spec next}}))
+
+(defn handle-import [{{:keys [pending-objects pending-locations]} ::import-status
+                      :as db}]
+  (cond
+    (seq pending-objects) (import-next-object db)
+    (seq pending-locations) (import-next-location db)))
+
+(re-frame/reg-event-fx
+ ::import
+ (fn [{db :db} _]
+   (.log js/console (str "import status: " (::import-status db)))
+   (handle-import db)))
+
+(defn update-import-object-status [{:keys [created-objects current] :as status}
+                                   {:keys [object] :as import-result}]
+  (let [create-spec (second current)
+        new-created-object (merge create-spec object)
+        new-created-objects (conj created-objects object)]
+    (-> status
+        (assoc :created-objects new-created-objects)
+        (dissoc :current))))
+
+(defn update-import-location-status [{:keys [created-locations current]:as status}
+                                   {:keys [location] :as import-result}]
+  (let [create-spec (second current)
+        new-created-location (merge create-spec location)
+        new-created-locations (conj created-locations new-created-location)]
+    (-> status
+        (assoc :created-locations new-created-locations)
+        (dissoc :current))))
+
+(defn update-status [{:keys [created-objects created-locations current]
+                      :as status}
+                     {:keys [object location] :as import-result}]
+  (let [step (first current)]
+    (cond
+      (= step ::import-object) (update-import-object-status status import-result)
+      (= step ::import-location) (update-import-location-status status import-result))
+    ))
+
+(re-frame/reg-event-fx
+ ::import-result
+ (fn [{:keys [db] :as cofx} [_ result]]
+   (let [{::keys [host session import-status]} db
+         new-status (update-status import-status result)]
+     (.log js/console (str "new status: " new-status))
+     {:db (assoc db ::import-status new-status)
+      :dispatch [::import {:host host,
+                           :session session,
+                           :status new-status}]})))

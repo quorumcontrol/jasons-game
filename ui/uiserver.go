@@ -142,6 +142,26 @@ func (us *UIServer) Receive(actorCtx actor.Context) {
 			log.Errorf("error sending message to stream: %v", err)
 		}
 
+	case *jasonsgame.ImportResult:
+		actorCtx.SetReceiveTimeout(5 * time.Second)
+		log.Debugf("import result: %s", msg)
+		if us.stream == nil {
+			log.Errorf("no valid stream for import result: %v", msg)
+			return
+		}
+
+		uiMsg, err := buildUIMessage(msg)
+		if err != nil {
+			panic(err)
+		}
+
+		err = us.stream.Send(uiMsg)
+		if err != nil {
+			us.stream = nil
+			us.sendDone()
+			log.Errorf("error sending import result to stream: %v", err)
+		}
+
 	case *jasonsgame.CommandUpdate:
 		actorCtx.SetReceiveTimeout(5 * time.Second)
 		log.Debugf("command update: %s", msg.Commands)
@@ -178,6 +198,22 @@ func (us *UIServer) Receive(actorCtx actor.Context) {
 			return
 		}
 		log.Debugf("user input has no game to go to %v", msg)
+	case *jasonsgame.ImportRequest:
+		actorCtx.SetReceiveTimeout(5 * time.Second)
+		log.Debugf("import request", msg)
+		if us.game != nil {
+			fut := actorCtx.RequestFuture(us.game, msg, 5*time.Second)
+			res, err := fut.Result()
+			if err != nil {
+				log.Errorf("error waiting for future: %v", err)
+			}
+			log.Debugf("received response from game")
+			if sender := actorCtx.Sender(); sender != nil {
+				actorCtx.Respond(res)
+			}
+			return
+		}
+		log.Debugf("import has no game to go to %v", msg)
 	default:
 		log.Debugf("received unknown message: %v (%s)", msg, reflect.TypeOf(msg).String())
 	}
