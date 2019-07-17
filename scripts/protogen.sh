@@ -17,3 +17,5 @@ protoc -I=./pb -I=$GOPATH/src -I=${GOPATH}/src/github.com/gogo/protobuf/protobuf
 protoc -I=./network -I=$GOPATH/src -I=${GOPATH}/src/github.com/gogo/protobuf/protobuf messages.proto --gogofaster_out=Mgoogle/protobuf/any.proto=github.com/gogo/protobuf/types,plugins=grpc:./network/
 
 protoc -I=./game -I=$GOPATH/src types.proto --gogofaster_out=Mgoogle/protobuf/any.proto=github.com/gogo/protobuf/types,plugins=grpc:./game/
+
+protoc -I=./inkfaucet/inkfaucet -I=$GOPATH/src messages.proto --gogofaster_out=Mgoogle/protobuf/any.proto=github.com/gogo/protobuf/types,plugins=grpc:./inkfaucet/inkfaucet

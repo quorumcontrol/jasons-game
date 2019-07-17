@@ -38,7 +38,9 @@ type LocalNetwork struct {
 	community     *Community
 }
 
-func NewLocalNetwork() Network {
+var _ Network = &LocalNetwork{}
+
+func NewLocalNetwork() *LocalNetwork {
 	keystore := dssync.MutexWrap(datastore.NewMapDatastore())
 
 	bstore := blockstore.NewBlockstore(keystore)
@@ -189,11 +191,21 @@ func (rn *LocalNetwork) NewCurrentStateSubscriptionProps(did string) *actor.Prop
 	})
 }
 
+func (ln *LocalNetwork) SendInk(tree *consensus.SignedChainTree, tokenName *consensus.TokenName, amount uint64, destinationChainId string) (*transactions.TokenPayload, error) {
+	// placeholder to fulfill the interface
+	return nil, nil
+}
+
+func (ln *LocalNetwork) ReceiveInk(tree *consensus.SignedChainTree, tokenPayload *transactions.TokenPayload) error {
+	// placeholder to fulfill the interface
+	return nil
+}
+
 func (ln *LocalNetwork) playTransactions(tree *consensus.SignedChainTree, transactions []*transactions.Transaction) (*consensus.SignedChainTree, error) {
 	ctx := context.TODO()
 	unmarshaledRoot, err := tree.ChainTree.Dag.Get(ctx, tree.Tip())
 	if unmarshaledRoot == nil || err != nil {
-		return nil, fmt.Errorf("error,missing root: %v", err)
+		return nil, fmt.Errorf("error missing root: %v", err)
 	}
 	root := &chaintree.RootNode{}
 

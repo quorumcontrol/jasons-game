@@ -9,13 +9,15 @@ import (
 	"github.com/AsynkronIT/protoactor-go/actor"
 	logging "github.com/ipfs/go-log"
 	"github.com/pkg/errors"
+
+	"github.com/quorumcontrol/jasons-game/config"
 	"github.com/quorumcontrol/jasons-game/game"
+
+	"github.com/quorumcontrol/tupelo-go-sdk/gossip3/types"
 
 	"github.com/quorumcontrol/jasons-game/network"
 	"github.com/quorumcontrol/jasons-game/pb/jasonsgame"
 	"github.com/quorumcontrol/jasons-game/ui"
-	"github.com/quorumcontrol/tupelo-go-sdk/gossip3/types"
-	"github.com/shibukawa/configdir"
 )
 
 var log = logging.Logger("gameserver")
@@ -30,25 +32,18 @@ type GameServer struct {
 }
 
 func NewGameServer(ctx context.Context, connectToLocalnet bool) *GameServer {
-	group, err := SetupTupeloNotaryGroup(ctx, connectToLocalnet)
+	group, err := network.SetupTupeloNotaryGroup(ctx, connectToLocalnet)
 	if err != nil {
 		panic(errors.Wrap(err, "setting up notary group"))
 	}
 
-	configDirs := configdir.New("tupelo", "jasons-game")
-	folders := configDirs.QueryFolders(configdir.Global)
-	folder := configDirs.QueryFolderContainsFile(sessionStorageDir)
-	if folder == nil {
-		if err := folders[0].CreateParentDir(sessionStorageDir); err != nil {
-			panic(err)
-		}
-	}
+	cfg := config.EnsureExists(sessionStorageDir)
 
 	return &GameServer{
 		sessions:    make(map[string]*actor.PID),
 		group:       group,
 		parentCtx:   ctx,
-		sessionPath: filepath.Join(folders[0].Path, sessionStorageDir),
+		sessionPath: cfg.Path,
 	}
 }
 
@@ -87,12 +82,18 @@ func (gs *GameServer) ReceiveStatMessages(sess *jasonsgame.Session, stream jason
 func (gs *GameServer) getOrCreateSession(sess *jasonsgame.Session, stream jasonsgame.GameService_ReceiveUIMessagesServer) *actor.PID {
 	uiActor, ok := gs.sessions[sess.Uuid]
 	if !ok {
-		// use filepath.Base as a "cleaner" here to not allow setting arbitrary directors with, for example, uuid: "../../etc/passwd"
+		// use filepath.Base as a "cleaner" here to not allow setting arbitrary directories with, for example, uuid: "../../etc/passwd"
 		statePath := filepath.Join(gs.sessionPath, filepath.Base(sess.Uuid))
 		if err := os.MkdirAll(statePath, 0750); err != nil {
 			panic(errors.Wrap(err, "error creating session storage"))
 		}
-		net, err := network.NewRemoteNetwork(gs.parentCtx, gs.group, statePath)
+
+		ds, err := config.LocalDataStore(statePath)
+		if err != nil {
+			panic(errors.Wrap(err, "error getting store"))
+		}
+
+		net, err := network.NewRemoteNetwork(gs.parentCtx, gs.group, ds)
 		if err != nil {
 			panic(errors.Wrap(err, "setting up network"))
 		}

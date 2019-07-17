@@ -1,4 +1,4 @@
-package server
+package network
 
 import (
 	"context"
@@ -18,13 +18,13 @@ type publicKeySet struct {
 }
 
 func loadSignerKeys(connectToLocalnet bool) ([]*publicKeySet, error) {
+	// TODO: Referencing devdocker dir here seems gross; should maybe rethink this
 	localBox := packr.New("localKeys", "../devdocker/localkeys")
 	testnetBox := packr.New("testnetKeys", "../devdocker/testnetkeys")
 
 	var jsonBytes []byte
 	var err error
 
-	// TODO: Referencing devdocker dir here seems gross; should maybe rethink this
 	if connectToLocalnet {
 		jsonBytes, err = localBox.Find("public-keys.json")
 	} else {

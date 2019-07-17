@@ -5,13 +5,13 @@ import (
 
 	"github.com/ethereum/go-ethereum/crypto"
 	cid "github.com/ipfs/go-cid"
+
 	"github.com/pkg/errors"
 	"github.com/quorumcontrol/chaintree/chaintree"
 	"github.com/quorumcontrol/chaintree/nodestore"
+	"github.com/quorumcontrol/messages/build/go/signatures"
 	"github.com/quorumcontrol/messages/build/go/transactions"
 	"github.com/quorumcontrol/tupelo-go-sdk/client"
-
-	"github.com/quorumcontrol/messages/build/go/signatures"
 	"github.com/quorumcontrol/tupelo-go-sdk/consensus"
 	"github.com/quorumcontrol/tupelo-go-sdk/gossip3/remote"
 	"github.com/quorumcontrol/tupelo-go-sdk/gossip3/types"
@@ -93,10 +93,11 @@ func (t *Tupelo) UpdateChainTree(tree *consensus.SignedChainTree, key *ecdsa.Pri
 		return errors.Wrap(err, "error creating set data transaction")
 	}
 
-	return t.PlayTransactions(tree, key, []*transactions.Transaction{transaction})
+	_, err = t.PlayTransactions(tree, key, []*transactions.Transaction{transaction})
+	return err
 }
 
-func (t *Tupelo) PlayTransactions(tree *consensus.SignedChainTree, key *ecdsa.PrivateKey, transactions []*transactions.Transaction) error {
+func (t *Tupelo) PlayTransactions(tree *consensus.SignedChainTree, key *ecdsa.PrivateKey, transactions []*transactions.Transaction) (*consensus.AddBlockResponse, error) {
 	c := client.New(t.NotaryGroup, tree.MustId(), t.PubSubSystem)
 	c.Listen()
 	defer c.Stop()
@@ -107,6 +108,13 @@ func (t *Tupelo) PlayTransactions(tree *consensus.SignedChainTree, key *ecdsa.Pr
 		tipPtr = &tip
 	}
 
-	_, err := c.PlayTransactions(tree, key, tipPtr, transactions)
-	return err
+	return c.PlayTransactions(tree, key, tipPtr, transactions)
+}
+
+func (t *Tupelo) TokenPayloadForTransaction(tree *consensus.SignedChainTree, tokenName *consensus.TokenName, sendTokenTxId string, sendTxSig *signatures.Signature) (*transactions.TokenPayload, error) {
+	c := client.New(t.NotaryGroup, tree.MustId(), t.PubSubSystem)
+	c.Listen()
+	defer c.Stop()
+
+	return c.TokenPayloadForTransaction(tree.ChainTree, tokenName, sendTokenTxId, sendTxSig)
 }

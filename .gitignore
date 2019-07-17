@@ -31,3 +31,9 @@ log
 *_gen.go
 *_gen_test.go
 *.pb.go
+
+devdocker/devink_state/*
+!devdocker/devink_state/.gitkeep
+
+logs/*
+!logs/.gitkeep
