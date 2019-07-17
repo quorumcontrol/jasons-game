@@ -25,8 +25,9 @@ gosources = $(shell find . -path "./vendor/*" -prune -o -type f -name "*.go" -pr
 
 all: frontend-build $(packr) build
 
+# Turn off go mod so that this will install to $GOPATH/src instead of $GOPATH/pkg/mod
 ${FIRSTGOPATH}/src/github.com/gogo/protobuf/protobuf:
-	go get github.com/gogo/protobuf/...
+	env GO111MODULE=off go get github.com/gogo/protobuf/...
 
 %.pb.go %_pb.d.ts %_pb_service.d.ts %_pb.js %_pb_service.js: %.proto $(FIRSTGOPATH)/src/github.com/gogo/protobuf/protobuf $(jsmodules)
 	./scripts/protogen.sh
