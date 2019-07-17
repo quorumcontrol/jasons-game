@@ -5,6 +5,8 @@ else
 	TAG = $(VERSION)
 endif
 
+BUILD ?= public
+
 # This is important to export until we're on Go 1.13+ or packr can break
 export GO111MODULE = on
 
@@ -40,19 +42,19 @@ $(FIRSTGOPATH)/bin/golangci-lint:
 $(FIRSTGOPATH)/bin/gotestsum:
 	go get gotest.tools/gotestsum
 
-bin/jasonsgame: $(gosources) $(generated) go.mod go.sum
+bin/jasonsgame-$(BUILD): $(gosources) $(generated) go.mod go.sum
 	mkdir -p bin
-	go build -tags='desktop $(BUILD)' -o ./bin/jasonsgame
+	go build -tags='desktop $(BUILD)' -o ./bin/jasonsgame-$(BUILD)
 
-build: bin/jasonsgame
+build: bin/jasonsgame-$(BUILD)
 
-JasonsGame.app/Contents/MacOS/jasonsgame: $(generated) go.mod go.sum frontend-build $(packr)
-	mkdir -p JasonsGame.app/Contents/MacOS
-	go build -tags='desktop macos_app_bundle $(BUILD)' -o JasonsGame.app/Contents/MacOS/jasonsgame
+JasonsGame-$(BUILD).app/Contents/MacOS/jasonsgame: $(generated) go.mod go.sum frontend-build $(packr)
+	mkdir -p JasonsGame-$(BUILD).app/Contents/MacOS
+	go build -tags='desktop macos_app_bundle $(BUILD)' -o JasonsGame-$(BUILD).app/Contents/MacOS/jasonsgame
 
-JasonsGame.app: JasonsGame.app/Contents/MacOS/jasonsgame
+JasonsGame-$(BUILD).app: JasonsGame-$(BUILD).app/Contents/MacOS/jasonsgame
 
-mac-app: JasonsGame.app
+mac-app: JasonsGame-$(BUILD).app
 
 lint: $(FIRSTGOPATH)/bin/golangci-lint $(generated)
 	$(FIRSTGOPATH)/bin/golangci-lint run --build-tags 'integration $(BUILD)'
@@ -121,7 +123,7 @@ vendor: go.mod go.sum $(FIRSTGOPATH)/bin/modvendor
 prepare: $(gosources) $(generated) $(packr) $(vendor)
 
 $(FIRSTGOPATH)/bin/packr2:
-	get -u github.com/gobuffalo/packr/v2@662c20c19dde
+	go get -u github.com/gobuffalo/packr/v2@662c20c19dde
 
 $(packr): $(FIRSTGOPATH)/bin/packr2 main.go
 	$(FIRSTGOPATH)/bin/packr2
@@ -131,6 +133,6 @@ clean: $(FIRSTGOPATH)/bin/packr2
 	go clean -tags='internal public' ./...
 	rm -rf vendor
 	rm -rf bin
-	rm -rf JasonsGame.app/Contents/MacOS
+	rm -rf JasonsGame.app-$(BUILD)/Contents/MacOS
 
 .PHONY: all build test integration-test localnet clean lint game-server jason inkfaucet devink game2 mac-app prepare generated dev down
