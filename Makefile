@@ -12,7 +12,7 @@ FIRSTGOPATH = $(firstword $(subst :, ,$(GOPATH)))
 
 jsmodules = frontend/jasons-game/node_modules
 generated = network/messages.pb.go game/types.pb.go pb/jasonsgame/jasonsgame.pb.go \
-            inkwell/inkwell/messages.pb.go \
+            inkfaucet/inkfaucet/messages.pb.go \
             frontend/jasons-game/src/js/frontend/remote/jasonsgame_pb.d.ts \
             frontend/jasons-game/src/js/frontend/remote/jasonsgame_pb.js \
             frontend/jasons-game/src/js/frontend/remote/jasonsgame_pb_service.d.ts \
@@ -88,14 +88,14 @@ game2: $(generated) go.mod go.sum
 jason: $(generated) go.mod go.sum
 	docker-compose -p jasons-game -f docker-compose-dev.yml up --force-recreate jason
 
-inkwell: $(generated) go.mod go.sum
-	env TOKEN_PAYLOAD=$(TOKEN_PAYLOAD) docker-compose -f docker-compose-dev.yml run --rm inkwell
+inkfaucet: $(generated) go.mod go.sum
+	env TOKEN_PAYLOAD=$(TOKEN_PAYLOAD) docker-compose -f docker-compose-dev.yml run --rm inkfaucet
 
-inkwelldid:
-	docker-compose -f docker-compose-dev.yml run --rm inkwelldid
+inkfaucetdid:
+	docker-compose -f docker-compose-dev.yml run --rm inkfaucetdid
 
 devink: $(generated) go.mod go.sum
-	env INKWELL_DID=$(INKWELL_DID) docker-compose -f docker-compose-dev.yml run --rm devink
+	env INK_FAUCET_DID=$(INK_FAUCET_DID) docker-compose -f docker-compose-dev.yml run --rm devink
 
 dev:
 	scripts/start-dev.sh
@@ -132,4 +132,4 @@ clean: $(FIRSTGOPATH)/bin/packr2
 	rm -rf bin
 	rm -rf JasonsGame.app/Contents/MacOS
 
-.PHONY: all build test integration-test localnet clean lint game-server jason inkwell devink game2 mac-app prepare generated dev down
+.PHONY: all build test integration-test localnet clean lint game-server jason inkfaucet devink game2 mac-app prepare generated dev down

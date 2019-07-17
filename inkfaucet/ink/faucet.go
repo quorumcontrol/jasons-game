@@ -13,11 +13,11 @@ import (
 	"github.com/quorumcontrol/tupelo-go-sdk/consensus"
 	"github.com/quorumcontrol/tupelo-go-sdk/gossip3/types"
 
-	"github.com/quorumcontrol/jasons-game/inkwell/inkwell"
+	"github.com/quorumcontrol/jasons-game/inkfaucet/inkfaucet"
 	"github.com/quorumcontrol/jasons-game/network"
 )
 
-const InkwellChainTreeName = "inkwell"
+const InkFaucetChainTreeName = "inkfaucet"
 
 var log = logging.Logger("ink")
 
@@ -29,29 +29,29 @@ type Well interface {
 	DepositInk(tokenPayload *transactions.TokenPayload) error
 }
 
-type ChainTreeInkwell struct {
+type ChainTreeInkFaucet struct {
 	ctDID      string
 	net        network.Network
 	inkOwnerId string
 }
 
-type ChainTreeInkwellConfig struct {
+type ChainTreeInkFaucetConfig struct {
 	Net         network.Network
 	InkOwnerDID string
 }
 
-var _ Well = &ChainTreeInkwell{}
+var _ Well = &ChainTreeInkFaucet{}
 
-func NewChainTreeInkwell(cfg ChainTreeInkwellConfig) (*ChainTreeInkwell, error) {
+func NewChainTreeInkFaucet(cfg ChainTreeInkFaucetConfig) (*ChainTreeInkFaucet, error) {
 	ct, err := ensureChainTree(cfg.Net)
 
 	if err != nil {
 		return nil, err
 	}
 
-	log.Infof("INKWELL_DID=%s", ct.MustId())
+	log.Infof("INK_FAUCET_DID=%s", ct.MustId())
 
-	cti := &ChainTreeInkwell{
+	cti := &ChainTreeInkFaucet{
 		ctDID:      ct.MustId(),
 		net:        cfg.Net,
 		inkOwnerId: cfg.InkOwnerDID,
@@ -60,23 +60,23 @@ func NewChainTreeInkwell(cfg ChainTreeInkwellConfig) (*ChainTreeInkwell, error) 
 	return cti, nil
 }
 
-// ensureChainTree gets or creates a new inkwell chaintree.
+// ensureChainTree gets or creates a new inkfaucet chaintree.
 // Note that this chaintree doesn't typically own the ink token; it just contains some
 // that was sent to it.
 func ensureChainTree(net network.Network) (*consensus.SignedChainTree, error) {
-	existing, err := net.GetChainTreeByName(InkwellChainTreeName)
+	existing, err := net.GetChainTreeByName(InkFaucetChainTreeName)
 	if err != nil {
-		return nil, errors.Wrap(err, "error checking for existing inkwell chaintree")
+		return nil, errors.Wrap(err, "error checking for existing inkfaucet chaintree")
 	}
 
 	if existing == nil {
-		return net.CreateNamedChainTree(InkwellChainTreeName)
+		return net.CreateNamedChainTree(InkFaucetChainTreeName)
 	}
 
 	return existing, nil
 }
 
-func (cti *ChainTreeInkwell) chainTree() (*consensus.SignedChainTree, error) {
+func (cti *ChainTreeInkFaucet) chainTree() (*consensus.SignedChainTree, error) {
 	ct, err := cti.net.GetTree(cti.ctDID)
 	if err != nil {
 		return nil, err
@@ -85,7 +85,7 @@ func (cti *ChainTreeInkwell) chainTree() (*consensus.SignedChainTree, error) {
 	return ct, nil
 }
 
-func (cti *ChainTreeInkwell) DepositInk(tokenPayload *transactions.TokenPayload) error {
+func (cti *ChainTreeInkFaucet) DepositInk(tokenPayload *transactions.TokenPayload) error {
 	ct, err := cti.chainTree()
 	if err != nil {
 		return errors.Wrap(err, "error depositing ink")
@@ -94,7 +94,7 @@ func (cti *ChainTreeInkwell) DepositInk(tokenPayload *transactions.TokenPayload)
 	return cti.net.ReceiveInk(ct, tokenPayload)
 }
 
-func (cti *ChainTreeInkwell) RequestInk(amount uint64, destinationChainId string) (*transactions.TokenPayload, error) {
+func (cti *ChainTreeInkFaucet) RequestInk(amount uint64, destinationChainId string) (*transactions.TokenPayload, error) {
 	tokenName := cti.TokenName()
 
 	ct, err := cti.chainTree()
@@ -102,12 +102,12 @@ func (cti *ChainTreeInkwell) RequestInk(amount uint64, destinationChainId string
 		return nil, errors.Wrap(err, "error requesting ink")
 	}
 
-	inkwellTree, err := ct.ChainTree.Tree(context.TODO())
+	inkfaucetTree, err := ct.ChainTree.Tree(context.TODO())
 	if err != nil {
-		return nil, errors.Wrap(err, "error getting inkwell tree for ink request")
+		return nil, errors.Wrap(err, "error getting inkfaucet tree for ink request")
 	}
 
-	tokenLedger := consensus.NewTreeLedger(inkwellTree, tokenName)
+	tokenLedger := consensus.NewTreeLedger(inkfaucetTree, tokenName)
 
 	tokenExists, err := tokenLedger.TokenExists()
 	if err != nil {
@@ -130,11 +130,11 @@ func (cti *ChainTreeInkwell) RequestInk(amount uint64, destinationChainId string
 	return cti.net.SendInk(ct, tokenName, amount, destinationChainId)
 }
 
-func (cti *ChainTreeInkwell) TokenName() *consensus.TokenName {
+func (cti *ChainTreeInkFaucet) TokenName() *consensus.TokenName {
 	return &consensus.TokenName{ChainTreeDID: cti.inkOwnerId, LocalName: "ink"}
 }
 
-func (cti *ChainTreeInkwell) ChainTreeDID() string {
+func (cti *ChainTreeInkFaucet) ChainTreeDID() string {
 	return cti.ctDID
 }
 
@@ -143,7 +143,7 @@ type InkActor struct {
 	group     *types.NotaryGroup
 	dataStore datastore.Batching
 	net       network.Network
-	inkwell   Well
+	inkfaucet   Well
 	tokenName *consensus.TokenName
 	handler   *actor.PID
 }
@@ -152,7 +152,7 @@ type InkActorConfig struct {
 	Group     *types.NotaryGroup
 	DataStore datastore.Batching
 	Net       network.Network
-	Inkwell   Well
+	InkFaucet   Well
 	TokenName *consensus.TokenName
 }
 
@@ -162,7 +162,7 @@ func NewInkActor(ctx context.Context, cfg InkActorConfig) *InkActor {
 		group:     cfg.Group,
 		dataStore: cfg.DataStore,
 		net:       cfg.Net,
-		inkwell:   cfg.Inkwell,
+		inkfaucet:   cfg.InkFaucet,
 		tokenName: cfg.TokenName,
 	}
 }
@@ -184,21 +184,21 @@ func (i *InkActor) Receive(actorCtx actor.Context) {
 	switch msg := actorCtx.Message().(type) {
 	case *actor.Started:
 		log.Info("ink actor started")
-	case *inkwell.InkRequest:
+	case *inkfaucet.InkRequest:
 		log.Infof("ink actor received ink request: %+v", msg)
-		tokenPayload, err := i.inkwell.RequestInk(msg.Amount, msg.DestinationChainId)
+		tokenPayload, err := i.inkfaucet.RequestInk(msg.Amount, msg.DestinationChainId)
 		if err != nil {
-			actorCtx.Respond(&inkwell.InkResponse{
+			actorCtx.Respond(&inkfaucet.InkResponse{
 				Error: err.Error(),
 			})
 			return
 		}
 
-		var response *inkwell.InkResponse
+		var response *inkfaucet.InkResponse
 
 		serializedTokenPayload, err := proto.Marshal(tokenPayload)
 		if err != nil {
-			response := &inkwell.InkResponse{
+			response := &inkfaucet.InkResponse{
 				Error: fmt.Sprintf("error serializing dev ink token payload: %v", err),
 			}
 
@@ -206,7 +206,7 @@ func (i *InkActor) Receive(actorCtx actor.Context) {
 			return
 		}
 
-		response = &inkwell.InkResponse{
+		response = &inkfaucet.InkResponse{
 			Token: serializedTokenPayload,
 		}
 

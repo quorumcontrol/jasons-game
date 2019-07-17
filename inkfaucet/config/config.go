@@ -12,21 +12,21 @@ import (
 	"github.com/quorumcontrol/jasons-game/network"
 )
 
-type InkwellConfig struct {
+type InkFaucetConfig struct {
 	Local       bool
 	S3Region    string
 	S3Bucket    string
 	InkOwnerDID string
 }
 
-type Inkwell struct {
+type InkFaucet struct {
 	NotaryGroup *types.NotaryGroup
 	DataStore   datastore.Batching
 	Net         network.Network
 }
 
-func Setup(ctx context.Context, cfg InkwellConfig) (*Inkwell, error) {
-	iw := Inkwell{}
+func Setup(ctx context.Context, cfg InkFaucetConfig) (*InkFaucet, error) {
+	iw := InkFaucet{}
 
 	group, err := network.SetupTupeloNotaryGroup(ctx, cfg.Local)
 	if err != nil {

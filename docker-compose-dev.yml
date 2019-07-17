@@ -6,7 +6,7 @@ services:
     depends_on:
       - jason
       - jasonblock
-      - inkwell
+      - inkfaucet
     command: ["go", "run", "main.go", "-disablewebview=true", "-localnet=true"]
     volumes:
       - .:/app:delegated
@@ -28,7 +28,7 @@ services:
     depends_on:
       - jason
       - jasonblock
-      - inkwell
+      - inkfaucet
     volumes:
       - .:/app:delegated
       - ./devdocker/.tmp:/root/.cache:delegated
@@ -77,9 +77,9 @@ services:
       TUPELO_BOOTSTRAP_NODES: /ip4/172.16.239.10/tcp/34001/ipfs/16Uiu2HAm3TGSEKEjagcCojSJeaT5rypaeJMKejijvYSnAjviWwV5
       JASON_BOOTSTRAP_NODES: /ip4/172.16.239.100/tcp/34001/ipfs/16Uiu2HAmBL6Xz9ichyunCexiqomcHyzVpKKmxAMgUusksBZzzM3K
 
-  inkwell:
+  inkfaucet:
     build: ./devdocker
-    command: ["go", "run", "inkwell/main.go", "-local=true", "-deposit=${TOKEN_PAYLOAD}"]
+    command: ["go", "run", "inkfaucet/main.go", "-local=true", "-deposit=${TOKEN_PAYLOAD}"]
     depends_on:
       - jason
     volumes:
@@ -95,9 +95,9 @@ services:
       INK_DID:
       TOKEN_PAYLOAD:
 
-  inkwelldid:
+  inkfaucetdid:
     build: ./devdocker
-    command: ["go", "run", "inkwell/main.go", "-local=true", "-outputdid=true"]
+    command: ["go", "run", "inkfaucet/main.go", "-local=true", "-outputdid=true"]
     depends_on:
       - jason
     volumes:
@@ -113,7 +113,7 @@ services:
 
   devink:
     build: ./devdocker
-    command: ["go", "run", "devink/main.go", "${INKWELL_DID}"]
+    command: ["go", "run", "devink/main.go", "${INK_FAUCET_DID}"]
     volumes:
       - .:/app:delegated
       - ./devdocker/.tmp:/root/.cache:delegated
@@ -123,7 +123,7 @@ services:
       GOPATH: /go
       BUILD: internal
       TUPELO_BOOTSTRAP_NODES: /ip4/172.16.239.10/tcp/34001/ipfs/16Uiu2HAm3TGSEKEjagcCojSJeaT5rypaeJMKejijvYSnAjviWwV5
-      INKWELL_DID:
+      INK_FAUCET_DID:
 
   game-testnet:
     build: ./devdocker

@@ -35,30 +35,30 @@ if [[ -z "${INK_DID}" ]]; then
 fi
 
 echo ''
-echo "DEV: Starting a new inkwell service for ${INK_DID}:ink"
+echo "DEV: Starting a new inkfaucet service for ${INK_DID}:ink"
 echo ''
-make inkwell INK_DID=${INK_DID} 2>&1 >logs/inkwell.log &
-sleep 15 # give inkwell time to bootstrap
-INKWELL_DID=$(capture_value "make inkwelldid" "inkwelldid.log" "INKWELL_DID")
+make inkfaucet INK_DID=${INK_DID} 2>&1 >logs/inkfaucet.log &
+sleep 15 # give inkfaucet time to bootstrap
+INK_FAUCET_DID=$(capture_value "make inkfaucetdid" "inkfaucetdid.log" "INK_FAUCET_DID")
 
-if [[ -z "${INKWELL_DID}" ]]; then
-  echo 'DEV: Error capturing INKWELL_DID. Aborting.'
+if [[ -z "${INK_FAUCET_DID}" ]]; then
+  echo 'DEV: Error capturing INK_FAUCET_DID. Aborting.'
   exit 1
 fi
 
 echo ''
-echo "DEV: Sending some devink to the ${INKWELL_DID} inkwell"
+echo "DEV: Sending some devink to the ${INK_FAUCET_DID} inkfaucet"
 echo ''
-TOKEN_PAYLOAD=$(capture_value "make devink INKWELL_DID=${INKWELL_DID}" "devink_send.log" "TOKEN_PAYLOAD")
+TOKEN_PAYLOAD=$(capture_value "make devink INK_FAUCET_DID=${INK_FAUCET_DID}" "devink_send.log" "TOKEN_PAYLOAD")
 
 if [[ -z "${TOKEN_PAYLOAD}" ]]; then
-  echo 'DEV: Error sending devink to inkwell. Aborting.'
+  echo 'DEV: Error sending devink to inkfaucet. Aborting.'
   exit 1
 fi
 
 echo ''
-echo "DEV: Depositing devink in inkwell: ${TOKEN_PAYLOAD}"
+echo "DEV: Depositing devink in inkfaucet: ${TOKEN_PAYLOAD}"
 echo ''
-make inkwell TOKEN_PAYLOAD=${TOKEN_PAYLOAD} 2>&1 >logs/inkwell_deposit.log
+make inkfaucet TOKEN_PAYLOAD=${TOKEN_PAYLOAD} 2>&1 >logs/inkfaucet_deposit.log
 
 tail -f logs/localnet.log

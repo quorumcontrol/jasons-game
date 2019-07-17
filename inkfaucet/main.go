@@ -12,13 +12,13 @@ import (
 	"github.com/pkg/errors"
 	"github.com/quorumcontrol/messages/build/go/transactions"
 
-	"github.com/quorumcontrol/jasons-game/inkwell/config"
-	"github.com/quorumcontrol/jasons-game/inkwell/depositor"
-	"github.com/quorumcontrol/jasons-game/inkwell/ink"
-	"github.com/quorumcontrol/jasons-game/inkwell/server"
+	"github.com/quorumcontrol/jasons-game/inkfaucet/config"
+	"github.com/quorumcontrol/jasons-game/inkfaucet/depositor"
+	"github.com/quorumcontrol/jasons-game/inkfaucet/ink"
+	"github.com/quorumcontrol/jasons-game/inkfaucet/server"
 )
 
-const localBucketName = "tupelo-inkwell-local"
+const localBucketName = "tupelo-inkfaucet-local"
 
 func mustSetLogLevel(name, level string) {
 	if err := logging.SetLogLevel(name, level); err != nil {
@@ -32,10 +32,10 @@ func main() {
 
 	mustSetLogLevel("*", "warning")
 	mustSetLogLevel("pubsub", "error")
-	mustSetLogLevel("inkwell", "debug")
+	mustSetLogLevel("inkfaucet", "debug")
 
 	local := flag.Bool("local", false, "connect to localnet & use localstack S3 instead of testnet & real S3")
-	outputdid := flag.Bool("outputdid", false, "output inkwell DID and exit")
+	outputdid := flag.Bool("outputdid", false, "output inkfaucet DID and exit")
 	deposit := flag.String("deposit", "", "token payload for ink deposit")
 	flag.Parse()
 
@@ -46,9 +46,9 @@ func main() {
 	} else {
 		var ok bool
 
-		s3Bucket, ok = os.LookupEnv("INKWELL_S3_BUCKET")
+		s3Bucket, ok = os.LookupEnv("INK_FAUCET_S3_BUCKET")
 		if !ok {
-			panic(fmt.Errorf("${INKWELL_S3_BUCKET} is required in non-local mode"))
+			panic(fmt.Errorf("${INK_FAUCET_S3_BUCKET} is required in non-local mode"))
 		}
 
 		s3Region, ok = os.LookupEnv("AWS_REGION")
@@ -59,7 +59,7 @@ func main() {
 
 	inkDID := os.Getenv("INK_DID")
 
-	inkwellCfg := config.InkwellConfig{
+	inkfaucetCfg := config.InkFaucetConfig{
 		Local:       *local,
 		S3Region:    s3Region,
 		S3Bucket:    s3Bucket,
@@ -67,19 +67,19 @@ func main() {
 	}
 
 	if outputdid != nil && *outputdid {
-		fmt.Println("Outputting inkwell DID")
+		fmt.Println("Outputting inkfaucet DID")
 		ctx := context.Background()
-		iw, err := config.Setup(ctx, inkwellCfg)
+		iw, err := config.Setup(ctx, inkfaucetCfg)
 		if err != nil {
 			panic(err)
 		}
 
-		ct, err := iw.Net.GetChainTreeByName(ink.InkwellChainTreeName)
+		ct, err := iw.Net.GetChainTreeByName(ink.InkFaucetChainTreeName)
 		if err != nil {
 			panic(err)
 		}
 
-		fmt.Printf("INKWELL_DID=%s\n", ct.MustId())
+		fmt.Printf("INK_FAUCET_DID=%s\n", ct.MustId())
 
 		os.Exit(0)
 	}
@@ -98,7 +98,7 @@ func main() {
 			panic(errors.Wrap(err, "error unmarshalling ink deposit token payload"))
 		}
 
-		dep, err := depositor.New(ctx, inkwellCfg)
+		dep, err := depositor.New(ctx, inkfaucetCfg)
 		if err != nil {
 			panic(errors.Wrap(err, "error creating ink depositer"))
 		}
@@ -108,19 +108,19 @@ func main() {
 			panic(errors.Wrap(err, "error depositing ink"))
 		}
 
-		fmt.Println("Deposited ink into inkwell")
+		fmt.Println("Deposited ink into inkfaucet")
 
 		os.Exit(0)
 	}
 
-	inkwell, err := server.New(ctx, inkwellCfg)
+	inkfaucet, err := server.New(ctx, inkfaucetCfg)
 	if err != nil {
-		panic(errors.Wrap(err, "error creating new inkwell server"))
+		panic(errors.Wrap(err, "error creating new inkfaucet server"))
 	}
 
-	err = inkwell.Start()
+	err = inkfaucet.Start()
 	if err != nil {
-		panic(errors.Wrap(err, "error starting inkwell service"))
+		panic(errors.Wrap(err, "error starting inkfaucet service"))
 	}
 
 	<-make(chan struct{})

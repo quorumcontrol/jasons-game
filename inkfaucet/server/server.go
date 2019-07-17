@@ -10,53 +10,53 @@ import (
 	"github.com/quorumcontrol/tupelo-go-sdk/consensus"
 	"github.com/quorumcontrol/tupelo-go-sdk/gossip3/types"
 
-	iwconfig "github.com/quorumcontrol/jasons-game/inkwell/config"
-	"github.com/quorumcontrol/jasons-game/inkwell/ink"
-	"github.com/quorumcontrol/jasons-game/inkwell/inkwell"
+	iwconfig "github.com/quorumcontrol/jasons-game/inkfaucet/config"
+	"github.com/quorumcontrol/jasons-game/inkfaucet/ink"
+	"github.com/quorumcontrol/jasons-game/inkfaucet/inkfaucet"
 	"github.com/quorumcontrol/jasons-game/network"
 )
 
-var log = logging.Logger("inkwell")
+var log = logging.Logger("inkfaucet")
 
-type InkwellRouter struct {
+type InkFaucetRouter struct {
 	parentCtx context.Context
 	group     *types.NotaryGroup
 	dataStore datastore.Batching
 	net       network.Network
-	inkwell   ink.Well
+	inkfaucet   ink.Well
 	tokenName *consensus.TokenName
 	handler   *actor.PID
 	inkActor  *actor.PID
 }
 
-func New(ctx context.Context, cfg iwconfig.InkwellConfig) (*InkwellRouter, error) {
+func New(ctx context.Context, cfg iwconfig.InkFaucetConfig) (*InkFaucetRouter, error) {
 	iw, err := iwconfig.Setup(ctx, cfg)
 	if err != nil {
 		return nil, err
 	}
 
-	sourceCfg := ink.ChainTreeInkwellConfig{
+	sourceCfg := ink.ChainTreeInkFaucetConfig{
 		Net:         iw.Net,
 		InkOwnerDID: cfg.InkOwnerDID,
 	}
 
-	ctiw, err := ink.NewChainTreeInkwell(sourceCfg)
+	ctiw, err := ink.NewChainTreeInkFaucet(sourceCfg)
 	if err != nil {
 		return nil, errors.Wrap(err, "error getting ink source")
 	}
 
-	return &InkwellRouter{
+	return &InkFaucetRouter{
 		parentCtx: ctx,
 		group:     iw.NotaryGroup,
 		dataStore: iw.DataStore,
 		net:       iw.Net,
-		inkwell:   ctiw,
+		inkfaucet:   ctiw,
 		tokenName: &consensus.TokenName{ChainTreeDID: cfg.InkOwnerDID, LocalName: "ink"},
 	}, nil
 }
 
-func (iw *InkwellRouter) Start() error {
-	log.Info("starting inkwell service")
+func (iw *InkFaucetRouter) Start() error {
+	log.Info("starting inkfaucet service")
 
 	arCtx := actor.EmptyRootContext
 
@@ -69,7 +69,7 @@ func (iw *InkwellRouter) Start() error {
 		Group:     iw.group,
 		DataStore: iw.dataStore,
 		Net:       iw.net,
-		Inkwell:   iw.inkwell,
+		InkFaucet:   iw.inkfaucet,
 		TokenName: iw.tokenName,
 	})
 
@@ -88,18 +88,18 @@ func (iw *InkwellRouter) Start() error {
 	return nil
 }
 
-func (iw *InkwellRouter) InkwellDID() string {
-	return iw.inkwell.ChainTreeDID()
+func (iw *InkFaucetRouter) InkFaucetDID() string {
+	return iw.inkfaucet.ChainTreeDID()
 }
 
-func (iw *InkwellRouter) Receive(actorCtx actor.Context) {
+func (iw *InkFaucetRouter) Receive(actorCtx actor.Context) {
 	switch msg := actorCtx.Message().(type) {
 	case *actor.Started:
 		// subscribe to community here?
-	case *inkwell.InkRequest:
+	case *inkfaucet.InkRequest:
 		log.Infof("Received InkRequest: %+v", msg)
 		actorCtx.Forward(iw.inkActor)
-	case *inkwell.InviteRequest:
+	case *inkfaucet.InviteRequest:
 		log.Infof("Received InviteRequest: %+v", msg)
 		// TODO: Write me
 	}

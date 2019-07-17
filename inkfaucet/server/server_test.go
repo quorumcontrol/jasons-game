@@ -16,9 +16,9 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/quorumcontrol/jasons-game/devink/devink"
-	iwconfig "github.com/quorumcontrol/jasons-game/inkwell/config"
-	"github.com/quorumcontrol/jasons-game/inkwell/depositor"
-	"github.com/quorumcontrol/jasons-game/inkwell/inkwell"
+	iwconfig "github.com/quorumcontrol/jasons-game/inkfaucet/config"
+	"github.com/quorumcontrol/jasons-game/inkfaucet/depositor"
+	"github.com/quorumcontrol/jasons-game/inkfaucet/inkfaucet"
 )
 
 func TestInkRequests(t *testing.T) {
@@ -34,7 +34,7 @@ func TestInkRequests(t *testing.T) {
 	}()
 	require.Nil(t, err)
 
-	cfg := iwconfig.InkwellConfig{
+	cfg := iwconfig.InkFaucetConfig{
 		Local:       true,
 		S3Bucket:    "test",
 		InkOwnerDID: devInk.ChainTree.MustId(),
@@ -54,7 +54,7 @@ func TestInkRequests(t *testing.T) {
 	assert.Equal(t, ctx, server.parentCtx)
 	assert.Equal(t, tokenName.String(), server.tokenName.String())
 
-	tokenSend, err := devInk.SendInk(ctx, server.InkwellDID(), 10)
+	tokenSend, err := devInk.SendInk(ctx, server.InkFaucetDID(), 10)
 	require.Nil(t, err)
 
 	dep, err := depositor.New(ctx, cfg)
@@ -71,12 +71,12 @@ func TestInkRequests(t *testing.T) {
 
 	rootContext := actor.EmptyRootContext
 
-	req := rootContext.RequestFuture(server.handler, &inkwell.InkRequest{Amount: 1, DestinationChainId: inkRecipient.MustId()}, 10*time.Second)
+	req := rootContext.RequestFuture(server.handler, &inkfaucet.InkRequest{Amount: 1, DestinationChainId: inkRecipient.MustId()}, 10*time.Second)
 
 	uncastResp, err := req.Result()
 	require.Nil(t, err)
 
-	resp, ok := uncastResp.(*inkwell.InkResponse)
+	resp, ok := uncastResp.(*inkfaucet.InkResponse)
 	require.True(t, ok)
 
 	require.NotEmpty(t, resp.Token)
