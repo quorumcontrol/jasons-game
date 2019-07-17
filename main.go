@@ -17,6 +17,7 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/reflection"
 
+	"github.com/quorumcontrol/jasons-game/build"
 	"github.com/quorumcontrol/jasons-game/pb/jasonsgame"
 	"github.com/quorumcontrol/jasons-game/server"
 	"github.com/quorumcontrol/jasons-game/ui"
@@ -64,6 +65,8 @@ func main() {
 	port := 8080
 	grpcServer := grpc.NewServer()
 	fmt.Println("Starting Jasons Game server")
+
+	fmt.Println(build.BuildLabel, "build")
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
