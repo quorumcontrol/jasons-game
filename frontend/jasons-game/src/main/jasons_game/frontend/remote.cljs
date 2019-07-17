@@ -156,8 +156,3 @@
    (.log js/console (str "sending import location request with spec: " spec))
    (let [req (new-import-location-request session spec)]
      (send-import-request host req (fn [resp] (.log js/console resp))))))
-
-(re-frame/reg-sub
- ::messages
- (fn [{::keys [messages] :as db} _]
-   messages))
