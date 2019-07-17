@@ -11,7 +11,7 @@ import (
 	"github.com/quorumcontrol/jasons-game/network"
 )
 
-// This is unused in public builds, but the compiler wants the types to exist
+// This is unused in public builds, but the compiler wants the types & funcs to exist
 
 type DevRemoteNetwork struct {
 	*network.RemoteNetwork
