@@ -17,7 +17,7 @@ import (
 	"github.com/quorumcontrol/jasons-game/network"
 )
 
-const InkFaucetChainTreeName = "inkfaucet"
+const InkFaucetChainTreeName = "inkFaucet"
 
 var log = logging.Logger("ink")
 
@@ -60,13 +60,13 @@ func NewChainTreeInkFaucet(cfg ChainTreeInkFaucetConfig) (*ChainTreeInkFaucet, e
 	return cti, nil
 }
 
-// ensureChainTree gets or creates a new inkfaucet chaintree.
+// ensureChainTree gets or creates a new inkFaucet chaintree.
 // Note that this chaintree doesn't typically own the ink token; it just contains some
 // that was sent to it.
 func ensureChainTree(net network.Network) (*consensus.SignedChainTree, error) {
 	existing, err := net.GetChainTreeByName(InkFaucetChainTreeName)
 	if err != nil {
-		return nil, errors.Wrap(err, "error checking for existing inkfaucet chaintree")
+		return nil, errors.Wrap(err, "error checking for existing inkFaucet chaintree")
 	}
 
 	if existing == nil {
@@ -104,7 +104,7 @@ func (cti *ChainTreeInkFaucet) RequestInk(amount uint64, destinationChainId stri
 
 	inkfaucetTree, err := ct.ChainTree.Tree(context.TODO())
 	if err != nil {
-		return nil, errors.Wrap(err, "error getting inkfaucet tree for ink request")
+		return nil, errors.Wrap(err, "error getting inkFaucet tree for ink request")
 	}
 
 	tokenLedger := consensus.NewTreeLedger(inkfaucetTree, tokenName)
@@ -143,7 +143,7 @@ type InkActor struct {
 	group     *types.NotaryGroup
 	dataStore datastore.Batching
 	net       network.Network
-	inkfaucet Faucet
+	inkFaucet Faucet
 	tokenName *consensus.TokenName
 	handler   *actor.PID
 }
@@ -162,7 +162,7 @@ func NewInkActor(ctx context.Context, cfg InkActorConfig) *InkActor {
 		group:     cfg.Group,
 		dataStore: cfg.DataStore,
 		net:       cfg.Net,
-		inkfaucet:   cfg.InkFaucet,
+		inkFaucet: cfg.InkFaucet,
 		tokenName: cfg.TokenName,
 	}
 }
@@ -186,7 +186,7 @@ func (i *InkActor) Receive(actorCtx actor.Context) {
 		log.Info("ink actor started")
 	case *inkfaucet.InkRequest:
 		log.Infof("ink actor received ink request: %+v", msg)
-		tokenPayload, err := i.inkfaucet.RequestInk(msg.Amount, msg.DestinationChainId)
+		tokenPayload, err := i.inkFaucet.RequestInk(msg.Amount, msg.DestinationChainId)
 		if err != nil {
 			actorCtx.Respond(&inkfaucet.InkResponse{
 				Error: err.Error(),

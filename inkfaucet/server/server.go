@@ -16,14 +16,14 @@ import (
 	"github.com/quorumcontrol/jasons-game/network"
 )
 
-var log = logging.Logger("inkfaucet")
+var log = logging.Logger("inkFaucet")
 
 type InkFaucetRouter struct {
 	parentCtx context.Context
 	group     *types.NotaryGroup
 	dataStore datastore.Batching
 	net       network.Network
-	inkfaucet   ink.Well
+	inkFaucet ink.Faucet
 	tokenName *consensus.TokenName
 	handler   *actor.PID
 	inkActor  *actor.PID
@@ -50,13 +50,13 @@ func New(ctx context.Context, cfg iwconfig.InkFaucetConfig) (*InkFaucetRouter, e
 		group:     iw.NotaryGroup,
 		dataStore: iw.DataStore,
 		net:       iw.Net,
-		inkfaucet:   ctiw,
+		inkFaucet: ctiw,
 		tokenName: &consensus.TokenName{ChainTreeDID: cfg.InkOwnerDID, LocalName: "ink"},
 	}, nil
 }
 
 func (iw *InkFaucetRouter) Start() error {
-	log.Info("starting inkfaucet service")
+	log.Info("starting inkFaucet service")
 
 	arCtx := actor.EmptyRootContext
 
@@ -69,7 +69,7 @@ func (iw *InkFaucetRouter) Start() error {
 		Group:     iw.group,
 		DataStore: iw.dataStore,
 		Net:       iw.net,
-		InkFaucet:   iw.inkfaucet,
+		InkFaucet: iw.inkFaucet,
 		TokenName: iw.tokenName,
 	})
 
@@ -89,7 +89,7 @@ func (iw *InkFaucetRouter) Start() error {
 }
 
 func (iw *InkFaucetRouter) InkFaucetDID() string {
-	return iw.inkfaucet.ChainTreeDID()
+	return iw.inkFaucet.ChainTreeDID()
 }
 
 func (iw *InkFaucetRouter) Receive(actorCtx actor.Context) {

@@ -12,8 +12,8 @@ import (
 )
 
 type InkDepositor struct {
-	iwconfig *config.InkFaucet
-	inkfaucet  ink.Well
+	iwconfig  *config.InkFaucet
+	inkfaucet ink.Faucet
 }
 
 func New(ctx context.Context, cfg config.InkFaucetConfig) (*InkDepositor, error) {
