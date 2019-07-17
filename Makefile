@@ -59,6 +59,7 @@ lint: $(FIRSTGOPATH)/bin/golangci-lint $(generated)
 
 test: $(generated) go.mod go.sum $(FIRSTGOPATH)/bin/gotestsum
 	gotestsum
+	gotestsum -- -tags=internal ./...
 
 ci-test: $(generated) go.mod go.sum $(FIRSTGOPATH)/bin/gotestsum
 	mkdir -p test_results/tests
@@ -66,7 +67,7 @@ ci-test: $(generated) go.mod go.sum $(FIRSTGOPATH)/bin/gotestsum
 
 integration-test: $(generated) go.mod go.sum
 ifdef testpackage
-	TEST_PACKAGE=${testpackage} docker-compose -p jasons-game -f docker-compose-dev.yml run --rm integration
+	env TEST_PACKAGE=${testpackage} docker-compose -p jasons-game -f docker-compose-dev.yml run --rm integration
 else
 	docker-compose -p jasons-game -f docker-compose-dev.yml run --rm integration
 endif
