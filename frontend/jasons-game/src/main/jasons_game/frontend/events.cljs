@@ -34,7 +34,7 @@
    (let [status {:pending-objects objects
                  :created-objects []
                  :pending-locations locations
-                 :created-locations []
+                 :unpopulated-locations []
                  :populated-locations []
                  :linked-locations []
                  :current nil}]

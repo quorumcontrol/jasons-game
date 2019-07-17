@@ -14,11 +14,40 @@ message LocationSpec {
   string did = 2;
 }
 
+message PopulateVisitPhase {}
+
+message PopulateDescribePhase {
+  string description = 1;
+}
+
+message PopulateDropObjectsPhase {
+  string object_name = 1;
+  string object_did = 2;
+}
+
+message PopulateConnectLocationsPhase {
+  string connection_name = 1;
+  string to_did = 2;
+}
+
+message PopulateSpec {
+  string name = 1;
+  string did = 2;
+
+  oneof phase {
+    PopulateVisitPhase visit = 3;
+    PopulateDescribePhase describe = 4;
+    PopulateDropObjectsPhase drop = 5;
+    PopulateConnectLocationsPhase connect = 6;
+  }
+}
+
 message ImportRequest {
   Session session = 1;
   oneof spec {
     ObjectSpec object = 2;
     LocationSpec location = 3;
+    PopulateSpec populate = 4;
   }
 }
 
@@ -29,6 +58,7 @@ message ImportResult {
   oneof spec {
     ObjectSpec object = 4;
     LocationSpec location = 5;
+    PopulateSpec populate = 6;
   }
 }
 

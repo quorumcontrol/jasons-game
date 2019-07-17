@@ -115,6 +115,33 @@ func (g *Game) handleImportLocation(actorCtx actor.Context, input *jasonsgame.Lo
 	return nil
 }
 
+func (g *Game) handlePopulateLocation(actorCtx actor.Context, input *jasonsgame.PopulateSpec) error {
+	var err error
+	switch phase := input.GetPhase().(type) {
+	case *jasonsgame.PopulateSpec_Visit:
+		g.sendUserMessage(actorCtx, fmt.Sprintf("visiting location %s (id: %s)", input.Name, input.Did))
+		err = g.handleLocationZoom(actorCtx, input.Did)
+	case *jasonsgame.PopulateSpec_Describe:
+		g.sendUserMessage(actorCtx, fmt.Sprintf("setting description for location %s", input.Name))
+		err = g.handleSetDescription(actorCtx, phase.Describe.Description)
+	case *jasonsgame.PopulateSpec_Drop:
+		interaction := &DropObjectInteraction{Did: phase.Drop.ObjectDid}
+		g.sendUserMessage(actorCtx, fmt.Sprintf("dropping object %s at location %s", phase.Drop.ObjectName, input.Name))
+		err = g.handleDropObject(actorCtx, interaction)
+	case *jasonsgame.PopulateSpec_Connect:
+		g.sendUserMessage(actorCtx, fmt.Sprintf("connecting locations %s and %s", input.Name, phase.Connect.ConnectionName))
+		err = g.connectLocations(actorCtx, phase.Connect.ToDid, phase.Connect.ConnectionName)
+	}
+
+	if err != nil {
+		g.sendUserMessage(actorCtx, fmt.Sprintf("error importing: %v", err))
+		return err
+	}
+
+	g.sendImportResult(actorCtx, input)
+	return nil
+}
+
 func (g *Game) handleImportObject(actorCtx actor.Context, input *jasonsgame.ObjectSpec) error {
 	newObject, err := g.createObject(actorCtx, input.Name, input.Description)
 	if err != nil {
@@ -144,9 +171,11 @@ func (g *Game) handleImportRequest(actorCtx actor.Context, input *jasonsgame.Imp
 
 	switch input.GetSpec().(type) {
 	case *jasonsgame.ImportRequest_Location:
-		g.handleImportLocation(actorCtx, input.GetLocation())
+		err = g.handleImportLocation(actorCtx, input.GetLocation())
 	case *jasonsgame.ImportRequest_Object:
-		g.handleImportObject(actorCtx, input.GetObject())
+		err = g.handleImportObject(actorCtx, input.GetObject())
+	case *jasonsgame.ImportRequest_Populate:
+		err = g.handlePopulateLocation(actorCtx, input.GetPopulate())
 	default:
 		log.Error("unrecognized input spec", spec)
 	}
@@ -512,17 +541,7 @@ func (g *Game) handleCreateLocation(actorCtx actor.Context, args string) error {
 	return nil
 }
 
-func (g *Game) handleConnectLocation(actorCtx actor.Context, args string) error {
-	connectRegex := regexp.MustCompile(`^(did:tupelo:\w+) as (.*)`)
-	matches := connectRegex.FindStringSubmatch(args)
-
-	if len(matches) < 2 {
-		return fmt.Errorf("must specify connections in the syntax of: connect location DID as CMD")
-	}
-
-	toDid := matches[1]
-	interactionCommand := matches[2]
-
+func (g *Game) connectLocations(actorCtx actor.Context, toDid string, interactionCommand string) error {
 	targetTree, err := g.network.GetTree(toDid)
 	if err != nil {
 		return fmt.Errorf("error fetching target location: %v", err)
@@ -567,6 +586,20 @@ func (g *Game) handleConnectLocation(actorCtx actor.Context, args string) error 
 
 	g.sendUserMessage(actorCtx, fmt.Sprintf("added a connection to %s as %s", toDid, interactionCommand))
 	return nil
+}
+
+func (g *Game) handleConnectLocation(actorCtx actor.Context, args string) error {
+	connectRegex := regexp.MustCompile(`^(did:tupelo:\w+) as (.*)`)
+	matches := connectRegex.FindStringSubmatch(args)
+
+	if len(matches) < 2 {
+		return fmt.Errorf("must specify connections in the syntax of: connect location DID as CMD")
+	}
+
+	toDid := matches[1]
+	interactionCommand := matches[2]
+
+	return g.connectLocations(actorCtx, toDid, interactionCommand)
 }
 
 func (g *Game) sendUILocation(actorCtx actor.Context) {
