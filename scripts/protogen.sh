@@ -18,4 +18,4 @@ protoc -I=./network -I=$GOPATH/src -I=${GOPATH}/src/github.com/gogo/protobuf/pro
 
 protoc -I=./game -I=$GOPATH/src types.proto --gogofaster_out=Mgoogle/protobuf/any.proto=github.com/gogo/protobuf/types,plugins=grpc:./game/
 
-protoc -I=./inkfaucet/inkfaucet -I=$GOPATH/erc messages.proto --gogofaster_out=Mgoogle/protobuf/any.proto=github.com/gogo/protobuf/types,plugins=grpc:./inkfaucet/inkfaucet
+protoc -I=./inkfaucet/inkfaucet -I=$GOPATH/src messages.proto --gogofaster_out=Mgoogle/protobuf/any.proto=github.com/gogo/protobuf/types,plugins=grpc:./inkfaucet/inkfaucet
