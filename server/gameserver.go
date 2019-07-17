@@ -68,6 +68,24 @@ func (gs *GameServer) SendCommand(ctx context.Context, inp *jasonsgame.UserInput
 	return res.(*jasonsgame.CommandReceived), nil
 }
 
+func (gs *GameServer) Import(ctx context.Context, inp *jasonsgame.ImportRequest) (*jasonsgame.CommandReceived, error) {
+	log.Debugf("importing: %v", inp)
+
+	act := gs.getOrCreateSession(inp.Session, nil)
+	if act == nil {
+		log.Errorf("error, received nil actor for session %v", inp.Session)
+	}
+
+	fut := actor.EmptyRootContext.RequestFuture(act, inp, 5*time.Second)
+	res, err := fut.Result()
+	if err != nil {
+		log.Errorf("error waiting for UI: %v", err)
+		return nil, errors.Wrap(err, "error waiting on import")
+	}
+
+	return res.(*jasonsgame.CommandReceived), nil
+}
+
 func (gs *GameServer) ReceiveUIMessages(sess *jasonsgame.Session, stream jasonsgame.GameService_ReceiveUIMessagesServer) error {
 	log.Debugf("receive user messages %v", sess)
 

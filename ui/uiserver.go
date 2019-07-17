@@ -80,6 +80,12 @@ func buildUIMessage(msg proto.Message) (*jasonsgame.UserInterfaceMessage, error)
 			UiMessage: &jasonsgame.UserInterfaceMessage_CommandUpdate{CommandUpdate: msg},
 		}
 		return uiMsg, nil
+	case *jasonsgame.ImportResult:
+		uiMsg := &jasonsgame.UserInterfaceMessage{
+			UiMessage: &jasonsgame.UserInterfaceMessage_ImportResult{ImportResult: msg},
+		}
+		return uiMsg, nil
+
 	default:
 		return nil, fmt.Errorf("Unrecognized user interface message: %v", msg)
 	}

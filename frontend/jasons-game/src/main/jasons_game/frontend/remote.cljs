@@ -17,6 +17,7 @@
 (def invoke (.-invoke grpc))
 
 (def game-send-command (.-SendCommand GameService))
+(def game-import-command (.-Import GameService))
 (def game-receive-usermessages (.-ReceiveUIMessages GameService))
 
 (def ui-message-types
@@ -43,6 +44,51 @@
     (unary game-send-command (clj->js {:request req
                                        :host host
                                        :onEnd callback}))))
+
+(defn new-object-spec [{:keys [description inscriptions]}]
+  (doto (game-lib/ObjectSpec.)
+    (.setDescription description)
+    (.setInscriptionsList (clj->js inscriptions))))
+
+(defn add-objects [import-req objects]
+  (let [obj-map (.getObjectsMap import-req)]
+    (reduce (fn [m obj]
+              (.set m (:name obj) (new-object-spec obj)))
+            obj-map objects)))
+
+(defn set-location-spec-links [s links]
+  (reduce (fn [lnks {:keys [name location] :as lnk}]
+            (.set lnks name location))
+          (.getLinksMap s) links))
+
+(defn new-location-spec [{:keys [description links objects]}]
+  (doto (game-lib/LocationSpec.)
+    (.setDescription description)
+    (set-location-spec-links links)
+    (.setObjectsList (clj->js objects))))
+
+(defn add-locations [import-req locations]
+  (let [loc-map (.getLocationsMap import-req)]
+    (reduce (fn [m loc]
+              (.set m (:name loc) (new-location-spec loc)))
+            loc-map locations)))
+
+(defn new-import-request [session]
+  (doto (game-lib/ImportRequest.)
+    (.setSession session)))
+
+(defn new-import-location-request [session location-spec]
+  (doto (new-import-request session)
+    (.setLocation (clj->js location-spec))))
+
+(defn new-import-object-request [session object-spec]
+  (doto (new-import-request session)
+    (.setObject (clj->js object-spec))))
+
+(defn send-import-request [host req callback]
+  (unary game-import-command (clj->js {:request req
+                                       :host host
+                                       :onEnd callback})))
 
 (defn start-game-listener [host session on-message on-end]
   (invoke game-receive-usermessages (clj->js {:request session
@@ -96,6 +142,20 @@
  (fn [{:keys [host session command]}]
    (send-user-input host session command
                     (fn [resp] (.log js/console resp)))))
+
+(re-frame/reg-fx
+ ::import-object
+ (fn [{:keys [host session spec]}]
+   (.log js/console (str "sending import object request with spec: " spec))
+   (let [req (new-import-object-request session spec)]
+     (send-import-request host req (fn [resp] (.log js/console resp))))))
+
+(re-frame/reg-fx
+ ::import-location
+ (fn [{:keys [host session spec]}]
+   (.log js/console (str "sending import location request with spec: " spec))
+   (let [req (new-import-location-request session spec)]
+     (send-import-request host req (fn [resp] (.log js/console resp))))))
 
 (re-frame/reg-sub
  ::messages

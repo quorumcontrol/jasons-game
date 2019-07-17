@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/AsynkronIT/protoactor-go/actor"
+	proto "github.com/golang/protobuf/proto"
 	cid "github.com/ipfs/go-cid"
 	logging "github.com/ipfs/go-log"
 	"github.com/pkg/errors"
@@ -55,6 +56,8 @@ func (g *Game) Receive(actorCtx actor.Context) {
 		g.initialize(actorCtx)
 	case *jasonsgame.UserInput:
 		g.handleUserInput(actorCtx, msg)
+	case *jasonsgame.ImportRequest:
+		g.handleImportRequest(actorCtx, msg)
 	case *jasonsgame.CommandUpdate:
 		g.sendCommandUpdate(actorCtx)
 	case *jasonsgame.ChatMessage, *jasonsgame.ShoutMessage:
@@ -94,6 +97,64 @@ func (g *Game) initialize(actorCtx actor.Context) {
 	}
 
 	g.sendUserMessage(actorCtx, l)
+}
+
+func (g *Game) handleImportLocation(actorCtx actor.Context, input *jasonsgame.LocationSpec) error {
+	newLocation, err := g.createLocation(actorCtx)
+	if err != nil {
+		return err
+	}
+
+	id := newLocation.MustId()
+
+	g.sendUserMessage(actorCtx, fmt.Sprintf("new location %s imported with id %s ", input.Name, id))
+
+	input.Did = id
+	g.sendImportResult(actorCtx, input)
+
+	return nil
+}
+
+func (g *Game) handleImportObject(actorCtx actor.Context, input *jasonsgame.ObjectSpec) error {
+	newObject, err := g.createObject(actorCtx, input.Name, input.Description)
+	if err != nil {
+		return err
+	}
+
+	did := newObject.Object.Did
+
+	g.sendUserMessage(actorCtx, fmt.Sprintf("%s has been imported with DID %s", input.Name, did))
+
+	input.Did = did
+	g.sendImportResult(actorCtx, input)
+
+	return nil
+}
+
+func (g *Game) handleImportRequest(actorCtx actor.Context, input *jasonsgame.ImportRequest) error {
+	if sender := actorCtx.Sender(); sender != nil {
+		log.Debugf("responding to parent with CommandReceived")
+		actorCtx.Respond(&jasonsgame.CommandReceived{Sequence: g.messageSequence})
+		g.messageSequence++
+	}
+
+	var err error
+
+	spec := input.GetSpec()
+
+	switch input.GetSpec().(type) {
+	case *jasonsgame.ImportRequest_Location:
+		g.handleImportLocation(actorCtx, input.GetLocation())
+	case *jasonsgame.ImportRequest_Object:
+		g.handleImportObject(actorCtx, input.GetObject())
+	default:
+		log.Error("unrecognized input spec", spec)
+	}
+	if err != nil {
+		g.sendUserMessage(actorCtx, fmt.Sprintf("error importing: %v", err))
+	}
+
+	return nil
 }
 
 func (g *Game) handleUserInput(actorCtx actor.Context, input *jasonsgame.UserInput) {
@@ -327,20 +388,31 @@ func (g *Game) handlePickUpObject(actorCtx actor.Context, interaction *PickUpObj
 	return nil
 }
 
-func (g *Game) handleCreateObject(actorCtx actor.Context, args string) error {
-	splitArgs := strings.Split(args, " ")
-	objName := splitArgs[0]
+func (g *Game) createObject(actorCtx actor.Context, objName string, desc string) (*CreateObjectResponse, error) {
 	response, err := actorCtx.RequestFuture(g.inventoryActor, &CreateObjectRequest{
 		Name:        objName,
-		Description: strings.Join(splitArgs[1:], " "),
+		Description: desc,
 	}, 5*time.Second).Result()
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	newObject, ok := response.(*CreateObjectResponse)
 	if !ok {
-		return fmt.Errorf("error casting create object response")
+		return nil, fmt.Errorf("error casting create object response")
+	}
+
+	return newObject, nil
+}
+
+func (g *Game) handleCreateObject(actorCtx actor.Context, args string) error {
+	splitArgs := strings.Split(args, " ")
+	objName := splitArgs[0]
+	desc := strings.Join(splitArgs[1:], " ")
+
+	newObject, err := g.createObject(actorCtx, objName, desc)
+	if err != nil {
+		return err
 	}
 
 	err = g.refreshInteractions(actorCtx)
@@ -410,8 +482,12 @@ func (g *Game) handleLocationInventoryList(actorCtx actor.Context) error {
 	return nil
 }
 
+func (g *Game) createLocation(actorCtx actor.Context) (*consensus.SignedChainTree, error) {
+	return g.network.CreateChainTree()
+}
+
 func (g *Game) handleCreateLocation(actorCtx actor.Context, args string) error {
-	newLocation, err := g.network.CreateChainTree()
+	newLocation, err := g.createLocation(actorCtx)
 	if err != nil {
 		return err
 	}
@@ -506,6 +582,27 @@ func (g *Game) sendUserMessage(actorCtx actor.Context, mesgInter interface{}) {
 	}
 	actorCtx.Send(g.ui, msgToUser)
 	g.messageSequence++
+}
+
+func (g *Game) sendImportResult(actorCtx actor.Context, msg proto.Message) {
+	var result *jasonsgame.ImportResult
+
+	switch msg := msg.(type) {
+	case *jasonsgame.LocationSpec:
+		result = &jasonsgame.ImportResult{
+			Spec: &jasonsgame.ImportResult_Location{Location: msg},
+		}
+
+	case *jasonsgame.ObjectSpec:
+		result = &jasonsgame.ImportResult{
+			Spec: &jasonsgame.ImportResult_Object{Object: msg},
+		}
+
+	default:
+		log.Errorf("error, unrecognized import result: %v", msg)
+	}
+
+	actorCtx.Send(g.ui, result)
 }
 
 func (g *Game) sendCommandUpdate(actorCtx actor.Context) {

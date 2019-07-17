@@ -13,6 +13,15 @@ type GameServiceSendCommand = {
   readonly responseType: typeof jasonsgame_pb.CommandReceived;
 };
 
+type GameServiceImport = {
+  readonly methodName: string;
+  readonly service: typeof GameService;
+  readonly requestStream: false;
+  readonly responseStream: false;
+  readonly requestType: typeof jasonsgame_pb.ImportRequest;
+  readonly responseType: typeof jasonsgame_pb.CommandReceived;
+};
+
 type GameServiceReceiveUIMessages = {
   readonly methodName: string;
   readonly service: typeof GameService;
@@ -34,6 +43,7 @@ type GameServiceReceiveStatMessages = {
 export class GameService {
   static readonly serviceName: string;
   static readonly SendCommand: GameServiceSendCommand;
+  static readonly Import: GameServiceImport;
   static readonly ReceiveUIMessages: GameServiceReceiveUIMessages;
   static readonly ReceiveStatMessages: GameServiceReceiveStatMessages;
 }
@@ -77,6 +87,15 @@ export class GameServiceClient {
   ): UnaryResponse;
   sendCommand(
     requestMessage: jasonsgame_pb.UserInput,
+    callback: (error: ServiceError|null, responseMessage: jasonsgame_pb.CommandReceived|null) => void
+  ): UnaryResponse;
+  import(
+    requestMessage: jasonsgame_pb.ImportRequest,
+    metadata: grpc.Metadata,
+    callback: (error: ServiceError|null, responseMessage: jasonsgame_pb.CommandReceived|null) => void
+  ): UnaryResponse;
+  import(
+    requestMessage: jasonsgame_pb.ImportRequest,
     callback: (error: ServiceError|null, responseMessage: jasonsgame_pb.CommandReceived|null) => void
   ): UnaryResponse;
   receiveUIMessages(requestMessage: jasonsgame_pb.Session, metadata?: grpc.Metadata): ResponseStream<jasonsgame_pb.UserInterfaceMessage>;

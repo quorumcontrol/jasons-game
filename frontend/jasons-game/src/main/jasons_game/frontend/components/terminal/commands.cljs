@@ -1,5 +1,6 @@
 (ns jasons-game.frontend.components.terminal.commands
   (:require [jasons-game.frontend.remote :as remote]
+            [jasons-game.frontend.components.file-picker :as file-picker]
             [clojure.string :as string]
             [clojure.walk :refer [keywordize-keys]]
             [reagent.core :as r]
@@ -7,6 +8,8 @@
             ["javascript-terminal" :as jsterm
              :refer [CommandMapping OptionParser]]
             ["react-terminal-component" :refer [ReactTerminalStateless]]))
+
+(def import-world-cmd "import-world")
 
 (defn parse-args [arg-str option-schema]
   (let [js-schema (clj->js option-schema)]
@@ -27,6 +30,10 @@
     (re-frame/dispatch [:user/input command])
     {}))
 
+(defmethod dispatch-command import-world-cmd [_ arg-list]
+  (file-picker/activate)
+  {})
+
 (defn add-command [commands new-command-name]
   (let [command-fn (fn [_ arg-list]
                      (dispatch-command new-command-name arg-list))]
@@ -43,4 +50,5 @@
            (rest commands))))
 
 (def default-mapping
-  (empty-mapping))
+  (-> (empty-mapping)
+      (add-command import-world-cmd)))

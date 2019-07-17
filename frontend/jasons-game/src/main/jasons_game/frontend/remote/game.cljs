@@ -14,14 +14,6 @@
   (doto (game-lib/Session.)
     (.setUuid id)))
 
-(defn send-user-input [host session input callback]
-  (let [req (doto (game-lib/UserInput.)
-              (.setMessage input)
-              (.setSession session))]
-    (unary game-send-command (clj->js {:request req
-                                       :host host
-                                       :onEnd callback}))))
-
 (defn start-game-listener [host session on-message on-end]
   (invoke game-receive-usermessages (clj->js {:request session
                                               :host host

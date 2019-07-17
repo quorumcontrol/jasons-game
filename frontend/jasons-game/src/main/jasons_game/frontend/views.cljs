@@ -2,6 +2,7 @@
   (:require
    [reagent.core :as r]
    [re-frame.core :as re-frame :refer [subscribe dispatch]]
+   [jasons-game.frontend.components.file-picker :as file-picker]
    [jasons-game.frontend.components.terminal :as terminal]
    [jasons-game.frontend.remote :as remote]
    ["react"]
@@ -11,4 +12,6 @@
 (defn app-root []
   (let [state (subscribe [::terminal/state])
         read-only? (subscribe [::terminal/read-only?])]
-    [terminal/show @state @read-only?]))
+    [:div
+     [terminal/show @state @read-only?]
+     [file-picker/element]]))

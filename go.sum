@@ -1024,6 +1024,8 @@ github.com/quorumcontrol/messages/build/go v0.0.0-20190530182608-30c127bffefb/go
 github.com/quorumcontrol/messages/build/go v0.0.0-20190603192428-dcb5ad7a31ca/go.mod h1:QLQVe/V3WcoFNglaJXmoRNs8u+KbsNd5MXeOaa77zgw=
 github.com/quorumcontrol/messages/build/go v0.0.0-20190604083406-7ee8fa6b39eb h1:+GQaw6dUv1qEwYyrKByssmzSarOg/WOGptuzkaFDqwI=
 github.com/quorumcontrol/messages/build/go v0.0.0-20190604083406-7ee8fa6b39eb/go.mod h1:QLQVe/V3WcoFNglaJXmoRNs8u+KbsNd5MXeOaa77zgw=
+github.com/quorumcontrol/messages/build/go v0.0.0-20190716095704-9acdbae78c93 h1:G1VRZKIZMjG00VXDK2xpv+fj2/3cKPwRPZpK/ofb1OE=
+github.com/quorumcontrol/messages/build/go v0.0.0-20190716095704-9acdbae78c93/go.mod h1:QLQVe/V3WcoFNglaJXmoRNs8u+KbsNd5MXeOaa77zgw=
 github.com/quorumcontrol/namedlocker v0.0.0-20180808140020-3f797c8b12b1 h1:FglNF7FTLpcl171qo5MFvbKjrLEsLtcKF72uQpefiPM=
 github.com/quorumcontrol/namedlocker v0.0.0-20180808140020-3f797c8b12b1/go.mod h1:7JSFW45PpKoXFaUpaJ8YtCNIwQWut0+Huo9ugBnKVe4=
 github.com/quorumcontrol/packr/v2 v2.2.1-0.20190523180755-1b8140a3b2d5 h1:6EGl2ozaykHhJnJAZNqVA4lahG+cuqEOw5CPgHU3wtU=
@@ -1051,6 +1053,8 @@ github.com/quorumcontrol/tupelo-go-sdk v0.5.1-0.20190705150850-609cdf01168c h1:R
 github.com/quorumcontrol/tupelo-go-sdk v0.5.1-0.20190705150850-609cdf01168c/go.mod h1:CjLD71vrLXVI3gXCJ2QhyuRPHSgnkzvalyx4oAgHvWI=
 github.com/quorumcontrol/tupelo-go-sdk v0.5.1-0.20190705184618-ce22a53817ff h1:EzzyBBIAcvF58lrO5qUqo/1n6WPeYVRdGY+rMorzrjQ=
 github.com/quorumcontrol/tupelo-go-sdk v0.5.1-0.20190705184618-ce22a53817ff/go.mod h1:CjLD71vrLXVI3gXCJ2QhyuRPHSgnkzvalyx4oAgHvWI=
+github.com/quorumcontrol/tupelo-go-sdk v0.5.1 h1:Wj8pKSyriqVMcPu2e4bWfE5Ugjk6o8TlIhWwj83b9ks=
+github.com/quorumcontrol/tupelo-go-sdk v0.5.1/go.mod h1:BkTYlHENbjO3chiFRtL+7mlDrK0SLLkdC0j8ODLQ2ZE=
 github.com/rcrowley/go-metrics v0.0.0-20181016184325-3113b8401b8a/go.mod h1:bCqnVzQkZxMG4s8nGwiZ5l3QUCyqpo9Y+/ZMZ9VjZe4=
 github.com/rogpeppe/go-internal v1.1.0/go.mod h1:M8bDsm7K2OlrFYOpmOWEs/qY81heoFRclV5y23lUDJ4=
 github.com/rogpeppe/go-internal v1.3.0 h1:RR9dF3JtopPvtkroDZuVD7qquD0bnHlKSqaQhgwt8yk=

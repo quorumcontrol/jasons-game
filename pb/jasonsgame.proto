@@ -2,6 +2,36 @@ syntax = "proto3";
 
 package jasonsgame;
 
+message ObjectSpec {
+  string name = 1;
+  string description = 2;
+  repeated string inscriptions = 3;
+  string did = 4;
+}
+
+message LocationSpec {
+  string name = 1;
+  string did = 2;
+}
+
+message ImportRequest {
+  Session session = 1;
+  oneof spec {
+    ObjectSpec object = 2;
+    LocationSpec location = 3;
+  }
+}
+
+message ImportResult {
+  bool error = 2;
+  string error_message = 3;
+
+  oneof spec {
+    ObjectSpec object = 4;
+    LocationSpec location = 5;
+  }
+}
+
 message UserInput {
     string message = 1;
     Session session = 2;
@@ -12,6 +42,7 @@ message MessageToUser {
     Location location = 2;
     uint64 sequence = 3;
     bool heartbeat = 4;
+
 }
 
 message CommandUpdate {
@@ -27,6 +58,7 @@ message UserInterfaceMessage {
   oneof ui_message {
     MessageToUser user_message = 1;
     CommandUpdate command_update = 2;
+    ImportResult import_result = 3;
   }
 }
 
@@ -102,6 +134,7 @@ message RequestObjectTransferMessage {
 
 service GameService {
     rpc SendCommand(UserInput) returns (CommandReceived) {}
+    rpc Import(ImportRequest) returns (CommandReceived) {}
     rpc ReceiveUIMessages(Session) returns (stream UserInterfaceMessage) {}
     rpc ReceiveStatMessages(Session) returns (stream Stats) {}
 }

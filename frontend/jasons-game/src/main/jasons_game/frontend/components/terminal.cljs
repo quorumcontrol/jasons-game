@@ -33,7 +33,7 @@
   (let [new-mapping (->> commands
                          (map #(string/split % #" "))
                          (map first)
-                         (commands/add-all (commands/empty-mapping)))]
+                         (commands/add-all commands/default-mapping))]
     (.setCommandMapping state new-mapping)))
 
 (defn show [state read-only?]

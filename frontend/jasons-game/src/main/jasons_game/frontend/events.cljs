@@ -2,6 +2,7 @@
   (:require [re-frame.core :as re-frame]
             [jasons-game.frontend.db :as db]
             [jasons-game.frontend.remote :as remote]
+            [jasons-game.frontend.components.file-picker :as file-picker]
             [jasons-game.frontend.components.terminal :as terminal]
             [day8.re-frame.tracing :refer-macros [fn-traced]]))
 
@@ -26,3 +27,8 @@
  :command/update
  (fn [db [_ command-update]]
    (update db ::terminal/state terminal/update-commands command-update)))
+
+(re-frame/reg-event-fx
+ ::file-picker/load
+ (fn [{{::remote/keys [host session]} :db} [_ file-contents]]
+   {::remote/import {:host host, :session session, :spec file-contents}}))

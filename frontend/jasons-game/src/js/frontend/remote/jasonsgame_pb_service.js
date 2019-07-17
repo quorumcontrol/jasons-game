@@ -19,6 +19,15 @@ GameService.SendCommand = {
   responseType: jasonsgame_pb.CommandReceived
 };
 
+GameService.Import = {
+  methodName: "Import",
+  service: GameService,
+  requestStream: false,
+  responseStream: false,
+  requestType: jasonsgame_pb.ImportRequest,
+  responseType: jasonsgame_pb.CommandReceived
+};
+
 GameService.ReceiveUIMessages = {
   methodName: "ReceiveUIMessages",
   service: GameService,
@@ -49,6 +58,37 @@ GameServiceClient.prototype.sendCommand = function sendCommand(requestMessage, m
     callback = arguments[1];
   }
   var client = grpc.unary(GameService.SendCommand, {
+    request: requestMessage,
+    host: this.serviceHost,
+    metadata: metadata,
+    transport: this.options.transport,
+    debug: this.options.debug,
+    onEnd: function (response) {
+      if (callback) {
+        if (response.status !== grpc.Code.OK) {
+          var err = new Error(response.statusMessage);
+          err.code = response.status;
+          err.metadata = response.trailers;
+          callback(err, null);
+        } else {
+          callback(null, response.message);
+        }
+      }
+    }
+  });
+  return {
+    cancel: function () {
+      callback = null;
+      client.close();
+    }
+  };
+};
+
+GameServiceClient.prototype.import = function pb_import(requestMessage, metadata, callback) {
+  if (arguments.length === 2) {
+    callback = arguments[1];
+  }
+  var client = grpc.unary(GameService.Import, {
     request: requestMessage,
     host: this.serviceHost,
     metadata: metadata,
