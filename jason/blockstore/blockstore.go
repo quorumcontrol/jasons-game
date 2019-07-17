@@ -16,7 +16,6 @@ import (
 	"github.com/pkg/errors"
 	communitycfg "github.com/quorumcontrol/community/config"
 	communityhub "github.com/quorumcontrol/community/hub"
-	"github.com/quorumcontrol/tupelo-go-sdk/gossip3/remote"
 	"github.com/quorumcontrol/tupelo-go-sdk/gossip3/types"
 	"github.com/quorumcontrol/tupelo-go-sdk/p2p"
 
@@ -36,7 +35,6 @@ const connectionGracePeriod = 20 * time.Second
 type Blockstore struct {
 	p2pHost           *p2p.LibP2PHost
 	swapper           *p2p.BitswapPeer
-	pubsubSystem      remote.PubSub
 	connectionManager ifconnmgr.ConnManager
 	parentCtx         context.Context
 	communityHub      *communityhub.Hub
@@ -120,7 +118,7 @@ func (p *Blockstore) Start() error {
 
 	log.Infof("serving a provider now")
 
-	p.jasonCommunity.Subscribe([]byte(network.GeneralTopic), func(_ context.Context, _ *messages.Envelope, protoMsg proto.Message) {
+	_, err = p.jasonCommunity.Subscribe([]byte(network.GeneralTopic), func(_ context.Context, _ *messages.Envelope, protoMsg proto.Message) {
 		switch msg := protoMsg.(type) {
 		case *network.Join:
 			peerID, err := peer.IDB58Decode(msg.Identity)
@@ -131,7 +129,9 @@ func (p *Blockstore) Start() error {
 			p.connectionManager.Protect(peerID, "player")
 		}
 	})
+	if err != nil {
+		return errors.Wrap(err, "error subscribing to community")
+	}
 
 	return nil
-
 }
