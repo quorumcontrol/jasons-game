@@ -3,7 +3,7 @@ package handlers
 import (
 	"context"
 
-	"github.com/golang/protobuf/proto"
+	"github.com/gogo/protobuf/proto"
 	"github.com/quorumcontrol/jasons-game/network"
 )
 

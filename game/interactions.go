@@ -5,15 +5,14 @@ import (
 	"fmt"
 	"io"
 
-	"golang.org/x/crypto/scrypt"
-	"golang.org/x/crypto/nacl/secretbox"
-	"github.com/golang/protobuf/proto"
-	types "github.com/golang/protobuf/ptypes"
-	anypb "github.com/golang/protobuf/ptypes/any"
+	"github.com/gogo/protobuf/proto"
+	ptypes "github.com/gogo/protobuf/types"
 	cbor "github.com/ipfs/go-ipld-cbor"
 	"github.com/pkg/errors"
 	"github.com/quorumcontrol/chaintree/safewrap"
 	"github.com/quorumcontrol/chaintree/typecaster"
+	"golang.org/x/crypto/nacl/secretbox"
+	"golang.org/x/crypto/scrypt"
 )
 
 func init() {
@@ -110,7 +109,7 @@ func (w *withInteractions) interactionsListFromTree(tree updatableTree) ([]Inter
 }
 
 func interactionToCborNode(i Interaction) (*cbor.Node, error) {
-	any, err := types.MarshalAny(i)
+	any, err := ptypes.MarshalAny(i)
 	if err != nil {
 		return nil, errors.Wrap(err, "error turning into any")
 	}
@@ -152,7 +151,7 @@ func interactionFromStoredMap(m map[string]interface{}) (Interaction, error) {
 		return nil, fmt.Errorf("interaction was not stored with protobuf typeUrl")
 	}
 
-	interaction, err := types.Empty(&anypb.Any{TypeUrl: typeURL.(string)})
+	interaction, err := ptypes.EmptyAny(&ptypes.Any{TypeUrl: typeURL.(string)})
 	if err != nil {
 		return nil, fmt.Errorf("protobuf type %v not found: %v", typeURL, err)
 	}

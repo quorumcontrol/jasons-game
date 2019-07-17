@@ -17,13 +17,11 @@ gosources = $(shell find . -path "./vendor/*" -prune -o -type f -name "*.go" -pr
 
 all: frontend-build $(packr) build
 
-$(FIRSTGOPATH)/bin/protoc-gen-go:
-	go get -u github.com/golang/protobuf/protoc-gen-go
+${FIRSTGOPATH}/src/github.com/gogo/protobuf/protobuf:
+	go get github.com/gogo/protobuf/...
 
-$(FIRSTGOPATH)/bin/protoc-go-inject-tag:
-	go get -u github.com/favadi/protoc-go-inject-tag
 
-$(generated): $(FIRSTGOPATH)/bin/protoc-gen-go $(FIRSTGOPATH)/bin/protoc-go-inject-tag $(jsmodules)
+$(generated): ${FIRSTGOPATH}/src/github.com/gogo/protobuf/protobuf $(jsmodules)
 	./scripts/protogen.sh
 
 $(jsmodules):
