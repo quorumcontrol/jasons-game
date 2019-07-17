@@ -21,7 +21,7 @@ const InkFaucetChainTreeName = "inkfaucet"
 
 var log = logging.Logger("ink")
 
-type Well interface {
+type Faucet interface {
 	TokenName() *consensus.TokenName
 	ChainTreeDID() string
 	RequestInk(amount uint64, destinationChainId string) (*transactions.TokenPayload, error)
@@ -40,7 +40,7 @@ type ChainTreeInkFaucetConfig struct {
 	InkOwnerDID string
 }
 
-var _ Well = &ChainTreeInkFaucet{}
+var _ Faucet = &ChainTreeInkFaucet{}
 
 func NewChainTreeInkFaucet(cfg ChainTreeInkFaucetConfig) (*ChainTreeInkFaucet, error) {
 	ct, err := ensureChainTree(cfg.Net)
@@ -143,7 +143,7 @@ type InkActor struct {
 	group     *types.NotaryGroup
 	dataStore datastore.Batching
 	net       network.Network
-	inkfaucet   Well
+	inkfaucet Faucet
 	tokenName *consensus.TokenName
 	handler   *actor.PID
 }
@@ -152,7 +152,7 @@ type InkActorConfig struct {
 	Group     *types.NotaryGroup
 	DataStore datastore.Batching
 	Net       network.Network
-	InkFaucet   Well
+	InkFaucet Faucet
 	TokenName *consensus.TokenName
 }
 
