@@ -3,7 +3,6 @@ package devink
 import (
 	"context"
 
-	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/hashicorp/go-uuid"
 	logging "github.com/ipfs/go-log"
 	"github.com/pkg/errors"
@@ -50,16 +49,10 @@ func NewSource(ctx context.Context, dataStoreDir string, connectToLocalnet bool)
 		return nil, errors.Wrap(err, "error getting private signingKey")
 	}
 
-	netKey, err := crypto.GenerateKey()
-	if err != nil {
-		return nil, errors.Wrap(err, "error generating network key")
-	}
-
 	netCfg := &network.RemoteNetworkConfig{
 		NotaryGroup:   notaryGroup,
 		KeyValueStore: ds,
 		SigningKey:    signingKey,
-		NetworkKey:    netKey,
 	}
 
 	rNet, err := network.NewRemoteNetworkWithConfig(ctx, netCfg)

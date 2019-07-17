@@ -3,7 +3,6 @@ package config
 import (
 	"context"
 
-	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ipfs/go-datastore"
 	"github.com/pkg/errors"
 	"github.com/quorumcontrol/tupelo-go-sdk/gossip3/types"
@@ -45,16 +44,10 @@ func Setup(ctx context.Context, cfg InkFaucetConfig) (*InkFaucet, error) {
 		return nil, errors.Wrap(err, "error getting private signingKey")
 	}
 
-	netKey, err := crypto.GenerateKey()
-	if err != nil {
-		return nil, errors.Wrap(err, "error generating network key")
-	}
-
 	netCfg := &network.RemoteNetworkConfig{
 		NotaryGroup:   group,
 		KeyValueStore: ds,
 		SigningKey:    signingKey,
-		NetworkKey:    netKey,
 	}
 
 	net, err := network.NewRemoteNetworkWithConfig(ctx, netCfg)
