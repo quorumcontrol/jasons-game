@@ -97,7 +97,7 @@ vendor: go.mod go.sum $(FIRSTGOPATH)/bin/modvendor
 prepare: $(gosources) $(generated) $(packr) $(vendor)
 
 $(FIRSTGOPATH)/bin/packr2:
-	go get -u github.com/gobuffalo/packr/v2/packr2
+	get -u github.com/gobuffalo/packr/v2@662c20c19dde
 
 $(packr): $(FIRSTGOPATH)/bin/packr2 main.go
 	$(FIRSTGOPATH)/bin/packr2
