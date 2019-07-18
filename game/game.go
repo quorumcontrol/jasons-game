@@ -72,7 +72,7 @@ func (g *Game) Receive(actorCtx actor.Context) {
 	case *ping:
 		actorCtx.Respond(true)
 	default:
-		log.Warningf("received message of unrecognized type")
+		log.Warningf("received unrecognized message %#v", msg)
 	}
 }
 
