@@ -96,7 +96,7 @@
         link-name (-> links first :name)
         did (get-created-did (concat unpopulated-locations populated-locations)
                               location-name)]
-    (doto (game-lib/PopulateDropObjectsPhase.)
+    (doto (game-lib/PopulateConnectLocationsPhase.)
       (.setConnectionName link-name)
       (.setToDid did))))
 
