@@ -23,8 +23,7 @@
     (.readAsText reader file)))
 
 (defn activate []
-  (let [el (.getElementById js/document element-id)]
-    (.click el)))
+  (.click (.getElementById js/document element-id)))
 
 (defn element []
   [:input {:id element-id
