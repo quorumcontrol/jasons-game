@@ -82,16 +82,16 @@
        first
        :did))
 
-(defn new-drop-proto [{:keys [created-objects unpopulated-locations] :as status}]
-  (let [{:keys [objects] :as pop-spec} (first unpopulated-locations)
+(defn new-drop-proto [{:keys [created-objects current] :as status}]
+  (let [{:keys [objects] :as current-loc} (second current)
         object-name (first objects)
         did (get-created-did created-objects object-name)]
     (doto (game-lib/PopulateDropObjectsPhase.)
       (.setObjectName object-name)
       (.setObjectDid did))))
 
-(defn new-connect-proto [{:keys [populated-locations unpopulated-locations] :as status}]
-  (let [{:keys [links] :as pop-spec} (first unpopulated-locations)
+(defn new-connect-proto [{:keys [populated-locations unpopulated-locations current] :as status}]
+  (let [{:keys [links] :as pop-spec} (second current)
         location-name (-> links first :location)
         link-name (-> links first :name)
         did (get-created-did (concat unpopulated-locations populated-locations)
@@ -105,7 +105,7 @@
     (case phase
       :describe (.setDescribe spec (doto (game-lib/PopulateDescribePhase.)
                                      (.setDescription (:description pop-loc))))
-      :drop (.setDrop spec (new-drop-proto pop-loc))
+      :drop (.setDrop spec (new-drop-proto status))
       :connect (.setConnect spec (new-connect-proto pop-loc))
       (.setVisit spec (game-lib/PopulateVisitPhase.))))
   spec)
