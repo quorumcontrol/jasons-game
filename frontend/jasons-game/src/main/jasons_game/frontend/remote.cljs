@@ -285,10 +285,10 @@
         (dissoc :current))))
 
 (defn increment-drop-phase [{:keys [objects] :as current-loc}]
-  (if (seq objects)
+  (if-let [other-objects (-> objects rest seq)]
     (-> current-loc
         (assoc :phase :drop)
-        (assoc :objects (rest objects)))
+        (assoc :objects other-objects))
     (assoc current-loc :phase :connect)))
 
 (defn increment-connect-phase [{:keys [links] :as current-loc}]
