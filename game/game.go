@@ -634,6 +634,11 @@ func (g *Game) sendImportResult(actorCtx actor.Context, msg proto.Message) {
 			Spec: &jasonsgame.ImportResult_Object{Object: msg},
 		}
 
+	case *jasonsgame.PopulateSpec:
+		result = &jasonsgame.ImportResult{
+			Spec: &jasonsgame.ImportResult_Populate{Populate: msg},
+		}
+
 	default:
 		log.Errorf("error, unrecognized import result: %v", msg)
 	}
