@@ -32,6 +32,6 @@ message GetTreeValueInteraction {
 
 message CipherInteraction {
   string command = 1;
-  bytes sealed_interaction_bytes = 2;
+  repeated bytes sealed_interaction_bytes = 2;
   bytes failure_interaction_bytes = 3;
 }

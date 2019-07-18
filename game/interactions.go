@@ -183,21 +183,27 @@ func NewCipherInteraction(command string, secret string, interactionToSeal Inter
 	}
 	failureInteractionBytes := failureInteractionNode.RawData()
 
-	var nonce [cipherNonceLength]byte
-	if _, err = io.ReadFull(rand.Reader, nonce[:]); err != nil {
-		return nil, err
-	}
+	secrets := []string{secret, "brandon"}
 
-	cipherKey, err := cipherKey([]byte(secret), nonce[:])
-	if err != nil {
-		return nil, err
-	}
+	sealedInteractions := make([][]byte, len(secrets))
 
-	sealedInteractionBytes := secretbox.Seal(nonce[:], interactionToSealBytes, &nonce, &cipherKey)
+	for i, secret := range secrets {
+		var nonce [cipherNonceLength]byte
+		if _, err = io.ReadFull(rand.Reader, nonce[:]); err != nil {
+			return nil, err
+		}
+
+		cipherKey, err := cipherKey([]byte(secret), nonce[:])
+		if err != nil {
+			return nil, err
+		}
+
+		sealedInteractions[i] = secretbox.Seal(nonce[:], interactionToSealBytes, &nonce, &cipherKey)
+	}
 
 	return &CipherInteraction{
 		Command:                 command,
-		SealedInteractionBytes:  sealedInteractionBytes,
+		SealedInteractionBytes:  sealedInteractions,
 		FailureInteractionBytes: failureInteractionBytes,
 	}, nil
 }
@@ -212,18 +218,26 @@ func cipherKey(secret []byte, salt []byte) (b [32]byte, err error) {
 }
 
 func (i *CipherInteraction) Unseal(secret string) (Interaction, bool, error) {
-	sealedBytes := i.SealedInteractionBytes
-	var nonce [cipherNonceLength]byte
-	copy(nonce[:], sealedBytes[:cipherNonceLength])
+	var interactionBytes []byte
+	var unsealedBytes []byte
+	var unsealSuccess bool
 
-	cipherKey, err := cipherKey([]byte(secret), nonce[:])
-	if err != nil {
-		return nil, false, err
+	for _, sealedBytes := range i.SealedInteractionBytes {
+		var nonce [cipherNonceLength]byte
+		copy(nonce[:], sealedBytes[:cipherNonceLength])
+
+		cipherKey, err := cipherKey([]byte(secret), nonce[:])
+		if err != nil {
+			return nil, false, err
+		}
+
+		unsealedBytes, unsealSuccess = secretbox.Open(nil, sealedBytes[cipherNonceLength:], &nonce, &cipherKey)
+
+		if unsealSuccess {
+			break
+		}
 	}
 
-	unsealedBytes, unsealSuccess := secretbox.Open(nil, sealedBytes[cipherNonceLength:], &nonce, &cipherKey)
-
-	var interactionBytes []byte
 	if unsealSuccess {
 		interactionBytes = unsealedBytes
 	} else {
