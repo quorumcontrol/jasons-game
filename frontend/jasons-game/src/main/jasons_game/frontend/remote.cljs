@@ -294,9 +294,11 @@
         (dissoc :objects))))
 
 (defn increment-connect-phase [{:keys [links] :as current-loc}]
-  (if (seq links)
-    (assoc current-loc :phase :connect)
-    (assoc current-loc :phase :done)))
+  (if-let [other-links (-> links rest seq)]
+    (assoc current-loc :phase :connect :links other-links)
+    (-> current-loc
+        (assoc :phase :done)
+        (dissoc :links))))
 
 (defn increment-populate-phase [{:keys [phase] :as current-loc}]
   (case phase
