@@ -100,36 +100,6 @@
       (.setConnectionName link-name)
       (.setToDid did))))
 
-(defn increment-drop-phase [{:keys [objects] :as current-loc}]
-  (if (seq objects)
-    (-> current-loc
-        (assoc :phase :drop)
-        (assoc :objects (rest objects)))
-    (assoc current-loc :phase :connect)))
-
-(defn increment-connect-phase [{:keys [links] :as current-loc}]
-  (if (seq links)
-    (assoc current-loc :phase :connect)
-    (assoc current-loc :phase :done)))
-
-(defn increment-populate-phase [{:keys [phase] :as current-loc}]
-  (case phase
-    :visit (assoc current-loc :phase :describe)
-    :describe (assoc current-loc :phase :drop)
-    :drop (increment-drop-phase current-loc)
-    :connect (increment-connect-phase current-loc)
-    (assoc current-loc :phase :visit)))
-
-(defn set-phase [{:keys [current unpopulated-locations populated-locations]
-                  :as status}]
-  (let [current-loc (second current)
-        new-loc (increment-populate-phase current-loc)]
-    (if (= (:phase new-loc) :done)
-      (-> status
-          (update :populated-locations conj new-loc)
-          (dissoc :current))
-      (-> (assoc status :current [::populate-location new-loc])))))
-
 (defn set-phase-proto [spec {:keys [current] :as status} phase]
   (let [pop-loc (second current)]
     (case phase
@@ -148,8 +118,7 @@
       (set-phase-proto status phase))))
 
 (defn new-populate-location-request [session status]
-  (let [new-status (set-phase status)
-        pop-loc-proto (status->populate-proto new-status)]
+  (let [pop-loc-proto (status->populate-proto status)]
     (doto (new-import-request session)
       (.setPopulate pop-loc-proto))))
 
@@ -240,14 +209,12 @@
 (re-frame/reg-fx
  ::import-object
  (fn [{:keys [host session spec]}]
-   (.log js/console (str "sending import object request with spec: " spec))
    (let [req (new-import-object-request session spec)]
      (send-import-request host req (fn [resp] (.log js/console resp))))))
 
 (re-frame/reg-fx
  ::import-location
  (fn [{:keys [host session spec]}]
-   (.log js/console (str "sending import location request with spec: " spec))
    (let [req (new-import-location-request session spec)]
      (send-import-request host req (fn [resp] (.log js/console resp))))))
 
@@ -280,15 +247,14 @@
      ::import-location {:host host, :session session, :spec next}}))
 
 (defn populate-next-location [{::keys [host session import-status] :as db}]
-  (let [{:keys [unpopulated-locations]} import-status
-        next (first unpopulated-locations)
-        current [::populate-location next]
-        new-unpopulated-locations (rest unpopulated-locations)
-        new-status (-> import-status
-                       (assoc :unpopulated-locations new-unpopulated-locations)
-                       (assoc :current current))]
-    {:db (assoc db ::import-status new-status)
-     ::populate-location {:host host, :session session, :status new-status}}))
+  (if (:current import-status)
+    {::populate-location {:host host, :session session, :status import-status}}
+    (when-let [unpopulated-locations (seq (:unpopulated-locations import-status))]
+      (let [new-status (-> import-status
+                           (update :unpopulated-locations rest)
+                           (assoc :current [::populate-location (first unpopulated-locations)]))]
+        {:db (assoc db ::import-status new-status)
+         ::populate-location {:host host, :session session, :status new-status}}))))
 
 (re-frame/reg-event-fx
  ::import
@@ -298,7 +264,7 @@
      (cond
        (seq pending-objects) (import-next-object db)
        (seq pending-locations) (import-next-location db)
-       (seq unpopulated-locations) (populate-next-location db)))))
+       :else (populate-next-location db)))))
 
 (defn update-import-object-status [{:keys [created-objects current] :as status}
                                    {:keys [object] :as import-result}]
@@ -318,17 +284,49 @@
         (assoc :unpopulated-locations new-unpopulated-locations)
         (dissoc :current))))
 
-(defn update-populate-location-status [{:keys [populated-locations current]:as status}
-                                       {:keys [populate] :as populate-result}]
-  (let [populate-spec (second current)
-        populated-location (populate populate-spec)]
-    (if-not (= status :done)
+(defn increment-drop-phase [{:keys [objects] :as current-loc}]
+  (if (seq objects)
+    (-> current-loc
+        (assoc :phase :drop)
+        (assoc :objects (rest objects)))
+    (assoc current-loc :phase :connect)))
+
+(defn increment-connect-phase [{:keys [links] :as current-loc}]
+  (if (seq links)
+    (assoc current-loc :phase :connect)
+    (assoc current-loc :phase :done)))
+
+(defn increment-populate-phase [{:keys [phase] :as current-loc}]
+  (case phase
+    :visit (assoc current-loc :phase :describe)
+    :describe (assoc current-loc :phase :drop)
+    :drop (increment-drop-phase current-loc)
+    :connect (increment-connect-phase current-loc)
+    (assoc current-loc :phase :visit)))
+
+(defn finalize-location [{:keys [unpopulated-locations current]
+                          :as status}]
+  (let [current-location (second current)]
+    (if (seq unpopulated-locations)
       (-> status
-          (assoc :current [::populate-location populated-location]))
-      (let [new-populated-locations (conj populated-locations populated-location)]
-        (-> status
-            (assoc :populated-locations new-populated-locations)
-            (dissoc :current))))))
+          (update :populated-locations conj current-location)
+          (update :unpopulated-locations rest)
+          (assoc :current [::populate-location (first unpopulated-locations)]))
+      (-> status
+          (update :populated-locations conj current-location)
+          (dissoc current)))))
+
+
+(defn update-populate-location-status [{:keys [populated-locations current] :as status}
+                                       {:keys [populate] :as populate-result}]
+  (let [current-loc (second current)
+        new-loc (increment-populate-phase current-loc)]
+    (assoc status :current [::populate-location new-loc])
+    (if (= (:phase new-loc) :done)
+      (-> status
+          (update :populated-locations conj new-loc)
+          (dissoc :current))
+      (-> (assoc status :current [::populate-location new-loc])))))
 
 (defn update-status [{:keys [current] :as status} import-result]
   (let [step (first current)]
