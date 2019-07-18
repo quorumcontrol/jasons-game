@@ -290,7 +290,8 @@
         (assoc :phase :drop)
         (assoc :objects other-objects))
     (-> current-loc
-        (assoc :phase :connect)
+        ;; (assoc :phase :connect) ; temporarily comment while debugging links
+        (assoc :phase :done) ; temporarily short circuit while d
         (dissoc :objects))))
 
 (defn increment-connect-phase [{:keys [links] :as current-loc}]
