@@ -76,42 +76,6 @@
   (doto (game-lib/ImportRequest.)
     (.setSession session)))
 
-(defn increment-drop-phase [{:keys [objects] :as pop-spec}]
-  (if (seq objects)
-    (-> pop-spec
-        (assoc :phase :drop)
-        (assoc :objects (rest objects)))
-    (assoc pop-spec :phase :connect)))
-
-(defn increment-connect-phase [{:keys [links] :as pop-spec}]
-  (if (seq links)
-    (-> pop-spec
-        (assoc :phase :connect)
-        (assoc :phase :done))))
-
-(defn set-populate-phase [pop-spec]
-  (let [old-phase (:phase pop-spec)]
-    (case old-phase
-      :visit (assoc pop-spec :phase :describe)
-      :describe (assoc pop-spec :phase :drop)
-      :drop (increment-drop-phase pop-spec)
-      :connect (increment-connect-phase pop-spec)
-      (assoc pop-spec :phase :visit))))
-
-(defn set-phase [{:keys [unpopulated-locations] :as status}]
-  (let [{:keys [phase]} unpopulated-locations
-        new-spec (if (nil? phase)
-                   (assoc unpopulated-locations :phase :visit)
-                   (set-populate-phase unpopulated-locations))]
-    (assoc status :unpopulated-locations new-spec)))
-
-(defn new-populate-phase [{:keys [phase] :as pop-spec}]
-  (case phase
-    :visit (game-lib/PopulateVisitPhase.)
-    :describe (doto (game-lib/PopulateDescribePhase.)
-                (.setDescription (:description pop-spec)))
-    :drop (doto (game-lib/PopulateDropObjectsPhase.))))
-
 (defn get-created-did [created created-name]
   (->> created
        (filter #(= (:name %) created-name))
@@ -136,20 +100,48 @@
       (.setConnectionName link-name)
       (.setToDid did))))
 
+(defn increment-drop-phase [{:keys [objects] :as current-loc}]
+  (if (seq objects)
+    (-> current-loc
+        (assoc :phase :drop)
+        (assoc :objects (rest objects)))
+    (assoc current-loc :phase :connect)))
+
+(defn increment-connect-phase [{:keys [links] :as current-loc}]
+  (if (seq links)
+    (assoc current-loc :phase :connect)
+    (assoc current-loc :phase :done)))
+
+(defn increment-populate-phase [{:keys [phase] :as current-loc}]
+  (case phase
+    :visit (assoc current-loc :phase :describe)
+    :describe (assoc current-loc :phase :drop)
+    :drop (increment-drop-phase current-loc)
+    :connect (increment-connect-phase current-loc)
+    (assoc current-loc :phase :visit)))
+
+(defn set-phase [{:keys [current unpopulated-locations populated-locations]
+                  :as status}]
+  (let [current-loc (second current)
+        new-loc (increment-populate-phase current-loc)]
+    (if (= (:phase new-loc) :done)
+      (-> status
+          (update :populated-locations conj new-loc)
+          (dissoc :current))
+      (-> (assoc status :current [::populate-location new-loc])))))
+
 (defn set-phase-proto [spec {:keys [current] :as status} phase]
-  (.log js/console (str "current:  " current))
-  (.log js/console (str "spec: " spec))
-  (let [pop-spec (second current)]
+  (let [pop-loc (second current)]
     (case phase
       :describe (.setDescribe spec (doto (game-lib/PopulateDescribePhase.)
-                                     (.setDescription (:description pop-spec))))
-      :drop (.setDrop spec (new-drop-proto pop-spec))
-      :connect (.setConnect spec (new-connect-proto pop-spec))
+                                     (.setDescription (:description pop-loc))))
+      :drop (.setDrop spec (new-drop-proto pop-loc))
+      :connect (.setConnect spec (new-connect-proto pop-loc))
       (.setVisit spec (game-lib/PopulateVisitPhase.))))
   spec)
 
-(defn status->populate-proto [{:keys [pop-spec] :as status}]
-  (let [{:keys [name did phase]} pop-spec]
+(defn status->populate-proto [{:keys [current] :as status}]
+  (let [{:keys [name did phase]} (second current)]
     (doto (game-lib/PopulateSpec.)
       (.setName name)
       (.setDid did)
@@ -157,9 +149,9 @@
 
 (defn new-populate-location-request [session status]
   (let [new-status (set-phase status)
-        pop-spec-proto (status->populate-proto new-status)]
+        pop-loc-proto (status->populate-proto new-status)]
     (doto (new-import-request session)
-      (.setPopulate pop-spec-proto))))
+      (.setPopulate pop-loc-proto))))
 
 (defn loc-spec->proto [{:keys [name] :as loc-spec}]
   (doto (game-lib/LocationSpec.)
@@ -262,9 +254,8 @@
 
 (re-frame/reg-fx
  ::populate-location
- (fn [{:keys [host session spec]}]
-   (.log js/console (str "sending populate location request with spec: " spec))
-   (let [req (new-populate-location-request session spec)]
+ (fn [{:keys [host session status]}]
+   (let [req (new-populate-location-request session status)]
      (send-import-request host req (fn [resp] (.log js/console resp))))))
 
 (defn import-next-object [{::keys [host session import-status] :as db}]
@@ -298,7 +289,7 @@
                        (assoc :unpopulated-locations new-unpopulated-locations)
                        (assoc :current current))]
     {:db (assoc db ::import-status new-status)
-     ::populate-location {:host host, :session session, :spec next}}))
+     ::populate-location {:host host, :session session, :status new-status}}))
 
 (defn handle-import [{{:keys [pending-objects pending-locations
                               unpopulated-locations]} ::import-status
