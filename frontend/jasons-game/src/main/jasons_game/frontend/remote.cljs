@@ -106,7 +106,7 @@
       :describe (.setDescribe spec (doto (game-lib/PopulateDescribePhase.)
                                      (.setDescription (:description pop-loc))))
       :drop (.setDrop spec (new-drop-proto status))
-      :connect (.setConnect spec (new-connect-proto pop-loc))
+      :connect (.setConnect spec (new-connect-proto status))
       (.setVisit spec (game-lib/PopulateVisitPhase.))))
   spec)
 
@@ -289,7 +289,9 @@
     (-> current-loc
         (assoc :phase :drop)
         (assoc :objects other-objects))
-    (assoc current-loc :phase :connect)))
+    (-> current-loc
+        (assoc :phase :connect)
+        (dissoc :objects))))
 
 (defn increment-connect-phase [{:keys [links] :as current-loc}]
   (if (seq links)
