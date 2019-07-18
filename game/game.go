@@ -133,7 +133,7 @@ func (g *Game) handlePopulateLocation(actorCtx actor.Context, input *jasonsgame.
 		g.sendUserMessage(actorCtx, fmt.Sprintf("visiting location %s (id: %s)", input.Name, input.Did))
 		err = g.handleLocationZoom(actorCtx, input.Did)
 	case *jasonsgame.PopulateSpec_Describe:
-		g.sendUserMessage(actorCtx, fmt.Sprintf("setting description for location %s", input.Name))
+		g.sendUserMessage(actorCtx, fmt.Sprintf("setting description for location %s to '%s'", input.Name, phase.Describe.Description))
 		err = g.handleSetDescription(actorCtx, phase.Describe.Description)
 	case *jasonsgame.PopulateSpec_Drop:
 		interaction := &DropObjectInteraction{Did: phase.Drop.ObjectDid}
