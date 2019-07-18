@@ -343,7 +343,6 @@
  (fn [{:keys [db] :as cofx} [_ result]]
    (let [{::keys [host session import-status]} db
          new-status (update-status import-status result)]
-     (.log js/console (str "new status: " new-status))
      {:db (assoc db ::import-status new-status)
       :dispatch [::import {:host host,
                            :session session,
