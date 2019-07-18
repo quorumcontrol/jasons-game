@@ -11,17 +11,17 @@ import (
 	"time"
 
 	"github.com/AsynkronIT/protoactor-go/actor"
-	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/common/hexutil"
+	"github.com/ethereum/go-ethereum/crypto"
 	badger "github.com/ipfs/go-ds-badger"
 	"github.com/pkg/errors"
+	"github.com/shibukawa/configdir"
+	"github.com/spf13/cobra"
+
 	"github.com/quorumcontrol/jasons-game/handlers"
 	"github.com/quorumcontrol/jasons-game/handlers/inventory"
 	"github.com/quorumcontrol/jasons-game/network"
-	"github.com/quorumcontrol/jasons-game/server"
 	"github.com/quorumcontrol/jasons-game/service"
-	"github.com/shibukawa/configdir"
-	"github.com/spf13/cobra"
 )
 
 func main() {
@@ -51,7 +51,7 @@ func main() {
 				}
 			}
 
-			notaryGroup, err := server.SetupTupeloNotaryGroup(ctx, localNetworkFlag)
+			notaryGroup, err := network.SetupTupeloNotaryGroup(ctx, localNetworkFlag)
 			if err != nil {
 				panic(errors.Wrap(err, "error setting up tupelo notary group"))
 			}
@@ -67,10 +67,10 @@ func main() {
 			}
 
 			config := &network.RemoteNetworkConfig{
-				NotaryGroup: notaryGroup,
+				NotaryGroup:   notaryGroup,
 				KeyValueStore: ds,
-				SigningKey: signingKey,
-				NetworkKey: networkKey,
+				SigningKey:    signingKey,
+				NetworkKey:    networkKey,
 			}
 
 			net, err := network.NewRemoteNetworkWithConfig(ctx, config)
@@ -107,7 +107,7 @@ func main() {
 	}
 
 	rootCmd.Flags().BoolVar(&localNetworkFlag, "local", false, "should this use local tupelo/jason, defaults to false")
-	rootCmd.Flags().StringVar(&serviceName, "name", "defaultService", "uniquee name of this service")
+	rootCmd.Flags().StringVar(&serviceName, "name", "defaultService", "unique name of this service")
 	rootCmd.Flags().StringArrayVar(&handlersFlag, "handlers", []string{}, "what handlers to use for this service")
 	err := rootCmd.MarkFlagRequired("handlers")
 	if err != nil {

@@ -54,16 +54,18 @@ func TestNavigation(t *testing.T) {
 	msgs := stream.GetMessages()
 
 	usrMsgs := filterUserMessages(t, msgs)
-
 	require.Len(t, usrMsgs, 3)
 
+	// Local network doesn't auto-refresh commands because that is tied to a tupelo
+	// state refresh
+	rootCtx.Send(game, &jasonsgame.UserInput{Message: "refresh"})
 	rootCtx.Send(game, &jasonsgame.UserInput{Message: "enter dungeon"})
 	time.Sleep(100 * time.Millisecond)
 	msgs = stream.GetMessages()
 
 	usrMsgs = filterUserMessages(t, msgs)
 
-	require.Len(t, usrMsgs, 4)
+	require.Len(t, usrMsgs, 5)
 	assert.NotNil(t, usrMsgs[3].GetLocation())
 }
 
@@ -171,6 +173,9 @@ func TestGoThroughPortal(t *testing.T) {
 	did := remoteTree.MustId()
 	rootCtx.Send(game, &jasonsgame.UserInput{Message: "build portal to" + did})
 	time.Sleep(100 * time.Millisecond)
+	// Local network doesn't auto-refresh commands because that is tied to a tupelo
+	// state refresh
+	rootCtx.Send(game, &jasonsgame.UserInput{Message: "refresh"})
 
 	err = stream.ClearMessages()
 	require.Nil(t, err)

@@ -5,7 +5,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/golang/protobuf/proto"
+	"github.com/gogo/protobuf/proto"
 	"github.com/quorumcontrol/community/pb/messages"
 	"github.com/quorumcontrol/jasons-game/game/trees"
 	"github.com/quorumcontrol/jasons-game/network"
@@ -83,7 +83,7 @@ func TestUnrestrictedRemoveHandler(t *testing.T) {
 		require.Nil(t, err)
 
 		received := make(chan *jasonsgame.TransferredObjectMessage, 1)
-		_, err =net.Community().Subscribe(net.Community().TopicFor(handlerTree.MustId()), func(ctx context.Context, _ *messages.Envelope, msg proto.Message) {
+		_, err = net.Community().Subscribe(net.Community().TopicFor(handlerTree.MustId()), func(ctx context.Context, _ *messages.Envelope, msg proto.Message) {
 			received <- msg.(*jasonsgame.TransferredObjectMessage)
 		})
 		require.Nil(t, err)

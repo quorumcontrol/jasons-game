@@ -11,19 +11,19 @@ import (
 	"path"
 	"runtime"
 	"testing"
-
 	"time"
 
 	"github.com/AsynkronIT/protoactor-go/actor"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/crypto"
+	"github.com/quorumcontrol/tupelo-go-sdk/bls"
+	"github.com/quorumcontrol/tupelo-go-sdk/gossip3/types"
+	"github.com/stretchr/testify/require"
+
+	"github.com/quorumcontrol/jasons-game/config"
 	"github.com/quorumcontrol/jasons-game/network"
 	"github.com/quorumcontrol/jasons-game/pb/jasonsgame"
 	"github.com/quorumcontrol/jasons-game/ui"
-	"github.com/quorumcontrol/tupelo-go-sdk/bls"
-	"github.com/quorumcontrol/tupelo-go-sdk/gossip3/types"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 )
 
 type publicKeySet struct {
@@ -86,7 +86,10 @@ func TestFullIntegration(t *testing.T) {
 
 	defer os.RemoveAll(path)
 
-	net, err := network.NewRemoteNetwork(ctx, group, path)
+	ds, err := config.LocalDataStore(path)
+	require.Nil(t, err)
+
+	net, err := network.NewRemoteNetwork(ctx, group, ds)
 	require.Nil(t, err)
 
 	rootCtx := actor.EmptyRootContext
@@ -109,13 +112,16 @@ func TestFullIntegration(t *testing.T) {
 	_, err = readyFut.Result()
 	require.Nil(t, err)
 
-	rootCtx.Send(gameActor, &jasonsgame.UserInput{Message: "north"})
+	someTree, err := net.CreateChainTree()
+	require.Nil(t, err)
 
-	time.Sleep(200 * time.Millisecond)
+	rootCtx.Send(gameActor, &jasonsgame.UserInput{Message: fmt.Sprintf("connect location %s as enter dungeon", someTree.MustId())})
+	time.Sleep(100 * time.Millisecond)
+	msgs := filterUserMessages(t, stream.GetMessages())
+	require.Len(t, msgs, 2)
 
-	msgs := stream.GetMessages()
-
+	rootCtx.Send(gameActor, &jasonsgame.UserInput{Message: "enter dungeon"})
+	time.Sleep(100 * time.Millisecond)
+	msgs = filterUserMessages(t, stream.GetMessages())
 	require.Len(t, msgs, 3)
-	assert.NotNil(t, msgs[1].GetUserMessage().Location)
-	assert.NotNil(t, msgs[2].GetUserMessage().Location)
 }

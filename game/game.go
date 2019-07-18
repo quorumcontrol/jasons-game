@@ -9,7 +9,7 @@ import (
 	"time"
 
 	"github.com/AsynkronIT/protoactor-go/actor"
-	proto "github.com/golang/protobuf/proto"
+	proto "github.com/gogo/protobuf/proto"
 	cid "github.com/ipfs/go-cid"
 	logging "github.com/ipfs/go-log"
 	"github.com/pkg/errors"
@@ -27,16 +27,21 @@ var shoutChannel = []byte("jasons-game-shouting-players")
 type ping struct{}
 
 type Game struct {
-	ui              *actor.PID
-	network         network.Network
-	playerTree      *PlayerTree
-	commands        commandList
-	messageSequence uint64
-	locationDid     string
-	locationActor   *actor.PID
-	chatActor       *actor.PID
-	inventoryActor  *actor.PID
-	shoutActor      *actor.PID
+	ui                   *actor.PID
+	network              network.Network
+	playerTree           *PlayerTree
+	commands             commandList
+	messageSequence      uint64
+	locationDid          string
+	locationActor        *actor.PID
+	chatActor            *actor.PID
+	inventoryActor       *actor.PID
+	shoutActor           *actor.PID
+	commandsByActorCache map[*actor.PID]commandList
+}
+
+type StateChange struct {
+	PID *actor.PID
 }
 
 func NewGameProps(playerTree *PlayerTree, ui *actor.PID, network network.Network) *actor.Props {
@@ -62,6 +67,8 @@ func (g *Game) Receive(actorCtx actor.Context) {
 		g.sendCommandUpdate(actorCtx)
 	case *jasonsgame.ChatMessage, *jasonsgame.ShoutMessage:
 		g.sendUserMessage(actorCtx, msg)
+	case *StateChange:
+		g.handleStateChange(actorCtx, msg)
 	case *ping:
 		actorCtx.Respond(true)
 	default:
@@ -78,6 +85,10 @@ func (g *Game) initialize(actorCtx actor.Context) {
 		Did:     g.playerTree.Did(),
 		Network: g.network,
 	}))
+	err := g.refreshInteractionsFor(actorCtx, g.inventoryActor)
+	if err != nil {
+		panic(errors.Wrap(err, "error attaching interactions for inventory"))
+	}
 
 	g.setLocation(actorCtx, g.playerTree.HomeLocation.MustId())
 
@@ -211,6 +222,7 @@ func (g *Game) handleUserInput(actorCtx actor.Context, input *jasonsgame.UserInp
 	case "location-zoom":
 		err = g.handleLocationZoom(actorCtx, args)
 	case "refresh":
+		err = g.refreshAllInteractions(actorCtx)
 		g.sendUILocation(actorCtx)
 	case "build-portal":
 		err = g.handleBuildPortal(actorCtx, args)
@@ -262,11 +274,6 @@ func (g *Game) handleBuildPortal(actorCtx actor.Context, toDid string) error {
 
 	if respErr := response.(*BuildPortalResponse).Error; respErr != nil {
 		return errors.Wrap(err, "error building portal")
-	}
-
-	err = g.refreshInteractions(actorCtx)
-	if err != nil {
-		log.Errorf("error refreshing interactions: %v", err)
 	}
 
 	g.sendUserMessage(actorCtx, fmt.Sprintf("successfully built a portal to %s", toDid))
@@ -396,11 +403,6 @@ func (g *Game) handleDropObject(actorCtx actor.Context, interaction *DropObjectI
 		return resp.Error
 	}
 
-	err = g.refreshInteractions(actorCtx)
-	if err != nil {
-		log.Errorf("error refreshing interactions: %v", err)
-	}
-
 	g.sendUserMessage(actorCtx, "object has been dropped into your current location")
 	return nil
 }
@@ -422,11 +424,6 @@ func (g *Game) handlePickUpObject(actorCtx actor.Context, interaction *PickUpObj
 
 	if resp.Error != nil {
 		return resp.Error
-	}
-
-	err = g.refreshInteractions(actorCtx)
-	if err != nil {
-		log.Errorf("error refreshing interactions: %v", err)
 	}
 
 	g.sendUserMessage(actorCtx, "object has been picked up")
@@ -458,11 +455,6 @@ func (g *Game) handleCreateObject(actorCtx actor.Context, args string) error {
 	newObject, err := g.createObject(actorCtx, objName, desc)
 	if err != nil {
 		return err
-	}
-
-	err = g.refreshInteractions(actorCtx)
-	if err != nil {
-		log.Errorf("error refreshing interactions: %v", err)
 	}
 
 	g.sendUserMessage(actorCtx, fmt.Sprintf("%s has been created with DID %s and is in your bag of hodling", objName, newObject.Object.Did))
@@ -579,11 +571,6 @@ func (g *Game) connectLocations(actorCtx actor.Context, toDid string, interactio
 		return fmt.Errorf("error adding connection: %v", resp.Error)
 	}
 
-	err = g.refreshInteractions(actorCtx)
-	if err != nil {
-		log.Errorf("error refreshing interactions: %v", err)
-	}
-
 	g.sendUserMessage(actorCtx, fmt.Sprintf("added a connection to %s as %s", toDid, interactionCommand))
 	return nil
 }
@@ -666,7 +653,8 @@ func (g *Game) sendCommandUpdate(actorCtx actor.Context) {
 }
 
 func (g *Game) setLocation(actorCtx actor.Context, locationDid string) {
-	if g.locationActor != nil {
+	oldLocationActor := g.locationActor
+	if oldLocationActor != nil {
 		actorCtx.Stop(g.locationActor)
 	}
 	g.locationActor = actorCtx.Spawn(NewLocationActorProps(&LocationActorConfig{
@@ -675,7 +663,7 @@ func (g *Game) setLocation(actorCtx actor.Context, locationDid string) {
 	}))
 	g.locationDid = locationDid
 
-	err := g.refreshInteractions(actorCtx)
+	err := g.replaceInteractionsFor(actorCtx, g.locationActor, oldLocationActor)
 	if err != nil {
 		panic(errors.Wrap(err, "error attaching interactions for location"))
 	}
@@ -694,42 +682,41 @@ func (g *Game) setCommands(actorCtx actor.Context, newCommands commandList) {
 	g.sendCommandUpdate(actorCtx)
 }
 
-func (g *Game) refreshInteractions(actorCtx actor.Context) error {
-	// FIXME: this is quick temporary hack to fix a race condition where
-	// help text isn't refreshed due to inventory transfers happening async
-	doIt := func() error {
-		newCommands := defaultCommandList
-
-		locationCommands, err := g.interactionCommandsFor(actorCtx, g.locationActor)
+func (g *Game) refreshAllInteractions(actorCtx actor.Context) error {
+	for pid := range g.commandsByActorCache {
+		err := g.refreshInteractionsFor(actorCtx, pid)
 		if err != nil {
-			return errors.Wrap(err, "location interactions")
+			return err
 		}
-		newCommands = append(newCommands, locationCommands...)
+	}
+	return nil
+}
 
-		inventoryCommands, err := g.interactionCommandsFor(actorCtx, g.inventoryActor)
-		if err != nil {
-			return errors.Wrap(err, "inventory interactions")
-		}
-		newCommands = append(newCommands, inventoryCommands...)
+func (g *Game) replaceInteractionsFor(actorCtx actor.Context, pid *actor.PID, oldPid *actor.PID) error {
+	if oldPid != nil {
+		delete(g.commandsByActorCache, oldPid)
+	}
+	return g.refreshInteractionsFor(actorCtx, pid)
+}
 
-		g.setCommands(actorCtx, newCommands)
-		return nil
+func (g *Game) refreshInteractionsFor(actorCtx actor.Context, pid *actor.PID) error {
+	if g.commandsByActorCache == nil {
+		g.commandsByActorCache = make(map[*actor.PID]commandList)
+	}
+	var err error
+	g.commandsByActorCache[pid], err = g.interactionCommandsFor(actorCtx, pid)
+
+	if err != nil {
+		return err
 	}
 
-	go func() {
-		time.Sleep(1 * time.Second)
-		err := doIt()
-		if err != nil {
-			log.Error(err)
-		}
-		time.Sleep(10 * time.Second)
-		err = doIt()
-		if err != nil {
-			log.Error(err)
-		}
-	}()
+	newCommands := defaultCommandList
+	for _, commands := range g.commandsByActorCache {
+		newCommands = append(newCommands, commands...)
+	}
 
-	return doIt()
+	g.setCommands(actorCtx, newCommands)
+	return nil
 }
 
 func (g *Game) interactionCommandsFor(actorCtx actor.Context, pid *actor.PID) (commandList, error) {
@@ -767,4 +754,14 @@ func (g *Game) getCurrentLocation(actorCtx actor.Context) (*jasonsgame.Location,
 		return nil, fmt.Errorf("error casting location")
 	}
 	return resp, nil
+}
+
+func (g *Game) handleStateChange(actorCtx actor.Context, msg *StateChange) {
+	pid := msg.PID
+	if _, ok := g.commandsByActorCache[pid]; ok {
+		err := g.refreshInteractionsFor(actorCtx, pid)
+		if err != nil {
+			log.Warningf("error refreshing interactions on state change %v", err)
+		}
+	}
 }

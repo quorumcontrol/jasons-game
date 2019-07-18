@@ -3,7 +3,7 @@ package inventory
 import (
 	"fmt"
 
-	"github.com/golang/protobuf/proto"
+	"github.com/gogo/protobuf/proto"
 	"github.com/quorumcontrol/jasons-game/game/trees"
 	"github.com/quorumcontrol/jasons-game/handlers"
 	broadcastHandlers "github.com/quorumcontrol/jasons-game/handlers/broadcast"

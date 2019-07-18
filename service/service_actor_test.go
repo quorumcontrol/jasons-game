@@ -6,12 +6,13 @@ import (
 	"time"
 
 	"github.com/AsynkronIT/protoactor-go/actor"
-	"github.com/golang/protobuf/proto"
+	"github.com/gogo/protobuf/proto"
 	"github.com/quorumcontrol/community/pb/messages"
+	"github.com/stretchr/testify/require"
+
 	"github.com/quorumcontrol/jasons-game/handlers/broadcast"
 	"github.com/quorumcontrol/jasons-game/network"
 	"github.com/quorumcontrol/jasons-game/pb/jasonsgame"
-	"github.com/stretchr/testify/require"
 )
 
 func TestServiceActor(t *testing.T) {

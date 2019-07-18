@@ -9,14 +9,16 @@ import (
 	"sync"
 	"time"
 
+	"github.com/AsynkronIT/protoactor-go/actor"
 	"github.com/ethereum/go-ethereum/crypto"
-	cid "github.com/ipfs/go-cid"
+	"github.com/google/uuid"
+	"github.com/ipfs/go-cid"
 	"github.com/ipfs/go-datastore"
-	badger "github.com/ipfs/go-ds-badger"
 	logging "github.com/ipfs/go-log"
 	"github.com/pkg/errors"
 	"github.com/quorumcontrol/chaintree/chaintree"
 	"github.com/quorumcontrol/chaintree/dag"
+	"github.com/quorumcontrol/messages/build/go/signatures"
 	"github.com/quorumcontrol/messages/build/go/transactions"
 	"github.com/quorumcontrol/tupelo-go-sdk/consensus"
 	"github.com/quorumcontrol/tupelo-go-sdk/gossip3/remote"
@@ -40,7 +42,13 @@ var DefaultGameBootstrappers = []string{
 	"/ip4/13.57.66.151/tcp/34001/ipfs/16Uiu2HAmFsyL7pKNRYJAhsJCF9aMLajnr2DN8jskUx6bsVcumGhB",
 }
 
+type InkNetwork interface {
+	SendInk(tree *consensus.SignedChainTree, tokenName *consensus.TokenName, amount uint64, destinationChainId string) (*transactions.TokenPayload, error)
+	ReceiveInk(tree *consensus.SignedChainTree, tokenPayload *transactions.TokenPayload) error
+}
+
 type Network interface {
+	InkNetwork
 	Community() *Community
 	ChangeChainTreeOwner(tree *consensus.SignedChainTree, newKeys []string) (*consensus.SignedChainTree, error)
 	CreateChainTree() (*consensus.SignedChainTree, error)
@@ -54,6 +62,7 @@ type Network interface {
 	StartDiscovery(string) error
 	StopDiscovery(string)
 	WaitForDiscovery(ns string, num int, dur time.Duration) error
+	NewCurrentStateSubscriptionProps(did string) *actor.Props
 }
 
 // RemoteNetwork implements the Network interface. Note this is *not* considered a secure system and private keys
@@ -66,7 +75,6 @@ type RemoteNetwork struct {
 	ipldp2pHost   *p2p.LibP2PHost
 	community     *Community
 	signingKey    *ecdsa.PrivateKey
-	networkKey    *ecdsa.PrivateKey
 }
 
 type RemoteNetworkConfig struct {
@@ -74,26 +82,45 @@ type RemoteNetworkConfig struct {
 	KeyValueStore datastore.Batching
 	SigningKey    *ecdsa.PrivateKey
 	NetworkKey    *ecdsa.PrivateKey
+	IpldKey       *ecdsa.PrivateKey
 }
 
+var _ Network = &RemoteNetwork{}
+
 func NewRemoteNetworkWithConfig(ctx context.Context, config *RemoteNetworkConfig) (Network, error) {
+	var err error
+
 	remote.Start()
 
 	net := &RemoteNetwork{
 		KeyValueStore: config.KeyValueStore,
-		signingKey: config.SigningKey,
-		networkKey: config.NetworkKey,
+		signingKey:    config.SigningKey,
 	}
 	group := config.NotaryGroup
 
-	ipldNetHost, lite, err := NewIPLDClient(ctx, net.networkKey, net.KeyValueStore, p2p.WithClientOnlyDHT(true))
+	networkKey := config.NetworkKey
+	if networkKey == nil {
+		networkKey, err = crypto.GenerateKey()
+		if err != nil {
+			return nil, errors.Wrap(err, "error generating network key")
+		}
+	}
+
+	ipldKey := config.IpldKey
+	if ipldKey == nil {
+		ipldKey, err = crypto.GenerateKey()
+		if err != nil {
+			return nil, errors.Wrap(err, "error generating ipld key")
+		}
+	}
+
+	ipldNetHost, lite, err := NewIPLDClient(ctx, ipldKey, net.KeyValueStore, p2p.WithClientOnlyDHT(true))
 	if err != nil {
 		return nil, errors.Wrap(err, "error creating IPLD client")
 	}
 	net.Ipld = lite
 	net.ipldp2pHost = ipldNetHost
-	net.community = NewJasonCommunity(ctx, net.networkKey, ipldNetHost)
-	pubSubSystem := remote.NewNetworkPubSub(ipldNetHost)
+	net.community = NewJasonCommunity(ctx, ipldKey, ipldNetHost)
 
 	// bootstrap to the game async so we can also setup the tupelo node, etc
 	// while this happens.
@@ -106,18 +133,22 @@ func NewRemoteNetworkWithConfig(ctx context.Context, config *RemoteNetworkConfig
 			log.Errorf("error bootstrapping ipld host: %v", err)
 			return
 		}
-		if err := pubSubSystem.Broadcast(BlockTopic, &Join{Identity: ipldNetHost.Identity()}); err != nil {
+		if err := net.WaitForDiscovery(DiscoveryNamespace, 1, 10*time.Second); err != nil {
+			log.Errorf("waiting for discovery failed %s", err)
+			return
+		}
+		if err := net.community.Send([]byte(GeneralTopic), &Join{Identity: ipldNetHost.Identity()}); err != nil {
 			log.Errorf("broadcasting Join failed: %s", err)
 		}
 	}()
 
-	tupeloP2PHost, err := p2p.NewLibP2PHost(ctx, net.networkKey, 0)
+	tupeloP2PHost, err := p2p.NewLibP2PHost(ctx, networkKey, 0)
 	if err != nil {
 		return nil, fmt.Errorf("error setting up p2p host: %s", err)
 	}
 
 	remote.NewRouter(tupeloP2PHost)
-	group.SetupAllRemoteActors(&net.networkKey.PublicKey)
+	group.SetupAllRemoteActors(&networkKey.PublicKey)
 
 	tupeloPubSub := remote.NewNetworkPubSub(tupeloP2PHost)
 
@@ -127,7 +158,7 @@ func NewRemoteNetworkWithConfig(ctx context.Context, config *RemoteNetworkConfig
 	}
 	net.Tupelo = tup
 
-	store := NewIPLDTreeStore(lite, net.KeyValueStore, pubSubSystem, tup)
+	store := NewIPLDTreeStore(lite, net.KeyValueStore, tup)
 	net.treeStore = store
 	tup.Store = store
 
@@ -147,22 +178,17 @@ func NewRemoteNetworkWithConfig(ctx context.Context, config *RemoteNetworkConfig
 	return net, nil
 }
 
-func NewRemoteNetwork(ctx context.Context, group *types.NotaryGroup, path string) (Network, error) {
-	ds, err := badger.NewDatastore(path, &badger.DefaultOptions)
-	if err != nil {
-		return nil, errors.Wrap(err, "error creating store")
-	}
-
+func NewRemoteNetwork(ctx context.Context, group *types.NotaryGroup, ds datastore.Batching) (Network, error) {
 	// TODO: keep the keys in a separate KeyStore
-	key, err := getOrCreateStoredPrivateKey(ds)
+	key, err := GetOrCreateStoredPrivateKey(ds)
 	if err != nil {
 		return nil, errors.Wrap(err, "error getting private key")
 	}
 
 	return NewRemoteNetworkWithConfig(ctx, &RemoteNetworkConfig{
-		NotaryGroup: group,
-		SigningKey: key,
-		NetworkKey: key,
+		NotaryGroup:   group,
+		SigningKey:    key,
+		NetworkKey:    key,
 		KeyValueStore: ds,
 	})
 }
@@ -172,11 +198,7 @@ func (rn *RemoteNetwork) TreeStore() TreeStore {
 }
 
 func (rn *RemoteNetwork) PublicKey() *ecdsa.PublicKey {
-	return &rn.signingKey.PublicKey
-}
-
-func (rn *RemoteNetwork) RepublishAll() error {
-	return rn.treeStore.(*IPLDTreeStore).RepublishAll()
+	return &rn.PrivateKey().PublicKey
 }
 
 func (rn *RemoteNetwork) Community() *Community {
@@ -195,7 +217,7 @@ func (rn *RemoteNetwork) WaitForDiscovery(ns string, num int, dur time.Duration)
 	return rn.ipldp2pHost.WaitForDiscovery(ns, num, dur)
 }
 
-func getOrCreateStoredPrivateKey(ds datastore.Batching) (key *ecdsa.PrivateKey, err error) {
+func GetOrCreateStoredPrivateKey(ds datastore.Batching) (key *ecdsa.PrivateKey, err error) {
 	storeKey := datastore.NewKey("privateKey")
 	stored, err := ds.Get(storeKey)
 	if err == nil {
@@ -223,9 +245,13 @@ func getOrCreateStoredPrivateKey(ds datastore.Batching) (key *ecdsa.PrivateKey, 
 	return key, nil
 }
 
+func (n *RemoteNetwork) PrivateKey() *ecdsa.PrivateKey {
+	return n.signingKey
+}
+
 func (n *RemoteNetwork) CreateNamedChainTree(name string) (*consensus.SignedChainTree, error) {
 	log.Debug("CreateNamedChainTree", name)
-	tree, err := n.Tupelo.CreateChainTree(n.signingKey)
+	tree, err := n.Tupelo.CreateChainTree(n.PrivateKey())
 	if err != nil {
 		return nil, errors.Wrap(err, "error creating tree")
 	}
@@ -241,7 +267,7 @@ func (n *RemoteNetwork) CreateNamedChainTree(name string) (*consensus.SignedChai
 }
 
 func (n *RemoteNetwork) CreateChainTree() (*consensus.SignedChainTree, error) {
-	tree, err := n.Tupelo.CreateChainTree(n.signingKey)
+	tree, err := n.Tupelo.CreateChainTree(n.PrivateKey())
 	if err != nil {
 		return nil, errors.Wrap(err, "error creating tree")
 	}
@@ -290,7 +316,7 @@ func (n *RemoteNetwork) GetTreeByTip(tip cid.Cid) (*consensus.SignedChainTree, e
 
 func (n *RemoteNetwork) UpdateChainTree(tree *consensus.SignedChainTree, path string, value interface{}) (*consensus.SignedChainTree, error) {
 	log.Debug("updateTree", tree.MustId(), path, value)
-	err := n.Tupelo.UpdateChainTree(tree, n.signingKey, path, value)
+	err := n.Tupelo.UpdateChainTree(tree, n.PrivateKey(), path, value)
 	if err != nil {
 		return nil, errors.Wrap(err, "error updating chaintree")
 	}
@@ -305,11 +331,70 @@ func (n *RemoteNetwork) ChangeChainTreeOwner(tree *consensus.SignedChainTree, ne
 		return nil, errors.Wrap(err, "error updating chaintree")
 	}
 
-	err = n.Tupelo.PlayTransactions(tree, n.signingKey, []*transactions.Transaction{transaction})
+	_, err = n.Tupelo.PlayTransactions(tree, n.PrivateKey(), []*transactions.Transaction{transaction})
 	if err != nil {
 		return nil, errors.Wrap(err, "error updating chaintree")
 	}
 	return tree, n.TreeStore().SaveTreeMetadata(tree)
+}
+
+type currentStateSubscriptionActor struct {
+	did    string
+	tupelo *Tupelo
+	cancel func()
+}
+
+func (act *currentStateSubscriptionActor) Receive(actorContext actor.Context) {
+	switch actorContext.Message().(type) {
+	case *actor.Started:
+		var err error
+		act.cancel, err = act.tupelo.SubscribeToCurrentStateChanges(act.did, func(msg *signatures.CurrentState) {
+			actorContext.Send(actorContext.Parent(), msg)
+		})
+		if err != nil {
+			panic(errors.Wrap(err, "error starting subscription actor for current state"))
+		}
+	case *actor.Stopping:
+		act.cancel()
+	}
+}
+
+func (rn *RemoteNetwork) NewCurrentStateSubscriptionProps(did string) *actor.Props {
+	return actor.PropsFromProducer(func() actor.Actor {
+		return &currentStateSubscriptionActor{
+			did:    did,
+			tupelo: rn.Tupelo,
+		}
+	})
+}
+
+func (n *RemoteNetwork) SendInk(tree *consensus.SignedChainTree, tokenName *consensus.TokenName, amount uint64, destinationChainId string) (*transactions.TokenPayload, error) {
+	transactionId, err := uuid.NewRandom()
+	if err != nil {
+		return nil, errors.Wrap(err, "error generating send token transaction ID")
+	}
+
+	transaction, err := chaintree.NewSendTokenTransaction(transactionId.String(), tokenName.String(), amount, destinationChainId)
+	if err != nil {
+		return nil, errors.Wrap(err, "error generating ink send token transaction")
+	}
+
+	txResp, err := n.Tupelo.PlayTransactions(tree, n.PrivateKey(), []*transactions.Transaction{transaction})
+	if err != nil {
+		return nil, errors.Wrap(err, "error playing ink send token transaction")
+	}
+
+	err = n.TreeStore().SaveTreeMetadata(tree)
+	if err != nil {
+		return nil, errors.Wrap(err, "error saving chaintree metadata after ink send transaction")
+	}
+
+	tokenPayload, err := n.Tupelo.TokenPayloadForTransaction(tree, tokenName, transactionId.String(), &txResp.Signature)
+	if err != nil {
+		return nil, errors.Wrap(err, "error getting token payload for ink send")
+	}
+
+	return tokenPayload, nil
 }
 
 func TupeloBootstrappers() []string {

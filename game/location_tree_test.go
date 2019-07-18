@@ -1,11 +1,11 @@
 package game
 
 import (
-	"testing"
 	"github.com/ethereum/go-ethereum/crypto"
-	"github.com/quorumcontrol/jasons-game/network"
 	"github.com/quorumcontrol/jasons-game/handlers"
+	"github.com/quorumcontrol/jasons-game/network"
 	"github.com/stretchr/testify/require"
+	"testing"
 )
 
 func TestLocationTree_SetHandler(t *testing.T) {

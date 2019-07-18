@@ -3,7 +3,7 @@ package handlers
 import (
 	"errors"
 
-	"github.com/golang/protobuf/proto"
+	"github.com/gogo/protobuf/proto"
 )
 
 const HandlerPath = "jasons-game-handler"

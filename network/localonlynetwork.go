@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/AsynkronIT/protoactor-go/actor"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ipfs/go-blockservice"
 	cid "github.com/ipfs/go-cid"
@@ -19,7 +20,6 @@ import (
 	"github.com/quorumcontrol/chaintree/chaintree"
 	"github.com/quorumcontrol/messages/build/go/transactions"
 	"github.com/quorumcontrol/tupelo-go-sdk/consensus"
-	"github.com/quorumcontrol/tupelo-go-sdk/gossip3/remote"
 	"github.com/quorumcontrol/tupelo-go-sdk/p2p"
 )
 
@@ -35,11 +35,12 @@ type LocalNetwork struct {
 	key           *ecdsa.PrivateKey
 	KeyValueStore datastore.Batching
 	treeStore     TreeStore
-	pubsub        remote.PubSub
 	community     *Community
 }
 
-func NewLocalNetwork() Network {
+var _ Network = &LocalNetwork{}
+
+func NewLocalNetwork() *LocalNetwork {
 	keystore := dssync.MutexWrap(datastore.NewMapDatastore())
 
 	bstore := blockstore.NewBlockstore(keystore)
@@ -57,15 +58,12 @@ func NewLocalNetwork() Network {
 		panic(errors.Wrap(err, "error creating IPLD client"))
 	}
 
-	pubsub := remote.NewNetworkPubSub(ipldNetHost)
-
-	ipldstore := NewIPLDTreeStore(dag, keystore, pubsub, new(DevNullTipGetter))
+	ipldstore := NewIPLDTreeStore(dag, keystore, new(DevNullTipGetter))
 
 	return &LocalNetwork{
 		key:           key,
 		KeyValueStore: keystore,
 		treeStore:     ipldstore,
-		pubsub:        pubsub,
 		community:     NewJasonCommunity(context.Background(), key, ipldNetHost),
 	}
 }
@@ -80,10 +78,6 @@ func (ln *LocalNetwork) PublicKey() *ecdsa.PublicKey {
 
 func (ln *LocalNetwork) Community() *Community {
 	return ln.community
-}
-
-func (ln *LocalNetwork) PubSubSystem() remote.PubSub {
-	return ln.pubsub
 }
 
 func (ln *LocalNetwork) StartDiscovery(_ string) error {
@@ -187,11 +181,31 @@ func (ln *LocalNetwork) ChangeChainTreeOwner(tree *consensus.SignedChainTree, ne
 	return ln.playTransactions(tree, []*transactions.Transaction{transaction})
 }
 
+type nilActor struct{}
+
+func (_ *nilActor) Receive(_ actor.Context) {}
+
+func (rn *LocalNetwork) NewCurrentStateSubscriptionProps(did string) *actor.Props {
+	return actor.PropsFromProducer(func() actor.Actor {
+		return &nilActor{}
+	})
+}
+
+func (ln *LocalNetwork) SendInk(tree *consensus.SignedChainTree, tokenName *consensus.TokenName, amount uint64, destinationChainId string) (*transactions.TokenPayload, error) {
+	// placeholder to fulfill the interface
+	return nil, nil
+}
+
+func (ln *LocalNetwork) ReceiveInk(tree *consensus.SignedChainTree, tokenPayload *transactions.TokenPayload) error {
+	// placeholder to fulfill the interface
+	return nil
+}
+
 func (ln *LocalNetwork) playTransactions(tree *consensus.SignedChainTree, transactions []*transactions.Transaction) (*consensus.SignedChainTree, error) {
 	ctx := context.TODO()
 	unmarshaledRoot, err := tree.ChainTree.Dag.Get(ctx, tree.Tip())
 	if unmarshaledRoot == nil || err != nil {
-		return nil, fmt.Errorf("error,missing root: %v", err)
+		return nil, fmt.Errorf("error missing root: %v", err)
 	}
 	root := &chaintree.RootNode{}
 

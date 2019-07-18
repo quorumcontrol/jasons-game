@@ -9,6 +9,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/quorumcontrol/jasons-game/network"
 	"github.com/quorumcontrol/jasons-game/pb/jasonsgame"
+	"github.com/quorumcontrol/messages/build/go/signatures"
 	"github.com/quorumcontrol/tupelo-go-sdk/consensus"
 	"github.com/quorumcontrol/tupelo-go-sdk/gossip3/middleware"
 )
@@ -65,6 +66,8 @@ func (l *LocationActor) Receive(actorCtx actor.Context) {
 		}
 		l.location = NewLocationTree(l.network, tree)
 
+		actorCtx.Spawn(l.network.NewCurrentStateSubscriptionProps(l.did))
+
 		_, err = l.network.Community().SubscribeActor(actorCtx.Self(), l.network.Community().TopicFor(l.did))
 		if err != nil {
 			panic(errors.Wrap(err, "error spawning land actor subscription"))
@@ -106,6 +109,10 @@ func (l *LocationActor) Receive(actorCtx actor.Context) {
 		})
 	case *ListInteractionsRequest:
 		l.handleListInteractionsRequest(actorCtx, msg)
+	case *signatures.CurrentState:
+		if parentPID := actorCtx.Parent(); parentPID != nil {
+			actorCtx.Send(parentPID, &StateChange{PID: actorCtx.Self()})
+		}
 	}
 }
 

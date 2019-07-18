@@ -1,0 +1,17 @@
+syntax = "proto3";
+
+package inkfaucet;
+
+message InviteRequest {
+
+}
+
+message InkRequest {
+    uint64 amount = 1;
+    string destination_chain_id = 2;
+}
+
+message InkResponse {
+    string error = 1;
+    bytes token = 2;
+}
