@@ -210,7 +210,6 @@
   (let [msg (.getImportResult resp)]
     (let [import-result (-> msg
                             resp->message)]
-      (.log js/console (str "import-result: " import-result))
       (re-frame/dispatch [::import-result import-result]))))
 
 (defn handle-game-message [resp]
@@ -291,19 +290,15 @@
     {:db (assoc db ::import-status new-status)
      ::populate-location {:host host, :session session, :status new-status}}))
 
-(defn handle-import [{{:keys [pending-objects pending-locations
-                              unpopulated-locations]} ::import-status
-                      :as db}]
-  (cond
-    (seq pending-objects) (import-next-object db)
-    (seq pending-locations) (import-next-location db)
-    (seq unpopulated-locations) (populate-next-location db)))
-
 (re-frame/reg-event-fx
  ::import
  (fn [{db :db} _]
-   (.log js/console (str "import status: " (::import-status db)))
-   (handle-import db)))
+   (let [{:keys [pending-objects pending-locations unpopulated-locations]}
+         (::import-status db)]
+     (cond
+       (seq pending-objects) (import-next-object db)
+       (seq pending-locations) (import-next-location db)
+       (seq unpopulated-locations) (populate-next-location db)))))
 
 (defn update-import-object-status [{:keys [created-objects current] :as status}
                                    {:keys [object] :as import-result}]
@@ -335,9 +330,7 @@
             (assoc :populated-locations new-populated-locations)
             (dissoc :current))))))
 
-(defn update-status [{:keys [created-objects unpopulated-locations current]
-                      :as status}
-                     {:keys [object location] :as import-result}]
+(defn update-status [{:keys [current] :as status} import-result]
   (let [step (first current)]
     (cond
       (= step ::import-object) (update-import-object-status status import-result)
