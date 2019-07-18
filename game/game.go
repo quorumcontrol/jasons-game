@@ -136,9 +136,13 @@ func (g *Game) handlePopulateLocation(actorCtx actor.Context, input *jasonsgame.
 		g.sendUserMessage(actorCtx, fmt.Sprintf("setting description for location %s to '%s'", input.Name, phase.Describe.Description))
 		err = g.handleSetDescription(actorCtx, phase.Describe.Description)
 	case *jasonsgame.PopulateSpec_Drop:
-		interaction := &DropObjectInteraction{Did: phase.Drop.ObjectDid}
-		g.sendUserMessage(actorCtx, fmt.Sprintf("dropping object %s at location %s", phase.Drop.ObjectName, input.Name))
-		err = g.handleDropObject(actorCtx, interaction)
+		if phase.Drop.ObjectDid != "" {
+			interaction := &DropObjectInteraction{Did: phase.Drop.ObjectDid}
+			g.sendUserMessage(actorCtx, fmt.Sprintf("dropping object %s at location %s", phase.Drop.ObjectName, input.Name))
+			err = g.handleDropObject(actorCtx, interaction)
+		} else {
+			g.sendUserMessage(actorCtx, "No objects to drop")
+		}
 	case *jasonsgame.PopulateSpec_Connect:
 		g.sendUserMessage(actorCtx, fmt.Sprintf("connecting locations %s and %s", input.Name, phase.Connect.ConnectionName))
 		err = g.connectLocations(actorCtx, phase.Connect.ToDid, phase.Connect.ConnectionName)
