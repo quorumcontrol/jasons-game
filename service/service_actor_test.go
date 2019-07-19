@@ -43,7 +43,7 @@ func TestServiceActor(t *testing.T) {
 	case msg := <-received:
 		require.Equal(t, msg.From, chatMessage.From)
 		require.Equal(t, msg.Message, chatMessage.Message)
-	case <-time.After(2 * time.Second):
+	case <-time.After(5 * time.Second):
 		require.Fail(t, "timeout waiting for chat message")
 	}
 }
