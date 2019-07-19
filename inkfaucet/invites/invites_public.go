@@ -21,15 +21,17 @@ type InvitesActorConfig struct {
 }
 
 func NewInvitesActor(ctx context.Context, cfg InvitesActorConfig) *InvitesActor {
-	// not available in public builds
+	log.Error("invites are not available in public builds")
 	return &InvitesActor{}
 }
 
 func (i *InvitesActor) Start(arCtx *actor.RootContext) {
+	log.Error("invites are not available in public builds")
 	// not available in public builds
 }
 
 func (i *InvitesActor) PID() *actor.PID {
+	log.Error("invites are not available in public builds")
 	// not available in public builds
 	return nil
 }
