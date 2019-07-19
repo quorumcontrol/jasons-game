@@ -6,6 +6,11 @@ message InviteRequest {
 
 }
 
+message InviteResponse {
+    string error = 1;
+    string invite = 2;
+}
+
 message InkRequest {
     uint64 amount = 1;
     string destination_chain_id = 2;

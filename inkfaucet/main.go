@@ -6,7 +6,9 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"time"
 
+	"github.com/AsynkronIT/protoactor-go/actor"
 	"github.com/gogo/protobuf/proto"
 	logging "github.com/ipfs/go-log"
 	"github.com/pkg/errors"
@@ -15,6 +17,7 @@ import (
 	"github.com/quorumcontrol/jasons-game/inkfaucet/config"
 	"github.com/quorumcontrol/jasons-game/inkfaucet/depositor"
 	"github.com/quorumcontrol/jasons-game/inkfaucet/ink"
+	"github.com/quorumcontrol/jasons-game/inkfaucet/inkfaucet"
 	"github.com/quorumcontrol/jasons-game/inkfaucet/server"
 )
 
@@ -32,11 +35,14 @@ func main() {
 
 	mustSetLogLevel("*", "warning")
 	mustSetLogLevel("pubsub", "error")
-	mustSetLogLevel("inkfaucet", "debug")
+	mustSetLogLevel("invites", "info")
+	mustSetLogLevel("inkFaucet", "info")
+	mustSetLogLevel("gamenetwork", "info")
 
 	local := flag.Bool("local", false, "connect to localnet & use localstack S3 instead of testnet & real S3")
 	outputdid := flag.Bool("outputdid", false, "output inkfaucet DID and exit")
 	deposit := flag.String("deposit", "", "token payload for ink deposit")
+	invite := flag.Bool("invite", false, "generate a new player invite code")
 	flag.Parse()
 
 	var s3Region, s3Bucket string
@@ -66,7 +72,7 @@ func main() {
 		InkOwnerDID: inkDID,
 	}
 
-	if outputdid != nil && *outputdid {
+	if *outputdid {
 		fmt.Println("Outputting inkfaucet DID")
 		ctx := context.Background()
 		iw, err := config.Setup(ctx, inkfaucetCfg)
@@ -100,7 +106,7 @@ func main() {
 
 		dep, err := depositor.New(ctx, inkfaucetCfg)
 		if err != nil {
-			panic(errors.Wrap(err, "error creating ink depositer"))
+			panic(errors.Wrap(err, "error creating ink depositor"))
 		}
 
 		err = dep.Deposit(tokenPayload)
@@ -108,19 +114,40 @@ func main() {
 			panic(errors.Wrap(err, "error depositing ink"))
 		}
 
-		fmt.Println("Deposited ink into inkfaucet")
+		fmt.Println("Deposited ink into ink faucet")
 
 		os.Exit(0)
 	}
 
-	inkfaucet, err := server.New(ctx, inkfaucetCfg)
+	inkFaucetRouter, err := server.New(ctx, inkfaucetCfg)
 	if err != nil {
 		panic(errors.Wrap(err, "error creating new inkfaucet server"))
 	}
 
-	err = inkfaucet.Start()
+	err = inkFaucetRouter.Start(*invite)
 	if err != nil {
 		panic(errors.Wrap(err, "error starting inkfaucet service"))
+	}
+
+	if *invite {
+		actorCtx := actor.EmptyRootContext
+
+		inviteReq := &inkfaucet.InviteRequest{}
+		inviteActorReq := actorCtx.RequestFuture(inkFaucetRouter.PID(), inviteReq, 35 * time.Second)
+
+		uncastReq, err := inviteActorReq.Result()
+		if err != nil {
+			panic(errors.Wrap(err, "error requesting invite"))
+		}
+
+		inviteResp, ok := uncastReq.(*inkfaucet.InviteResponse)
+		if !ok {
+			panic(errors.Errorf("error casting invite request of type %T", uncastReq))
+		}
+
+		fmt.Println("\n\ninvite code:", inviteResp.Invite)
+
+		os.Exit(0)
 	}
 
 	<-make(chan struct{})

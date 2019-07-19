@@ -101,6 +101,9 @@ inkfaucetdid:
 devink: $(generated) go.mod go.sum
 	env INK_FAUCET_DID=$(INK_FAUCET_DID) docker-compose -f docker-compose-dev.yml run --rm devink
 
+invite: $(generated) go.mod go.sum
+	env INK_DID=$(INK_DID) docker-compose -f docker-compose-dev.yml run --rm invite
+
 dev:
 	scripts/start-dev.sh
 
