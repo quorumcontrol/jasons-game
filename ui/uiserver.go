@@ -66,6 +66,21 @@ func NewUIProps(stream remoteStream, net network.Network) *actor.Props {
 	})
 }
 
+type UIInviteServer struct {
+	network  network.Network
+	stream   remoteStream
+	doneChan doneChan
+}
+
+func NewUIInviteProps(stream remoteStream, net network.Network) *actor.Props {
+	return actor.PropsFromProducer(func() actor.Actor {
+		return &UIInviteServer{
+			network: net,
+			stream:  stream,
+		}
+	})
+}
+
 type SetGame struct {
 	Game *actor.PID
 }
@@ -189,6 +204,59 @@ func (us *UIServer) sendDone() {
 	if us.doneChan != nil {
 		select {
 		case us.doneChan <- struct{}{}:
+			log.Debugf("sent done")
+		default:
+			log.Warningf("nothing listening on done channel")
+		}
+	}
+}
+
+func (uis *UIInviteServer) Receive(actorCtx actor.Context) {
+	switch msg := actorCtx.Message().(type) {
+	case *actor.Started:
+		actorCtx.Send(actorCtx.Self(), &jasonsgame.MessageToUser{Message: "Welcome to Jason's Game! Please enter your invite code."})
+
+	case *actor.Stopping:
+		if uis.doneChan != nil {
+			uis.doneChan <- struct{}{}
+		}
+
+	case *SetStream:
+		// free up the previous stream
+		uis.sendDone()
+
+		uis.stream = msg.Stream
+		uis.doneChan = msg.DoneChan
+
+	case *jasonsgame.MessageToUser:
+		actorCtx.SetReceiveTimeout(5 * time.Second)
+		log.Debugf("message to user: %s", msg.Message)
+		if uis.stream == nil {
+			log.Errorf("no valid stream for user message: %v", msg.Message)
+			return
+		}
+
+		uiMsg, err := buildUIMessage(msg)
+		if err != nil {
+			panic(err)
+		}
+
+		err = uis.stream.Send(uiMsg)
+		if err != nil {
+			uis.stream = nil
+			uis.sendDone()
+			log.Errorf("error sending message to stream: %v", err)
+		}
+
+	case *jasonsgame.UserInput:
+		// TODO: Spawn invites actor here and send it an invite submission
+	}
+}
+
+func (uis *UIInviteServer) sendDone() {
+	if uis.doneChan != nil {
+		select {
+		case uis.doneChan <- struct{}{}:
 			log.Debugf("sent done")
 		default:
 			log.Warningf("nothing listening on done channel")

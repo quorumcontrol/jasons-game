@@ -104,14 +104,19 @@ func (gs *GameServer) getOrCreateSession(sess *jasonsgame.Session, stream jasons
 			panic("must supply a valid session")
 		}
 
+		playerTree, err := game.GetPlayerTree(net)
+		if err != nil {
+			panic(errors.Wrap(err, "error getting player tree"))
+		}
+
+		if playerTree == nil {
+			log.Debug("player doesn't have an existing chaintree; spawning invite UI")
+			return actor.EmptyRootContext.Spawn(ui.NewUIInviteProps(stream, net))
+		}
+
 		log.Debugf("creating actors")
 		uiActor = actor.EmptyRootContext.Spawn(ui.NewUIProps(stream, net))
 		gs.sessions[sess.Uuid] = uiActor
-
-		playerTree, err := game.GetOrCreatePlayerTree(net)
-		if err != nil {
-			panic(errors.Wrap(err, "error creating player tree"))
-		}
 
 		actor.EmptyRootContext.Spawn(game.NewGameProps(playerTree, uiActor, net))
 
