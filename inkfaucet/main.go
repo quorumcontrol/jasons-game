@@ -14,6 +14,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/quorumcontrol/messages/build/go/transactions"
 
+	"github.com/quorumcontrol/jasons-game/build"
 	"github.com/quorumcontrol/jasons-game/inkfaucet/config"
 	"github.com/quorumcontrol/jasons-game/inkfaucet/depositor"
 	"github.com/quorumcontrol/jasons-game/inkfaucet/ink"
@@ -42,7 +43,12 @@ func main() {
 	local := flag.Bool("local", false, "connect to localnet & use localstack S3 instead of testnet & real S3")
 	outputdid := flag.Bool("outputdid", false, "output inkfaucet DID and exit")
 	deposit := flag.String("deposit", "", "token payload for ink deposit")
-	invite := flag.Bool("invite", false, "generate a new player invite code")
+
+	var invite *bool
+	if build.BuildLabel == "internal" {
+		invite = flag.Bool("invite", false, "generate a new player invite code")
+	}
+
 	flag.Parse()
 
 	var s3Region, s3Bucket string
@@ -130,6 +136,10 @@ func main() {
 	}
 
 	if *invite {
+		if build.BuildLabel != "internal" {
+			os.Exit(1)
+		}
+
 		actorCtx := actor.EmptyRootContext
 
 		inviteReq := &inkfaucet.InviteRequest{}

@@ -1,3 +1,5 @@
+// +build internal
+
 package invites
 
 import (
