@@ -86,6 +86,13 @@ else
 	docker-compose -p jasons-game -f docker-compose-dev.yml run --rm --service-ports game
 endif
 
+importer: $(generated) go.mod go.sum
+ifdef testnet
+	docker-compose -p jasons-game -f docker-compose-dev.yml run --rm importer-testnet
+else
+	docker-compose -p jasons-game -f docker-compose-dev.yml run --rm importer
+endif
+
 game2: $(generated) go.mod go.sum
 	docker-compose -p jasons-game -f docker-compose-dev.yml run --rm --service-ports game2
 
@@ -140,4 +147,4 @@ clean: $(FIRSTGOPATH)/bin/packr2
 	rm -rf JasonsGame.app-$(BUILD)/Contents/MacOS
 	rm -f $(generated)
 
-.PHONY: all build test integration-test localnet clean lint game-server jason inkfaucet devink game2 mac-app prepare generated dev down
+.PHONY: all build test integration-test localnet clean lint game-server importer jason inkfaucet devink game2 mac-app prepare generated dev down

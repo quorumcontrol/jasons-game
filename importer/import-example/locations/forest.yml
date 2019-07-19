@@ -1,0 +1,13 @@
+data:
+  description: "you are now in the forest, what now?"
+  somevalue: "this is a getvalue interaction"
+interactions:
+  - type: ChangeLocationInteraction
+    value:
+      command: "go back"
+      did: "{{.Locations.home}}"
+  - type: GetTreeValueInteraction
+    value:
+      command: "take a nap"
+      did: "{{.Locations.forest}}"
+      path: "somevalue"

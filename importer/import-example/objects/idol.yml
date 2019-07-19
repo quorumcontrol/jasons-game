@@ -1,0 +1,28 @@
+data:
+  description: "this is an idol"
+interactions:
+  - type: RespondInteraction
+    value:
+      command: "touch the idol"
+      response: "you probably shouldn't do that"
+  - type:  DropObjectInteraction
+    value:
+      command: "drop the idol"
+      did: "{{.Objects.idol}}"
+  - type:  PickUpObjectInteraction
+    value:
+      command: "pick up the idol"
+      did: "{{.Objects.idol}}"
+  - type:  CipherInteraction
+    value:
+      command: "whisper to the idol"
+      secret: "sherbert lemon"
+      success_interaction:
+        type:  PickUpObjectInteraction
+        value:
+          did: "{{.Objects.idol}}"
+      failure_interaction:
+        type: RespondInteraction
+        value:
+          command: "touch the idol"
+          response: "you probably shouldn't do that"

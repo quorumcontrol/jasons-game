@@ -36,6 +36,10 @@ func (t *InventoryTree) MustId() string {
 	return t.tree.MustId()
 }
 
+func (t *InventoryTree) Tree() *consensus.SignedChainTree {
+	return t.tree
+}
+
 func (t *InventoryTree) BroadcastTopic() []byte {
 	return t.network.Community().TopicFor(t.tree.MustId() + "/inventory")
 }
