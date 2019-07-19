@@ -20,6 +20,8 @@ import (
 
 var log = logging.Logger("invites")
 
+const inviteInkAmount = uint64(1000)
+
 type InvitesActor struct {
 	parentCtx context.Context
 	handler   *actor.PID
@@ -79,7 +81,7 @@ func (i *InvitesActor) handleInviteRequest(actorCtx actor.Context) {
 	log.Debugf("invite actor created ephemeral chaintree: %+v", *inviteChainTree)
 
 	inkReq := &inkfaucet.InkRequest{
-		Amount:             1,
+		Amount:             inviteInkAmount,
 		DestinationChainId: inviteChainTree.MustId(),
 	}
 
