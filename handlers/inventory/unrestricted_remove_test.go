@@ -42,6 +42,8 @@ func TestUnrestrictedRemoveHandler(t *testing.T) {
 	existsBeforeInTo, err := toInventory.Exists(objectTree.MustId())
 	require.Nil(t, err)
 	require.False(t, existsBeforeInTo)
+	toInventoryAuths, err := toInventory.Authentications()
+	require.Nil(t, err)
 
 	msg := &jasonsgame.RequestObjectTransferMessage{
 		From:   fromTree.MustId(),
@@ -55,6 +57,9 @@ func TestUnrestrictedRemoveHandler(t *testing.T) {
 	t.Run("without handler on target inventory", func(t *testing.T) {
 		received := make(chan *jasonsgame.TransferredObjectMessage, 1)
 		_, err = net.Community().Subscribe(toInventory.BroadcastTopic(), func(ctx context.Context, _ *messages.Envelope, msg proto.Message) {
+			// simulate the receiver changed ownership
+			_, err = net.ChangeChainTreeOwner(objectTree, toInventoryAuths)
+			require.Nil(t, err)
 			received <- msg.(*jasonsgame.TransferredObjectMessage)
 		})
 		require.Nil(t, err)
@@ -84,6 +89,9 @@ func TestUnrestrictedRemoveHandler(t *testing.T) {
 
 		received := make(chan *jasonsgame.TransferredObjectMessage, 1)
 		_, err = net.Community().Subscribe(net.Community().TopicFor(handlerTree.MustId()), func(ctx context.Context, _ *messages.Envelope, msg proto.Message) {
+			// simulate the receiver changed ownership
+			_, err = net.ChangeChainTreeOwner(objectTree, toInventoryAuths)
+			require.Nil(t, err)
 			received <- msg.(*jasonsgame.TransferredObjectMessage)
 		})
 		require.Nil(t, err)
