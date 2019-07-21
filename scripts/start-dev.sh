@@ -38,7 +38,7 @@ echo ''
 echo "DEV: Starting a new inkfaucet service for ${INK_DID}:ink"
 echo ''
 make inkfaucet INK_DID=${INK_DID} 2>&1 >logs/inkfaucet.log &
-sleep 15 # give inkfaucet time to bootstrap
+sleep 30 # give inkfaucet time to bootstrap
 INK_FAUCET_DID=$(capture_value "make inkfaucetdid" "inkfaucetdid.log" "INK_FAUCET_DID")
 
 if [[ -z "${INK_FAUCET_DID}" ]]; then

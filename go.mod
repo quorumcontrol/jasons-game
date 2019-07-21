@@ -31,6 +31,7 @@ require (
 	github.com/libp2p/go-libp2p-pubsub v0.1.0
 	github.com/libp2p/go-libp2p-transport v0.0.5 // indirect
 	github.com/libp2p/go-testutil v0.1.0 // indirect
+	github.com/mr-tron/base58 v1.1.2
 	github.com/pkg/errors v0.8.1
 	github.com/quorumcontrol/chaintree v0.0.0-20190709145156-03b818830f38
 	github.com/quorumcontrol/community v0.0.0-20190716000000-efb332722109442e527251ae60d5a919db7ac8c6

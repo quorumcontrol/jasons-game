@@ -119,29 +119,34 @@ func (ln *LocalNetwork) CreateNamedChainTree(name string) (*consensus.SignedChai
 	return tree, ln.KeyValueStore.Put(datastore.NewKey("-n-"+name), []byte(tree.MustId()))
 }
 
-func (ln *LocalNetwork) CreateChainTree() (*consensus.SignedChainTree, error) {
+func (ln *LocalNetwork) CreateEphemeralChainTree() (*consensus.SignedChainTree, *ecdsa.PrivateKey, error) {
 	ephemeralPrivate, err := crypto.GenerateKey()
 	if err != nil {
-		return nil, errors.Wrap(err, "error creating key")
+		return nil, nil, errors.Wrap(err, "error creating key")
 	}
 
 	tree, err := consensus.NewSignedChainTree(ephemeralPrivate.PublicKey, ln.TreeStore())
 	if err != nil {
-		return nil, errors.Wrap(err, "error creating tree")
+		return nil, nil, errors.Wrap(err, "error creating tree")
 	}
 
 	newTree, err := ln.ChangeChainTreeOwner(tree, []string{crypto.PubkeyToAddress(ln.key.PublicKey).String()})
 	if err != nil {
-		return nil, errors.Wrap(err, "error changing ownership")
+		return nil, nil, errors.Wrap(err, "error changing ownership")
 	}
 	tree = newTree
 
 	err = ln.TreeStore().SaveTreeMetadata(tree)
 	if err != nil {
-		return nil, errors.Wrap(err, "error saving tree metadata")
+		return nil, nil, errors.Wrap(err, "error saving tree metadata")
 	}
 
-	return tree, ln.KeyValueStore.Put(datastore.NewKey("-n-"+tree.MustId()), []byte(tree.MustId()))
+	return tree, ephemeralPrivate, ln.KeyValueStore.Put(datastore.NewKey("-n-"+tree.MustId()), []byte(tree.MustId()))
+}
+
+func (ln *LocalNetwork) CreateChainTree() (*consensus.SignedChainTree, error) {
+	ct, _, err := ln.CreateEphemeralChainTree()
+	return ct, err
 }
 
 func (ln *LocalNetwork) GetChainTreeByName(name string) (*consensus.SignedChainTree, error) {
@@ -199,6 +204,15 @@ func (ln *LocalNetwork) SendInk(tree *consensus.SignedChainTree, tokenName *cons
 func (ln *LocalNetwork) ReceiveInk(tree *consensus.SignedChainTree, tokenPayload *transactions.TokenPayload) error {
 	// placeholder to fulfill the interface
 	return nil
+}
+
+func (ln *LocalNetwork) ReceiveInkOnEphemeralChainTree(tree *consensus.SignedChainTree, privateKey *ecdsa.PrivateKey, tokenPayload *transactions.TokenPayload) error {
+	// placeholder to fulfill the interface
+	return nil
+}
+
+func (ln *LocalNetwork) DisallowReceiveInk(chaintreeId string) {
+	// placeholder to fulfill the interface
 }
 
 func (ln *LocalNetwork) playTransactions(tree *consensus.SignedChainTree, transactions []*transactions.Transaction) (*consensus.SignedChainTree, error) {
