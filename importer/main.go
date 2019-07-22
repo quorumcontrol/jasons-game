@@ -10,6 +10,7 @@ import (
 	"path/filepath"
 	"strings"
 	"text/template"
+	"unicode"
 
 	ptypes "github.com/gogo/protobuf/types"
 	"github.com/imdario/mergo"
@@ -381,15 +382,16 @@ func (i *Importer) loadYaml(importPath string) (*ImportPayload, error) {
 		if info.IsDir() {
 			return nil
 		}
+
 		// If importing a single file, treat it as the full compiled loaded item
 		if importPath == p {
 			yamlFile, err := ioutil.ReadFile(p)
 			if err != nil {
-				return err
+				return errors.Wrap(err, fmt.Sprintf("error reading file %s", p))
 			}
 			err = yaml.Unmarshal(yamlFile, loaded)
 			if err != nil {
-				return err
+				return errors.Wrap(err, fmt.Sprintf("error unmarshalling file %s", p))
 			}
 			return nil
 		}
@@ -398,6 +400,18 @@ func (i *Importer) loadYaml(importPath string) (*ImportPayload, error) {
 		working := built
 
 		directoryPath, fileName := filepath.Split(p)
+		fileNameWithoutExt := strings.TrimSuffix(fileName, filepath.Ext(fileName))
+
+		if filepath.Ext(fileName) != ".yaml" && filepath.Ext(fileName) != ".yml" {
+			log.Debugf("Skipping non-yaml file %s\n", p)
+			return nil
+		}
+
+		if !isAlphaNumeric(fileNameWithoutExt) {
+			log.Errorf("Filename %s must only contain alphanumeric or _ characters", p)
+			panic("")
+		}
+
 		trimmedDirectoryPath := strings.Trim(strings.TrimPrefix(directoryPath, importPath), string(os.PathSeparator))
 		directorySlice := []string{}
 		if len(trimmedDirectoryPath) > 0 {
@@ -415,18 +429,17 @@ func (i *Importer) loadYaml(importPath string) (*ImportPayload, error) {
 
 		yamlFile, err := ioutil.ReadFile(p)
 		if err != nil {
-			return err
+			return errors.Wrap(err, fmt.Sprintf("error reading file %s", p))
 		}
 		err = yaml.Unmarshal(yamlFile, yamlData)
 		if err != nil {
-			return err
+			return errors.Wrap(err, fmt.Sprintf("error unmarshalling file %s", p))
 		}
 
-		fileNameWithoutExt := strings.TrimSuffix(fileName, filepath.Ext(fileName))
 		working[fileNameWithoutExt] = yamlData
 
 		if err := mergo.Merge(&loaded, built); err != nil {
-			return err
+			return errors.Wrap(err, fmt.Sprintf("error appending file %s", p))
 		}
 
 		return nil
@@ -443,6 +456,18 @@ func (i *Importer) loadYaml(importPath string) (*ImportPayload, error) {
 	}
 
 	return processedYaml, nil
+}
+
+// Taken to ensure file name is alphanumeric, which is used in template parsing:
+// https://github.com/golang/go/blob/c7bb4533cb7d91eadc9c674e48dc644bc831e64e/src/text/template/parse/lex.go#L664
+func isAlphaNumeric(str string) bool {
+	for _, r := range str {
+		isValid := r == '_' || unicode.IsLetter(r) || unicode.IsDigit(r)
+		if !isValid {
+			return false
+		}
+	}
+	return true
 }
 
 func main() {
