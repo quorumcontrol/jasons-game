@@ -294,7 +294,8 @@ func (i *Importer) loadObjects(data map[string]*ImportObject, ids *NameToDids) e
 		}
 
 		if _, ok := objData.Data["name"]; !ok {
-			objData.Data["name"] = name
+			// Files must be named with underscore, but default name in the UI should be hyphenated
+			objData.Data["name"] = strings.ReplaceAll(name, "_", "-")
 		}
 
 		tree, err = i.loadBasicData(tree, objData.Data)
