@@ -17,6 +17,7 @@ import (
 	"github.com/quorumcontrol/jasons-game/pb/jasonsgame"
 	"github.com/quorumcontrol/jasons-game/ui"
 	"github.com/quorumcontrol/tupelo-go-sdk/consensus"
+	"gopkg.in/yaml.v2"
 )
 
 var log = logging.Logger("game")
@@ -236,6 +237,8 @@ func (g *Game) handleInteractionInput(actorCtx actor.Context, cmd *interactionCo
 		err = g.handlePickUpObject(actorCtx, interaction)
 	case *GetTreeValueInteraction:
 		err = g.handleGetTreeValueInteraction(actorCtx, interaction)
+	case *SetTreeValueInteraction:
+		err = g.handleSetTreeValueInteraction(actorCtx, interaction, args)
 	case *CipherInteraction:
 		nextInteraction, _, err := interaction.Unseal(args)
 		if err != nil {
@@ -251,6 +254,29 @@ func (g *Game) handleInteractionInput(actorCtx actor.Context, cmd *interactionCo
 	}
 
 	return err
+}
+
+func (g *Game) handleSetTreeValueInteraction(actorCtx actor.Context, interaction *SetTreeValueInteraction, args string) error {
+	ctx := context.TODO()
+
+	tree, err := g.network.GetTree(interaction.Did)
+	if err != nil {
+		return errors.Wrap(err, "error fetching tree")
+	}
+	if tree == nil {
+		return fmt.Errorf("could not find tree with did %v", interaction.Did)
+	}
+
+	tree, err = interaction.SetValue(ctx, g.network, tree, args)
+	if err != nil {
+		return errors.Wrap(err, fmt.Sprintf("error setting value on tree %v", interaction.Did))
+	}
+
+	g.sendUserMessage(actorCtx, fmt.Sprintf("set %v", interaction.Path))
+
+	fmt.Printf("%v\n", tree.ChainTree.Dag.Dump(ctx))
+
+	return nil
 }
 
 func (g *Game) handleGetTreeValueInteraction(actorCtx actor.Context, interaction *GetTreeValueInteraction) error {
@@ -271,10 +297,27 @@ func (g *Game) handleGetTreeValueInteraction(actorCtx actor.Context, interaction
 
 	value, _, err := tree.ChainTree.Dag.Resolve(ctx, append([]string{"tree", "data", "jasons-game"}, pathSlice...))
 	if err != nil {
-		return errors.Wrap(err, fmt.Sprintf("error fetching value for %v", pathSlice))
+		return errors.Wrap(err, fmt.Sprintf("error fetching value for %v", interaction.Path))
 	}
 
-	g.sendUserMessage(actorCtx, value)
+	var toSend string
+	switch msg := value.(type) {
+	case string:
+		toSend = msg
+	case []interface{}:
+		stringSlice := make([]string, len(msg))
+		for i, v := range msg {
+			stringSlice[i] = fmt.Sprintf("%v", v)
+		}
+		toSend = strings.Join(stringSlice, "\n")
+	default:
+		valBytes, err := yaml.Marshal(msg)
+		if err != nil {
+			return errors.Wrap(err, fmt.Sprintf("error casting value at %v", interaction.Path))
+		}
+		toSend = string(valBytes)
+	}
+	g.sendUserMessage(actorCtx, toSend)
 	return nil
 }
 
