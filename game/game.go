@@ -173,7 +173,7 @@ func (g *Game) handleImportObject(actorCtx actor.Context, input *jasonsgame.Obje
 	return nil
 }
 
-func (g *Game) handleImportRequest(actorCtx actor.Context, input *jasonsgame.ImportRequest) error {
+func (g *Game) handleImportRequest(actorCtx actor.Context, input *jasonsgame.ImportRequest) {
 	if sender := actorCtx.Sender(); sender != nil {
 		log.Debugf("responding to parent with CommandReceived")
 		actorCtx.Respond(&jasonsgame.CommandReceived{Sequence: g.messageSequence})
@@ -197,8 +197,6 @@ func (g *Game) handleImportRequest(actorCtx actor.Context, input *jasonsgame.Imp
 	if err != nil {
 		g.sendUserMessage(actorCtx, fmt.Sprintf("error importing: %v", err))
 	}
-
-	return nil
 }
 
 func (g *Game) handleUserInput(actorCtx actor.Context, input *jasonsgame.UserInput) {
