@@ -15,6 +15,7 @@ import (
 
 	"github.com/quorumcontrol/tupelo-go-sdk/gossip3/types"
 
+	"github.com/quorumcontrol/jasons-game/importer"
 	"github.com/quorumcontrol/jasons-game/network"
 	"github.com/quorumcontrol/jasons-game/pb/jasonsgame"
 	"github.com/quorumcontrol/jasons-game/ui"
@@ -102,6 +103,12 @@ func (gs *GameServer) getOrCreateSession(sess *jasonsgame.Session, stream jasons
 			// TODO: do this more gracefully
 			log.Errorf("no session")
 			panic("must supply a valid session")
+		}
+
+		logging.SetLogLevel("importer", "info")
+		_, err = importer.New(net).Import("importer/import-example")
+		if err != nil {
+			panic(errors.Wrap(err, "error on import"))
 		}
 
 		log.Debugf("creating actors")
