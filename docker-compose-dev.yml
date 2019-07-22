@@ -27,7 +27,7 @@ services:
       - jason
       - jasonblock
       - inkfaucet
-    command: ["go", "run", "importer/main.go", "-local=false", "-path=importer/import-example"]
+    command: ["go", "run", "importer/cmd/importer/main.go", "-local=false", "-path=importer/import-example"]
     volumes:
       - .:/app:delegated
       - ./devdocker/.tmp:/root/.cache:delegated

@@ -1,9 +1,7 @@
-package main
+package importer
 
 import (
 	"bytes"
-	"context"
-	"flag"
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -14,8 +12,6 @@ import (
 
 	ptypes "github.com/gogo/protobuf/types"
 	"github.com/imdario/mergo"
-	"github.com/ipfs/go-datastore"
-	dssync "github.com/ipfs/go-datastore/sync"
 	logging "github.com/ipfs/go-log"
 	"github.com/pkg/errors"
 	"github.com/quorumcontrol/chaintree/typecaster"
@@ -336,41 +332,41 @@ func (i *Importer) replaceVariables(data *ImportPayload, vars interface{}) (*Imp
 	return processedYaml, nil
 }
 
-func (i *Importer) Import(importPath string) error {
+func (i *Importer) Import(importPath string) (*NameToDids, error) {
 	var err error
 	var data *ImportPayload
 
 	data, err = i.loadYaml(importPath)
 
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	ids, err := i.createTrees(data)
 	if err != nil {
-		return err
+		return ids, err
 	}
 
 	data, err = i.replaceVariables(data, ids)
 	if err != nil {
-		return err
+		return ids, err
 	}
 
 	// Note: its important to load objects first since locations' inventory fetch
 	// the name of an object by did
 	err = i.loadObjects(data.Objects, ids)
 	if err != nil {
-		return err
+		return ids, err
 	}
 
 	err = i.loadLocations(data.Locations, ids)
 	if err != nil {
-		return err
+		return ids, err
 	}
 
 	log.Infof("import complete - %d locations created - %d objects created", len(ids.Locations), len(ids.Objects))
 
-	return nil
+	return ids, nil
 }
 
 func (i *Importer) loadYaml(importPath string) (*ImportPayload, error) {
@@ -469,44 +465,4 @@ func isAlphaNumeric(str string) bool {
 		}
 	}
 	return true
-}
-
-func main() {
-	importPath := flag.String("path", "", "which directory to import")
-	local := flag.Bool("local", true, "connect to localnet & use localstack S3 instead of testnet & real S3")
-	logLevel := flag.String("log", "debug", "log level for importer")
-	flag.Parse()
-
-	logging.SetLogLevel("importer", *logLevel)
-
-	if *importPath == "" {
-		panic(fmt.Errorf("Must set -path to directory to import"))
-	}
-
-	var net network.Network
-	// FIXME: this should be local / testnet, not mock / local
-	if *local {
-		net = network.NewLocalNetwork()
-	} else {
-		ctx := context.Background()
-
-		group, err := network.SetupTupeloNotaryGroup(ctx, true)
-		if err != nil {
-			panic(errors.Wrap(err, "error setting up tupelo notary group"))
-		}
-
-		ds := dssync.MutexWrap(datastore.NewMapDatastore())
-
-		net, err = network.NewRemoteNetwork(ctx, group, ds)
-		if err != nil {
-			panic(errors.Wrap(err, "error setting up remote network"))
-		}
-	}
-
-	importer := New(net)
-
-	err := importer.Import(*importPath)
-	if err != nil {
-		panic(err)
-	}
 }
