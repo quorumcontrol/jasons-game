@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/AsynkronIT/protoactor-go/actor"
+	"github.com/AsynkronIT/protoactor-go/eventstream"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ipfs/go-blockservice"
 	cid "github.com/ipfs/go-cid"
@@ -18,6 +19,7 @@ import (
 	"github.com/ipfs/go-merkledag"
 	"github.com/pkg/errors"
 	"github.com/quorumcontrol/chaintree/chaintree"
+	"github.com/quorumcontrol/messages/build/go/signatures"
 	"github.com/quorumcontrol/messages/build/go/transactions"
 	"github.com/quorumcontrol/tupelo-go-sdk/consensus"
 	"github.com/quorumcontrol/tupelo-go-sdk/p2p"
@@ -32,10 +34,11 @@ func (dntg *DevNullTipGetter) GetTip(_ string) (cid.Cid, error) {
 // LocalNetwork implements the Network interface but doesn't require
 // a full tupelo/IPLD setup
 type LocalNetwork struct {
-	key           *ecdsa.PrivateKey
-	KeyValueStore datastore.Batching
-	treeStore     TreeStore
-	community     *Community
+	key              *ecdsa.PrivateKey
+	KeyValueStore    datastore.Batching
+	treeStore        TreeStore
+	community        *Community
+	mockTupeloEvents *eventstream.EventStream
 }
 
 var _ Network = &LocalNetwork{}
@@ -61,10 +64,11 @@ func NewLocalNetwork() *LocalNetwork {
 	ipldstore := NewIPLDTreeStore(dag, keystore, new(DevNullTipGetter))
 
 	return &LocalNetwork{
-		key:           key,
-		KeyValueStore: keystore,
-		treeStore:     ipldstore,
-		community:     NewJasonCommunity(context.Background(), key, ipldNetHost),
+		key:              key,
+		KeyValueStore:    keystore,
+		treeStore:        ipldstore,
+		community:        NewJasonCommunity(context.Background(), key, ipldNetHost),
+		mockTupeloEvents: new(eventstream.EventStream),
 	}
 }
 
@@ -186,13 +190,19 @@ func (ln *LocalNetwork) ChangeChainTreeOwner(tree *consensus.SignedChainTree, ne
 	return ln.playTransactions(tree, []*transactions.Transaction{transaction})
 }
 
-type nilActor struct{}
-
-func (_ *nilActor) Receive(_ actor.Context) {}
-
 func (rn *LocalNetwork) NewCurrentStateSubscriptionProps(did string) *actor.Props {
-	return actor.PropsFromProducer(func() actor.Actor {
-		return &nilActor{}
+	return actor.PropsFromFunc(func(actorCtx actor.Context) {
+		switch actorCtx.Message().(type) {
+		case *actor.Started:
+			rn.mockTupeloEvents.Subscribe(func(evt interface{}) {
+				switch eMsg := evt.(type) {
+				case *signatures.CurrentState:
+					if did == string(eMsg.Signature.ObjectId) {
+						actorCtx.Send(actorCtx.Parent(), evt)
+					}
+				}
+			})
+		}
 	})
 }
 
@@ -259,6 +269,16 @@ func (ln *LocalNetwork) playTransactions(tree *consensus.SignedChainTree, transa
 	if !isValid {
 		return nil, fmt.Errorf("error invalid transaction")
 	}
+
+	currentState := &signatures.CurrentState{Signature: &signatures.Signature{
+		ObjectId: []byte(tree.MustId()),
+		NewTip:   tree.Tip().Bytes(),
+		Height:   height + 1,
+	}}
+	if tip != nil {
+		currentState.Signature.PreviousTip = tip.Bytes()
+	}
+	ln.mockTupeloEvents.Publish(currentState)
 
 	return tree, ln.TreeStore().SaveTreeMetadata(tree)
 }
