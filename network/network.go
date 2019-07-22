@@ -45,6 +45,8 @@ var DefaultGameBootstrappers = []string{
 type InkNetwork interface {
 	SendInk(tree *consensus.SignedChainTree, tokenName *consensus.TokenName, amount uint64, destinationChainId string) (*transactions.TokenPayload, error)
 	ReceiveInk(tree *consensus.SignedChainTree, tokenPayload *transactions.TokenPayload) error
+	ReceiveInkOnEphemeralChainTree(tree *consensus.SignedChainTree, privateKey *ecdsa.PrivateKey, tokenPayload *transactions.TokenPayload) error
+	DisallowReceiveInk(chaintreeId string)
 }
 
 type Network interface {
@@ -52,6 +54,7 @@ type Network interface {
 	Community() *Community
 	ChangeChainTreeOwner(tree *consensus.SignedChainTree, newKeys []string) (*consensus.SignedChainTree, error)
 	CreateChainTree() (*consensus.SignedChainTree, error)
+	CreateEphemeralChainTree() (*consensus.SignedChainTree, *ecdsa.PrivateKey, error)
 	CreateNamedChainTree(name string) (*consensus.SignedChainTree, error)
 	GetChainTreeByName(name string) (*consensus.SignedChainTree, error)
 	GetTreeByTip(tip cid.Cid) (*consensus.SignedChainTree, error)
@@ -266,8 +269,8 @@ func (n *RemoteNetwork) CreateNamedChainTree(name string) (*consensus.SignedChai
 	return tree, n.KeyValueStore.Put(datastore.NewKey("-n-"+name), []byte(tree.MustId()))
 }
 
-func (n *RemoteNetwork) CreateChainTree() (*consensus.SignedChainTree, error) {
-	tree, err := n.Tupelo.CreateChainTree(n.PrivateKey())
+func (n *RemoteNetwork) createChainTree(key *ecdsa.PrivateKey) (*consensus.SignedChainTree, error) {
+	tree, err := n.Tupelo.CreateChainTree(key)
 	if err != nil {
 		return nil, errors.Wrap(err, "error creating tree")
 	}
@@ -280,6 +283,21 @@ func (n *RemoteNetwork) CreateChainTree() (*consensus.SignedChainTree, error) {
 	log.Debug("CreateChainTree - saved", tree.MustId())
 
 	return tree, n.KeyValueStore.Put(datastore.NewKey("-n-"+tree.MustId()), []byte(tree.MustId()))
+}
+
+func (n *RemoteNetwork) CreateChainTree() (*consensus.SignedChainTree, error) {
+	return n.createChainTree(n.PrivateKey())
+}
+
+func (n *RemoteNetwork) CreateEphemeralChainTree() (*consensus.SignedChainTree, *ecdsa.PrivateKey, error) {
+	key, err := crypto.GenerateKey()
+	if err != nil {
+		return nil, nil, errors.Wrap(err, "error generating ephemeral private key")
+	}
+
+	ct, err := n.createChainTree(key)
+
+	return ct, key, err
 }
 
 func (n *RemoteNetwork) GetChainTreeByName(name string) (*consensus.SignedChainTree, error) {
@@ -374,25 +392,35 @@ func (n *RemoteNetwork) SendInk(tree *consensus.SignedChainTree, tokenName *cons
 		return nil, errors.Wrap(err, "error generating send token transaction ID")
 	}
 
+	log.Debugf("send ink transaction id: %s", transactionId)
+
 	transaction, err := chaintree.NewSendTokenTransaction(transactionId.String(), tokenName.String(), amount, destinationChainId)
 	if err != nil {
 		return nil, errors.Wrap(err, "error generating ink send token transaction")
 	}
+
+	log.Debugf("send ink transaction: %+v", *transaction)
 
 	txResp, err := n.Tupelo.PlayTransactions(tree, n.PrivateKey(), []*transactions.Transaction{transaction})
 	if err != nil {
 		return nil, errors.Wrap(err, "error playing ink send token transaction")
 	}
 
+	log.Debugf("send ink PlayTransactions response: %+v", txResp)
+
 	err = n.TreeStore().SaveTreeMetadata(tree)
 	if err != nil {
 		return nil, errors.Wrap(err, "error saving chaintree metadata after ink send transaction")
 	}
 
+	log.Debug("send ink saved tree metadata")
+
 	tokenPayload, err := n.Tupelo.TokenPayloadForTransaction(tree, tokenName, transactionId.String(), &txResp.Signature)
 	if err != nil {
 		return nil, errors.Wrap(err, "error getting token payload for ink send")
 	}
+
+	log.Debugf("send ink token payload: %+v", *tokenPayload)
 
 	return tokenPayload, nil
 }

@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/AsynkronIT/protoactor-go/actor"
+	"github.com/AsynkronIT/protoactor-go/eventstream"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ipfs/go-blockservice"
 	cid "github.com/ipfs/go-cid"
@@ -18,6 +19,7 @@ import (
 	"github.com/ipfs/go-merkledag"
 	"github.com/pkg/errors"
 	"github.com/quorumcontrol/chaintree/chaintree"
+	"github.com/quorumcontrol/messages/build/go/signatures"
 	"github.com/quorumcontrol/messages/build/go/transactions"
 	"github.com/quorumcontrol/tupelo-go-sdk/consensus"
 	"github.com/quorumcontrol/tupelo-go-sdk/p2p"
@@ -32,10 +34,11 @@ func (dntg *DevNullTipGetter) GetTip(_ string) (cid.Cid, error) {
 // LocalNetwork implements the Network interface but doesn't require
 // a full tupelo/IPLD setup
 type LocalNetwork struct {
-	key           *ecdsa.PrivateKey
-	KeyValueStore datastore.Batching
-	treeStore     TreeStore
-	community     *Community
+	key              *ecdsa.PrivateKey
+	KeyValueStore    datastore.Batching
+	treeStore        TreeStore
+	community        *Community
+	mockTupeloEvents *eventstream.EventStream
 }
 
 var _ Network = &LocalNetwork{}
@@ -61,10 +64,11 @@ func NewLocalNetwork() *LocalNetwork {
 	ipldstore := NewIPLDTreeStore(dag, keystore, new(DevNullTipGetter))
 
 	return &LocalNetwork{
-		key:           key,
-		KeyValueStore: keystore,
-		treeStore:     ipldstore,
-		community:     NewJasonCommunity(context.Background(), key, ipldNetHost),
+		key:              key,
+		KeyValueStore:    keystore,
+		treeStore:        ipldstore,
+		community:        NewJasonCommunity(context.Background(), key, ipldNetHost),
+		mockTupeloEvents: new(eventstream.EventStream),
 	}
 }
 
@@ -119,29 +123,34 @@ func (ln *LocalNetwork) CreateNamedChainTree(name string) (*consensus.SignedChai
 	return tree, ln.KeyValueStore.Put(datastore.NewKey("-n-"+name), []byte(tree.MustId()))
 }
 
-func (ln *LocalNetwork) CreateChainTree() (*consensus.SignedChainTree, error) {
+func (ln *LocalNetwork) CreateEphemeralChainTree() (*consensus.SignedChainTree, *ecdsa.PrivateKey, error) {
 	ephemeralPrivate, err := crypto.GenerateKey()
 	if err != nil {
-		return nil, errors.Wrap(err, "error creating key")
+		return nil, nil, errors.Wrap(err, "error creating key")
 	}
 
 	tree, err := consensus.NewSignedChainTree(ephemeralPrivate.PublicKey, ln.TreeStore())
 	if err != nil {
-		return nil, errors.Wrap(err, "error creating tree")
+		return nil, nil, errors.Wrap(err, "error creating tree")
 	}
 
 	newTree, err := ln.ChangeChainTreeOwner(tree, []string{crypto.PubkeyToAddress(ln.key.PublicKey).String()})
 	if err != nil {
-		return nil, errors.Wrap(err, "error changing ownership")
+		return nil, nil, errors.Wrap(err, "error changing ownership")
 	}
 	tree = newTree
 
 	err = ln.TreeStore().SaveTreeMetadata(tree)
 	if err != nil {
-		return nil, errors.Wrap(err, "error saving tree metadata")
+		return nil, nil, errors.Wrap(err, "error saving tree metadata")
 	}
 
-	return tree, ln.KeyValueStore.Put(datastore.NewKey("-n-"+tree.MustId()), []byte(tree.MustId()))
+	return tree, ephemeralPrivate, ln.KeyValueStore.Put(datastore.NewKey("-n-"+tree.MustId()), []byte(tree.MustId()))
+}
+
+func (ln *LocalNetwork) CreateChainTree() (*consensus.SignedChainTree, error) {
+	ct, _, err := ln.CreateEphemeralChainTree()
+	return ct, err
 }
 
 func (ln *LocalNetwork) GetChainTreeByName(name string) (*consensus.SignedChainTree, error) {
@@ -181,13 +190,19 @@ func (ln *LocalNetwork) ChangeChainTreeOwner(tree *consensus.SignedChainTree, ne
 	return ln.playTransactions(tree, []*transactions.Transaction{transaction})
 }
 
-type nilActor struct{}
-
-func (_ *nilActor) Receive(_ actor.Context) {}
-
 func (rn *LocalNetwork) NewCurrentStateSubscriptionProps(did string) *actor.Props {
-	return actor.PropsFromProducer(func() actor.Actor {
-		return &nilActor{}
+	return actor.PropsFromFunc(func(actorCtx actor.Context) {
+		switch actorCtx.Message().(type) {
+		case *actor.Started:
+			rn.mockTupeloEvents.Subscribe(func(evt interface{}) {
+				switch eMsg := evt.(type) {
+				case *signatures.CurrentState:
+					if did == string(eMsg.Signature.ObjectId) {
+						actorCtx.Send(actorCtx.Parent(), evt)
+					}
+				}
+			})
+		}
 	})
 }
 
@@ -199,6 +214,15 @@ func (ln *LocalNetwork) SendInk(tree *consensus.SignedChainTree, tokenName *cons
 func (ln *LocalNetwork) ReceiveInk(tree *consensus.SignedChainTree, tokenPayload *transactions.TokenPayload) error {
 	// placeholder to fulfill the interface
 	return nil
+}
+
+func (ln *LocalNetwork) ReceiveInkOnEphemeralChainTree(tree *consensus.SignedChainTree, privateKey *ecdsa.PrivateKey, tokenPayload *transactions.TokenPayload) error {
+	// placeholder to fulfill the interface
+	return nil
+}
+
+func (ln *LocalNetwork) DisallowReceiveInk(chaintreeId string) {
+	// placeholder to fulfill the interface
 }
 
 func (ln *LocalNetwork) playTransactions(tree *consensus.SignedChainTree, transactions []*transactions.Transaction) (*consensus.SignedChainTree, error) {
@@ -245,6 +269,16 @@ func (ln *LocalNetwork) playTransactions(tree *consensus.SignedChainTree, transa
 	if !isValid {
 		return nil, fmt.Errorf("error invalid transaction")
 	}
+
+	currentState := &signatures.CurrentState{Signature: &signatures.Signature{
+		ObjectId: []byte(tree.MustId()),
+		NewTip:   tree.Tip().Bytes(),
+		Height:   height + 1,
+	}}
+	if tip != nil {
+		currentState.Signature.PreviousTip = tip.Bytes()
+	}
+	ln.mockTupeloEvents.Publish(currentState)
 
 	return tree, ln.TreeStore().SaveTreeMetadata(tree)
 }

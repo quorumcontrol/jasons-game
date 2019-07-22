@@ -4,103 +4,113 @@ import (
 	"context"
 
 	"github.com/AsynkronIT/protoactor-go/actor"
-	"github.com/ipfs/go-datastore"
 	logging "github.com/ipfs/go-log"
 	"github.com/pkg/errors"
 	"github.com/quorumcontrol/tupelo-go-sdk/consensus"
-	"github.com/quorumcontrol/tupelo-go-sdk/gossip3/types"
 
-	iwconfig "github.com/quorumcontrol/jasons-game/inkfaucet/config"
+	"github.com/quorumcontrol/jasons-game/inkfaucet/config"
 	"github.com/quorumcontrol/jasons-game/inkfaucet/ink"
 	"github.com/quorumcontrol/jasons-game/inkfaucet/inkfaucet"
+	"github.com/quorumcontrol/jasons-game/inkfaucet/invites"
 	"github.com/quorumcontrol/jasons-game/network"
 )
 
-var log = logging.Logger("inkFaucet")
+var log = logging.Logger("inkFaucetRouter")
 
 type InkFaucetRouter struct {
-	parentCtx context.Context
-	group     *types.NotaryGroup
-	dataStore datastore.Batching
-	net       network.Network
-	inkFaucet ink.Faucet
-	tokenName *consensus.TokenName
-	handler   *actor.PID
-	inkActor  *actor.PID
+	parentCtx    context.Context
+	net          network.Network
+	inkFaucet    ink.Faucet
+	tokenName    *consensus.TokenName
+	handler      *actor.PID
+	inkActor     *actor.PID
+	invitesActor *actor.PID
 }
 
-func New(ctx context.Context, cfg iwconfig.InkFaucetConfig) (*InkFaucetRouter, error) {
-	iw, err := iwconfig.Setup(ctx, cfg)
+func New(ctx context.Context, cfg config.InkFaucetConfig) (*InkFaucetRouter, error) {
+	iw, err := config.Setup(ctx, cfg)
 	if err != nil {
 		return nil, err
 	}
 
-	sourceCfg := ink.ChainTreeInkFaucetConfig{
+	faucetConfig := ink.ChainTreeInkFaucetConfig{
 		Net:         iw.Net,
 		InkOwnerDID: cfg.InkOwnerDID,
 	}
 
-	ctiw, err := ink.NewChainTreeInkFaucet(sourceCfg)
+	ctif, err := ink.NewChainTreeInkFaucet(faucetConfig)
 	if err != nil {
-		return nil, errors.Wrap(err, "error getting ink source")
+		return nil, errors.Wrap(err, "error creating ink faucet")
 	}
 
 	return &InkFaucetRouter{
 		parentCtx: ctx,
-		group:     iw.NotaryGroup,
-		dataStore: iw.DataStore,
 		net:       iw.Net,
-		inkFaucet: ctiw,
+		inkFaucet: ctif,
 		tokenName: &consensus.TokenName{ChainTreeDID: cfg.InkOwnerDID, LocalName: "ink"},
 	}, nil
 }
 
-func (iw *InkFaucetRouter) Start() error {
+func (ifr *InkFaucetRouter) Start(allowInvites bool) error {
 	log.Info("starting inkFaucet service")
 
 	arCtx := actor.EmptyRootContext
 
 	act := arCtx.Spawn(actor.PropsFromProducer(func() actor.Actor {
-		return iw
+		return ifr
 	}))
-	iw.handler = act
+	ifr.handler = act
 
-	inkAct := ink.NewInkActor(iw.parentCtx, ink.InkActorConfig{
-		Group:     iw.group,
-		DataStore: iw.dataStore,
-		Net:       iw.net,
-		InkFaucet: iw.inkFaucet,
-		TokenName: iw.tokenName,
+	inkAct := ink.NewInkActor(ifr.parentCtx, ink.InkActorConfig{
+		InkFaucet: ifr.inkFaucet,
 	})
 
 	inkAct.Start(arCtx)
 
-	iw.inkActor = inkAct.PID()
+	ifr.inkActor = inkAct.PID()
+
+	if allowInvites {
+		invitesActor := invites.NewInvitesActor(ifr.parentCtx, invites.InvitesActorConfig{
+			InkFaucet: inkAct.PID(),
+			Net:       ifr.net,
+		})
+
+		invitesActor.Start(arCtx)
+
+		ifr.invitesActor = invitesActor.PID()
+	}
 
 	go func() {
-		<-iw.parentCtx.Done()
+		<-ifr.parentCtx.Done()
 		arCtx.Stop(act)
 	}()
-	log.Info("serving ink & invite requests")
 
-	// TODO: Subscribe to topic & listen for invite & ink requests
+	if allowInvites {
+		log.Info("serving ink & invite requests")
+	} else {
+		log.Info("serving ink requests")
+	}
 
 	return nil
 }
 
-func (iw *InkFaucetRouter) InkFaucetDID() string {
-	return iw.inkFaucet.ChainTreeDID()
+func (ifr *InkFaucetRouter) InkFaucetDID() string {
+	return ifr.inkFaucet.ChainTreeDID()
 }
 
-func (iw *InkFaucetRouter) Receive(actorCtx actor.Context) {
+func (ifr *InkFaucetRouter) Receive(actorCtx actor.Context) {
 	switch msg := actorCtx.Message().(type) {
 	case *actor.Started:
 		// subscribe to community here?
 	case *inkfaucet.InkRequest:
 		log.Infof("Received InkRequest: %+v", msg)
-		actorCtx.Forward(iw.inkActor)
+		actorCtx.Forward(ifr.inkActor)
 	case *inkfaucet.InviteRequest:
 		log.Infof("Received InviteRequest: %+v", msg)
-		// TODO: Write me
+		actorCtx.Forward(ifr.invitesActor)
 	}
+}
+
+func (ifr *InkFaucetRouter) PID() *actor.PID {
+	return ifr.handler
 }

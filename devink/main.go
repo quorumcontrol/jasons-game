@@ -15,8 +15,8 @@ import (
 )
 
 const (
-	dataStoreDir = "dev-ink"
-	amount       = 10000
+	dataStoreDir  = "dev-ink"
+	minimumAmount = 1000000
 )
 
 func main() {
@@ -39,7 +39,7 @@ func main() {
 		panic(err)
 	}
 
-	err = devInkSource.EnsureBalance(ctx, amount)
+	err = devInkSource.EnsureBalance(ctx, minimumAmount)
 	if err != nil {
 		panic(err)
 	}
@@ -47,7 +47,7 @@ func main() {
 	if len(os.Args) > 1 && len(os.Args[1]) > 0 {
 		destinationChainId := os.Args[1]
 
-		tokenSend, err := devInkSource.SendInk(ctx, destinationChainId, amount)
+		tokenSend, err := devInkSource.SendInk(ctx, destinationChainId, minimumAmount)
 		if err != nil {
 			panic(err)
 		}

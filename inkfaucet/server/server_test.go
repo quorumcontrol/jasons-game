@@ -63,7 +63,7 @@ func TestInkRequests(t *testing.T) {
 	err = dep.Deposit(tokenSend)
 	require.Nil(t, err)
 
-	err = server.Start()
+	err = server.Start(false)
 	require.Nil(t, err)
 
 	inkRecipient, err := devInk.Net.CreateNamedChainTree("ink-recipient")

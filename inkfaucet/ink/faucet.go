@@ -6,12 +6,10 @@ import (
 
 	"github.com/AsynkronIT/protoactor-go/actor"
 	"github.com/gogo/protobuf/proto"
-	"github.com/ipfs/go-datastore"
 	logging "github.com/ipfs/go-log"
 	"github.com/pkg/errors"
 	"github.com/quorumcontrol/messages/build/go/transactions"
 	"github.com/quorumcontrol/tupelo-go-sdk/consensus"
-	"github.com/quorumcontrol/tupelo-go-sdk/gossip3/types"
 
 	"github.com/quorumcontrol/jasons-game/inkfaucet/inkfaucet"
 	"github.com/quorumcontrol/jasons-game/network"
@@ -19,7 +17,7 @@ import (
 
 const InkFaucetChainTreeName = "inkFaucet"
 
-var log = logging.Logger("ink")
+var log = logging.Logger("inkFaucet")
 
 type Faucet interface {
 	TokenName() *consensus.TokenName
@@ -70,8 +68,17 @@ func ensureChainTree(net network.Network) (*consensus.SignedChainTree, error) {
 	}
 
 	if existing == nil {
-		return net.CreateNamedChainTree(InkFaucetChainTreeName)
+		ct, err := net.CreateNamedChainTree(InkFaucetChainTreeName)
+		if err != nil {
+			return nil, err
+		}
+
+		net.DisallowReceiveInk(ct.MustId())
+
+		return ct, nil
 	}
+
+	net.DisallowReceiveInk(existing.MustId())
 
 	return existing, nil
 }
@@ -97,10 +104,18 @@ func (cti *ChainTreeInkFaucet) DepositInk(tokenPayload *transactions.TokenPayloa
 func (cti *ChainTreeInkFaucet) RequestInk(amount uint64, destinationChainId string) (*transactions.TokenPayload, error) {
 	tokenName := cti.TokenName()
 
+	if !tokenName.IsCanonical() {
+		return nil, errors.Errorf("token name %s is not canonical", tokenName)
+	}
+
+	log.Debugf("ink request canonical token name: %s", cti.TokenName())
+
 	ct, err := cti.chainTree()
 	if err != nil {
 		return nil, errors.Wrap(err, "error requesting ink")
 	}
+
+	log.Debugf("ink faucet chaintree: %s", ct)
 
 	inkfaucetTree, err := ct.ChainTree.Tree(context.TODO())
 	if err != nil {
@@ -114,6 +129,8 @@ func (cti *ChainTreeInkFaucet) RequestInk(amount uint64, destinationChainId stri
 		return nil, errors.Wrap(err, "error checking for ink token existence")
 	}
 
+	log.Debugf("ink faucet token exists? %v", tokenExists)
+
 	if !tokenExists {
 		return nil, errors.Wrapf(err, "ink token %s does not exist", tokenName)
 	}
@@ -123,8 +140,10 @@ func (cti *ChainTreeInkFaucet) RequestInk(amount uint64, destinationChainId stri
 		return nil, errors.Wrap(err, "error getting ink token balance")
 	}
 
+	log.Debugf("ink faucet token balance: %d", tokenBalance)
+
 	if tokenBalance < amount {
-		return nil, errors.Wrapf(err, "ink token balance %d is insufficient to fulfill request for %d", tokenBalance, amount)
+		return nil, errors.Errorf("ink token balance %d is insufficient to fulfill request for %d", tokenBalance, amount)
 	}
 
 	return cti.net.SendInk(ct, tokenName, amount, destinationChainId)
@@ -140,30 +159,18 @@ func (cti *ChainTreeInkFaucet) ChainTreeDID() string {
 
 type InkActor struct {
 	parentCtx context.Context
-	group     *types.NotaryGroup
-	dataStore datastore.Batching
-	net       network.Network
 	inkFaucet Faucet
-	tokenName *consensus.TokenName
 	handler   *actor.PID
 }
 
 type InkActorConfig struct {
-	Group     *types.NotaryGroup
-	DataStore datastore.Batching
-	Net       network.Network
 	InkFaucet Faucet
-	TokenName *consensus.TokenName
 }
 
 func NewInkActor(ctx context.Context, cfg InkActorConfig) *InkActor {
 	return &InkActor{
 		parentCtx: ctx,
-		group:     cfg.Group,
-		dataStore: cfg.DataStore,
-		net:       cfg.Net,
 		inkFaucet: cfg.InkFaucet,
-		tokenName: cfg.TokenName,
 	}
 }
 
@@ -188,29 +195,40 @@ func (i *InkActor) Receive(actorCtx actor.Context) {
 		log.Infof("ink actor received ink request: %+v", msg)
 		tokenPayload, err := i.inkFaucet.RequestInk(msg.Amount, msg.DestinationChainId)
 		if err != nil {
+			msg := fmt.Sprintf("error requesting ink: %v", err)
+			log.Error(msg)
 			actorCtx.Respond(&inkfaucet.InkResponse{
-				Error: err.Error(),
+				Error: msg,
 			})
 			return
 		}
+
+		log.Debugf("ink actor got token payload: %+v", *tokenPayload)
 
 		var response *inkfaucet.InkResponse
 
 		serializedTokenPayload, err := proto.Marshal(tokenPayload)
 		if err != nil {
-			response := &inkfaucet.InkResponse{
-				Error: fmt.Sprintf("error serializing dev ink token payload: %v", err),
+			msg := fmt.Sprintf("error marshalling token payload: %v", err)
+			log.Error(msg)
+			response = &inkfaucet.InkResponse{
+				Error: msg,
 			}
-
 			actorCtx.Respond(response)
 			return
 		}
+
+		log.Debug("ink actor serialized token payload")
 
 		response = &inkfaucet.InkResponse{
 			Token: serializedTokenPayload,
 		}
 
+		log.Debugf("ink actor sending response: %+v", *response)
+
 		actorCtx.Respond(response)
+	default:
+		log.Warningf("ink actor received unknown message type %T", msg)
 	}
 }
 

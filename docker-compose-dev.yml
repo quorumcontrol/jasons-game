@@ -18,7 +18,6 @@ services:
     environment:
       PPROF_ENABLED: "true"
       GOPATH: /go
-      BUILD: internal
       TUPELO_BOOTSTRAP_NODES: /ip4/172.16.239.10/tcp/34001/ipfs/16Uiu2HAm3TGSEKEjagcCojSJeaT5rypaeJMKejijvYSnAjviWwV5
       JASON_BOOTSTRAP_NODES: /ip4/172.16.239.100/tcp/34001/ipfs/16Uiu2HAmBL6Xz9ichyunCexiqomcHyzVpKKmxAMgUusksBZzzM3K
 
@@ -39,7 +38,6 @@ services:
     environment:
       PPROF_ENABLED: "true"
       GOPATH: /go
-      BUILD: internal
       TUPELO_BOOTSTRAP_NODES: /ip4/172.16.239.10/tcp/34001/ipfs/16Uiu2HAm3TGSEKEjagcCojSJeaT5rypaeJMKejijvYSnAjviWwV5
       JASON_BOOTSTRAP_NODES: /ip4/172.16.239.100/tcp/34001/ipfs/16Uiu2HAmBL6Xz9ichyunCexiqomcHyzVpKKmxAMgUusksBZzzM3K
 
@@ -54,7 +52,6 @@ services:
     environment:
       PPROF_ENABLED: "true"
       GOPATH: /go
-      BUILD: internal
       JASON_BOOTSTRAP_NODES: /ip4/172.16.239.100/tcp/34001/ipfs/16Uiu2HAmBL6Xz9ichyunCexiqomcHyzVpKKmxAMgUusksBZzzM3K
     networks:
       default:
@@ -73,14 +70,14 @@ services:
     environment:
       PPROF_ENABLED: "true"
       GOPATH: /go
-      BUILD: internal
       TUPELO_BOOTSTRAP_NODES: /ip4/172.16.239.10/tcp/34001/ipfs/16Uiu2HAm3TGSEKEjagcCojSJeaT5rypaeJMKejijvYSnAjviWwV5
       JASON_BOOTSTRAP_NODES: /ip4/172.16.239.100/tcp/34001/ipfs/16Uiu2HAmBL6Xz9ichyunCexiqomcHyzVpKKmxAMgUusksBZzzM3K
 
   inkfaucet:
     build: ./devdocker
-    command: ["go", "run", "inkfaucet/main.go", "-local=true", "-deposit=${TOKEN_PAYLOAD}"]
+    command: ["go", "run", "-tags=internal", "inkfaucet/main.go", "-local=true", "-deposit=${TOKEN_PAYLOAD}"]
     depends_on:
+      - localstack
       - jason
     volumes:
       - .:/app:delegated
@@ -89,7 +86,6 @@ services:
       - ./devdocker/devink_state:/root/.config/tupelo:delegated
     environment:
       GOPATH: /go
-      BUILD: internal
       TUPELO_BOOTSTRAP_NODES: /ip4/172.16.239.10/tcp/34001/ipfs/16Uiu2HAm3TGSEKEjagcCojSJeaT5rypaeJMKejijvYSnAjviWwV5
       JASON_BOOTSTRAP_NODES: /ip4/172.16.239.100/tcp/34001/ipfs/16Uiu2HAmBL6Xz9ichyunCexiqomcHyzVpKKmxAMgUusksBZzzM3K
       INK_DID:
@@ -97,8 +93,10 @@ services:
 
   inkfaucetdid:
     build: ./devdocker
-    command: ["go", "run", "inkfaucet/main.go", "-local=true", "-outputdid=true"]
+    command: ["go", "run", "-tags=internal", "inkfaucet/main.go", "-local=true", "-outputdid=true"]
     depends_on:
+      - inkfaucet
+      - localstack
       - jason
     volumes:
       - .:/app:delegated
@@ -107,13 +105,12 @@ services:
       - ./devdocker/devink_state:/root/.config/tupelo:delegated
     environment:
       GOPATH: /go
-      BUILD: internal
       TUPELO_BOOTSTRAP_NODES: /ip4/172.16.239.10/tcp/34001/ipfs/16Uiu2HAm3TGSEKEjagcCojSJeaT5rypaeJMKejijvYSnAjviWwV5
       JASON_BOOTSTRAP_NODES: /ip4/172.16.239.100/tcp/34001/ipfs/16Uiu2HAmBL6Xz9ichyunCexiqomcHyzVpKKmxAMgUusksBZzzM3K
 
   devink:
     build: ./devdocker
-    command: ["go", "run", "devink/main.go", "${INK_FAUCET_DID}"]
+    command: ["go", "run", "-tags=internal", "devink/main.go", "${INK_FAUCET_DID}"]
     volumes:
       - .:/app:delegated
       - ./devdocker/.tmp:/root/.cache:delegated
@@ -121,9 +118,25 @@ services:
       - ./devdocker/devink_state:/root/.config/tupelo:delegated
     environment:
       GOPATH: /go
-      BUILD: internal
       TUPELO_BOOTSTRAP_NODES: /ip4/172.16.239.10/tcp/34001/ipfs/16Uiu2HAm3TGSEKEjagcCojSJeaT5rypaeJMKejijvYSnAjviWwV5
       INK_FAUCET_DID:
+
+  invite:
+    build: ./devdocker
+    command: ["go", "run", "-tags=internal", "inkfaucet/main.go", "-local=true", "-invite=true"]
+    depends_on:
+      - localstack
+      - jason
+    volumes:
+      - .:/app:delegated
+      - ./devdocker/.tmp:/root/.cache:delegated
+      - $GOPATH/pkg/mod:/go/pkg/mod:delegated
+      - ./devdocker/devink_state:/root/.config/tupelo:delegated
+    environment:
+      GOPATH: /go
+      TUPELO_BOOTSTRAP_NODES: /ip4/172.16.239.10/tcp/34001/ipfs/16Uiu2HAm3TGSEKEjagcCojSJeaT5rypaeJMKejijvYSnAjviWwV5
+      JASON_BOOTSTRAP_NODES: /ip4/172.16.239.100/tcp/34001/ipfs/16Uiu2HAmBL6Xz9ichyunCexiqomcHyzVpKKmxAMgUusksBZzzM3K
+      INK_DID:
 
   game-testnet:
     build: ./devdocker
@@ -139,7 +152,6 @@ services:
     environment:
       PPROF_ENABLED: "true"
       GOPATH: /go
-      BUILD: internal
 
   localstack:
     image: localstack/localstack
@@ -154,7 +166,7 @@ services:
       - go
       - test
       - -v
-      - -tags=integration
+      - -tags='integration internal'
       - -timeout=5m
       - ${TEST_PACKAGE-./...}
     volumes:
@@ -163,7 +175,6 @@ services:
       - $GOPATH/pkg/mod:/go/pkg/mod:delegated
     environment:
       GOPATH: /go
-      BUILD: internal
       TUPELO_BOOTSTRAP_NODES: /ip4/172.16.239.10/tcp/34001/ipfs/16Uiu2HAm3TGSEKEjagcCojSJeaT5rypaeJMKejijvYSnAjviWwV5
       JASON_BOOTSTRAP_NODES: /ip4/172.16.239.100/tcp/34001/ipfs/16Uiu2HAmBL6Xz9ichyunCexiqomcHyzVpKKmxAMgUusksBZzzM3K
 

@@ -32,6 +32,11 @@ func (h *UnrestrictedAddHandler) Handle(msg proto.Message) error {
 			return fmt.Errorf("error fetching inventory chaintree: %v", err)
 		}
 
+		targetAuths, err := targetInventory.Authentications()
+		if err != nil {
+			return fmt.Errorf("error fetching target chaintree authentications %s; error: %v", msg.To, err)
+		}
+
 		exists, err := targetInventory.Exists(msg.Object)
 		if err != nil {
 			return err
@@ -44,6 +49,17 @@ func (h *UnrestrictedAddHandler) Handle(msg proto.Message) error {
 		if err != nil {
 			return err
 		}
+
+		objectTree, err := h.network.GetTree(msg.Object)
+		if err != nil {
+			return fmt.Errorf("error fetching object chaintree %s: %v", msg.Object, err)
+		}
+
+		_, err = h.network.ChangeChainTreeOwner(objectTree, targetAuths)
+		if err != nil {
+			return fmt.Errorf("error changing object owner: %v", err)
+		}
+
 		return nil
 	default:
 		return handlers.ErrUnsupportedMessageType
