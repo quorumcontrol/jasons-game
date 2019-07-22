@@ -10,7 +10,6 @@ import (
 	"path/filepath"
 	"strings"
 	"text/template"
-	"time"
 	"unicode"
 
 	ptypes "github.com/gogo/protobuf/types"
@@ -80,7 +79,6 @@ func (i *Importer) createTrees(data *ImportPayload) (*NameToDids, error) {
 			return nil, err
 		}
 		ids.Locations[key] = tree.MustId()
-		time.Sleep(1 * time.Second)
 		log.Infof("%s: Created chaintree for locations.%s", tree.MustId(), key)
 	}
 
@@ -90,7 +88,6 @@ func (i *Importer) createTrees(data *ImportPayload) (*NameToDids, error) {
 			return nil, err
 		}
 		ids.Objects[key] = tree.MustId()
-		time.Sleep(1 * time.Second)
 		log.Infof("%s: Created chaintree for objects.%s", tree.MustId(), key)
 	}
 
@@ -113,7 +110,6 @@ func (i *Importer) loadBasicData(tree *consensus.SignedChainTree, data map[strin
 
 	for key, val := range flatPaths {
 		tree, err = i.network.UpdateChainTree(tree, fmt.Sprintf("jasons-game/%s", key), val)
-		time.Sleep(1 * time.Second)
 
 		if err != nil {
 			return tree, errors.Wrap(err, "updating location data")
@@ -134,7 +130,6 @@ func (i *Importer) loadInventory(tree *consensus.SignedChainTree, data []string)
 
 	for _, objectDid := range data {
 		err = inventoryTree.Add(objectDid)
-		time.Sleep(1 * time.Second)
 		if err != nil {
 			return inventoryTree.Tree(), err
 		}
@@ -250,7 +245,6 @@ func (i *Importer) loadInteractions(tree *consensus.SignedChainTree, data []*Imp
 		}
 
 		err = interactionTree.AddInteraction(interaction)
-		time.Sleep(1 * time.Second)
 		if err != nil {
 			return interactionTree.Tree(), err
 		}
