@@ -53,6 +53,11 @@ func main() {
 		panic(errors.Wrap(err, "error configuring S3 data store"))
 	}
 
+	ds, err = config.LocalDataStore("/tmp/importer")
+	if err != nil {
+		panic(errors.Wrap(err, "error configuring local data store"))
+	}
+
 	notaryGroup, err := network.SetupTupeloNotaryGroup(ctx, *isLocal)
 	if err != nil {
 		panic(errors.Wrap(err, "error setting up tupelo notary group"))
