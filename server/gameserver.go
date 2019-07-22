@@ -12,6 +12,7 @@ import (
 
 	"github.com/quorumcontrol/jasons-game/config"
 	"github.com/quorumcontrol/jasons-game/game"
+	"github.com/quorumcontrol/jasons-game/inkfaucet/ink"
 
 	"github.com/quorumcontrol/tupelo-go-sdk/gossip3/types"
 
@@ -109,9 +110,22 @@ func (gs *GameServer) getOrCreateSession(sess *jasonsgame.Session, stream jasons
 			panic(errors.Wrap(err, "error getting player tree"))
 		}
 
+		inkDID := os.Getenv("INK_DID")
+		if inkDID == "" {
+			panic(errors.New("INK_DID must be set"))
+		}
+
+		inkFaucet, err := ink.NewChainTreeInkFaucet(ink.ChainTreeInkFaucetConfig{
+			Net:         net,
+			InkOwnerDID: inkDID,
+		})
+		if err != nil {
+			panic(errors.Wrap(err, "error creating ink faucet"))
+		}
+
 		if playerTree == nil {
 			log.Debug("player doesn't have an existing chaintree; spawning invite UI")
-			return actor.EmptyRootContext.Spawn(ui.NewUIInviteProps(stream, net))
+			return actor.EmptyRootContext.Spawn(ui.NewUIInviteProps(stream, net, inkFaucet))
 		}
 
 		log.Debugf("creating actors")

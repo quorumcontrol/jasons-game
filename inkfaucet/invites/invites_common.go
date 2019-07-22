@@ -4,10 +4,15 @@ import (
 	"context"
 
 	"github.com/AsynkronIT/protoactor-go/actor"
+	"github.com/btcsuite/btcutil/base58"
+	"github.com/ethereum/go-ethereum/crypto"
 	logging "github.com/ipfs/go-log"
-	"github.com/libp2p/go-libp2p-core/network"
+	"github.com/quorumcontrol/tupelo-go-sdk/consensus"
 
+	"github.com/quorumcontrol/jasons-game/game"
+	"github.com/quorumcontrol/jasons-game/inkfaucet/ink"
 	"github.com/quorumcontrol/jasons-game/inkfaucet/inkfaucet"
+	"github.com/quorumcontrol/jasons-game/network"
 )
 
 var log = logging.Logger("invites")
@@ -15,12 +20,12 @@ var log = logging.Logger("invites")
 type InvitesActor struct {
 	parentCtx context.Context
 	handler   *actor.PID
-	inkFaucet *actor.PID
+	inkFaucet ink.Faucet
 	net       network.Network
 }
 
 type InvitesActorConfig struct {
-	InkFaucet *actor.PID
+	InkFaucet ink.Faucet
 	Net       network.Network
 }
 
@@ -58,16 +63,108 @@ func (i *InvitesActor) Receive(actorCtx actor.Context) {
 		i.handleInviteRequest(actorCtx)
 	case *inkfaucet.InviteSubmission:
 		log.Info("invites actor received invite submission")
-		i.handleInviteSubmission(actorCtx)
+		i.handleInviteSubmission(actorCtx, msg)
 	default:
 		log.Warningf("invites actor received unknown message type %T: %+v", msg, msg)
 	}
 }
 
-func (i *InvitesActor) handleInviteSubmission(actorCtx actor.Context) {
-	// TODO: See if private key in submission matches a chaintree,
-	//  create a new player chaintree if so,
-	//  change owner of invite CT to new player,
-	//  send all ink in invite CT to new player CT,
-	//  delete invite CT.
+func (i *InvitesActor) handleInviteSubmission(actorCtx actor.Context, msg *inkfaucet.InviteSubmission) {
+	encodedKey := msg.Invite
+	serializedKey := base58.Decode(encodedKey)
+
+	key, err := crypto.ToECDSA(serializedKey)
+	if err != nil {
+		actorCtx.Respond(&inkfaucet.InviteSubmissionResponse{
+			Error: "invalid invite code",
+		})
+		return
+	}
+
+	inviteChainTree, err := i.net.GetChainTreeByName(encodedKey)
+	if err != nil {
+		actorCtx.Respond(&inkfaucet.InviteSubmissionResponse{
+			Error: "invalid invite code",
+		})
+		return
+	}
+
+	if inviteChainTree == nil {
+		actorCtx.Respond(&inkfaucet.InviteSubmissionResponse{
+			Error: "invalid invite code",
+		})
+		return
+	}
+
+	// FIXME: Can't import game here; it's a cycle
+	playerChainTree, err := game.CreatePlayerTree(i.net)
+	if err != nil {
+		actorCtx.Respond(&inkfaucet.InviteSubmissionResponse{
+			Error: "invalid invite code",
+		})
+		return
+	}
+
+	playerChainTreeOwners, err := playerChainTree.Authentications()
+	if err != nil {
+		actorCtx.Respond(&inkfaucet.InviteSubmissionResponse{
+			Error: "invalid invite code",
+		})
+		return
+	}
+
+	newInviteChainTree, err := i.net.ChangeEphemeralChainTreeOwner(inviteChainTree, key, playerChainTreeOwners)
+	if err != nil {
+		actorCtx.Respond(&inkfaucet.InviteSubmissionResponse{
+			Error: "invalid invite code",
+		})
+		return
+	}
+
+	newInviteTree, err := newInviteChainTree.ChainTree.Tree(context.TODO())
+	if err != nil {
+		actorCtx.Respond(&inkfaucet.InviteSubmissionResponse{
+			Error: "invalid invite code",
+		})
+		return
+	}
+
+	inkTokenName := i.inkFaucet.TokenName()
+
+	// TODO: Move all the ink transfer code to its own func
+	tokenLedger := consensus.NewTreeLedger(newInviteTree, inkTokenName)
+
+	inkBalance, err := tokenLedger.Balance()
+	if err != nil {
+		actorCtx.Respond(&inkfaucet.InviteSubmissionResponse{
+			Error: "invalid invite code",
+		})
+		return
+	}
+
+	tokenPayload, err := i.net.SendInk(newInviteChainTree, inkTokenName, inkBalance, playerChainTree.Did())
+	if err != nil {
+		actorCtx.Respond(&inkfaucet.InviteSubmissionResponse{
+			Error: "invalid invite code",
+		})
+		return
+	}
+
+	err = i.net.ReceiveInk(playerChainTree.ChainTree(), tokenPayload)
+	if err != nil {
+		actorCtx.Respond(&inkfaucet.InviteSubmissionResponse{
+			Error: "invalid invite code",
+		})
+		return
+	}
+
+	err = i.net.DeleteChainTreeByName(encodedKey)
+	if err != nil {
+		actorCtx.Respond(&inkfaucet.InviteSubmissionResponse{
+			Error: "invalid invite code",
+		})
+		return
+	}
+
+	actorCtx.Respond(&inkfaucet.InviteSubmissionResponse{})
 }

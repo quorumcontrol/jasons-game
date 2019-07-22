@@ -71,7 +71,7 @@ func (ifr *InkFaucetRouter) Start(allowInvites bool) error {
 
 	if allowInvites {
 		invitesActor := invites.NewInvitesActor(ifr.parentCtx, invites.InvitesActorConfig{
-			InkFaucet: inkAct.PID(),
+			InkFaucet: ifr.inkFaucet,
 			Net:       ifr.net,
 		})
 

@@ -1,6 +1,7 @@
 package ui
 
 import (
+	"context"
 	"fmt"
 	"reflect"
 	"time"
@@ -8,6 +9,10 @@ import (
 	"github.com/AsynkronIT/protoactor-go/actor"
 	"github.com/gogo/protobuf/proto"
 	logging "github.com/ipfs/go-log"
+
+	"github.com/quorumcontrol/jasons-game/inkfaucet/ink"
+	"github.com/quorumcontrol/jasons-game/inkfaucet/inkfaucet"
+	"github.com/quorumcontrol/jasons-game/inkfaucet/invites"
 	"github.com/quorumcontrol/jasons-game/network"
 	"github.com/quorumcontrol/jasons-game/pb/jasonsgame"
 )
@@ -67,16 +72,19 @@ func NewUIProps(stream remoteStream, net network.Network) *actor.Props {
 }
 
 type UIInviteServer struct {
-	network  network.Network
-	stream   remoteStream
-	doneChan doneChan
+	network   network.Network
+	stream    remoteStream
+	doneChan  doneChan
+	inkFaucet ink.Faucet
+	invites   *actor.PID
 }
 
-func NewUIInviteProps(stream remoteStream, net network.Network) *actor.Props {
+func NewUIInviteProps(stream remoteStream, net network.Network, inkFaucet ink.Faucet) *actor.Props {
 	return actor.PropsFromProducer(func() actor.Actor {
 		return &UIInviteServer{
-			network: net,
-			stream:  stream,
+			network:   net,
+			stream:    stream,
+			inkFaucet: inkFaucet,
 		}
 	})
 }
@@ -214,12 +222,21 @@ func (us *UIServer) sendDone() {
 func (uis *UIInviteServer) Receive(actorCtx actor.Context) {
 	switch msg := actorCtx.Message().(type) {
 	case *actor.Started:
+		invitesActor := invites.NewInvitesActor(context.TODO(), invites.InvitesActorConfig{
+			InkFaucet: uis.inkFaucet,
+			Net:       uis.network,
+		})
+		actorCtx.Spawn(actor.PropsFromProducer(func() actor.Actor {
+			return invitesActor
+		}))
+		uis.invites = invitesActor.PID()
 		actorCtx.Send(actorCtx.Self(), &jasonsgame.MessageToUser{Message: "Welcome to Jason's Game! Please enter your invite code."})
 
 	case *actor.Stopping:
 		if uis.doneChan != nil {
 			uis.doneChan <- struct{}{}
 		}
+		actorCtx.Poison(uis.invites)
 
 	case *SetStream:
 		// free up the previous stream
@@ -249,7 +266,29 @@ func (uis *UIInviteServer) Receive(actorCtx actor.Context) {
 		}
 
 	case *jasonsgame.UserInput:
-		// TODO: Spawn invites actor here and send it an invite submission
+		inviteSubmission := &inkfaucet.InviteSubmission{
+			Invite: msg.Message,
+		}
+
+		req := actorCtx.RequestFuture(uis.invites, inviteSubmission, 10 * time.Second)
+
+		uncastInviteResp, err := req.Result()
+		if err != nil {
+			panic("invalid invite code")
+		}
+
+		inviteResp, ok := uncastInviteResp.(*inkfaucet.InviteSubmissionResponse)
+		if !ok {
+			panic("invalid invite code")
+		}
+
+		if inviteResp.GetError() != "" {
+			panic("invalid invite code")
+		}
+
+		actorCtx.Send(actorCtx.Self(), &jasonsgame.MessageToUser{Message: "Invite code accepted."})
+
+		// TODO: Spawn a normal UIServer here, hand the stream and network over to it, & shut this actor down.
 	}
 }
 
