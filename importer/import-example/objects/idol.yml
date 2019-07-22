@@ -24,5 +24,4 @@ interactions:
       failure_interaction:
         type: RespondInteraction
         value:
-          command: "touch the idol"
-          response: "you probably shouldn't do that"
+          response: "nomel trebrehs"
