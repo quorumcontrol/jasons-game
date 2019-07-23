@@ -92,7 +92,7 @@ func (i *Importer) createTrees(data *ImportPayload) (*NameToDids, error) {
 
 func (i *Importer) loadBasicData(tree *consensus.SignedChainTree, data map[string]interface{}) (*consensus.SignedChainTree, error) {
 	var err error
-	if data == nil || len(data) == 0 {
+	if len(data) == 0 {
 		return tree, err
 	}
 
@@ -118,7 +118,7 @@ func (i *Importer) loadBasicData(tree *consensus.SignedChainTree, data map[strin
 
 func (i *Importer) loadInventory(tree *consensus.SignedChainTree, data []string) (*consensus.SignedChainTree, error) {
 	var err error
-	if data == nil || len(data) == 0 {
+	if len(data) == 0 {
 		return tree, err
 	}
 
@@ -228,7 +228,7 @@ func (i *Importer) convertImportInteraction(attrs *ImportInteraction) (game.Inte
 
 func (i *Importer) loadInteractions(tree *consensus.SignedChainTree, data []*ImportInteraction) (*consensus.SignedChainTree, error) {
 	var err error
-	if data == nil || len(data) == 0 {
+	if len(data) == 0 {
 		return tree, err
 	}
 
@@ -272,7 +272,7 @@ func (i *Importer) loadLocations(data map[string]*ImportLocation, ids *NameToDid
 			return err
 		}
 
-		tree, err = i.loadInventory(tree, locData.Inventory)
+		_, err = i.loadInventory(tree, locData.Inventory)
 		if err != nil {
 			return err
 		}
@@ -299,7 +299,7 @@ func (i *Importer) loadObjects(data map[string]*ImportObject, ids *NameToDids) e
 			return err
 		}
 
-		tree, err = i.loadInteractions(tree, objData.Interactions)
+		_, err = i.loadInteractions(tree, objData.Interactions)
 		if err != nil {
 			return err
 		}

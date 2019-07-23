@@ -34,6 +34,7 @@ func TestImportIntegration(t *testing.T) {
 
 	path := "import-example"
 	ids, err := New(net).Import(path)
+	require.Nil(t, err)
 	rootCtx.Send(game, &jasonsgame.UserInput{Message: fmt.Sprintf("connect location %s as enter importer-world", ids.Locations["home"])})
 	time.Sleep(10 * time.Millisecond)
 

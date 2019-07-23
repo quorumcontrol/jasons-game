@@ -19,7 +19,10 @@ func main() {
 	logLevel := flag.String("log", "debug", "log level for importer")
 	flag.Parse()
 
-	logging.SetLogLevel("importer", *logLevel)
+	err := logging.SetLogLevel("importer", *logLevel)
+	if err != nil {
+		panic(err)
+	}
 
 	if *importPath == "" {
 		panic(fmt.Errorf("Must set -path to directory to import"))
@@ -45,7 +48,7 @@ func main() {
 		}
 	}
 
-	_, err := importer.New(net).Import(*importPath)
+	_, err = importer.New(net).Import(*importPath)
 	if err != nil {
 		panic(err)
 	}
