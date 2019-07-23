@@ -106,15 +106,22 @@ func (h *UnrestrictedRemoveHandler) Handle(msg proto.Message) error {
 		}
 
 		future := actor.NewFuture(10 * time.Second)
+		subscriptionReadyFuture := actor.NewFuture(1 * time.Second)
 		pid := actor.EmptyRootContext.Spawn(actor.PropsFromFunc(func(actorCtx actor.Context) {
 			switch msg := actorCtx.Message().(type) {
 			case *actor.Started:
 				actorCtx.Spawn(h.network.NewCurrentStateSubscriptionProps(objectTree.MustId()))
+				actorCtx.Send(subscriptionReadyFuture.PID(), true)
 			case *signatures.CurrentState:
 				actorCtx.Send(future.PID(), msg)
 			}
 		}))
 		defer actor.EmptyRootContext.Stop(pid)
+
+		_, err = subscriptionReadyFuture.Result()
+		if err != nil {
+			return fmt.Errorf("error subscribing to object current state change %v", handleRollbacks(err, rollbacks))
+		}
 
 		if err := targetHandler.Handle(transferredObjectMessage); err != nil {
 			return fmt.Errorf("error with target handler: %v", handleRollbacks(err, rollbacks))
