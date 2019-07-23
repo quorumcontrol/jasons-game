@@ -4,7 +4,7 @@ go 1.12
 
 require (
 	github.com/AsynkronIT/protoactor-go v0.0.0-20190429152931-21e2d03dcae5
-	github.com/aws/aws-sdk-go v1.15.60
+	github.com/aws/aws-sdk-go v1.21.0
 	github.com/dgraph-io/badger v1.6.0 // indirect
 	github.com/ethereum/go-ethereum v1.8.27
 	github.com/gobuffalo/packr/v2 v2.5.3-0.20190708182234-662c20c19dde
@@ -18,7 +18,7 @@ require (
 	github.com/ipfs/go-cid v0.0.2
 	github.com/ipfs/go-datastore v0.0.5
 	github.com/ipfs/go-ds-badger v0.0.5
-	github.com/ipfs/go-ds-s3 v0.0.0-00010101000000-000000000000
+	github.com/ipfs/go-ds-s3 v0.0.1
 	github.com/ipfs/go-ipfs-blockstore v0.0.1
 	github.com/ipfs/go-ipfs-config v0.0.6
 	github.com/ipfs/go-ipfs-exchange-offline v0.0.1
@@ -35,15 +35,15 @@ require (
 	github.com/mr-tron/base58 v1.1.2
 	github.com/pkg/errors v0.8.1
 	github.com/quorumcontrol/chaintree v0.0.0-20190709145156-03b818830f38
-	github.com/quorumcontrol/community v0.0.0-20190716000000-efb332722109442e527251ae60d5a919db7ac8c6
-	github.com/quorumcontrol/messages/build/go v0.0.0-20190716095704-9acdbae78c93
-	github.com/quorumcontrol/tupelo-go-sdk v0.5.1
+	github.com/quorumcontrol/community v0.0.0-20190722000000-5f668465bdd9673c3cfbe29771e54f221432cf9c
+	github.com/quorumcontrol/messages/build/go v0.0.0-20190723140659-c8a3565a7c72
+	github.com/quorumcontrol/tupelo-go-sdk v0.5.3-rc1
 	github.com/shibukawa/configdir v0.0.0-20170330084843-e180dbdc8da0
 	github.com/spf13/cobra v0.0.5
 	github.com/stretchr/testify v1.3.0
 	github.com/zserge/webview v0.0.0-20190123072648-16c93bcaeaeb
-	golang.org/x/crypto v0.0.0-20190621222207-cc06ce4a13d4
-	google.golang.org/grpc v1.21.1
+	golang.org/x/crypto v0.0.0-20190701094942-4def268fd1a4
+	google.golang.org/grpc v1.22.0
 	gopkg.in/yaml.v2 v2.2.2
 )
 

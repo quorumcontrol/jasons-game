@@ -72,7 +72,7 @@ func TestCreateChainTree(t *testing.T) {
 	key, err := crypto.GenerateKey()
 	require.Nil(t, err)
 
-	ps := remote.NewNetworkPubSub(node)
+	ps := remote.NewNetworkPubSub(node.GetPubSub())
 
 	tup := &Tupelo{
 		Store:        nodestore.MustMemoryStore(ctx),
@@ -97,7 +97,7 @@ func TestGetTip(t *testing.T) {
 	key, err := crypto.GenerateKey()
 	require.Nil(t, err)
 
-	ps := remote.NewNetworkPubSub(node)
+	ps := remote.NewNetworkPubSub(node.GetPubSub())
 
 	tup := &Tupelo{
 		Store:        nodestore.MustMemoryStore(ctx),

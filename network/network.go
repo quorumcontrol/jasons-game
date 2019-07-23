@@ -153,7 +153,7 @@ func NewRemoteNetworkWithConfig(ctx context.Context, config *RemoteNetworkConfig
 	remote.NewRouter(tupeloP2PHost)
 	group.SetupAllRemoteActors(&networkKey.PublicKey)
 
-	tupeloPubSub := remote.NewNetworkPubSub(tupeloP2PHost)
+	tupeloPubSub := remote.NewNetworkPubSub(tupeloP2PHost.GetPubSub())
 
 	tup := &Tupelo{
 		NotaryGroup:  group,
