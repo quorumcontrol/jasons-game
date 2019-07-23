@@ -7,6 +7,7 @@ require (
 	github.com/aws/aws-sdk-go v1.21.0
 	github.com/dgraph-io/badger v1.6.0 // indirect
 	github.com/ethereum/go-ethereum v1.8.27
+	github.com/go-stack/stack v1.8.0
 	github.com/gobuffalo/packr/v2 v2.5.3-0.20190708182234-662c20c19dde
 	github.com/gogo/protobuf v1.2.1
 	github.com/google/uuid v1.1.1
@@ -44,7 +45,6 @@ require (
 	golang.org/x/crypto v0.0.0-20190701094942-4def268fd1a4
 	google.golang.org/grpc v1.22.0
 	gopkg.in/yaml.v2 v2.2.2
-	github.com/go-stack/stack v1.8.0
 )
 
 replace github.com/libp2p/go-libp2p-pubsub v0.1.0 => github.com/quorumcontrol/go-libp2p-pubsub v0.0.4-0.20190528094025-e4e719f73e7a
