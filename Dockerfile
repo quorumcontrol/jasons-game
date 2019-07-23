@@ -10,12 +10,10 @@ COPY . .
 ENV GO111MODULE on
 
 RUN go install -mod=vendor -v -a -gcflags=-trimpath="${PWD}" -asmflags=-trimpath="${PWD}"
-RUN go install -mod=vendor -v -a ./jason
 
 FROM alpine:3.9
 LABEL maintainer="dev@quorumcontrol.com"
 
 COPY --from=build /go/bin/jasons-game /usr/bin/jasons-game
-COPY --from=build /go/bin/jason /usr/bin/jason
 
 ENTRYPOINT ["/usr/bin/jason"]
