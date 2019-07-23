@@ -245,7 +245,7 @@ func (g *Game) handleInteractionInput(actorCtx actor.Context, cmd *interactionCo
 			parse:       nextInteraction.GetCommand(),
 			interaction: nextInteraction,
 		}
-		return g.handleInteractionInput(actorCtx, nextCmd, "")
+		return g.handleInteractionInput(actorCtx, nextCmd, args)
 	default:
 		g.sendUserMessage(actorCtx, fmt.Sprintf("no interaction matching %s, type %v", cmd.Parse(), reflect.TypeOf(interaction)))
 	}
