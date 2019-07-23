@@ -12,6 +12,7 @@ require (
 	github.com/google/uuid v1.1.1
 	github.com/gorilla/mux v1.7.1
 	github.com/hashicorp/go-uuid v1.0.1
+	github.com/imdario/mergo v0.3.7
 	github.com/improbable-eng/grpc-web v0.9.5
 	github.com/ipfs/go-blockservice v0.1.1
 	github.com/ipfs/go-cid v0.0.2
@@ -43,6 +44,7 @@ require (
 	github.com/zserge/webview v0.0.0-20190123072648-16c93bcaeaeb
 	golang.org/x/crypto v0.0.0-20190621222207-cc06ce4a13d4
 	google.golang.org/grpc v1.21.1
+	gopkg.in/yaml.v2 v2.2.2
 )
 
 replace github.com/libp2p/go-libp2p-pubsub v0.1.0 => github.com/quorumcontrol/go-libp2p-pubsub v0.0.4-0.20190528094025-e4e719f73e7a
