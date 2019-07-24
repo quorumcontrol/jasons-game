@@ -1,7 +1,7 @@
 version: 2
 jobs:
   build:
-    resource_class: large
+    resource_class: medium+
     docker:
       - image: circleci/golang:1.12.5
     steps:
