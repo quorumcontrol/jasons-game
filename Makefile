@@ -45,7 +45,7 @@ $(FIRSTGOPATH)/bin/gotestsum:
 
 bin/jasonsgame-$(BUILD): $(gosources) $(generated) go.mod go.sum
 	mkdir -p bin
-	go build -tags='desktop $(BUILD)' -o ./bin/jasonsgame-$(BUILD)
+	go build -tags='desktop $(BUILD)' -ldflags="-X main.inkDID=${INK_DID}" -o ./bin/jasonsgame-$(BUILD)
 
 build: bin/jasonsgame-$(BUILD)
 

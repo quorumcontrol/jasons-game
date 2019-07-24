@@ -33,7 +33,7 @@ func (i *InvitesActor) handleInviteRequest(actorCtx actor.Context) {
 
 	log.Debugf("invite actor ink request: %+v", *inkReq)
 
-	inviteInkReq := actorCtx.RequestFuture(i.inkFaucet, inkReq, 30 * time.Second)
+	inviteInkReq := actorCtx.RequestFuture(i.inkActor.PID(), inkReq, 30 * time.Second)
 
 	uncastInkResp, err := inviteInkReq.Result()
 	if err != nil {

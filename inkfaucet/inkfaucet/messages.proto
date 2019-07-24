@@ -15,6 +15,7 @@ message InviteSubmission {
 
 message InviteSubmissionResponse {
     string error = 1;
+    string player_chain_id = 2;
 }
 
 message InkRequest {

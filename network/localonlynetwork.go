@@ -190,6 +190,16 @@ func (ln *LocalNetwork) ChangeChainTreeOwner(tree *consensus.SignedChainTree, ne
 	return ln.playTransactions(tree, []*transactions.Transaction{transaction})
 }
 
+func (ln *LocalNetwork) ChangeEphemeralChainTreeOwner(tree *consensus.SignedChainTree, privateKey *ecdsa.PrivateKey, newKeys []string) (*consensus.SignedChainTree, error) {
+	// placeholder to fulfill the interface
+	return nil, nil
+}
+
+func (ln *LocalNetwork) DeleteChainTreeByName(name string) error {
+	// placeholder to fulfill the interface
+	return nil
+}
+
 func (rn *LocalNetwork) NewCurrentStateSubscriptionProps(did string) *actor.Props {
 	return actor.PropsFromFunc(func(actorCtx actor.Context) {
 		switch actorCtx.Message().(type) {

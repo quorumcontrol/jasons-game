@@ -10,11 +10,10 @@ import (
 	logging "github.com/ipfs/go-log"
 	"github.com/pkg/errors"
 
+	"github.com/quorumcontrol/tupelo-go-sdk/gossip3/types"
+
 	"github.com/quorumcontrol/jasons-game/config"
 	"github.com/quorumcontrol/jasons-game/game"
-	"github.com/quorumcontrol/jasons-game/inkfaucet/ink"
-
-	"github.com/quorumcontrol/tupelo-go-sdk/gossip3/types"
 
 	"github.com/quorumcontrol/jasons-game/network"
 	"github.com/quorumcontrol/jasons-game/pb/jasonsgame"
@@ -30,21 +29,28 @@ type GameServer struct {
 	group       *types.NotaryGroup
 	parentCtx   context.Context
 	sessionPath string
+	inkDID      string
 }
 
-func NewGameServer(ctx context.Context, connectToLocalnet bool) *GameServer {
-	group, err := network.SetupTupeloNotaryGroup(ctx, connectToLocalnet)
+type GameServerConfig struct {
+	LocalNet bool
+	InkDID   string
+}
+
+func NewGameServer(ctx context.Context, cfg GameServerConfig) *GameServer {
+	group, err := network.SetupTupeloNotaryGroup(ctx, cfg.LocalNet)
 	if err != nil {
 		panic(errors.Wrap(err, "setting up notary group"))
 	}
 
-	cfg := config.EnsureExists(sessionStorageDir)
+	sessionCfg := config.EnsureExists(sessionStorageDir)
 
 	return &GameServer{
 		sessions:    make(map[string]*actor.PID),
 		group:       group,
 		parentCtx:   ctx,
-		sessionPath: cfg.Path,
+		sessionPath: sessionCfg.Path,
+		inkDID:      cfg.InkDID,
 	}
 }
 
@@ -110,22 +116,11 @@ func (gs *GameServer) getOrCreateSession(sess *jasonsgame.Session, stream jasons
 			panic(errors.Wrap(err, "error getting player tree"))
 		}
 
-		inkDID := os.Getenv("INK_DID")
-		if inkDID == "" {
-			panic(errors.New("INK_DID must be set"))
-		}
-
-		inkFaucet, err := ink.NewChainTreeInkFaucet(ink.ChainTreeInkFaucetConfig{
-			Net:         net,
-			InkOwnerDID: inkDID,
-		})
-		if err != nil {
-			panic(errors.Wrap(err, "error creating ink faucet"))
-		}
-
 		if playerTree == nil {
 			log.Debug("player doesn't have an existing chaintree; spawning invite UI")
-			return actor.EmptyRootContext.Spawn(ui.NewUIInviteProps(stream, net, inkFaucet))
+			uiInviteActor := actor.EmptyRootContext.Spawn(ui.NewUIInviteProps(stream, net, gs.inkDID))
+			gs.sessions[sess.Uuid] = uiInviteActor
+			return uiInviteActor
 		}
 
 		log.Debugf("creating actors")
@@ -139,5 +134,19 @@ func (gs *GameServer) getOrCreateSession(sess *jasonsgame.Session, stream jasons
 			panic(errors.Wrap(err, "error starting game actor"))
 		}
 	}
+
+	uncastFinished, err := actor.EmptyRootContext.RequestFuture(uiActor, ui.Finished{}, 2 * time.Second).Result()
+	if err != nil {
+		panic(errors.Wrap(err, "error querying finished state of ui actor"))
+	}
+
+	finished := uncastFinished.(bool)
+
+	if finished {
+		actor.EmptyRootContext.Poison(uiActor)
+		delete(gs.sessions, sess.Uuid)
+		return gs.getOrCreateSession(sess, stream)
+	}
+
 	return uiActor
 }

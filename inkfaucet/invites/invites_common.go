@@ -9,7 +9,6 @@ import (
 	logging "github.com/ipfs/go-log"
 	"github.com/quorumcontrol/tupelo-go-sdk/consensus"
 
-	"github.com/quorumcontrol/jasons-game/game"
 	"github.com/quorumcontrol/jasons-game/inkfaucet/ink"
 	"github.com/quorumcontrol/jasons-game/inkfaucet/inkfaucet"
 	"github.com/quorumcontrol/jasons-game/network"
@@ -20,19 +19,22 @@ var log = logging.Logger("invites")
 type InvitesActor struct {
 	parentCtx context.Context
 	handler   *actor.PID
-	inkFaucet ink.Faucet
+	inkActor  *ink.InkActor
+	inkDID    string
 	net       network.Network
 }
 
 type InvitesActorConfig struct {
-	InkFaucet ink.Faucet
-	Net       network.Network
+	InkActor *ink.InkActor
+	InkDID   string
+	Net      network.Network
 }
 
 func NewInvitesActor(ctx context.Context, cfg InvitesActorConfig) *InvitesActor {
 	return &InvitesActor{
 		parentCtx: ctx,
-		inkFaucet: cfg.InkFaucet,
+		inkActor:  cfg.InkActor,
+		inkDID:    cfg.InkDID,
 		net:       cfg.Net,
 	}
 }
@@ -57,12 +59,12 @@ func (i *InvitesActor) PID() *actor.PID {
 func (i *InvitesActor) Receive(actorCtx actor.Context) {
 	switch msg := actorCtx.Message().(type) {
 	case *actor.Started:
-		log.Info("invites actor started")
+		log.Debug("invites actor started")
 	case *inkfaucet.InviteRequest:
-		log.Info("invites actor received invite request")
+		log.Debug("invites actor received invite request")
 		i.handleInviteRequest(actorCtx)
 	case *inkfaucet.InviteSubmission:
-		log.Info("invites actor received invite submission")
+		log.Debug("invites actor received invite submission")
 		i.handleInviteSubmission(actorCtx, msg)
 	default:
 		log.Warningf("invites actor received unknown message type %T: %+v", msg, msg)
@@ -96,8 +98,7 @@ func (i *InvitesActor) handleInviteSubmission(actorCtx actor.Context, msg *inkfa
 		return
 	}
 
-	// FIXME: Can't import game here; it's a cycle
-	playerChainTree, err := game.CreatePlayerTree(i.net)
+	playerChainTree, err := i.net.CreateNamedChainTree("player")
 	if err != nil {
 		actorCtx.Respond(&inkfaucet.InviteSubmissionResponse{
 			Error: "invalid invite code",
@@ -129,7 +130,7 @@ func (i *InvitesActor) handleInviteSubmission(actorCtx actor.Context, msg *inkfa
 		return
 	}
 
-	inkTokenName := i.inkFaucet.TokenName()
+	inkTokenName := &consensus.TokenName{ChainTreeDID: i.inkDID, LocalName: "ink"}
 
 	// TODO: Move all the ink transfer code to its own func
 	tokenLedger := consensus.NewTreeLedger(newInviteTree, inkTokenName)
@@ -142,7 +143,7 @@ func (i *InvitesActor) handleInviteSubmission(actorCtx actor.Context, msg *inkfa
 		return
 	}
 
-	tokenPayload, err := i.net.SendInk(newInviteChainTree, inkTokenName, inkBalance, playerChainTree.Did())
+	tokenPayload, err := i.net.SendInk(newInviteChainTree, inkTokenName, inkBalance, playerChainTree.MustId())
 	if err != nil {
 		actorCtx.Respond(&inkfaucet.InviteSubmissionResponse{
 			Error: "invalid invite code",
@@ -150,7 +151,7 @@ func (i *InvitesActor) handleInviteSubmission(actorCtx actor.Context, msg *inkfa
 		return
 	}
 
-	err = i.net.ReceiveInk(playerChainTree.ChainTree(), tokenPayload)
+	err = i.net.ReceiveInk(playerChainTree, tokenPayload)
 	if err != nil {
 		actorCtx.Respond(&inkfaucet.InviteSubmissionResponse{
 			Error: "invalid invite code",
@@ -166,5 +167,8 @@ func (i *InvitesActor) handleInviteSubmission(actorCtx actor.Context, msg *inkfa
 		return
 	}
 
-	actorCtx.Respond(&inkfaucet.InviteSubmissionResponse{})
+	actorCtx.Respond(&inkfaucet.InviteSubmissionResponse{
+		PlayerChainId: playerChainTree.MustId(),
+	})
 }
+
