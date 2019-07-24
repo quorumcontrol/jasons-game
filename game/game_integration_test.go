@@ -37,6 +37,7 @@ func loadSignerKeys() ([]*publicKeySet, error) {
 	if !ok {
 		return nil, fmt.Errorf("No caller information")
 	}
+	// TODO: Switchout for toml
 	jsonBytes, err := ioutil.ReadFile(path.Join(path.Dir(filename), "../devdocker/localkeys/public-keys.json"))
 	if err != nil {
 		return nil, err

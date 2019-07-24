@@ -167,11 +167,11 @@ func NewRemoteNetworkWithConfig(ctx context.Context, config *RemoteNetworkConfig
 
 	// now all that setup is done, wait for the tupelo and game bootstrappers
 
-	if _, err = tupeloP2PHost.Bootstrap(TupeloBootstrappers()); err != nil {
-		return nil, err
+	if _, err = tupeloP2PHost.Bootstrap(group.Config().BootstrapAddresses); err != nil {
+		return nil, errors.Wrap(err, "error bootstrapping to tupelo")
 	}
 	if err = tupeloP2PHost.WaitForBootstrap(len(group.Signers), 15*time.Second); err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "error on bootstrap wait for tupelo")
 	}
 
 	log.Infof("started tupelo host %s", tupeloP2PHost.Identity())

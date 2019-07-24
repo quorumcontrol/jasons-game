@@ -2,12 +2,9 @@ package network
 
 import (
 	"context"
-	"encoding/json"
+	"fmt"
 
-	"github.com/ethereum/go-ethereum/common/hexutil"
-	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/gobuffalo/packr/v2"
-	"github.com/quorumcontrol/tupelo-go-sdk/bls"
 	"github.com/quorumcontrol/tupelo-go-sdk/gossip3/types"
 )
 
@@ -17,45 +14,39 @@ type publicKeySet struct {
 	PeerIDBase58Key   string `json:"peerIDBase58Key,omitempty"`
 }
 
-func loadSignerKeys(connectToLocalnet bool) ([]*publicKeySet, error) {
+func loadSignerConfig(connectToLocalnet bool) (*types.Config, error) {
 	// TODO: Referencing devdocker dir here seems gross; should maybe rethink this
 	localBox := packr.New("localKeys", "../devdocker/localkeys")
 	testnetBox := packr.New("testnetKeys", "../devdocker/testnetkeys")
 
-	var jsonBytes []byte
+	var tomlBytes []byte
 	var err error
 
 	if connectToLocalnet {
-		jsonBytes, err = localBox.Find("public-keys.json")
+		// TODO: make this file real
+		tomlBytes, err = localBox.Find("notarygroup.toml")
 	} else {
-		jsonBytes, err = testnetBox.Find("public-keys.json")
+		tomlBytes, err = testnetBox.Find("notarygroup.toml")
 	}
 
+	ngConfig, err := types.TomlToConfig(string(tomlBytes))
 	if err != nil {
-		return nil, err
-	}
-	var keySet []*publicKeySet
-	if err := json.Unmarshal(jsonBytes, &keySet); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("error loading notary group config")
 	}
 
-	return keySet, nil
+	return ngConfig, nil
 }
 
 func SetupTupeloNotaryGroup(ctx context.Context, connectToLocalnet bool) (*types.NotaryGroup, error) {
-	keys, err := loadSignerKeys(connectToLocalnet)
+	config, err := loadSignerConfig(connectToLocalnet)
 	if err != nil {
 		return nil, err
 	}
-	group := types.NewNotaryGroup("tupelo-in-local-docker")
-	for _, keySet := range keys {
-		ecdsaBytes := hexutil.MustDecode(keySet.EcdsaHexPublicKey)
-		verKeyBytes := hexutil.MustDecode(keySet.BlsHexPublicKey)
-		ecdsaPubKey, err := crypto.UnmarshalPubkey(ecdsaBytes)
-		if err != nil {
-			return nil, err
-		}
-		signer := types.NewRemoteSigner(ecdsaPubKey, bls.BytesToVerKey(verKeyBytes))
+
+	group := types.NewNotaryGroupFromConfig(config)
+
+	for _, keySet := range config.Signers {
+		signer := types.NewRemoteSigner(keySet.DestKey, keySet.VerKey)
 		group.AddSigner(signer)
 	}
 
