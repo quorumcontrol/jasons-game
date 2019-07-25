@@ -4,20 +4,12 @@ package game
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"os"
-	"path"
-	"runtime"
 	"testing"
 	"time"
 
 	"github.com/AsynkronIT/protoactor-go/actor"
-	"github.com/ethereum/go-ethereum/common/hexutil"
-	"github.com/ethereum/go-ethereum/crypto"
-	"github.com/quorumcontrol/tupelo-go-sdk/bls"
-	"github.com/quorumcontrol/tupelo-go-sdk/gossip3/types"
 	"github.com/stretchr/testify/require"
 
 	"github.com/quorumcontrol/jasons-game/config"
@@ -32,49 +24,11 @@ type publicKeySet struct {
 	PeerIDBase58Key   string `json:"peerIDBase58Key,omitempty"`
 }
 
-func loadSignerKeys() ([]*publicKeySet, error) {
-	_, filename, _, ok := runtime.Caller(0)
-	if !ok {
-		return nil, fmt.Errorf("No caller information")
-	}
-	// TODO: Switchout for toml
-	jsonBytes, err := ioutil.ReadFile(path.Join(path.Dir(filename), "../devdocker/localkeys/public-keys.json"))
-	if err != nil {
-		return nil, err
-	}
-	var keySet []*publicKeySet
-	if err := json.Unmarshal(jsonBytes, &keySet); err != nil {
-		return nil, err
-	}
-
-	return keySet, nil
-}
-
-func setupNotaryGroup(ctx context.Context) (*types.NotaryGroup, error) {
-	keys, err := loadSignerKeys()
-	if err != nil {
-		return nil, err
-	}
-	group := types.NewNotaryGroup("hardcodedprivatekeysareunsafe")
-	for _, keySet := range keys {
-		ecdsaBytes := hexutil.MustDecode(keySet.EcdsaHexPublicKey)
-		verKeyBytes := hexutil.MustDecode(keySet.BlsHexPublicKey)
-		ecdsaPubKey, err := crypto.UnmarshalPubkey(ecdsaBytes)
-		if err != nil {
-			return nil, err
-		}
-		signer := types.NewRemoteSigner(ecdsaPubKey, bls.BytesToVerKey(verKeyBytes))
-		group.AddSigner(signer)
-	}
-
-	return group, nil
-}
-
 func TestFullIntegration(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	group, err := setupNotaryGroup(ctx)
+	group, err := network.SetupTupeloNotaryGroup(ctx, true)
 	require.Nil(t, err)
 
 	path := "/tmp/test-full-game"

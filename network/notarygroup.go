@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/gobuffalo/packr/v2"
+	packr "github.com/gobuffalo/packr/v2"
 	"github.com/quorumcontrol/tupelo-go-sdk/gossip3/types"
 )
 
@@ -23,7 +23,6 @@ func loadSignerConfig(connectToLocalnet bool) (*types.Config, error) {
 	var err error
 
 	if connectToLocalnet {
-		// TODO: make this file real
 		tomlBytes, err = localBox.Find("notarygroup.toml")
 	} else {
 		tomlBytes, err = testnetBox.Find("notarygroup.toml")
