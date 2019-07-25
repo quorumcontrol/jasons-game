@@ -8,7 +8,7 @@ import (
 	"github.com/quorumcontrol/tupelo-go-sdk/gossip3/types"
 )
 
-func loadSignerConfig(connectToLocalnet bool) (*types.Config, error) {
+func LoadSignerConfig(connectToLocalnet bool) (*types.Config, error) {
 	// TODO: Referencing devdocker dir here seems gross; should maybe rethink this
 	localBox := packr.New("localKeys", "../devdocker/localkeys")
 	testnetBox := packr.New("testnetKeys", "../devdocker/testnetkeys")
@@ -35,7 +35,7 @@ func loadSignerConfig(connectToLocalnet bool) (*types.Config, error) {
 }
 
 func SetupTupeloNotaryGroup(ctx context.Context, connectToLocalnet bool) (*types.NotaryGroup, error) {
-	config, err := loadSignerConfig(connectToLocalnet)
+	config, err := LoadSignerConfig(connectToLocalnet)
 	if err != nil {
 		return nil, err
 	}

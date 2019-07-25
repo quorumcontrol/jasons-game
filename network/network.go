@@ -32,11 +32,6 @@ const BlockTopic = "jasons-game-tupelo-world-blocks"
 const ShoutTopic = "jasons-game-shouting-players"
 const GeneralTopic = "jasons-game-general"
 
-var DefaultTupeloBootstrappers = []string{
-	"/ip4/18.185.81.67/tcp/34001/ipfs/16Uiu2HAmJTmontYmNLgWPFLoWZYuEZ6fWhaqHh7vQABncaBWnZaW",
-	"/ip4/3.217.212.32/tcp/34001/ipfs/16Uiu2HAmL5sbPp4LZJJhQTtTkpaNNEPUxrRoiyJqD8Mkj5tJkiow",
-}
-
 var DefaultGameBootstrappers = []string{
 	"/ip4/3.208.36.214/tcp/34001/ipfs/16Uiu2HAmGsma99vu8SaheLdCEvMAH2VGbiQ1UH75ctjEVyz89ck6",
 	"/ip4/13.57.66.151/tcp/34001/ipfs/16Uiu2HAmFsyL7pKNRYJAhsJCF9aMLajnr2DN8jskUx6bsVcumGhB",
@@ -425,12 +420,18 @@ func (n *RemoteNetwork) SendInk(tree *consensus.SignedChainTree, tokenName *cons
 	return tokenPayload, nil
 }
 
-func TupeloBootstrappers() []string {
+func TupeloBootstrappers() ([]string, error) {
 	if envSpecifiedNodes, ok := os.LookupEnv("TUPELO_BOOTSTRAP_NODES"); ok {
 		log.Debugf("using tupelo bootstrap nodes: %s", envSpecifiedNodes)
-		return strings.Split(envSpecifiedNodes, ",")
+		return strings.Split(envSpecifiedNodes, ","), nil
 	}
-	return DefaultTupeloBootstrappers
+
+	cfg, err := LoadSignerConfig(false)
+	if err != nil {
+		return nil, fmt.Errorf("error loading notary group config: %v", err)
+	}
+
+	return cfg.BootstrapAddresses, nil
 }
 
 func GameBootstrappers() []string {
