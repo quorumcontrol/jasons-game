@@ -9,6 +9,17 @@ services:
       default:
         ipv4_address: 172.16.239.10
 
+  community:
+    image: quorumcontrol/community:master
+    depends_on:
+      - bootstrap
+    command: ["-c", "/configs/community/config.toml"]
+    volumes:
+      - ./devdocker/localkeys:/configs
+    networks:
+      default:
+        ipv4_address: 172.16.239.100
+
   node0:
     image: quorumcontrol/tupelo:master
     depends_on:
