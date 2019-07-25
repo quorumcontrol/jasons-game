@@ -1,0 +1,36 @@
+data:
+  description: "Fever trees give way to a circle of marulas.\n
+The soil dries and a hot, dusty breeze hits you in the face.\n
+\n
+You squint, emerging from the brush into an armory of sorts,
+hardly shaded by an enormous baobab tree.  \n
+What you assume are smithing tools hang on hooks from the wall of a rickety hovel.\n
+\n
+Next to the building—hardly a building—next to the shack a tall woman brings
+a hammer up over her head and then down onto a sizzling piece of metal wedged
+against an anvil.\n
+Her skin is covered in blisters.\n
+Her eyes are hardly open.\n
+She is chained to the baobab tree."
+interactions:
+  - type: ChangeLocationInteraction
+    value:
+      command: "north"
+      did: "{{.Locations.globeroom}}"
+  - type: ChangeLocationInteraction
+    value:
+      command: "south"
+      did: "{{.Locations.stageareamidnightblue}}"
+  - type: RespondInteraction
+    value:
+      command: "look at path north"
+      response: "It disappears into thick, tall grass beyond which you think you
+can make out a building."
+  - type: RespondInteraction
+    value:
+      command: "look at path south"
+      response: "It disappears into thick, tall grass beyond which is a forest."
+inventory:
+  - "{{.Objects.blacksmith}}"
+  - "{{.Objects.smithingtools}}"
+  - "{{.Objects.shack}}"

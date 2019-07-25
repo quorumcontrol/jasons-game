@@ -1,0 +1,15 @@
+data:
+  description: "You emerge into a small clearing.\n \n
+Weeds and grass have been pulled from the ground to make space for a platform 
+placed along one side. \n \n
+Beyond it a path heads off to the north."
+interactions:
+  - type: ChangeLocationInteraction
+    value:
+      command: "north"
+      did: "{{.Locations.stageareadarkgreen}}"
+  - type: RespondInteraction
+    value:
+      command: "look at path north"
+      response: "It disappears into thick, tall grass beyond which you think
+you can make out a building."

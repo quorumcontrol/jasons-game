@@ -1,0 +1,33 @@
+data:
+  description: "You find yourself once again in the makeshift outdoor theater in the woods. \n
+  There are paths leading north and south. \n
+  \n
+  A platform, now lively with a rehearsal is just along one side. \n
+  \n
+  The actor, dressed in purple, stands on the platform, reciting poetry to another,
+  who is flapping on the ground like a fish. \n
+  \n
+  '...half the flood hath their heel cut. But fortune, mov'd, varies again.' \n
+  \n
+  In the back, a table with a notebook and pen sit unattended and on the ground
+  nearby a basket is overflowing with discarded paper. "
+interactions:
+  - type: ChangeLocationInteraction
+    value:
+      command: "north"
+      did: "{{.Locations.stageareamidnightblue}}"
+  - type: ChangeLocationInteraction
+    value:
+      command: "south"
+      did: "{{.Locations.stageareadarkgreen}}"
+  - type: RespondInteraction
+    value:
+      command: "look at path north"
+      response: "It disappears into thick, tall grass beyond which you think
+you can make out a building."
+inventory:
+  - "{{.Objects.actorpurple}}"
+  - "{{.Objects.basketpurple}}"
+  - "{{.Objects.notebookpurple}}"
+  - "{{.Objects.stagepurple}}"
+  - "{{.Objects.featherpen}}"

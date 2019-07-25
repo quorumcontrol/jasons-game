@@ -1,0 +1,28 @@
+data:
+  name: blacksmith
+  description: "A tall woman brings a hammer up over her head and then down
+  onto a sizzling piece of metal wedged against an anvil. \n"
+interactions:
+  - type: RespondInteraction
+    value:
+      command: "look at blacksmith"
+      response: "A tall woman brings a hammer up over her head and then down
+      onto a sizzling piece of metal wedged against an anvil.  \n
+      \n
+      Her skin is covered in blisters.  Her eyes are hardly open. \n
+      \n
+      She is chained to the baobab tree.\n
+      She is rambling while she works. \n
+      You can make out words but not their meaning.\n"
+  - type: RespondInteraction
+    value:
+      command: "talk to blacksmith"
+      response: "'The artifact only a season old is between the artifact made
+      of white silver and the epoch old one in that order as one travels
+      from the west.' "
+  - type: RespondInteraction
+    value:
+      command: "listen to blacksmith"
+      response: "'The artifact only a season old is between the artifact made
+      of white silver and the epoch old one in that order as one travels
+      from the west.' "

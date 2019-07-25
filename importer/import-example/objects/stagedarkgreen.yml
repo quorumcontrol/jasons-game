@@ -1,0 +1,10 @@
+data:
+  name: stage
+  description: "A woman on stage recites poetry to a man standing on a ladder.\n"
+interactions:
+  - type: RespondInteraction
+    value:
+      command: "look at stage"
+      response: "Weeds and grass have been pulled from the ground to make
+      space for a platform placed along one side.\n \n
+      A woman on stage recites poetry to a man standing on a ladder.\n"

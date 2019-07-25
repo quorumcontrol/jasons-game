@@ -1,0 +1,17 @@
+data:
+  name: globe
+  description: "A large brass plaque has been cemented into the floor.\n"
+interactions:
+  - type: RespondInteraction
+    value:
+      command: "look at globe"
+      response: "Dominating the room is an enormous sphere. \n
+      You imagine that if you stood on your toes you could barely touch the lower tropic.\n"
+  - type: RespondInteraction
+    value:
+      command: "use globe"
+      response: "You aren't sure how.'\n"
+  - type: RespondInteraction
+    value:
+      command: "pickup globe"
+      response: "It's far too heavy to move. You can't take it with you. \n"

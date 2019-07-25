@@ -1,0 +1,38 @@
+data:
+  description: "You find yourself once again in the makeshift outdoor theater in the woods.\n
+  There are paths leading north and south.\n
+  \n
+  A platform, now lively with a rehearsal, is just along one side.\n
+  \n
+  The actor, dressed in midnight blue, stands on the platform reciting poetry to another,
+  who is sitting, trying to pull off his shoe. \n
+  \n
+  'I would not be the villain that thou thinkst for the whole space that's in the tyrant's grasp.'\n
+  \n
+  In the back, a table with a notebook and pen sit unattended and on the ground nearby a
+  basket is overflowing with discarded paper."
+interactions:
+  - type: ChangeLocationInteraction
+    value:
+      command: "north"
+      did: "{{.Locations.smithingarea}}"
+  - type: ChangeLocationInteraction
+    value:
+      command: "south"
+      did: "{{.Locations.stageareapurple}}"
+  - type: RespondInteraction
+    value:
+      command: "look at path north"
+      response: "It disappears into thick, tall grass beyond which you think
+you can make out a building."
+  - type: RespondInteraction
+    value:
+      command: "look at path south"
+      response: "It disappears into thick, tall grass beyond which you think
+you can make out a building."
+inventory:
+  - "{{.Objects.actormidnightblue}}"
+  - "{{.Objects.basketmidnightblue}}"
+  - "{{.Objects.notebookmidnightblue}}"
+  - "{{.Objects.stagemidnightblue}}"
+  - "{{.Objects.featherpen}}"

@@ -1,9 +1,0 @@
-data:
-  description: "you have entered the world of the fairies, in front of you sits a great forest"
-interactions:
-  - type: ChangeLocationInteraction
-    value:
-      command: "enter the forest"
-      did: "{{.Locations.forest}}"
-inventory:
-  - "{{.Objects.idol}}"

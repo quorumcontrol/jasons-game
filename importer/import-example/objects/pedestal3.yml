@@ -1,0 +1,12 @@
+data:
+  name: "pedestal three"
+  description: "Etched into the third pedestal is a cyclops. \n"
+interactions:
+  - type: RespondInteraction
+    value:
+      command: "look at pedestal three"
+      response: "Etched into the third pedestal is a cyclops. "
+  - type: RespondInteraction
+    value:
+      command: "pickup pedestal three"
+      response: "Thats not possible.  It's cemented to the ground. "

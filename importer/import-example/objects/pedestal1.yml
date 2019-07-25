@@ -1,0 +1,26 @@
+data:
+  name: "pedestal one"
+  description: "On the top of the first pedestal there is a crude engraving:\n
+  What appears to be a woman's head with snakes instead of hair.\n"
+interactions:
+  - type: RespondInteraction
+    value:
+      command: "look at pedestal one"
+      response: "On the top of the first pedestal there is a crude engraving:\n
+      What appears to be a woman's head with snakes instead of hair."
+  - type: RespondInteraction
+    value:
+      command: "pickup pedestal one"
+      response: "It's cemented to the ground. "
+  - type:  CipherInteraction
+    value:
+      command: "count"
+      secret: "snakes"
+      success_interaction:
+        type: RespondInteraction
+        value:
+          response: "There are 14 snakes."
+      failure_interaction:
+        type: RespondInteraction
+        value:
+          response: "I am not sure what you want to count."

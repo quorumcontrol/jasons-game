@@ -1,0 +1,14 @@
+data:
+  name: "feather pen"
+  description: "The quill is fresh with ink, sitting next to the notebook.\n"
+interactions:
+  - type: RespondInteraction
+    value:
+      command: "look at feather pen"
+      response: "The quill is fresh with ink, sitting next to the notebook.\n"
+  - type: RespondInteraction
+    value:
+      command: "pickup feather pen"
+      response: "You go to put it in your bag when you realize it's getting
+      ink all over. \n
+      Best to leave it here. "

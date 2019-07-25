@@ -1,0 +1,16 @@
+data:
+  name: "pedestal two"
+  description: "On top of the second pedestal are a series of scratches that\n
+  almost look like a spider with single scratches for legs and a quick gouge\n
+  for each eye. \n"
+interactions:
+  - type: RespondInteraction
+    value:
+      command: "look at pedestal two"
+      response: "On top of the second pedestal are a series of scratches that\n
+      almost look like a spider with single scratches for legs and a quick\n
+      gouge for each eye."
+  - type: RespondInteraction
+    value:
+      command: "pickup pedestal two"
+      response: "It's cemented to the ground. "

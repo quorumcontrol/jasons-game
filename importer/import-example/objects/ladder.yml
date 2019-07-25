@@ -1,0 +1,14 @@
+data:
+  name: ladder
+  description: "A woman on stage recites poetry to a man standing on a ladder.\n"
+interactions:
+  - type: RespondInteraction
+    value:
+      command: "look at ladder"
+      response: "There is an actor standing on the ladder.\n
+      You'd best not interrupt the rehearsal.\n"
+  - type: RespondInteraction
+    value:
+      command: "pickup ladder"
+      response: "There is an actor standing on the ladder.\n
+      You'd best not interrupt the rehearsal.\n"

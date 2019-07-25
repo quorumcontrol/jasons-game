@@ -1,0 +1,13 @@
+data:
+  name: basket
+  description: "A trash bin sitting on the floor next to the director's table
+is overflowing with discarded paper. "
+interactions:
+  - type: RespondInteraction
+    value:
+      command: "look at basket"
+      response: "Inside the basket are a number of crumpled papers.\n
+      On one is written, 'This monologue is all over the place!'  \n
+      On another, 'The lightest artifact, weighing only a whisper,
+      is next to the one weighing a feather. '  \n
+      And yet another, 'actors.  so changeable.'\n"

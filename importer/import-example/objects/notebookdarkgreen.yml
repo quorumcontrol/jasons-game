@@ -1,0 +1,25 @@
+
+data:
+  name: notebook
+  description: "Various pages with the director's writing scrawled on them.\n
+There are a few blank pages toward the back of the book. "
+interactions:
+  - type: RespondInteraction
+    value:
+      command: "look at notebook"
+      response: "Various pages with the director's writing scrawled on them.\n
+There are a few blank pages toward the back of the book."
+  - type: RespondInteraction
+    value:
+      command: "use notebook"
+      response: "This isn't your notebook. Try taking a blank page from the back. "
+  - type: RespondInteraction
+    value:
+      command: "get notebook"
+      response: "It would be rude to take the director's notebook. \n
+      If you need to write something down, maybe only take one page."
+  - type: RespondInteraction
+    value:
+      command: "rip page from notebook"
+      response: "This acts as a pickup of a page to be generated and
+      put in your invetory."

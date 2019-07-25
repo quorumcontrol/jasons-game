@@ -1,0 +1,15 @@
+data:
+  name: "shack"
+  description: "What you assume are smithing tools hang on hooks from the
+  wall of a rickety hovel.\n"
+interactions:
+  - type: RespondInteraction
+    value:
+      command: "look at shack"
+      response: "What you assume are smithing tools hang on hooks from the
+      wall of a rickety hovel.\n"
+  - type: RespondInteraction
+    value:
+      command: "enter shack"
+      response: "You start to enter the shack but can see there is not much in there.\n
+      It also smells pretty bad."

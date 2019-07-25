@@ -1,0 +1,38 @@
+data:
+  description: "You once again find yourself in the makeshift outdoor theater
+in the woods.\n
+There are paths leading north and south.\n
+\n
+A platform, lively with rehearsal is just along one side.\n
+The actor, dressed in dark green, stands on the platform, reciting poetry to
+another, who is standing on a ladder.\n
+\n
+'Nor that is not the lark whose notes do beat...'\n
+\n
+In the back, a table with a notebook and pen sit unattended and on the ground
+nearby a basket is overflowing with discarded paper. "
+interactions:
+  - type: ChangeLocationInteraction
+    value:
+      command: "north"
+      did: "{{.Locations.stageareapurple}}"
+  - type: ChangeLocationInteraction
+    value:
+      command: "south"
+      did: "{{.Locations.stageareainitial}}"
+  - type: RespondInteraction
+    value:
+      command: "look at path north"
+      response: "It disappears into thick, tall grass beyond which you think
+you can make out a building."
+  - type: RespondInteraction
+    value:
+      command: "look at path south"
+      response: "It disappears into thick, tall grass beyond which you can't see much."
+inventory:
+  - "{{.Objects.actordarkgreen}}"
+  - "{{.Objects.basketdarkgreen}}"
+  - "{{.Objects.notebookdarkgreen}}"
+  - "{{.Objects.stagedarkgreen}}"
+  - "{{.Objects.featherpen}}"
+  - "{{.Objects.ladder}}"

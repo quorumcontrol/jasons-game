@@ -1,0 +1,22 @@
+data:
+  name: "actor"
+  description: "A woman wearing a dramatic purple gown stands on a raised platform,
+  reciting poetry to a man flapping on the ground like a fish. \n"
+interactions:
+  - type: RespondInteraction
+    value:
+      command: "look at actor"
+      response: "A woman wearing a dramatic purple gown stands on a raised platform,
+      reciting poetry to a man flapping on the ground like a fish. \n"
+  - type: RespondInteraction
+    value:
+      command: "listen to actor"
+      response: "The actor continues to recite poetry."
+  - type: RespondInteraction
+    value:
+      command: "talk to actor"
+      response: "You had best not interupt."
+  - type: RespondInteraction
+    value:
+      command: "go to actor"
+      response: "You had best not interupt."

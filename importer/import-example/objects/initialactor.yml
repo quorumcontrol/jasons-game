@@ -1,0 +1,14 @@
+data:
+  description: "A woman wearing a black robe stands on a raised platform,
+reciting poetry to a man laying on the ground.
+Did she just glance at you?"
+interactions:
+
+  - type: RespondInteraction
+    value:
+      command: "talk to actor"
+      response: "You had best not interrupt."
+  - type: RespondInteraction
+    value:
+      command: "listen to actor"
+      response: "The actor continues to recite poetry."

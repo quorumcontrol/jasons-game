@@ -1,0 +1,28 @@
+data:
+  name: plaque
+  description: "A large brass plaque has been cemented into the floor.\n"
+interactions:
+  - type: RespondInteraction
+    value:
+      command: "look at plaque"
+      response: "'A remnant of the fools that came before, self-important, pompous,
+      The Great Globe continues to stand in the Spring Kingdom as a reminder
+      of the Old Ones' obsession with knowledge.  \n
+      \n
+      Although no one from Spring has ever known how to move the Globe,
+      our Kingdom continues to flourish. \n
+      Our energy will carry us forward always.'\n"
+  - type: RespondInteraction
+    value:
+      command: "use plaque"
+      response: "'A remnant of the fools that came before, self-important, pompous,\n
+      The Great Globe continues to stand in the Spring Kingdom as a reminder\n
+      of the Old Ones' obsession with knowledge.  \n
+      \n
+      Although no one from Spring has ever known how to move the Globe,\n
+      our Kingdom continues to flourish. \n
+      Our energy will carry us forward always.'\n"
+  - type: RespondInteraction
+    value:
+      command: "pickup plaque"
+      response: "It's cemented into the floor.\n"

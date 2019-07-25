@@ -1,4 +1,4 @@
-data:
+data: 
   description: "this is an idol"
 interactions:
   - type: RespondInteraction
@@ -24,4 +24,5 @@ interactions:
       failure_interaction:
         type: RespondInteraction
         value:
-          response: "nomel trebrehs"
+          command: "touch the idol"
+          response: "you probably shouldn't do that"

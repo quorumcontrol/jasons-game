@@ -1,0 +1,14 @@
+data:
+  name: "shack"
+  description: "What you assume are smithing tools hang on hooks from the
+  wall of a rickety hovel.\n"
+interactions:
+  - type: RespondInteraction
+    value:
+      command: "look at smithing tools"
+      response: "What you assume are smithing tools hang on hooks from the
+      wall of a rickety hovel.  There is a wide variety and some look dangerous.\n"
+  - type: RespondInteraction
+    value:
+      command: "pickup smithing tools"
+      response: "You don't want to carry those around."

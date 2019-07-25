@@ -1,0 +1,32 @@
+
+data:
+  name: director
+  description: "The director is clearly frustrated. \n
+She's ripped countless pages out of her notebook and tossed
+them in the basket at her side."
+interactions:
+  - type: RespondInteraction
+    value:
+      command: "look at director"
+      response: "The director is clearly frustrated.
+
+She's ripped countless pages out of her notebook and tossed
+them in the basket at her side."
+  - type: RespondInteraction
+    value:
+      command: "listen to director"
+      response: "'I can't take this anymore.\n
+Every time I write something down, she changes it again.\n \n
+Here! Like this, ' She rips a sheet out of her notebook and points at it. \n
+'In the last run through her robe was purple.'\n \n
+She tosses the paper in a basket on the floor by her side.\n
+'I'm ready to call it quits.'"
+  - type: RespondInteraction
+    value:
+      command: "talk to director"
+      response: "'I can't take this anymore.\n
+Every time I write something down, she changes it again.\n \n
+Here! Like this, ' She rips a sheet out of her notebook and points at it. \n
+'In the last run through her robe was purple.'\n \n
+She tosses the paper in a basket on the floor by her side.\n
+'I'm ready to call it quits.'"

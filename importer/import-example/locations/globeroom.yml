@@ -1,0 +1,24 @@
+data:
+  description: "You trudge through fresh, and somehow punishing, grassy fields
+until you reach an oversized stone building.\n
+\n
+You, with great caution, enter the building.\n
+You are in a huge hall. Dominating the room is an enormous sphere.\n
+You imagine that if you stood on your toes you could barely touch the lower
+tropic.  The continents are foreign.\n
+\n
+An enormous blue needle hangs from the ceiling and rests exactly where the
+equator and the meridian meet.  Also in the room are three pedestals, each
+with an etching on its face.  \n
+A brass plaque is inset into the floor."
+interactions:
+  - type: ChangeLocationInteraction
+    value:
+      command: "south"
+      did: "{{.Locations.smithingarea}}"
+inventory:
+  - "{{.Objects.plaque}}"
+  - "{{.Objects.globe}}"
+  - "{{.Objects.pedestal1}}"
+  - "{{.Objects.pedestal2}}"
+  - "{{.Objects.pedestal3}}"
