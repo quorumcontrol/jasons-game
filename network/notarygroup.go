@@ -8,12 +8,6 @@ import (
 	"github.com/quorumcontrol/tupelo-go-sdk/gossip3/types"
 )
 
-type publicKeySet struct {
-	BlsHexPublicKey   string `json:"blsHexPublicKey,omitempty"`
-	EcdsaHexPublicKey string `json:"ecdsaHexPublicKey,omitempty"`
-	PeerIDBase58Key   string `json:"peerIDBase58Key,omitempty"`
-}
-
 func loadSignerConfig(connectToLocalnet bool) (*types.Config, error) {
 	// TODO: Referencing devdocker dir here seems gross; should maybe rethink this
 	localBox := packr.New("localKeys", "../devdocker/localkeys")

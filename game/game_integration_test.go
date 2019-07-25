@@ -18,12 +18,6 @@ import (
 	"github.com/quorumcontrol/jasons-game/ui"
 )
 
-type publicKeySet struct {
-	BlsHexPublicKey   string `json:"blsHexPublicKey,omitempty"`
-	EcdsaHexPublicKey string `json:"ecdsaHexPublicKey,omitempty"`
-	PeerIDBase58Key   string `json:"peerIDBase58Key,omitempty"`
-}
-
 func TestFullIntegration(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
