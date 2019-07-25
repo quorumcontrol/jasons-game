@@ -12,8 +12,8 @@ import (
 	"github.com/AsynkronIT/protoactor-go/actor"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/google/uuid"
-	"github.com/ipfs/go-cid"
-	"github.com/ipfs/go-datastore"
+	cid "github.com/ipfs/go-cid"
+	datastore "github.com/ipfs/go-datastore"
 	logging "github.com/ipfs/go-log"
 	"github.com/pkg/errors"
 	"github.com/quorumcontrol/chaintree/chaintree"
@@ -31,11 +31,6 @@ var log = logging.Logger("gamenetwork")
 const BlockTopic = "jasons-game-tupelo-world-blocks"
 const ShoutTopic = "jasons-game-shouting-players"
 const GeneralTopic = "jasons-game-general"
-
-var DefaultTupeloBootstrappers = []string{
-	"/ip4/18.185.81.67/tcp/34001/ipfs/16Uiu2HAmJTmontYmNLgWPFLoWZYuEZ6fWhaqHh7vQABncaBWnZaW",
-	"/ip4/3.217.212.32/tcp/34001/ipfs/16Uiu2HAmL5sbPp4LZJJhQTtTkpaNNEPUxrRoiyJqD8Mkj5tJkiow",
-}
 
 var DefaultGameBootstrappers = []string{
 	"/ip4/3.208.36.214/tcp/34001/ipfs/16Uiu2HAmGsma99vu8SaheLdCEvMAH2VGbiQ1UH75ctjEVyz89ck6",
@@ -167,11 +162,11 @@ func NewRemoteNetworkWithConfig(ctx context.Context, config *RemoteNetworkConfig
 
 	// now all that setup is done, wait for the tupelo and game bootstrappers
 
-	if _, err = tupeloP2PHost.Bootstrap(TupeloBootstrappers()); err != nil {
-		return nil, err
+	if _, err = tupeloP2PHost.Bootstrap(group.Config().BootstrapAddresses); err != nil {
+		return nil, errors.Wrap(err, "error bootstrapping to tupelo")
 	}
 	if err = tupeloP2PHost.WaitForBootstrap(len(group.Signers), 15*time.Second); err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "error on bootstrap wait for tupelo")
 	}
 
 	log.Infof("started tupelo host %s", tupeloP2PHost.Identity())
@@ -425,12 +420,18 @@ func (n *RemoteNetwork) SendInk(tree *consensus.SignedChainTree, tokenName *cons
 	return tokenPayload, nil
 }
 
-func TupeloBootstrappers() []string {
+func TupeloBootstrappers() ([]string, error) {
 	if envSpecifiedNodes, ok := os.LookupEnv("TUPELO_BOOTSTRAP_NODES"); ok {
 		log.Debugf("using tupelo bootstrap nodes: %s", envSpecifiedNodes)
-		return strings.Split(envSpecifiedNodes, ",")
+		return strings.Split(envSpecifiedNodes, ","), nil
 	}
-	return DefaultTupeloBootstrappers
+
+	cfg, err := LoadSignerConfig(false)
+	if err != nil {
+		return nil, fmt.Errorf("error loading notary group config: %v", err)
+	}
+
+	return cfg.BootstrapAddresses, nil
 }
 
 func GameBootstrappers() []string {

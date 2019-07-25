@@ -15,7 +15,7 @@ import (
 )
 
 func newRemoteNetwork(t *testing.T, ctx context.Context, path string) Network {
-	group, err := setupNotaryGroup(ctx)
+	group, err := SetupTupeloNotaryGroup(ctx, true)
 	require.Nil(t, err)
 
 	ds, err := config.LocalDataStore(path)

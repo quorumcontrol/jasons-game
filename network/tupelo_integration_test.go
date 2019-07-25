@@ -8,10 +8,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/quorumcontrol/chaintree/nodestore"
-	"github.com/quorumcontrol/tupelo-go-sdk/bls"
 	"github.com/quorumcontrol/tupelo-go-sdk/gossip3/remote"
 	"github.com/quorumcontrol/tupelo-go-sdk/gossip3/types"
 	"github.com/quorumcontrol/tupelo-go-sdk/p2p"
@@ -39,31 +37,11 @@ func setupRemote(ctx context.Context, group *types.NotaryGroup) (p2p.Node, error
 	return p2pHost, nil
 }
 
-func setupNotaryGroup(ctx context.Context) (*types.NotaryGroup, error) {
-	keys, err := loadSignerKeys(true)
-	if err != nil {
-		return nil, err
-	}
-	group := types.NewNotaryGroup("hardcodedprivatekeysareunsafe")
-	for _, keySet := range keys {
-		ecdsaBytes := hexutil.MustDecode(keySet.EcdsaHexPublicKey)
-		verKeyBytes := hexutil.MustDecode(keySet.BlsHexPublicKey)
-		ecdsaPubKey, err := crypto.UnmarshalPubkey(ecdsaBytes)
-		if err != nil {
-			return nil, err
-		}
-		signer := types.NewRemoteSigner(ecdsaPubKey, bls.BytesToVerKey(verKeyBytes))
-		group.AddSigner(signer)
-	}
-
-	return group, nil
-}
-
 func TestCreateChainTree(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	group, err := setupNotaryGroup(ctx)
+	group, err := SetupTupeloNotaryGroup(ctx, true)
 	require.Nil(t, err)
 
 	node, err := setupRemote(ctx, group)
@@ -88,7 +66,7 @@ func TestGetTip(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	group, err := setupNotaryGroup(ctx)
+	group, err := SetupTupeloNotaryGroup(ctx, true)
 	require.Nil(t, err)
 
 	node, err := setupRemote(ctx, group)
