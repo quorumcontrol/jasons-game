@@ -367,6 +367,8 @@ func (g *Game) handlePlayerInventoryList(actorCtx actor.Context) error {
 }
 
 func (g *Game) handleLocationInventoryList(actorCtx actor.Context) error {
+	g.sendUILocation(actorCtx)
+
 	response, err := actorCtx.RequestFuture(g.locationActor, &InventoryListRequest{}, 5*time.Second).Result()
 	if err != nil {
 		return err
