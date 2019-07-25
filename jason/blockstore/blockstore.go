@@ -6,8 +6,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/ipfs/go-datastore"
-	"github.com/libp2p/go-libp2p"
+	datastore "github.com/ipfs/go-datastore"
+	libp2p "github.com/libp2p/go-libp2p"
 	connmgr "github.com/libp2p/go-libp2p-connmgr"
 
 	"github.com/gogo/protobuf/proto"
@@ -101,7 +101,14 @@ func (p *Blockstore) Start() error {
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		if _, err := p.p2pHost.Bootstrap(network.TupeloBootstrappers()); err != nil {
+		bootstrappers, err := network.TupeloBootstrappers()
+
+		if err != nil {
+			log.Errorf("error reading bootstrap addresses for tupelo: %v", err)
+			return
+		}
+
+		if _, err := p.p2pHost.Bootstrap(bootstrappers); err != nil {
 			log.Errorf("error bootstrapping ipld host for tupelo: %v", err)
 			return
 		}
