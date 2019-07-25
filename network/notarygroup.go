@@ -22,9 +22,13 @@ func loadSignerConfig(connectToLocalnet bool) (*types.Config, error) {
 		tomlBytes, err = testnetBox.Find("notarygroup.toml")
 	}
 
+	if err != nil {
+		return nil, fmt.Errorf("error reading notary group config: %v", err)
+	}
+
 	ngConfig, err := types.TomlToConfig(string(tomlBytes))
 	if err != nil {
-		return nil, fmt.Errorf("error loading notary group config")
+		return nil, fmt.Errorf("error loading notary group config: %v", err)
 	}
 
 	return ngConfig, nil
