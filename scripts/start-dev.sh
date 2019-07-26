@@ -61,4 +61,7 @@ echo "DEV: Depositing devink in inkfaucet: ${TOKEN_PAYLOAD}"
 echo ''
 make inkfaucet TOKEN_PAYLOAD=${TOKEN_PAYLOAD} >logs/inkfaucet_deposit.log 2>&1
 
-tail -f logs/localnet.log
+echo ''
+echo "DEV: Starting game"
+echo ''
+make game-server INK_DID=${INK_DID}
