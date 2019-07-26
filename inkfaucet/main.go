@@ -36,7 +36,7 @@ func main() {
 
 	mustSetLogLevel("*", "warning")
 	mustSetLogLevel("pubsub", "error")
-	mustSetLogLevel("invites", "info")
+	mustSetLogLevel("invites", "debug")
 	mustSetLogLevel("inkFaucet", "info")
 	mustSetLogLevel("gamenetwork", "info")
 

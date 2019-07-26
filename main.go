@@ -62,6 +62,7 @@ func main() {
 	mustSetLogLevel("game", "debug")
 	mustSetLogLevel("gameserver", "debug")
 	mustSetLogLevel("gamenetwork", "debug")
+	mustSetLogLevel("invites", "debug")
 
 	port := 8080
 	grpcServer := grpc.NewServer()
@@ -73,6 +74,10 @@ func main() {
 	defer cancel()
 
 	disableWebView, localnet := ui.SetOptions()
+
+	if inkDID == "" {
+		inkDID = os.Getenv("INK_DID")
+	}
 
 	gsCfg := server.GameServerConfig{
 		LocalNet: *localnet,

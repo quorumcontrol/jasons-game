@@ -75,25 +75,35 @@ func (i *InvitesActor) handleInviteSubmission(actorCtx actor.Context, msg *inkfa
 	encodedKey := msg.Invite
 	serializedKey := base58.Decode(encodedKey)
 
+	log.Debug("decoded invite")
+
 	key, err := crypto.ToECDSA(serializedKey)
 	if err != nil {
 		actorCtx.Respond(&inkfaucet.InviteSubmissionResponse{
-			Error: "invalid invite code",
+			Error: err.Error(),
 		})
 		return
 	}
 
-	inviteChainTree, err := i.net.GetChainTreeByName(encodedKey)
+	log.Debug("converted invite to key")
+
+	inviteChainTreeDID := consensus.EcdsaPubkeyToDid(key.PublicKey)
+
+	log.Debugf("invite code converted to DID: %s", inviteChainTreeDID)
+
+	inviteChainTree, err := i.net.GetTree(inviteChainTreeDID)
 	if err != nil {
 		actorCtx.Respond(&inkfaucet.InviteSubmissionResponse{
-			Error: "invalid invite code",
+			Error: err.Error(),
 		})
 		return
 	}
+
+	log.Debugf("got invite chaintree: %+v", inviteChainTree)
 
 	if inviteChainTree == nil {
 		actorCtx.Respond(&inkfaucet.InviteSubmissionResponse{
-			Error: "invalid invite code",
+			Error: "invite chaintree is nil",
 		})
 		return
 	}
@@ -101,31 +111,37 @@ func (i *InvitesActor) handleInviteSubmission(actorCtx actor.Context, msg *inkfa
 	playerChainTree, err := i.net.CreateNamedChainTree("player")
 	if err != nil {
 		actorCtx.Respond(&inkfaucet.InviteSubmissionResponse{
-			Error: "invalid invite code",
+			Error: err.Error(),
 		})
 		return
 	}
+
+	log.Debug("created new player chaintree")
 
 	playerChainTreeOwners, err := playerChainTree.Authentications()
 	if err != nil {
 		actorCtx.Respond(&inkfaucet.InviteSubmissionResponse{
-			Error: "invalid invite code",
+			Error: err.Error(),
 		})
 		return
 	}
+
+	log.Debug("get player chaintree owner")
 
 	newInviteChainTree, err := i.net.ChangeEphemeralChainTreeOwner(inviteChainTree, key, playerChainTreeOwners)
 	if err != nil {
 		actorCtx.Respond(&inkfaucet.InviteSubmissionResponse{
-			Error: "invalid invite code",
+			Error: err.Error(),
 		})
 		return
 	}
 
+	log.Debug("changed owner of invite chaintree to player")
+
 	newInviteTree, err := newInviteChainTree.ChainTree.Tree(context.TODO())
 	if err != nil {
 		actorCtx.Respond(&inkfaucet.InviteSubmissionResponse{
-			Error: "invalid invite code",
+			Error: err.Error(),
 		})
 		return
 	}
@@ -138,34 +154,42 @@ func (i *InvitesActor) handleInviteSubmission(actorCtx actor.Context, msg *inkfa
 	inkBalance, err := tokenLedger.Balance()
 	if err != nil {
 		actorCtx.Respond(&inkfaucet.InviteSubmissionResponse{
-			Error: "invalid invite code",
+			Error: err.Error(),
 		})
 		return
 	}
+
+	log.Debugf("moving %d ink to player chaintree", inkBalance)
 
 	tokenPayload, err := i.net.SendInk(newInviteChainTree, inkTokenName, inkBalance, playerChainTree.MustId())
 	if err != nil {
 		actorCtx.Respond(&inkfaucet.InviteSubmissionResponse{
-			Error: "invalid invite code",
+			Error: err.Error(),
 		})
 		return
 	}
+
+	log.Debug("sent ink to player")
 
 	err = i.net.ReceiveInk(playerChainTree, tokenPayload)
 	if err != nil {
 		actorCtx.Respond(&inkfaucet.InviteSubmissionResponse{
-			Error: "invalid invite code",
+			Error: err.Error(),
 		})
 		return
 	}
 
-	err = i.net.DeleteChainTreeByName(encodedKey)
+	log.Debug("player chaintree has received ink")
+
+	err = i.net.DeleteTree(inviteChainTreeDID)
 	if err != nil {
 		actorCtx.Respond(&inkfaucet.InviteSubmissionResponse{
-			Error: "invalid invite code",
+			Error: err.Error(),
 		})
 		return
 	}
+
+	log.Debug("deleted invite chaintree")
 
 	actorCtx.Respond(&inkfaucet.InviteSubmissionResponse{
 		PlayerChainId: playerChainTree.MustId(),

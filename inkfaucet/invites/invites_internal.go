@@ -66,8 +66,11 @@ func (i *InvitesActor) handleInviteRequest(actorCtx actor.Context) {
 
 	log.Debugf("invite actor received ink to ephemeral chaintree")
 
+	serializedKey := crypto.FromECDSA(inviteKey)
+	encodedKey := base58.Encode(serializedKey)
+
 	actorCtx.Respond(&inkfaucet.InviteResponse{
-		Invite: base58.Encode(crypto.FromECDSA(inviteKey)),
+		Invite: encodedKey,
 	})
 }
 

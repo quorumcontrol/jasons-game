@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/AsynkronIT/protoactor-go/actor"
+	"github.com/ipfs/go-datastore"
 	logging "github.com/ipfs/go-log"
 	"github.com/pkg/errors"
 
@@ -87,6 +88,11 @@ func (gs *GameServer) ReceiveStatMessages(sess *jasonsgame.Session, stream jason
 }
 
 func (gs *GameServer) getOrCreateSession(sess *jasonsgame.Session, stream jasonsgame.GameService_ReceiveUIMessagesServer) *actor.PID {
+	var (
+		ds datastore.Batching
+		err error
+	)
+
 	uiActor, ok := gs.sessions[sess.Uuid]
 	if !ok {
 		// use filepath.Base as a "cleaner" here to not allow setting arbitrary directories with, for example, uuid: "../../etc/passwd"
@@ -95,7 +101,7 @@ func (gs *GameServer) getOrCreateSession(sess *jasonsgame.Session, stream jasons
 			panic(errors.Wrap(err, "error creating session storage"))
 		}
 
-		ds, err := config.LocalDataStore(statePath)
+		ds, err = config.LocalDataStore(statePath)
 		if err != nil {
 			panic(errors.Wrap(err, "error getting store"))
 		}
@@ -135,7 +141,7 @@ func (gs *GameServer) getOrCreateSession(sess *jasonsgame.Session, stream jasons
 		}
 	}
 
-	uncastFinished, err := actor.EmptyRootContext.RequestFuture(uiActor, ui.Finished{}, 2 * time.Second).Result()
+	uncastFinished, err := actor.EmptyRootContext.RequestFuture(uiActor, ui.Finished{}, 2*time.Second).Result()
 	if err != nil {
 		panic(errors.Wrap(err, "error querying finished state of ui actor"))
 	}
@@ -145,6 +151,10 @@ func (gs *GameServer) getOrCreateSession(sess *jasonsgame.Session, stream jasons
 	if finished {
 		actor.EmptyRootContext.Poison(uiActor)
 		delete(gs.sessions, sess.Uuid)
+		err = ds.Close()
+		if err != nil {
+			panic(err)
+		}
 		return gs.getOrCreateSession(sess, stream)
 	}
 

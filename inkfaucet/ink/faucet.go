@@ -203,7 +203,7 @@ func (i *InkActor) Receive(actorCtx actor.Context) {
 			return
 		}
 
-		log.Debugf("ink actor got token payload: %+v", *tokenPayload)
+		log.Debugf("ink actor got token payload: %+v", tokenPayload)
 
 		var response *inkfaucet.InkResponse
 
@@ -224,7 +224,7 @@ func (i *InkActor) Receive(actorCtx actor.Context) {
 			Token: serializedTokenPayload,
 		}
 
-		log.Debugf("ink actor sending response: %+v", *response)
+		log.Debugf("ink actor sending response: %+v", response)
 
 		actorCtx.Respond(response)
 	default:

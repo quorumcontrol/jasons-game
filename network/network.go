@@ -10,7 +10,6 @@ import (
 	"time"
 
 	"github.com/AsynkronIT/protoactor-go/actor"
-	"github.com/btcsuite/btcutil/base58"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/google/uuid"
 	cid "github.com/ipfs/go-cid"
@@ -56,7 +55,7 @@ type Network interface {
 	GetChainTreeByName(name string) (*consensus.SignedChainTree, error)
 	GetTreeByTip(tip cid.Cid) (*consensus.SignedChainTree, error)
 	GetTree(did string) (*consensus.SignedChainTree, error)
-	DeleteChainTreeByName(name string) error
+	DeleteTree(did string) error
 	UpdateChainTree(tree *consensus.SignedChainTree, path string, value interface{}) (*consensus.SignedChainTree, error)
 	TreeStore() TreeStore
 	PublicKey() *ecdsa.PublicKey
@@ -267,12 +266,38 @@ func (n *RemoteNetwork) CreateNamedChainTree(name string) (*consensus.SignedChai
 	return tree, n.KeyValueStore.Put(datastore.NewKey("-n-"+name), []byte(tree.MustId()))
 }
 
-func (n *RemoteNetwork) createChainTree(key *ecdsa.PrivateKey) (*consensus.SignedChainTree, error) {
-	tree, err := n.Tupelo.CreateChainTree(key)
+func (n *RemoteNetwork) createChainTree(key *ecdsa.PrivateKey, keyIsAddress bool) (*consensus.SignedChainTree, error) {
+	var (
+		addrKey *ecdsa.PrivateKey
+		err error
+	)
+
+	if keyIsAddress {
+		addrKey = key
+	} else {
+		addrKey, err = crypto.GenerateKey()
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	tree, err := n.Tupelo.CreateChainTree(addrKey)
 	if err != nil {
 		return nil, errors.Wrap(err, "error creating tree")
 	}
 	log.Debug("CreateChainTree - created", tree.MustId())
+
+	if !keyIsAddress {
+		transaction, err := chaintree.NewSetOwnershipTransaction([]string{crypto.PubkeyToAddress(key.PublicKey).String()})
+		if err != nil {
+			return nil, errors.Wrap(err, "error creating ownership transaction for chaintree")
+		}
+
+		_, err = n.Tupelo.PlayTransactions(tree, addrKey, []*transactions.Transaction{transaction})
+		if err != nil {
+			return nil, errors.Wrap(err, "error playing transactions")
+		}
+	}
 
 	err = n.TreeStore().SaveTreeMetadata(tree)
 	if err != nil {
@@ -284,7 +309,7 @@ func (n *RemoteNetwork) createChainTree(key *ecdsa.PrivateKey) (*consensus.Signe
 }
 
 func (n *RemoteNetwork) CreateChainTree() (*consensus.SignedChainTree, error) {
-	return n.createChainTree(n.PrivateKey())
+	return n.createChainTree(n.PrivateKey(), false)
 }
 
 func (n *RemoteNetwork) CreateEphemeralChainTree() (*consensus.SignedChainTree, *ecdsa.PrivateKey, error) {
@@ -293,15 +318,12 @@ func (n *RemoteNetwork) CreateEphemeralChainTree() (*consensus.SignedChainTree, 
 		return nil, nil, errors.Wrap(err, "error generating ephemeral private key")
 	}
 
-	ct, err := n.createChainTree(key)
+	ct, err := n.createChainTree(key, true)
 	if err != nil {
 		return nil, nil, errors.Wrap(err, "error creating ephemeral chaintree")
 	}
 
-	serializedKey := crypto.FromECDSA(key)
-	encodedKey := base58.Encode(serializedKey)
-
-	return ct, key, n.KeyValueStore.Put(datastore.NewKey("-n-"+encodedKey), []byte(ct.MustId()))
+	return ct, key, nil
 }
 
 func (n *RemoteNetwork) GetChainTreeByName(name string) (*consensus.SignedChainTree, error) {
@@ -390,8 +412,8 @@ func (act *currentStateSubscriptionActor) Receive(actorContext actor.Context) {
 	}
 }
 
-func (rn *RemoteNetwork) DeleteChainTreeByName(name string) error {
-	ct, err := rn.GetChainTreeByName(name)
+func (rn *RemoteNetwork) DeleteTree(did string) error {
+	ct, err := rn.GetTree(did)
 	if err != nil {
 		return err
 	}
@@ -401,7 +423,7 @@ func (rn *RemoteNetwork) DeleteChainTreeByName(name string) error {
 		return err
 	}
 
-	return rn.KeyValueStore.Delete(datastore.NewKey("-n-" + name))
+	return nil
 }
 
 func (rn *RemoteNetwork) NewCurrentStateSubscriptionProps(did string) *actor.Props {
