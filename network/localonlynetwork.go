@@ -195,7 +195,7 @@ func (ln *LocalNetwork) ChangeEphemeralChainTreeOwner(tree *consensus.SignedChai
 	return nil, nil
 }
 
-func (ln *LocalNetwork) DeleteChainTreeByName(name string) error {
+func (ln *LocalNetwork) DeleteTree(name string) error {
 	// placeholder to fulfill the interface
 	return nil
 }
