@@ -21,7 +21,7 @@ function capture_value () {
 echo ''
 echo 'DEV: Starting localnet'
 echo ''
-make localnet 2>&1 >logs/localnet.log &
+make localnet >logs/localnet.log 2>&1 &
 sleep 15 # give localnet some time to come up; sleeps are gross; loop until port 34001 is open instead?
 
 echo ''
@@ -37,7 +37,7 @@ fi
 echo ''
 echo "DEV: Starting a new inkfaucet service for ${INK_DID}:ink"
 echo ''
-make inkfaucet INK_DID=${INK_DID} 2>&1 >logs/inkfaucet.log &
+make inkfaucet INK_DID=${INK_DID} >logs/inkfaucet.log 2>&1 &
 sleep 30 # give inkfaucet time to bootstrap
 INK_FAUCET_DID=$(capture_value "make inkfaucetdid" "inkfaucetdid.log" "INK_FAUCET_DID")
 
@@ -59,6 +59,6 @@ fi
 echo ''
 echo "DEV: Depositing devink in inkfaucet: ${TOKEN_PAYLOAD}"
 echo ''
-make inkfaucet TOKEN_PAYLOAD=${TOKEN_PAYLOAD} 2>&1 >logs/inkfaucet_deposit.log
+make inkfaucet TOKEN_PAYLOAD=${TOKEN_PAYLOAD} >logs/inkfaucet_deposit.log 2>&1
 
 tail -f logs/localnet.log
