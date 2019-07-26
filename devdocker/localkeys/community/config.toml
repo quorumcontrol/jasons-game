@@ -1,0 +1,13 @@
+NotaryGroupConfig = "../notarygroup.toml"
+Key = "0xff20bbd4f65b2cd30eeb78ec49d83b42574d9d81d77196e111a243d01c6259fd"
+Port = 34001
+
+Name = "jasonsgame"
+Shards = 1024
+CacheMessages = false
+CacheBlocks = true
+RebroadcastCommit = true
+TrackPeers = false
+
+[Storage]
+Kind = "memory"

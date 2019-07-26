@@ -4,8 +4,6 @@ services:
   game:
     build: ./devdocker
     depends_on:
-      - jason
-      - jasonblock
       - inkfaucet
     command: ["go", "run", "main.go", "-disablewebview=true", "-localnet=true"]
     volumes:
@@ -25,8 +23,6 @@ services:
     build: ./devdocker
     command: ["go", "run", "main.go", "-disablewebview=true", "-localnet=true"]
     depends_on:
-      - jason
-      - jasonblock
       - inkfaucet
     volumes:
       - .:/app:delegated
@@ -41,44 +37,11 @@ services:
       TUPELO_BOOTSTRAP_NODES: /ip4/172.16.239.10/tcp/34001/ipfs/16Uiu2HAm3TGSEKEjagcCojSJeaT5rypaeJMKejijvYSnAjviWwV5
       JASON_BOOTSTRAP_NODES: /ip4/172.16.239.100/tcp/34001/ipfs/16Uiu2HAmBL6Xz9ichyunCexiqomcHyzVpKKmxAMgUusksBZzzM3K
 
-  jason:
-    build: ./devdocker
-    command: ["go", "run", "jason/cmd/bootstrap/main.go", "-ip=172.16.239.100", "-port=34001"]
-    volumes:
-      - .:/app:delegated
-      - ./devdocker/.tmp:/root/.cache:delegated
-      - $GOPATH/pkg/mod:/go/pkg/mod:delegated
-      - ./devdocker/jason/private.key:/root/.config/tupelo/jasons-game/private.key
-    environment:
-      PPROF_ENABLED: "true"
-      GOPATH: /go
-      JASON_BOOTSTRAP_NODES: /ip4/172.16.239.100/tcp/34001/ipfs/16Uiu2HAmBL6Xz9ichyunCexiqomcHyzVpKKmxAMgUusksBZzzM3K
-    networks:
-      default:
-        ipv4_address: 172.16.239.100
-
-  jasonblock:
-    build: ./devdocker
-    command: ["go", "run", "jason/cmd/blockstore/main.go", "-local=true"]
-    depends_on:
-      - localstack
-      - jason
-    volumes:
-      - .:/app:delegated
-      - ./devdocker/.tmp:/root/.cache:delegated
-      - $GOPATH/pkg/mod:/go/pkg/mod:delegated
-    environment:
-      PPROF_ENABLED: "true"
-      GOPATH: /go
-      TUPELO_BOOTSTRAP_NODES: /ip4/172.16.239.10/tcp/34001/ipfs/16Uiu2HAm3TGSEKEjagcCojSJeaT5rypaeJMKejijvYSnAjviWwV5
-      JASON_BOOTSTRAP_NODES: /ip4/172.16.239.100/tcp/34001/ipfs/16Uiu2HAmBL6Xz9ichyunCexiqomcHyzVpKKmxAMgUusksBZzzM3K
-
   inkfaucet:
     build: ./devdocker
     command: ["go", "run", "-tags=internal", "inkfaucet/main.go", "-local=true", "-deposit=${TOKEN_PAYLOAD}"]
     depends_on:
       - localstack
-      - jason
     volumes:
       - .:/app:delegated
       - ./devdocker/.tmp:/root/.cache:delegated
@@ -97,7 +60,6 @@ services:
     depends_on:
       - inkfaucet
       - localstack
-      - jason
     volumes:
       - .:/app:delegated
       - ./devdocker/.tmp:/root/.cache:delegated
@@ -126,7 +88,6 @@ services:
     command: ["go", "run", "-tags=internal", "inkfaucet/main.go", "-local=true", "-invite=true"]
     depends_on:
       - localstack
-      - jason
     volumes:
       - .:/app:delegated
       - ./devdocker/.tmp:/root/.cache:delegated
@@ -156,8 +117,6 @@ services:
   importer:
     build: ./devdocker
     depends_on:
-      - jason
-      - jasonblock
       - inkfaucet
     command: ["go", "run", "importer/cmd/importer/main.go", "-local=true", "-path=importer/import-example"]
     volumes:
@@ -191,8 +150,6 @@ services:
 
   integration:
     build: ./devdocker
-    depends_on:
-      - jason
     command:
       - go
       - test
