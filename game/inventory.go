@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"strings"
+	"sync"
 
 	"github.com/AsynkronIT/protoactor-go/actor"
 	"github.com/AsynkronIT/protoactor-go/plugin"
@@ -314,23 +315,46 @@ func (inv *InventoryActor) handleListInteractionsRequest(actorCtx actor.Context,
 	}
 
 	interactions := []Interaction{}
+	mut := &sync.Mutex{}
 
-	for _, object := range objects {
-		obj, err := FindObjectTree(inv.network, object.Did)
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
 
-		if err != nil {
-			actorCtx.Respond(&ListInteractionsResponse{Error: err})
-			return
-		}
+	wg := &sync.WaitGroup{}
+	wg.Add(len(objects))
 
-		objectInteractions, err := obj.InteractionsList()
-		if err != nil {
-			actorCtx.Respond(&ListInteractionsResponse{Error: err})
-			return
-		}
+	for _, obj := range objects {
+		go func(object *Object) {
+			defer wg.Done()
 
-		interactions = append(interactions, objectInteractions...)
+			for {
+				select {
+				case <-ctx.Done():
+					return
+				default:
+					obj, err := FindObjectTree(inv.network, object.Did)
+					if err != nil {
+						cancel()
+						actorCtx.Respond(&ListInteractionsResponse{Error: err})
+						return
+					}
+
+					objectInteractions, err := obj.InteractionsList()
+					if err != nil {
+						cancel()
+						actorCtx.Respond(&ListInteractionsResponse{Error: err})
+						return
+					}
+
+					mut.Lock()
+					interactions = append(interactions, objectInteractions...)
+					mut.Unlock()
+					return
+				}
+			}
+		}(obj)
 	}
 
+	wg.Wait()
 	actorCtx.Respond(&ListInteractionsResponse{Interactions: interactions})
 }
