@@ -267,7 +267,7 @@ func (g *Game) handleSetTreeValueInteraction(actorCtx actor.Context, interaction
 		return fmt.Errorf("could not find tree with did %v", interaction.Did)
 	}
 
-	tree, err = interaction.SetValue(ctx, g.network, tree, args)
+	_, err = interaction.SetValue(ctx, g.network, tree, args)
 	if err != nil {
 		return errors.Wrap(err, fmt.Sprintf("error setting value on tree %v", interaction.Did))
 	}
