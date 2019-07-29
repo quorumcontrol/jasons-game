@@ -274,8 +274,6 @@ func (g *Game) handleSetTreeValueInteraction(actorCtx actor.Context, interaction
 
 	g.sendUserMessage(actorCtx, fmt.Sprintf("set %v", interaction.Path))
 
-	fmt.Printf("%v\n", tree.ChainTree.Dag.Dump(ctx))
-
 	return nil
 }
 
