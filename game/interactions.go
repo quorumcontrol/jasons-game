@@ -1,9 +1,11 @@
 package game
 
 import (
+	"context"
 	"crypto/rand"
 	"fmt"
 	"io"
+	"strings"
 
 	"github.com/gogo/protobuf/proto"
 	ptypes "github.com/gogo/protobuf/types"
@@ -11,6 +13,8 @@ import (
 	"github.com/pkg/errors"
 	"github.com/quorumcontrol/chaintree/safewrap"
 	"github.com/quorumcontrol/chaintree/typecaster"
+	"github.com/quorumcontrol/jasons-game/network"
+	"github.com/quorumcontrol/tupelo-go-sdk/consensus"
 	"golang.org/x/crypto/nacl/secretbox"
 	"golang.org/x/crypto/scrypt"
 )
@@ -26,6 +30,8 @@ func init() {
 	typecaster.AddType(DropObjectInteraction{})
 	cbor.RegisterCborType(GetTreeValueInteraction{})
 	typecaster.AddType(GetTreeValueInteraction{})
+	cbor.RegisterCborType(SetTreeValueInteraction{})
+	typecaster.AddType(SetTreeValueInteraction{})
 	cbor.RegisterCborType(CipherInteraction{})
 	typecaster.AddType(CipherInteraction{})
 }
@@ -40,6 +46,7 @@ var _ Interaction = (*ChangeLocationInteraction)(nil)
 var _ Interaction = (*PickUpObjectInteraction)(nil)
 var _ Interaction = (*DropObjectInteraction)(nil)
 var _ Interaction = (*GetTreeValueInteraction)(nil)
+var _ Interaction = (*SetTreeValueInteraction)(nil)
 var _ Interaction = (*CipherInteraction)(nil)
 
 type ListInteractionsRequest struct{}
@@ -63,6 +70,41 @@ type withInteractions struct {
 type updatableTree interface {
 	getPath([]string) (interface{}, error)
 	updatePath([]string, interface{}) error
+}
+
+func (i *SetTreeValueInteraction) SetValue(ctx context.Context, network network.Network, tree *consensus.SignedChainTree, value string) (*consensus.SignedChainTree, error) {
+	var valueToSet interface{} // nolint
+	valueToSet = value
+
+	pathSlice, err := consensus.DecodePath(i.Path)
+	if err != nil {
+		return tree, errors.Wrap(err, "error casting path")
+	}
+
+	if i.Multiple {
+		currentValue, _, err := tree.ChainTree.Dag.Resolve(ctx, append([]string{"tree", "data", "jasons-game"}, pathSlice...))
+		if err != nil {
+			return tree, errors.Wrap(err, fmt.Sprintf("error fetching value for %v", pathSlice))
+		}
+
+		if currentValue == nil {
+			valueToSet = []interface{}{value}
+		} else {
+			currentValueSlice, ok := currentValue.([]interface{})
+			if !ok {
+				return tree, errors.Wrap(err, fmt.Sprintf("error casting existing value %v, not a slice", currentValue))
+			}
+
+			valueToSet = append(currentValueSlice, value)
+		}
+	}
+
+	newTree, err := network.UpdateChainTree(tree, strings.Join(append([]string{"jasons-game"}, pathSlice...), "/"), valueToSet)
+	if err != nil {
+		return tree, errors.Wrap(err, "error updating path")
+	}
+
+	return newTree, nil
 }
 
 func (w *withInteractions) addInteractionToTree(tree updatableTree, i Interaction) error {
