@@ -137,7 +137,7 @@ func (l *LocationActor) handleListInteractionsRequest(actorCtx actor.Context, ms
 		})
 	}
 
-	inventoryInteractionsResp, err := actorCtx.RequestFuture(l.inventoryActor, &ListInteractionsRequest{}, 5*time.Second).Result()
+	inventoryInteractionsResp, err := actorCtx.RequestFuture(l.inventoryActor, &ListInteractionsRequest{}, 30*time.Second).Result()
 	if err != nil {
 		actorCtx.Respond(&ListInteractionsResponse{Error: err})
 		return
