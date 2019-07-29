@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"strings"
-	"sync"
 
 	"github.com/AsynkronIT/protoactor-go/actor"
 	"github.com/AsynkronIT/protoactor-go/plugin"
@@ -315,46 +314,46 @@ func (inv *InventoryActor) handleListInteractionsRequest(actorCtx actor.Context,
 	}
 
 	interactions := []Interaction{}
-	mut := &sync.Mutex{}
+	if len(objects) == 0 {
+		actorCtx.Respond(&ListInteractionsResponse{Interactions: interactions})
+		return
+	}
 
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-
-	wg := &sync.WaitGroup{}
-	wg.Add(len(objects))
+	interactionsCh := make(chan []Interaction, len(objects))
+	errCh := make(chan error)
 
 	for _, obj := range objects {
 		go func(object *Object) {
-			defer wg.Done()
-
-			for {
-				select {
-				case <-ctx.Done():
-					return
-				default:
-					obj, err := FindObjectTree(inv.network, object.Did)
-					if err != nil {
-						cancel()
-						actorCtx.Respond(&ListInteractionsResponse{Error: err})
-						return
-					}
-
-					objectInteractions, err := obj.InteractionsList()
-					if err != nil {
-						cancel()
-						actorCtx.Respond(&ListInteractionsResponse{Error: err})
-						return
-					}
-
-					mut.Lock()
-					interactions = append(interactions, objectInteractions...)
-					mut.Unlock()
-					return
-				}
+			obj, err := FindObjectTree(inv.network, object.Did)
+			if err != nil {
+				errCh <- err
+				return
 			}
+
+			objectInteractions, err := obj.InteractionsList()
+			if err != nil {
+				errCh <- err
+				return
+			}
+
+			interactionsCh <- objectInteractions
 		}(obj)
 	}
 
-	wg.Wait()
+	receivedCount := 0
+	done := false
+
+	for !done {
+		select {
+		case err := <-errCh:
+			actorCtx.Respond(&ListInteractionsResponse{Error: err})
+			return
+		case objectInteractions := <-interactionsCh:
+			interactions = append(interactions, objectInteractions...)
+			receivedCount++
+			done = receivedCount >= len(objects)
+		}
+	}
+
 	actorCtx.Respond(&ListInteractionsResponse{Interactions: interactions})
 }
