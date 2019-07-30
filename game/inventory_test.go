@@ -106,7 +106,7 @@ func TestInventoryActor_Receive_NamesMustBeUnique(t *testing.T) {
 
 	// create first object
 
-	response, err := context.RequestFuture(createObject, &CreateObjectRequest{Name: "test", Description: "test object"}, 1*time.Second).Result()
+	response, err := context.RequestFuture(createObject, &CreateObjectRequest{Name: "test2", Description: "test object"}, 1*time.Second).Result()
 	require.Nil(t, err)
 
 	createObjectResponse, ok := response.(*CreateObjectResponse)
@@ -115,7 +115,7 @@ func TestInventoryActor_Receive_NamesMustBeUnique(t *testing.T) {
 
 	// try to create second object w/ same name
 
-	response, err = context.RequestFuture(createObject, &CreateObjectRequest{Name: "test", Description: "another test"}, 1*time.Second).Result()
+	response, err = context.RequestFuture(createObject, &CreateObjectRequest{Name: "test2", Description: "another test"}, 1*time.Second).Result()
 	require.Nil(t, err)
 
 	createObjectResponse, ok = response.(*CreateObjectResponse)
