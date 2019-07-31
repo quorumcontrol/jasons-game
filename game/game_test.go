@@ -204,7 +204,7 @@ func TestInscriptionInteractions(t *testing.T) {
 	defer rootCtx.Stop(simulatedUI)
 	defer rootCtx.Stop(game)
 
-	playerTree, err := GetOrCreatePlayerTree(net)
+	playerTree, err := GetPlayerTree(net)
 	require.Nil(t, err)
 
 	objTree, err := net.CreateChainTree()
@@ -244,7 +244,7 @@ func TestInscriptionInteractions(t *testing.T) {
 		time.Sleep(50 * time.Millisecond)
 		msgs := filterUserMessages(t, stream.GetMessages())
 		lastMsg := msgs[len(msgs)-1]
-		assert.Equal(t, lastMsg.Message, "this is a magic sword\nwith magical properties")
+		assert.Equal(t, "this is a magic sword\nwith magical properties", lastMsg.Message)
 	})
 
 	t.Run("with a mutli-valued inscription", func(t *testing.T) {
@@ -272,6 +272,6 @@ func TestInscriptionInteractions(t *testing.T) {
 		time.Sleep(50 * time.Millisecond)
 		msgs := filterUserMessages(t, stream.GetMessages())
 		lastMsg := msgs[len(msgs)-1]
-		assert.Equal(t, lastMsg.Message, "with magical properties")
+		assert.Equal(t, "with magical properties", lastMsg.Message)
 	})
 }
