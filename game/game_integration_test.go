@@ -49,9 +49,13 @@ func TestFullIntegration(t *testing.T) {
 	require.Nil(t, err)
 	defer rootCtx.Stop(uiActor)
 
-	playerTree, err := GetOrCreatePlayerTree(net)
+	playerChain, err := net.CreateNamedChainTree("player")
 	require.Nil(t, err)
-	gameActor, err := rootCtx.SpawnNamed(NewGameProps(playerTree, uiActor, net),
+	playerTree, err := CreatePlayerTree(net, playerChain.MustId())
+	require.Nil(t, err)
+
+	gameCfg := &GameConfig{PlayerTree: playerTree, UiActor: uiActor, Network: net}
+	gameActor, err := rootCtx.SpawnNamed(NewGameProps(gameCfg),
 		"test-integration-game")
 	require.Nil(t, err)
 	defer rootCtx.Stop(gameActor)

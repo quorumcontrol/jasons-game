@@ -146,18 +146,13 @@ func GetPlayerTree(net network.Network) (*PlayerTree, error) {
 	return NewPlayerTree(net, playerChain), nil
 }
 
-func CreatePlayerTree(net network.Network) (*PlayerTree, error) {
-	playerChain, err := net.GetChainTreeByName("player")
+func CreatePlayerTree(net network.Network, chainTreeId string) (*PlayerTree, error) {
+	playerChain, err := net.GetTree(chainTreeId)
 	if err != nil {
 		return nil, err
 	}
-	if playerChain != nil {
-		return nil, errors.New("player chaintree already exists")
-	}
-
-	playerChain, err = net.CreateNamedChainTree("player")
-	if err != nil {
-		return nil, err
+	if playerChain == nil {
+		return nil, errors.Errorf("player chaintree %s was not found", chainTreeId)
 	}
 
 	playerTree := NewPlayerTree(net, playerChain)

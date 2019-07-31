@@ -36,6 +36,7 @@ func New(ctx context.Context, cfg config.InkFaucetConfig) (*InkFaucetRouter, err
 	faucetConfig := ink.ChainTreeInkFaucetConfig{
 		Net:         iw.Net,
 		InkOwnerDID: cfg.InkOwnerDID,
+		PrivateKey:  cfg.PrivateKey,
 	}
 
 	ctif, err := ink.NewChainTreeInkFaucet(faucetConfig)

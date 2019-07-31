@@ -1,19 +1,14 @@
 package ui
 
 import (
-	"context"
 	"fmt"
 	"reflect"
-	"strings"
 	"time"
 
 	"github.com/AsynkronIT/protoactor-go/actor"
 	"github.com/gogo/protobuf/proto"
 	logging "github.com/ipfs/go-log"
-	"github.com/pkg/errors"
 
-	"github.com/quorumcontrol/jasons-game/inkfaucet/inkfaucet"
-	"github.com/quorumcontrol/jasons-game/inkfaucet/invites"
 	"github.com/quorumcontrol/jasons-game/network"
 	"github.com/quorumcontrol/jasons-game/pb/jasonsgame"
 )
@@ -72,27 +67,6 @@ func NewUIProps(stream remoteStream, net network.Network) *actor.Props {
 	})
 }
 
-type Finished struct{}
-
-type UIInviteServer struct {
-	network  network.Network
-	stream   remoteStream
-	inkDID   string
-	doneChan doneChan
-	invites  *actor.PID
-	finished bool
-}
-
-func NewUIInviteProps(stream remoteStream, net network.Network, inkDID string) *actor.Props {
-	return actor.PropsFromProducer(func() actor.Actor {
-		return &UIInviteServer{
-			network: net,
-			stream:  stream,
-			inkDID:  inkDID,
-		}
-	})
-}
-
 type SetGame struct {
 	Game *actor.PID
 }
@@ -132,14 +106,15 @@ func (us *UIServer) Receive(actorCtx actor.Context) {
 	case *actor.ReceiveTimeout:
 		actorCtx.Send(actorCtx.Self(), &jasonsgame.MessageToUser{Heartbeat: true})
 	case *SetGame:
+		log.Debug("received SetGame")
 		us.game = msg.Game
 	case *SetStream:
+		log.Debug("received SetStream")
 		// free up the previous stream
 		us.sendDone()
 
 		us.stream = msg.Stream
 		us.doneChan = msg.DoneChan
-		actorCtx.Send(actorCtx.Self(), &jasonsgame.MessageToUser{Message: "missed you while you were gone"})
 
 		if us.game != nil {
 			cmdUpdate := &jasonsgame.CommandUpdate{}
@@ -207,8 +182,6 @@ func (us *UIServer) Receive(actorCtx actor.Context) {
 			return
 		}
 		log.Debugf("user input has no game to go to %v", msg)
-	case Finished:
-		actorCtx.Respond(false)
 	default:
 		log.Debugf("received unknown message: %v (%s)", msg, reflect.TypeOf(msg).String())
 	}
@@ -218,118 +191,6 @@ func (us *UIServer) sendDone() {
 	if us.doneChan != nil {
 		select {
 		case us.doneChan <- struct{}{}:
-			log.Debugf("sent done")
-		default:
-			log.Warningf("nothing listening on done channel")
-		}
-	}
-}
-
-func (uis *UIInviteServer) Receive(actorCtx actor.Context) {
-	switch msg := actorCtx.Message().(type) {
-	case *actor.Started:
-		log.Debug("UIInviteServer actor started")
-		invitesActor := invites.NewInvitesActor(context.TODO(), invites.InvitesActorConfig{
-			Net:    uis.network,
-			InkDID: uis.inkDID,
-		})
-		invitesActor.Start(actor.EmptyRootContext)
-		uis.invites = invitesActor.PID()
-		actorCtx.Send(actorCtx.Self(), &jasonsgame.MessageToUser{Message: "Welcome to Jason's Game! Please enter your invite code like this: `invitation [code]`."})
-
-	case *actor.Stopping:
-		if uis.doneChan != nil {
-			uis.doneChan <- struct{}{}
-		}
-		actorCtx.Poison(uis.invites)
-
-	case *SetStream:
-		log.Debug("UIInviteServer received SetStream")
-		// free up the previous stream
-		uis.sendDone()
-
-		uis.stream = msg.Stream
-		uis.doneChan = msg.DoneChan
-
-		cmdUpdate, err := buildUIMessage(&jasonsgame.CommandUpdate{
-			Commands: []string{"help", "invitation"},
-		})
-		if err != nil {
-			panic(err)
-		}
-
-		err = uis.stream.Send(cmdUpdate)
-		if err != nil {
-			uis.stream = nil
-			uis.sendDone()
-			log.Error(errors.Wrap(err, "error sending message to stream"))
-		}
-
-
-	case *jasonsgame.MessageToUser:
-		actorCtx.SetReceiveTimeout(5 * time.Second)
-		log.Debugf("message to user: %s", msg.Message)
-		if uis.stream == nil {
-			log.Errorf("no valid stream for user message: %v", msg.Message)
-			return
-		}
-
-		uiMsg, err := buildUIMessage(msg)
-		if err != nil {
-			panic(err)
-		}
-
-		err = uis.stream.Send(uiMsg)
-		if err != nil {
-			uis.stream = nil
-			uis.sendDone()
-			log.Errorf("error sending message to stream: %v", err)
-		}
-
-	case *jasonsgame.UserInput:
-		cmdComponents := strings.Split(msg.Message, " ")
-		switch cmd := cmdComponents[0]; cmd {
-		case "invitation":
-			inviteSubmission := &inkfaucet.InviteSubmission{
-				Invite: cmdComponents[1],
-			}
-
-			req := actorCtx.RequestFuture(uis.invites, inviteSubmission, 10*time.Second)
-
-			uncastInviteResp, err := req.Result()
-			if err != nil {
-				panic("invalid invite code")
-			}
-
-			inviteResp, ok := uncastInviteResp.(*inkfaucet.InviteSubmissionResponse)
-			if !ok {
-				panic("invalid invite code")
-			}
-
-			if inviteResp.GetError() != "" {
-				panic("invalid invite code")
-			}
-
-			actorCtx.Send(actorCtx.Self(), &jasonsgame.MessageToUser{Message: "Invite code accepted."})
-
-			uis.finished = true
-
-		case "help":
-			actorCtx.Send(actorCtx.Self(), &jasonsgame.MessageToUser{Message: "available commands:"})
-			actorCtx.Send(actorCtx.Self(), &jasonsgame.MessageToUser{Message: "help"})
-			actorCtx.Send(actorCtx.Self(), &jasonsgame.MessageToUser{Message: "invitation"})
-		}
-
-
-	case Finished:
-		actorCtx.Respond(uis.finished)
-	}
-}
-
-func (uis *UIInviteServer) sendDone() {
-	if uis.doneChan != nil {
-		select {
-		case uis.doneChan <- struct{}{}:
 			log.Debugf("sent done")
 		default:
 			log.Warningf("nothing listening on done channel")

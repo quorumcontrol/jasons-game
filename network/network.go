@@ -48,9 +48,9 @@ type Network interface {
 	InkNetwork
 	Community() *Community
 	ChangeChainTreeOwner(tree *consensus.SignedChainTree, newKeys []string) (*consensus.SignedChainTree, error)
-	ChangeEphemeralChainTreeOwner(tree *consensus.SignedChainTree, privateKey *ecdsa.PrivateKey, newKeys []string) (*consensus.SignedChainTree, error)
+	ChangeChainTreeOwnerWithKey(tree *consensus.SignedChainTree, privateKey *ecdsa.PrivateKey, newKeys []string) (*consensus.SignedChainTree, error)
 	CreateChainTree() (*consensus.SignedChainTree, error)
-	CreateEphemeralChainTree() (*consensus.SignedChainTree, *ecdsa.PrivateKey, error)
+	CreateChainTreeWithKey(key *ecdsa.PrivateKey) (*consensus.SignedChainTree, error)
 	CreateNamedChainTree(name string) (*consensus.SignedChainTree, error)
 	GetChainTreeByName(name string) (*consensus.SignedChainTree, error)
 	GetTreeByTip(tip cid.Cid) (*consensus.SignedChainTree, error)
@@ -312,18 +312,13 @@ func (n *RemoteNetwork) CreateChainTree() (*consensus.SignedChainTree, error) {
 	return n.createChainTree(n.PrivateKey(), false)
 }
 
-func (n *RemoteNetwork) CreateEphemeralChainTree() (*consensus.SignedChainTree, *ecdsa.PrivateKey, error) {
-	key, err := crypto.GenerateKey()
-	if err != nil {
-		return nil, nil, errors.Wrap(err, "error generating ephemeral private key")
-	}
-
+func (n *RemoteNetwork) CreateChainTreeWithKey(key *ecdsa.PrivateKey) (*consensus.SignedChainTree, error) {
 	ct, err := n.createChainTree(key, true)
 	if err != nil {
-		return nil, nil, errors.Wrap(err, "error creating ephemeral chaintree")
+		return nil, errors.Wrap(err, "error creating ephemeral chaintree")
 	}
 
-	return ct, key, nil
+	return ct, nil
 }
 
 func (n *RemoteNetwork) GetChainTreeByName(name string) (*consensus.SignedChainTree, error) {
@@ -387,7 +382,7 @@ func (n *RemoteNetwork) ChangeChainTreeOwner(tree *consensus.SignedChainTree, ne
 	return n.changeChainTreeOwner(tree, n.PrivateKey(), newKeys)
 }
 
-func (n *RemoteNetwork) ChangeEphemeralChainTreeOwner(tree *consensus.SignedChainTree, privateKey *ecdsa.PrivateKey, newKeys []string) (*consensus.SignedChainTree, error) {
+func (n *RemoteNetwork) ChangeChainTreeOwnerWithKey(tree *consensus.SignedChainTree, privateKey *ecdsa.PrivateKey, newKeys []string) (*consensus.SignedChainTree, error) {
 	return n.changeChainTreeOwner(tree, privateKey, newKeys)
 }
 

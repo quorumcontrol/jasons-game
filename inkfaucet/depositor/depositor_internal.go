@@ -4,37 +4,53 @@ package depositor
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/quorumcontrol/messages/build/go/transactions"
 
 	"github.com/quorumcontrol/jasons-game/inkfaucet/config"
 	"github.com/quorumcontrol/jasons-game/inkfaucet/ink"
+	"github.com/quorumcontrol/jasons-game/network"
 )
 
 type InkDepositor struct {
-	iwconfig  *config.InkFaucet
+	ifconfig  *config.InkFaucet
 	inkfaucet ink.Faucet
+	net       network.Network
 }
 
 func New(ctx context.Context, cfg config.InkFaucetConfig) (*InkDepositor, error) {
-	iwconfig, err := config.Setup(ctx, cfg)
+	ifconfig, err := config.Setup(ctx, cfg)
 	if err != nil {
 		return nil, err
 	}
 
 	cticonfig := ink.ChainTreeInkFaucetConfig{
-		Net:         iwconfig.Net,
+		Net:         ifconfig.Net,
 		InkOwnerDID: cfg.InkOwnerDID,
+		PrivateKey:  cfg.PrivateKey,
 	}
 
-	iw, err := ink.NewChainTreeInkFaucet(cticonfig)
+	inkFaucet, err := ink.NewChainTreeInkFaucet(cticonfig)
 	if err != nil {
 		return nil, err
 	}
 
-	return &InkDepositor{iwconfig: iwconfig, inkfaucet: iw}, nil
+	return &InkDepositor{ifconfig: ifconfig, inkfaucet: inkFaucet, net: ifconfig.Net}, nil
 }
 
 func (id *InkDepositor) Deposit(tokenPayload *transactions.TokenPayload) error {
-	return id.inkfaucet.DepositInk(tokenPayload)
+	err := id.inkfaucet.DepositInk(tokenPayload)
+	if err != nil {
+		fmt.Printf("error: %v\n", err)
+	}
+
+	ifct, err := id.net.GetTree(id.inkfaucet.ChainTreeDID())
+	if err != nil {
+		fmt.Printf("error: %v\n", err)
+	}
+
+	fmt.Println("ink faucet chaintree after deposit:", ifct.ChainTree.Dag.Dump(context.TODO()))
+
+	return err
 }

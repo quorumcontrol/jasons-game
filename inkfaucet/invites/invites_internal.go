@@ -18,13 +18,18 @@ import (
 const inviteInkAmount = uint64(1000)
 
 func (i *InvitesActor) handleInviteRequest(actorCtx actor.Context) {
-	inviteChainTree, inviteKey, err := i.net.CreateEphemeralChainTree()
+	inviteKey, err := crypto.GenerateKey()
+	if err != nil {
+		i.errorResponse(actorCtx, err, "error generating key for invite chaintree")
+	}
+
+	inviteChainTree, err := i.net.CreateChainTreeWithKey(inviteKey)
 	if err != nil {
 		i.errorResponse(actorCtx, err, "error creating invite chaintree")
 		return
 	}
 
-	log.Debugf("invite actor created ephemeral chaintree: %+v", *inviteChainTree)
+	log.Debugf("invite actor created ephemeral chaintree: %+v", inviteChainTree)
 
 	inkReq := &inkfaucet.InkRequest{
 		Amount:             inviteInkAmount,

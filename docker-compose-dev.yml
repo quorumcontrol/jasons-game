@@ -18,6 +18,7 @@ services:
       GOPATH: /go
       TUPELO_BOOTSTRAP_NODES: /ip4/172.16.239.10/tcp/34001/ipfs/16Uiu2HAm3TGSEKEjagcCojSJeaT5rypaeJMKejijvYSnAjviWwV5
       JASON_BOOTSTRAP_NODES: /ip4/172.16.239.100/tcp/34001/ipfs/16Uiu2HAmBL6Xz9ichyunCexiqomcHyzVpKKmxAMgUusksBZzzM3K
+      INK_DID:
 
   game2:
     build: ./devdocker
@@ -36,6 +37,7 @@ services:
       GOPATH: /go
       TUPELO_BOOTSTRAP_NODES: /ip4/172.16.239.10/tcp/34001/ipfs/16Uiu2HAm3TGSEKEjagcCojSJeaT5rypaeJMKejijvYSnAjviWwV5
       JASON_BOOTSTRAP_NODES: /ip4/172.16.239.100/tcp/34001/ipfs/16Uiu2HAmBL6Xz9ichyunCexiqomcHyzVpKKmxAMgUusksBZzzM3K
+      INK_DID:
 
   inkfaucet:
     build: ./devdocker
@@ -53,26 +55,11 @@ services:
       JASON_BOOTSTRAP_NODES: /ip4/172.16.239.100/tcp/34001/ipfs/16Uiu2HAmBL6Xz9ichyunCexiqomcHyzVpKKmxAMgUusksBZzzM3K
       INK_DID:
       TOKEN_PAYLOAD:
-
-  inkfaucetdid:
-    build: ./devdocker
-    command: ["go", "run", "-tags=internal", "inkfaucet/main.go", "-local=true", "-outputdid=true"]
-    depends_on:
-      - inkfaucet
-      - localstack
-    volumes:
-      - .:/app:delegated
-      - ./devdocker/.tmp:/root/.cache:delegated
-      - $GOPATH/pkg/mod:/go/pkg/mod:delegated
-      - ./devdocker/devink_state:/root/.config/tupelo:delegated
-    environment:
-      GOPATH: /go
-      TUPELO_BOOTSTRAP_NODES: /ip4/172.16.239.10/tcp/34001/ipfs/16Uiu2HAm3TGSEKEjagcCojSJeaT5rypaeJMKejijvYSnAjviWwV5
-      JASON_BOOTSTRAP_NODES: /ip4/172.16.239.100/tcp/34001/ipfs/16Uiu2HAmBL6Xz9ichyunCexiqomcHyzVpKKmxAMgUusksBZzzM3K
+      INK_FAUCET_KEY:
 
   devink:
     build: ./devdocker
-    command: ["go", "run", "-tags=internal", "devink/main.go", "${INK_FAUCET_DID}"]
+    command: ["go", "run", "-tags=internal", "devink/main.go", "${INK_FAUCET_KEY}"]
     volumes:
       - .:/app:delegated
       - ./devdocker/.tmp:/root/.cache:delegated
@@ -81,7 +68,7 @@ services:
     environment:
       GOPATH: /go
       TUPELO_BOOTSTRAP_NODES: /ip4/172.16.239.10/tcp/34001/ipfs/16Uiu2HAm3TGSEKEjagcCojSJeaT5rypaeJMKejijvYSnAjviWwV5
-      INK_FAUCET_DID:
+      INK_FAUCET_KEY:
 
   invite:
     build: ./devdocker
@@ -98,6 +85,7 @@ services:
       TUPELO_BOOTSTRAP_NODES: /ip4/172.16.239.10/tcp/34001/ipfs/16Uiu2HAm3TGSEKEjagcCojSJeaT5rypaeJMKejijvYSnAjviWwV5
       JASON_BOOTSTRAP_NODES: /ip4/172.16.239.100/tcp/34001/ipfs/16Uiu2HAmBL6Xz9ichyunCexiqomcHyzVpKKmxAMgUusksBZzzM3K
       INK_DID:
+      INK_FAUCET_KEY:
 
   game-testnet:
     build: ./devdocker

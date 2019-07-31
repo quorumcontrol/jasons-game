@@ -7,7 +7,6 @@ import (
 	"time"
 
 	"github.com/AsynkronIT/protoactor-go/actor"
-	"github.com/ipfs/go-datastore"
 	logging "github.com/ipfs/go-log"
 	"github.com/pkg/errors"
 
@@ -88,11 +87,6 @@ func (gs *GameServer) ReceiveStatMessages(sess *jasonsgame.Session, stream jason
 }
 
 func (gs *GameServer) getOrCreateSession(sess *jasonsgame.Session, stream jasonsgame.GameService_ReceiveUIMessagesServer) *actor.PID {
-	var (
-		ds datastore.Batching
-		err error
-	)
-
 	uiActor, ok := gs.sessions[sess.Uuid]
 	if !ok {
 		// use filepath.Base as a "cleaner" here to not allow setting arbitrary directories with, for example, uuid: "../../etc/passwd"
@@ -101,7 +95,7 @@ func (gs *GameServer) getOrCreateSession(sess *jasonsgame.Session, stream jasons
 			panic(errors.Wrap(err, "error creating session storage"))
 		}
 
-		ds, err = config.LocalDataStore(statePath)
+		ds, err := config.LocalDataStore(statePath)
 		if err != nil {
 			panic(errors.Wrap(err, "error getting store"))
 		}
@@ -117,46 +111,22 @@ func (gs *GameServer) getOrCreateSession(sess *jasonsgame.Session, stream jasons
 			panic("must supply a valid session")
 		}
 
+		log.Debugf("creating actors")
+		uiActor = actor.EmptyRootContext.Spawn(ui.NewUIProps(stream, net))
+		gs.sessions[sess.Uuid] = uiActor
+
 		playerTree, err := game.GetPlayerTree(net)
 		if err != nil {
 			panic(errors.Wrap(err, "error getting player tree"))
 		}
 
-		if playerTree == nil {
-			log.Debug("player doesn't have an existing chaintree; spawning invite UI")
-			uiInviteActor := actor.EmptyRootContext.Spawn(ui.NewUIInviteProps(stream, net, gs.inkDID))
-			gs.sessions[sess.Uuid] = uiInviteActor
-			return uiInviteActor
+		gameCfg := &game.GameConfig{
+			PlayerTree: playerTree,
+			UiActor:    uiActor,
+			Network:    net,
+		    InkDID:     gs.inkDID,
 		}
-
-		log.Debugf("creating actors")
-		uiActor = actor.EmptyRootContext.Spawn(ui.NewUIProps(stream, net))
-		gs.sessions[sess.Uuid] = uiActor
-
-		actor.EmptyRootContext.Spawn(game.NewGameProps(playerTree, uiActor, net))
-
-		_, err = playerTree.HomeLocation.Id()
-		if err != nil {
-			panic(errors.Wrap(err, "error starting game actor"))
-		}
+		actor.EmptyRootContext.Spawn(game.NewGameProps(gameCfg))
 	}
-
-	uncastFinished, err := actor.EmptyRootContext.RequestFuture(uiActor, ui.Finished{}, 2*time.Second).Result()
-	if err != nil {
-		panic(errors.Wrap(err, "error querying finished state of ui actor"))
-	}
-
-	finished := uncastFinished.(bool)
-
-	if finished {
-		actor.EmptyRootContext.Poison(uiActor)
-		delete(gs.sessions, sess.Uuid)
-		err = ds.Close()
-		if err != nil {
-			panic(err)
-		}
-		return gs.getOrCreateSession(sess, stream)
-	}
-
 	return uiActor
 }

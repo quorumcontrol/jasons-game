@@ -24,9 +24,13 @@ func TestImportIntegration(t *testing.T) {
 
 	simulatedUI, err := rootCtx.SpawnNamed(ui.NewUIProps(stream, net), t.Name()+"-ui")
 	require.Nil(t, err)
-	playerTree, err := gamepkg.GetOrCreatePlayerTree(net)
+	playerChain, err := net.CreateNamedChainTree("player")
 	require.Nil(t, err)
-	game, err := rootCtx.SpawnNamed(gamepkg.NewGameProps(playerTree, simulatedUI, net), t.Name()+"-game")
+	playerTree, err := gamepkg.CreatePlayerTree(net, playerChain.MustId())
+	require.Nil(t, err)
+
+	gameCfg := &gamepkg.GameConfig{PlayerTree: playerTree, UiActor: simulatedUI, Network: net}
+	game, err := rootCtx.SpawnNamed(gamepkg.NewGameProps(gameCfg), t.Name()+"-game")
 	require.Nil(t, err)
 
 	defer rootCtx.Stop(simulatedUI)

@@ -20,9 +20,13 @@ func setupUiAndGame(t *testing.T, stream *ui.TestStream, net network.Network) (s
 	simulatedUI, err := rootCtx.SpawnNamed(ui.NewUIProps(stream, net), t.Name()+"-ui")
 	require.Nil(t, err)
 
-	playerTree, err := CreatePlayerTree(net)
+	playerChain, err := net.CreateNamedChainTree("player")
 	require.Nil(t, err)
-	game, err = rootCtx.SpawnNamed(NewGameProps(playerTree, simulatedUI, net), t.Name()+"-game")
+	playerTree, err := CreatePlayerTree(net, playerChain.MustId())
+	require.Nil(t, err)
+
+	gameCfg := &GameConfig{PlayerTree: playerTree, UiActor: simulatedUI, Network: net}
+	game, err = rootCtx.SpawnNamed(NewGameProps(gameCfg), t.Name()+"-game")
 	require.Nil(t, err)
 	return simulatedUI, game
 }
@@ -102,9 +106,13 @@ func TestCallMe(t *testing.T) {
 	require.Nil(t, err)
 	defer rootCtx.Stop(simulatedUI)
 
-	playerTree, err := CreatePlayerTree(net)
+	playerChain, err := net.CreateNamedChainTree("player")
 	require.Nil(t, err)
-	game, err := rootCtx.SpawnNamed(NewGameProps(playerTree, simulatedUI, net), "test-callme-game")
+	playerTree, err := CreatePlayerTree(net, playerChain.MustId())
+	require.Nil(t, err)
+
+	gameCfg := &GameConfig{PlayerTree: playerTree, UiActor: simulatedUI, Network: net}
+	game, err := rootCtx.SpawnNamed(NewGameProps(gameCfg), "test-callme-game")
 	require.Nil(t, err)
 	defer rootCtx.Stop(game)
 
@@ -113,7 +121,7 @@ func TestCallMe(t *testing.T) {
 	rootCtx.Send(game, &jasonsgame.UserInput{Message: "call me " + newName})
 	time.Sleep(100 * time.Millisecond)
 
-	tree, err := net.GetChainTreeByName("player")
+	tree, err := net.GetTree(playerChain.MustId())
 	require.Nil(t, err)
 
 	pt := NewPlayerTree(net, tree)
