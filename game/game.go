@@ -135,6 +135,8 @@ func (g *Game) handleUserInput(actorCtx actor.Context, input *jasonsgame.UserInp
 		g.sendUILocation(actorCtx)
 	case "build-portal":
 		err = g.handleBuildPortal(actorCtx, args)
+	case "delete-portal":
+		err = g.handleDeletePortal(actorCtx, args)
 	case "say":
 		actorCtx.Send(g.chatActor, args)
 	case "shout":
@@ -186,6 +188,20 @@ func (g *Game) handleBuildPortal(actorCtx actor.Context, toDid string) error {
 	}
 
 	g.sendUserMessage(actorCtx, fmt.Sprintf("successfully built a portal to %s", toDid))
+	return nil
+}
+
+func (g *Game) handleDeletePortal(actorCtx actor.Context, toDid string) error {
+	response, err := actorCtx.RequestFuture(g.locationActor, &DeletePortalRequest{}, 30*time.Second).Result()
+	if err != nil {
+		return errors.Wrap(err, "error deleting portal")
+	}
+
+	if respErr := response.(*DeletePortalResponse).Error; respErr != nil {
+		return errors.Wrap(err, "error deleting portal")
+	}
+
+	g.sendUserMessage(actorCtx, "successfully deleted the portal")
 	return nil
 }
 
