@@ -106,6 +106,20 @@ func (l *LocationTree) BuildPortal(toDid string) error {
 	return l.updatePath(portalPath, portal)
 }
 
+func (l *LocationTree) DeletePortal() error {
+	currentPortal, err := l.GetPortal()
+
+	if err != nil {
+		return fmt.Errorf("error fetching portals: %v", err)
+	}
+
+	if currentPortal == nil {
+		return fmt.Errorf("error, no portal to delete")
+	}
+
+	return l.updatePath(portalPath, nil)
+}
+
 func (l *LocationTree) GetPortal() (*jasonsgame.Portal, error) {
 	portal, err := l.getPath(portalPath)
 	if err != nil {
