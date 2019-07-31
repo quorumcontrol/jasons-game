@@ -58,7 +58,8 @@ JasonsGame-$(BUILD).app: JasonsGame-$(BUILD).app/Contents/MacOS/jasonsgame
 mac-app: JasonsGame-$(BUILD).app
 
 lint: $(FIRSTGOPATH)/bin/golangci-lint $(generated)
-	$(FIRSTGOPATH)/bin/golangci-lint run --build-tags 'integration $(BUILD)'
+	$(FIRSTGOPATH)/bin/golangci-lint run --build-tags 'integration public'
+	$(FIRSTGOPATH)/bin/golangci-lint run --build-tags 'integration internal'
 
 test: $(generated) go.mod go.sum $(FIRSTGOPATH)/bin/gotestsum
 	gotestsum
