@@ -12,7 +12,7 @@ import (
 	"github.com/ipfs/go-cid"
 	logging "github.com/ipfs/go-log"
 	"github.com/pkg/errors"
-  "gopkg.in/yaml.v2"
+	"gopkg.in/yaml.v2"
 
 	"github.com/quorumcontrol/tupelo-go-sdk/consensus"
 
