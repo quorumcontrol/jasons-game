@@ -314,22 +314,45 @@ func (inv *InventoryActor) handleListInteractionsRequest(actorCtx actor.Context,
 	}
 
 	interactions := []Interaction{}
+	if len(objects) == 0 {
+		actorCtx.Respond(&ListInteractionsResponse{Interactions: interactions})
+		return
+	}
 
-	for _, object := range objects {
-		obj, err := FindObjectTree(inv.network, object.Did)
+	interactionsCh := make(chan []Interaction, len(objects))
+	errCh := make(chan error)
 
-		if err != nil {
+	for _, obj := range objects {
+		go func(object *Object) {
+			obj, err := FindObjectTree(inv.network, object.Did)
+			if err != nil {
+				errCh <- err
+				return
+			}
+
+			objectInteractions, err := obj.InteractionsList()
+			if err != nil {
+				errCh <- err
+				return
+			}
+
+			interactionsCh <- objectInteractions
+		}(obj)
+	}
+
+	receivedCount := 0
+	done := false
+
+	for !done {
+		select {
+		case err := <-errCh:
 			actorCtx.Respond(&ListInteractionsResponse{Error: err})
 			return
+		case objectInteractions := <-interactionsCh:
+			interactions = append(interactions, objectInteractions...)
+			receivedCount++
+			done = receivedCount >= len(objects)
 		}
-
-		objectInteractions, err := obj.InteractionsList()
-		if err != nil {
-			actorCtx.Respond(&ListInteractionsResponse{Error: err})
-			return
-		}
-
-		interactions = append(interactions, objectInteractions...)
 	}
 
 	actorCtx.Respond(&ListInteractionsResponse{Interactions: interactions})

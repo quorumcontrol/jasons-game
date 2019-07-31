@@ -12,6 +12,7 @@ import (
 	"github.com/ipfs/go-cid"
 	logging "github.com/ipfs/go-log"
 	"github.com/pkg/errors"
+  "gopkg.in/yaml.v2"
 
 	"github.com/quorumcontrol/tupelo-go-sdk/consensus"
 
@@ -263,6 +264,8 @@ func (g *Game) handleUserInput(actorCtx actor.Context, input *jasonsgame.UserInp
 		g.sendUILocation(actorCtx)
 	case "build-portal":
 		err = g.handleBuildPortal(actorCtx, args)
+	case "delete-portal":
+		err = g.handleDeletePortal(actorCtx, args)
 	case "say":
 		actorCtx.Send(g.chatActor, args)
 	case "shout":
@@ -304,7 +307,7 @@ func (g *Game) handleName(name string) error {
 func (g *Game) handleBuildPortal(actorCtx actor.Context, toDid string) error {
 	response, err := actorCtx.RequestFuture(g.locationActor, &BuildPortalRequest{
 		To: toDid,
-	}, 5*time.Second).Result()
+	}, 30*time.Second).Result()
 	if err != nil {
 		return errors.Wrap(err, "error building portal")
 	}
@@ -314,6 +317,20 @@ func (g *Game) handleBuildPortal(actorCtx actor.Context, toDid string) error {
 	}
 
 	g.sendUserMessage(actorCtx, fmt.Sprintf("successfully built a portal to %s", toDid))
+	return nil
+}
+
+func (g *Game) handleDeletePortal(actorCtx actor.Context, toDid string) error {
+	response, err := actorCtx.RequestFuture(g.locationActor, &DeletePortalRequest{}, 30*time.Second).Result()
+	if err != nil {
+		return errors.Wrap(err, "error deleting portal")
+	}
+
+	if respErr := response.(*DeletePortalResponse).Error; respErr != nil {
+		return errors.Wrap(err, "error deleting portal")
+	}
+
+	g.sendUserMessage(actorCtx, "successfully deleted the portal")
 	return nil
 }
 
@@ -334,7 +351,7 @@ func (g *Game) handleTipZoom(actorCtx actor.Context, tip string) error {
 }
 
 func (g *Game) handleSetDescription(actorCtx actor.Context, desc string) error {
-	response, err := actorCtx.RequestFuture(g.locationActor, &SetLocationDescriptionRequest{Description: desc}, 5*time.Second).Result()
+	response, err := actorCtx.RequestFuture(g.locationActor, &SetLocationDescriptionRequest{Description: desc}, 30*time.Second).Result()
 
 	if err != nil {
 		return errors.Wrap(err, "error setting description")
@@ -365,6 +382,8 @@ func (g *Game) handleInteractionInput(actorCtx actor.Context, cmd *interactionCo
 		err = g.handlePickUpObject(actorCtx, interaction)
 	case *GetTreeValueInteraction:
 		err = g.handleGetTreeValueInteraction(actorCtx, interaction)
+	case *SetTreeValueInteraction:
+		err = g.handleSetTreeValueInteraction(actorCtx, interaction, args)
 	case *CipherInteraction:
 		nextInteraction, _, err := interaction.Unseal(args)
 		if err != nil {
@@ -380,6 +399,27 @@ func (g *Game) handleInteractionInput(actorCtx actor.Context, cmd *interactionCo
 	}
 
 	return err
+}
+
+func (g *Game) handleSetTreeValueInteraction(actorCtx actor.Context, interaction *SetTreeValueInteraction, args string) error {
+	ctx := context.TODO()
+
+	tree, err := g.network.GetTree(interaction.Did)
+	if err != nil {
+		return errors.Wrap(err, "error fetching tree")
+	}
+	if tree == nil {
+		return fmt.Errorf("could not find tree with did %v", interaction.Did)
+	}
+
+	_, err = interaction.SetValue(ctx, g.network, tree, args)
+	if err != nil {
+		return errors.Wrap(err, fmt.Sprintf("error setting value on tree %v", interaction.Did))
+	}
+
+	g.sendUserMessage(actorCtx, fmt.Sprintf("set %v", interaction.Path))
+
+	return nil
 }
 
 func (g *Game) handleGetTreeValueInteraction(actorCtx actor.Context, interaction *GetTreeValueInteraction) error {
@@ -400,10 +440,27 @@ func (g *Game) handleGetTreeValueInteraction(actorCtx actor.Context, interaction
 
 	value, _, err := tree.ChainTree.Dag.Resolve(ctx, append([]string{"tree", "data", "jasons-game"}, pathSlice...))
 	if err != nil {
-		return errors.Wrap(err, fmt.Sprintf("error fetching value for %v", pathSlice))
+		return errors.Wrap(err, fmt.Sprintf("error fetching value for %v", interaction.Path))
 	}
 
-	g.sendUserMessage(actorCtx, value)
+	var toSend string
+	switch msg := value.(type) {
+	case string:
+		toSend = msg
+	case []interface{}:
+		stringSlice := make([]string, len(msg))
+		for i, v := range msg {
+			stringSlice[i] = fmt.Sprintf("%v", v)
+		}
+		toSend = strings.Join(stringSlice, "\n")
+	default:
+		valBytes, err := yaml.Marshal(msg)
+		if err != nil {
+			return errors.Wrap(err, fmt.Sprintf("error casting value at %v", interaction.Path))
+		}
+		toSend = string(valBytes)
+	}
+	g.sendUserMessage(actorCtx, toSend)
 	return nil
 }
 
@@ -411,7 +468,7 @@ func (g *Game) handleDropObject(actorCtx actor.Context, interaction *DropObjectI
 	response, err := actorCtx.RequestFuture(g.inventoryActor, &TransferObjectRequest{
 		Did: interaction.Did,
 		To:  g.locationDid,
-	}, 5*time.Second).Result()
+	}, 30*time.Second).Result()
 
 	if err != nil {
 		return errors.Wrap(err, "error executing drop request")
@@ -434,7 +491,7 @@ func (g *Game) handlePickUpObject(actorCtx actor.Context, interaction *PickUpObj
 	response, err := actorCtx.RequestFuture(g.locationActor, &TransferObjectRequest{
 		Did: interaction.Did,
 		To:  g.playerTree.Did(),
-	}, 10*time.Second).Result()
+	}, 30*time.Second).Result()
 
 	if err != nil {
 		return err
@@ -459,7 +516,7 @@ func (g *Game) handleCreateObject(actorCtx actor.Context, args string) error {
 	response, err := actorCtx.RequestFuture(g.inventoryActor, &CreateObjectRequest{
 		Name:        objName,
 		Description: strings.Join(splitArgs[1:], " "),
-	}, 5*time.Second).Result()
+	}, 30*time.Second).Result()
 	if err != nil {
 		return err
 	}
@@ -474,7 +531,7 @@ func (g *Game) handleCreateObject(actorCtx actor.Context, args string) error {
 }
 
 func (g *Game) handlePlayerInventoryList(actorCtx actor.Context) error {
-	response, err := actorCtx.RequestFuture(g.inventoryActor, &InventoryListRequest{}, 5*time.Second).Result()
+	response, err := actorCtx.RequestFuture(g.inventoryActor, &InventoryListRequest{}, 30*time.Second).Result()
 	if err != nil {
 		return err
 	}
@@ -498,7 +555,7 @@ func (g *Game) handlePlayerInventoryList(actorCtx actor.Context) error {
 func (g *Game) handleLocationInventoryList(actorCtx actor.Context) error {
 	g.sendUILocation(actorCtx)
 
-	response, err := actorCtx.RequestFuture(g.locationActor, &InventoryListRequest{}, 5*time.Second).Result()
+	response, err := actorCtx.RequestFuture(g.locationActor, &InventoryListRequest{}, 30*time.Second).Result()
 	if err != nil {
 		return err
 	}
@@ -578,7 +635,7 @@ func (g *Game) handleConnectLocation(actorCtx actor.Context, args string) error 
 		Did:     toDid,
 	}
 
-	result, err := actorCtx.RequestFuture(g.locationActor, &AddInteractionRequest{Interaction: interaction}, 5*time.Second).Result()
+	result, err := actorCtx.RequestFuture(g.locationActor, &AddInteractionRequest{Interaction: interaction}, 30*time.Second).Result()
 	if err != nil {
 		return fmt.Errorf("error adding connection: %v", err)
 	}
@@ -713,7 +770,7 @@ func (g *Game) refreshInteractionsFor(actorCtx actor.Context, pid *actor.PID) er
 }
 
 func (g *Game) interactionCommandsFor(actorCtx actor.Context, pid *actor.PID) (commandList, error) {
-	response, err := actorCtx.RequestFuture(pid, &ListInteractionsRequest{}, 5*time.Second).Result()
+	response, err := actorCtx.RequestFuture(pid, &ListInteractionsRequest{}, 30*time.Second).Result()
 	if err != nil || response == nil {
 		return nil, fmt.Errorf("error fetching interactions %v", err)
 	}
@@ -738,7 +795,7 @@ func (g *Game) interactionCommandsFor(actorCtx actor.Context, pid *actor.PID) (c
 }
 
 func (g *Game) getCurrentLocation(actorCtx actor.Context) (*jasonsgame.Location, error) {
-	response, err := actorCtx.RequestFuture(g.locationActor, &GetLocation{}, 5*time.Second).Result()
+	response, err := actorCtx.RequestFuture(g.locationActor, &GetLocation{}, 30*time.Second).Result()
 	if err != nil {
 		return nil, err
 	}

@@ -45,6 +45,13 @@ type BuildPortalResponse struct {
 	Error error
 }
 
+type DeletePortalRequest struct {
+}
+
+type DeletePortalResponse struct {
+	Error error
+}
+
 func NewLocationActorProps(cfg *LocationActorConfig) *actor.Props {
 	return actor.PropsFromProducer(func() actor.Actor {
 		return &LocationActor{
@@ -103,6 +110,10 @@ func (l *LocationActor) Receive(actorCtx actor.Context) {
 		actorCtx.Forward(l.inventoryActor)
 	case *BuildPortalRequest:
 		l.handleBuildPortal(actorCtx, msg)
+	case *DeletePortalRequest:
+		actorCtx.Respond(&DeletePortalResponse{
+			Error: l.location.DeletePortal(),
+		})
 	case *AddInteractionRequest:
 		actorCtx.Respond(&AddInteractionResponse{
 			Error: l.location.AddInteraction(msg.Interaction),
@@ -137,7 +148,7 @@ func (l *LocationActor) handleListInteractionsRequest(actorCtx actor.Context, ms
 		})
 	}
 
-	inventoryInteractionsResp, err := actorCtx.RequestFuture(l.inventoryActor, &ListInteractionsRequest{}, 5*time.Second).Result()
+	inventoryInteractionsResp, err := actorCtx.RequestFuture(l.inventoryActor, &ListInteractionsRequest{}, 30*time.Second).Result()
 	if err != nil {
 		actorCtx.Respond(&ListInteractionsResponse{Error: err})
 		return

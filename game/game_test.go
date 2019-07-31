@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/AsynkronIT/protoactor-go/actor"
+	"github.com/quorumcontrol/jasons-game/game/trees"
 	"github.com/quorumcontrol/jasons-game/network"
 	"github.com/quorumcontrol/jasons-game/pb/jasonsgame"
 	"github.com/quorumcontrol/jasons-game/ui"
@@ -193,4 +194,84 @@ func TestGoThroughPortal(t *testing.T) {
 	msgs := stream.GetMessages()
 	lastMsg := msgs[len(msgs)-1]
 	assert.Equal(t, remoteDescription, lastMsg.GetUserMessage().Message)
+}
+
+func TestInscriptionInteractions(t *testing.T) {
+	net := network.NewLocalNetwork()
+	stream := ui.NewTestStream()
+
+	simulatedUI, game := setupUiAndGame(t, stream, net)
+	defer rootCtx.Stop(simulatedUI)
+	defer rootCtx.Stop(game)
+
+	playerTree, err := GetOrCreatePlayerTree(net)
+	require.Nil(t, err)
+
+	objTree, err := net.CreateChainTree()
+	require.Nil(t, err)
+	obj := NewObjectTree(net, objTree)
+	err = obj.SetName("test-object")
+	require.Nil(t, err)
+
+	inventoryTree, err := trees.FindInventoryTree(net, playerTree.Did())
+	require.Nil(t, err)
+	err = inventoryTree.Add(obj.MustId())
+	require.Nil(t, err)
+
+	t.Run("with a mutli-valued inscription", func(t *testing.T) {
+		err = obj.AddInteraction(&SetTreeValueInteraction{
+			Command:  "test1 inscribe",
+			Did:      obj.MustId(),
+			Path:     "inscriptions",
+			Multiple: true,
+		})
+		require.Nil(t, err)
+
+		err = obj.AddInteraction(&GetTreeValueInteraction{
+			Command: "test1 read",
+			Did:     obj.MustId(),
+			Path:    "inscriptions",
+		})
+		require.Nil(t, err)
+		time.Sleep(50 * time.Millisecond)
+		rootCtx.Send(game, &jasonsgame.UserInput{Message: "refresh"})
+		time.Sleep(50 * time.Millisecond)
+		rootCtx.Send(game, &jasonsgame.UserInput{Message: "test1 inscribe this is a magic sword"})
+		time.Sleep(50 * time.Millisecond)
+		rootCtx.Send(game, &jasonsgame.UserInput{Message: "test1 inscribe with magical properties"})
+		time.Sleep(50 * time.Millisecond)
+		rootCtx.Send(game, &jasonsgame.UserInput{Message: "test1 read inscriptions"})
+		time.Sleep(50 * time.Millisecond)
+		msgs := filterUserMessages(t, stream.GetMessages())
+		lastMsg := msgs[len(msgs)-1]
+		assert.Equal(t, lastMsg.Message, "this is a magic sword\nwith magical properties")
+	})
+
+	t.Run("with a mutli-valued inscription", func(t *testing.T) {
+		err = obj.AddInteraction(&SetTreeValueInteraction{
+			Command: "test2 inscribe",
+			Did:     obj.MustId(),
+			Path:    "inscriptions2",
+		})
+		require.Nil(t, err)
+
+		err = obj.AddInteraction(&GetTreeValueInteraction{
+			Command: "test2 read",
+			Did:     obj.MustId(),
+			Path:    "inscriptions2",
+		})
+		require.Nil(t, err)
+		time.Sleep(50 * time.Millisecond)
+		rootCtx.Send(game, &jasonsgame.UserInput{Message: "refresh"})
+		time.Sleep(50 * time.Millisecond)
+		rootCtx.Send(game, &jasonsgame.UserInput{Message: "test2 inscribe this is a magic sword"})
+		time.Sleep(50 * time.Millisecond)
+		rootCtx.Send(game, &jasonsgame.UserInput{Message: "test2 inscribe with magical properties"})
+		time.Sleep(50 * time.Millisecond)
+		rootCtx.Send(game, &jasonsgame.UserInput{Message: "test2 read inscriptions"})
+		time.Sleep(50 * time.Millisecond)
+		msgs := filterUserMessages(t, stream.GetMessages())
+		lastMsg := msgs[len(msgs)-1]
+		assert.Equal(t, lastMsg.Message, "with magical properties")
+	})
 }

@@ -33,8 +33,10 @@ const ShoutTopic = "jasons-game-shouting-players"
 const GeneralTopic = "jasons-game-general"
 
 var DefaultGameBootstrappers = []string{
-	"/ip4/3.208.36.214/tcp/34001/ipfs/16Uiu2HAmGsma99vu8SaheLdCEvMAH2VGbiQ1UH75ctjEVyz89ck6",
-	"/ip4/13.57.66.151/tcp/34001/ipfs/16Uiu2HAmFsyL7pKNRYJAhsJCF9aMLajnr2DN8jskUx6bsVcumGhB",
+	"/ip4/3.13.69.217/tcp/34011/ipfs/16Uiu2HAmSXDGtQTaNPVzQQkdYuZ221k5668tUYeEEpnzE7UEteFn",
+	"/ip4/34.212.243.16/tcp/34011/ipfs/16Uiu2HAmL3JgeNJGcqZjUgzaq5nhPwDXgGpxah5ssBokaUbKo6ds",
+	"/ip4/52.57.153.71/tcp/34011/ipfs/16Uiu2HAkuUHpfEjMmiGQozSZLw74enRbzDBqsX9AiSAcHAEhVYTj",
+	"/ip4/13.250.221.143/tcp/34011/ipfs/16Uiu2HAmJbmqFNKzVNFaAXYFxtmPBN8zAC1kxvgQjQNPDDXTyDMk",
 }
 
 type InkNetwork interface {
@@ -467,20 +469,6 @@ func (n *RemoteNetwork) SendInk(tree *consensus.SignedChainTree, tokenName *cons
 	log.Debugf("send ink token payload: %+v", *tokenPayload)
 
 	return tokenPayload, nil
-}
-
-func TupeloBootstrappers() ([]string, error) {
-	if envSpecifiedNodes, ok := os.LookupEnv("TUPELO_BOOTSTRAP_NODES"); ok {
-		log.Debugf("using tupelo bootstrap nodes: %s", envSpecifiedNodes)
-		return strings.Split(envSpecifiedNodes, ","), nil
-	}
-
-	cfg, err := LoadSignerConfig(false)
-	if err != nil {
-		return nil, fmt.Errorf("error loading notary group config: %v", err)
-	}
-
-	return cfg.BootstrapAddresses, nil
 }
 
 func GameBootstrappers() []string {
