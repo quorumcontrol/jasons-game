@@ -56,6 +56,10 @@ func (l *LocationTree) AddInteraction(i Interaction) error {
 	return l.addInteractionToTree(l, i)
 }
 
+func (l *LocationTree) RemoveInteraction(cmd string) error {
+	return l.removeInteractionFromTree(l, cmd)
+}
+
 func (l *LocationTree) InteractionsList() ([]Interaction, error) {
 	return l.interactionsListFromTree(l)
 }

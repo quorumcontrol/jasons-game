@@ -123,6 +123,29 @@ func (w *withInteractions) addInteractionToTree(tree updatableTree, i Interactio
 	return tree.updatePath([]string{"interactions", i.GetCommand()}, toStore)
 }
 
+func (w *withInteractions) removeInteractionFromTree(tree updatableTree, cmd string) error {
+	val, err := tree.getPath([]string{"interactions"})
+	if err != nil {
+		return err
+	}
+	if val == nil {
+		return fmt.Errorf("interaction %v does not exist exists", cmd)
+	}
+
+	interactions, ok := val.(map[string]interface{})
+	if !ok {
+		return fmt.Errorf("interaction %v does not exist exists", cmd)
+	}
+
+	if _, ok = interactions[cmd]; !ok {
+		return fmt.Errorf("interaction %v does not exist exists", cmd)
+	}
+
+	delete(interactions, cmd)
+
+	return tree.updatePath([]string{"interactions"}, interactions)
+}
+
 func (w *withInteractions) getInteractionFromTree(tree updatableTree, command string) (Interaction, error) {
 	val, err := tree.getPath([]string{"interactions", command})
 	if err != nil || val == nil {
