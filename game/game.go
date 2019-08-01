@@ -36,6 +36,7 @@ type Game struct {
 	locationActor        *actor.PID
 	chatActor            *actor.PID
 	inventoryActor       *actor.PID
+	inventoryHandler     *PlayerInventoryHandler
 	shoutActor           *actor.PID
 	commandsByActorCache map[*actor.PID]commandList
 }
@@ -79,9 +80,12 @@ func (g *Game) initialize(actorCtx actor.Context) {
 
 	g.shoutActor = actorCtx.Spawn(g.network.Community().NewSubscriberProps(shoutChannel))
 
+	g.inventoryHandler = NewPlayerInventoryHandler(g.network, g.playerTree.Did())
+
 	g.inventoryActor = actorCtx.Spawn(NewInventoryActorProps(&InventoryActorConfig{
 		Did:     g.playerTree.Did(),
 		Network: g.network,
+		Handler: g.inventoryHandler,
 	}))
 	err := g.refreshInteractionsFor(actorCtx, g.inventoryActor)
 	if err != nil {
@@ -359,6 +363,16 @@ func (g *Game) handleDropObject(actorCtx actor.Context, interaction *DropObjectI
 }
 
 func (g *Game) handlePickUpObject(actorCtx actor.Context, interaction *PickUpObjectInteraction) error {
+	changeEventCh := make(chan *InventoryChangeEvent, 1)
+
+	objectDid := interaction.Did
+	subscription := g.inventoryHandler.Subscribe(objectDid, func(evt *InventoryChangeEvent) {
+		changeEventCh <- evt
+	})
+	defer g.inventoryHandler.Unsubscribe(subscription)
+
+	g.inventoryHandler.ExpectObject(objectDid)
+
 	response, err := actorCtx.RequestFuture(g.locationActor, &TransferObjectRequest{
 		Did: interaction.Did,
 		To:  g.playerTree.Did(),
@@ -377,7 +391,14 @@ func (g *Game) handlePickUpObject(actorCtx actor.Context, interaction *PickUpObj
 		return resp.Error
 	}
 
-	g.sendUserMessage(actorCtx, "object has been picked up")
+	changeEvent := <-changeEventCh
+
+	if changeEvent.Message != "" {
+		g.sendUserMessage(actorCtx, changeEvent.Message)
+	} else {
+		g.sendUserMessage(actorCtx, "object has been picked up")
+	}
+
 	return nil
 }
 
