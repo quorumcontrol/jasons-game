@@ -30,6 +30,7 @@ type InventoryActor struct {
 type InventoryActorConfig struct {
 	Did     string
 	Network network.Network
+	Handler handlers.Handler
 }
 
 type CreateObjectRequest struct {
@@ -70,6 +71,7 @@ func NewInventoryActorProps(cfg *InventoryActorConfig) *actor.Props {
 		return &InventoryActor{
 			did:     cfg.Did,
 			network: cfg.Network,
+			handler: cfg.Handler,
 		}
 	}).WithReceiverMiddleware(
 		middleware.LoggingMiddleware,
@@ -89,7 +91,7 @@ func (inv *InventoryActor) Receive(actorCtx actor.Context) {
 		inv.handleTransferObject(actorCtx, msg)
 	case *jasonsgame.TransferredObjectMessage:
 		inv.Log.Debugf("Received TransferredObjectRequest: %+v\n", msg)
-		err := inventoryHandlers.NewUnrestrictedAddHandler(inv.network).Handle(msg)
+		err := inv.handler.Handle(msg)
 		if err != nil {
 			inv.Log.Errorf("Error on TransferredObjectMessage: %+v\n", err)
 		}
@@ -114,10 +116,13 @@ func (inv *InventoryActor) initialize(actorCtx actor.Context) {
 	actorCtx.Spawn(inv.network.NewCurrentStateSubscriptionProps(inv.did))
 
 	inv.subscriber = actorCtx.Spawn(inv.network.Community().NewSubscriberProps(inventoryTree.BroadcastTopic()))
-	inv.handler = inv.pickHandler(actorCtx, inventoryTree)
+
+	if inv.handler == nil {
+		inv.handler = inv.pickDefaultHandler(actorCtx, inventoryTree)
+	}
 }
 
-func (inv *InventoryActor) pickHandler(actorCtx actor.Context, inventoryTree *trees.InventoryTree) handlers.Handler {
+func (inv *InventoryActor) pickDefaultHandler(actorCtx actor.Context, inventoryTree *trees.InventoryTree) handlers.Handler {
 	chaintreeHandler, err := handlers.FindHandlerForTree(inv.network, inventoryTree.MustId())
 	if err != nil {
 		panic(fmt.Sprintf("error finding handler for inventory: %v", err))
@@ -133,7 +138,10 @@ func (inv *InventoryActor) pickHandler(actorCtx actor.Context, inventoryTree *tr
 	}
 
 	if isLocal {
-		return inventoryHandlers.NewUnrestrictedRemoveHandler(inv.network)
+		return handlers.NewCompositeHandler([]handlers.Handler{
+			inventoryHandlers.NewUnrestrictedAddHandler(inv.network),
+			inventoryHandlers.NewUnrestrictedRemoveHandler(inv.network),
+		})
 	} else {
 		return handlers.NewNoopHandler()
 	}
