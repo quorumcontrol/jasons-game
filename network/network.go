@@ -268,37 +268,26 @@ func (n *RemoteNetwork) CreateNamedChainTree(name string) (*consensus.SignedChai
 	return tree, n.KeyValueStore.Put(datastore.NewKey("-n-"+name), []byte(tree.MustId()))
 }
 
-func (n *RemoteNetwork) createChainTree(key *ecdsa.PrivateKey, keyIsAddress bool) (*consensus.SignedChainTree, error) {
-	var (
-		addrKey *ecdsa.PrivateKey
-		err error
-	)
-
-	if keyIsAddress {
-		addrKey = key
-	} else {
-		addrKey, err = crypto.GenerateKey()
-		if err != nil {
-			return nil, err
-		}
+func (n *RemoteNetwork) CreateChainTree() (*consensus.SignedChainTree, error) {
+	key, err := crypto.GenerateKey()
+	if err != nil {
+		return nil, err
 	}
 
-	tree, err := n.Tupelo.CreateChainTree(addrKey)
+	tree, err := n.Tupelo.CreateChainTree(key)
 	if err != nil {
 		return nil, errors.Wrap(err, "error creating tree")
 	}
 	log.Debug("CreateChainTree - created", tree.MustId())
 
-	if !keyIsAddress {
-		transaction, err := chaintree.NewSetOwnershipTransaction([]string{crypto.PubkeyToAddress(key.PublicKey).String()})
-		if err != nil {
-			return nil, errors.Wrap(err, "error creating ownership transaction for chaintree")
-		}
+	transaction, err := chaintree.NewSetOwnershipTransaction([]string{crypto.PubkeyToAddress(*n.PublicKey()).String()})
+	if err != nil {
+		return nil, errors.Wrap(err, "error creating ownership transaction for chaintree")
+	}
 
-		_, err = n.Tupelo.PlayTransactions(tree, addrKey, []*transactions.Transaction{transaction})
-		if err != nil {
-			return nil, errors.Wrap(err, "error playing transactions")
-		}
+	_, err = n.Tupelo.PlayTransactions(tree, key, []*transactions.Transaction{transaction})
+	if err != nil {
+		return nil, errors.Wrap(err, "error playing transactions")
 	}
 
 	err = n.TreeStore().SaveTreeMetadata(tree)
@@ -310,17 +299,20 @@ func (n *RemoteNetwork) createChainTree(key *ecdsa.PrivateKey, keyIsAddress bool
 	return tree, n.KeyValueStore.Put(datastore.NewKey("-n-"+tree.MustId()), []byte(tree.MustId()))
 }
 
-func (n *RemoteNetwork) CreateChainTree() (*consensus.SignedChainTree, error) {
-	return n.createChainTree(n.PrivateKey(), false)
-}
-
 func (n *RemoteNetwork) CreateChainTreeWithKey(key *ecdsa.PrivateKey) (*consensus.SignedChainTree, error) {
-	ct, err := n.createChainTree(key, true)
+	tree, err := n.Tupelo.CreateChainTree(key)
 	if err != nil {
-		return nil, errors.Wrap(err, "error creating ephemeral chaintree")
+		return nil, errors.Wrap(err, "error creating chaintree")
 	}
+	log.Debug("CreateChainTreeWithKey - created", tree.MustId())
 
-	return ct, nil
+	err = n.TreeStore().SaveTreeMetadata(tree)
+	if err != nil {
+		return nil, errors.Wrap(err, "error saving tree")
+	}
+	log.Debug("CreateChainTreeWithKey - saved", tree.MustId())
+
+	return tree, n.KeyValueStore.Put(datastore.NewKey("-n-"+tree.MustId()), []byte(tree.MustId()))
 }
 
 func (n *RemoteNetwork) GetChainTreeByName(name string) (*consensus.SignedChainTree, error) {

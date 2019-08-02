@@ -25,6 +25,8 @@ require (
 	github.com/ipfs/go-ipld-format v0.0.2
 	github.com/ipfs/go-log v0.0.1
 	github.com/ipfs/go-merkledag v0.1.0
+	github.com/libp2p/go-libp2p-transport v0.0.5 // indirect
+	github.com/libp2p/go-testutil v0.1.0 // indirect
 	github.com/mr-tron/base58 v1.1.2
 	github.com/pkg/errors v0.8.1
 	github.com/quorumcontrol/chaintree v0.0.0-20190709145156-03b818830f38
