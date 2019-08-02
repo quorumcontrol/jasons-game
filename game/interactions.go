@@ -78,6 +78,30 @@ type updatableTree interface {
 	updatePath([]string, interface{}) error
 }
 
+type BuildPortalInteraction struct {
+	Interaction
+}
+
+func (i *BuildPortalInteraction) GetCommand() string {
+	return "build portal to"
+}
+
+func (i *BuildPortalInteraction) GetHidden() bool {
+	return false
+}
+
+type DeletePortalInteraction struct {
+	Interaction
+}
+
+func (i *DeletePortalInteraction) GetCommand() string {
+	return "delete portal"
+}
+
+func (i *DeletePortalInteraction) GetHidden() bool {
+	return false
+}
+
 func (i *SetTreeValueInteraction) SetValue(ctx context.Context, network network.Network, tree *consensus.SignedChainTree, value string) (*consensus.SignedChainTree, error) {
 	var valueToSet interface{} // nolint
 	valueToSet = value

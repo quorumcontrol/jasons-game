@@ -6,6 +6,7 @@ import (
 
 	"github.com/AsynkronIT/protoactor-go/actor"
 	"github.com/AsynkronIT/protoactor-go/plugin"
+	"github.com/ipfs/go-cid"
 	"github.com/pkg/errors"
 	"github.com/quorumcontrol/jasons-game/network"
 	"github.com/quorumcontrol/jasons-game/pb/jasonsgame"
@@ -121,6 +122,19 @@ func (l *LocationActor) Receive(actorCtx actor.Context) {
 	case *ListInteractionsRequest:
 		l.handleListInteractionsRequest(actorCtx, msg)
 	case *signatures.CurrentState:
+		if string(msg.Signature.ObjectId) == l.did {
+			newTip, err := cid.Cast(msg.Signature.NewTip)
+			if err != nil {
+				l.Log.Error(errors.Wrap(err, "could not refresh location"))
+				return
+			}
+			refreshedLocation, err := l.network.GetTreeByTip(newTip)
+			if err != nil {
+				l.Log.Error(errors.Wrap(err, "could not refresh location"))
+				return
+			}
+			l.location = NewLocationTree(l.network, refreshedLocation)
+		}
 		if parentPID := actorCtx.Parent(); parentPID != nil {
 			actorCtx.Send(parentPID, &StateChange{PID: actorCtx.Self()})
 		}
@@ -128,18 +142,24 @@ func (l *LocationActor) Receive(actorCtx actor.Context) {
 }
 
 func (l *LocationActor) handleListInteractionsRequest(actorCtx actor.Context, msg *ListInteractionsRequest) {
-	locInteractions, err := l.location.InteractionsList()
+	localKeyAddr := consensus.DidToAddr(consensus.EcdsaPubkeyToDid(*l.network.PublicKey()))
+	isLocal, err := l.location.IsOwnedBy([]string{localKeyAddr})
 	if err != nil {
-		actorCtx.Respond(&ListInteractionsResponse{Error: err})
+		actorCtx.Respond(&ListInteractionsResponse{Error: errors.Wrap(err, "error getting owner auths")})
 		return
 	}
 
-	interactions := make([]*InteractionResponse, len(locInteractions))
-	for i, interaction := range locInteractions {
-		interactions[i] = &InteractionResponse{
-			AttachedTo:  "location",
-			Interaction: interaction,
-		}
+	interactions := []*InteractionResponse{}
+
+	if isLocal {
+		interactions = append(interactions, &InteractionResponse{
+			AttachedTo: "location",
+			Interaction: &SetTreeValueInteraction{
+				Command: "set description",
+				Did:     l.location.MustId(),
+				Path:    "description",
+			},
+		})
 	}
 
 	portal, err := l.location.GetPortal()
@@ -156,6 +176,33 @@ func (l *LocationActor) handleListInteractionsRequest(actorCtx actor.Context, ms
 				Did:     portal.To,
 			},
 		})
+
+		if isLocal {
+			interactions = append(interactions, &InteractionResponse{
+				AttachedTo:  "location",
+				Interaction: &DeletePortalInteraction{},
+			})
+		}
+	} else {
+		if isLocal {
+			interactions = append(interactions, &InteractionResponse{
+				AttachedTo:  "location",
+				Interaction: &BuildPortalInteraction{},
+			})
+		}
+	}
+
+	locInteractions, err := l.location.InteractionsList()
+	if err != nil {
+		actorCtx.Respond(&ListInteractionsResponse{Error: err})
+		return
+	}
+
+	for i, interaction := range locInteractions {
+		interactions[i] = &InteractionResponse{
+			AttachedTo:  "location",
+			Interaction: interaction,
+		}
 	}
 
 	inventoryInteractionsResp, err := actorCtx.RequestFuture(l.inventoryActor, &ListInteractionsRequest{}, 30*time.Second).Result()

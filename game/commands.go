@@ -15,17 +15,15 @@ var defaultCommandList = commandList{
 	newCommand("help", "help"),
 	newCommand("help", "help location"),
 	newCommand("help", "help [name of object]"),
-	newCommand("set-description", "set description").groupIn("location"),
-	newCommand("delete-portal", "delete portal").groupIn("location"),
-	newCommand("build-portal", "build portal to").groupIn("location"),
-	newCommand("tip-zoom", "go to tip").hide(),
-	newCommand("create-location", "create location").hide(),
-	newCommand("connect-location", "connect location").hide(),
-	newCommand("exit", "exit").hide(),
-	newCommand("say", "say").hide(),
-	newCommand("shout", "shout").hide(),
-	newCommand("open-portal", "open portal").hide(),
-	newCommand("refresh", "refresh").hide(),
+	newHiddenCommand("tip-zoom", "go to tip"),
+	newHiddenCommand("create-location", "create location"),
+	newHiddenCommand("connect-location", "connect location"),
+	newHiddenCommand("exit", "exit"),
+	newHiddenCommand("say", "say"),
+	newHiddenCommand("shout", "shout"),
+	newHiddenCommand("open-portal", "open portal"),
+	newHiddenCommand("refresh", "refresh"),
+	&basicCommand{ name: "location-inventory-list", parse: "look around", helpGroup: "location"}, // Ensures a location always has help
 }
 
 type command interface {
@@ -57,16 +55,6 @@ func (c *basicCommand) Hidden() bool {
 
 func (c *basicCommand) HelpGroup() string {
 	return c.helpGroup
-}
-
-func (c *basicCommand) hide() *basicCommand {
-	c.hidden = true
-	return c
-}
-
-func (c *basicCommand) groupIn(group string) *basicCommand {
-	c.helpGroup = group
-	return c
 }
 
 func newCommand(name, parse string) *basicCommand {
