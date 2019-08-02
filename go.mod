@@ -4,9 +4,10 @@ go 1.12
 
 require (
 	github.com/AsynkronIT/protoactor-go v0.0.0-20190429152931-21e2d03dcae5
-	github.com/btcsuite/btcutil v0.0.0-20190425235716-9e5f4b9a998d
+	github.com/aws/aws-sdk-go v1.21.0
 	github.com/dgraph-io/badger v1.6.0 // indirect
 	github.com/ethereum/go-ethereum v1.8.27
+	github.com/go-stack/stack v1.8.0
 	github.com/gobuffalo/packr/v2 v2.5.3-0.20190708182234-662c20c19dde
 	github.com/gogo/protobuf v1.2.1
 	github.com/google/uuid v1.1.1
@@ -18,6 +19,7 @@ require (
 	github.com/ipfs/go-cid v0.0.2
 	github.com/ipfs/go-datastore v0.0.5
 	github.com/ipfs/go-ds-badger v0.0.5
+	github.com/ipfs/go-ds-s3 v0.0.1
 	github.com/ipfs/go-ipfs-blockstore v0.0.1
 	github.com/ipfs/go-ipfs-config v0.0.6
 	github.com/ipfs/go-ipfs-exchange-offline v0.0.1
@@ -25,6 +27,9 @@ require (
 	github.com/ipfs/go-ipld-format v0.0.2
 	github.com/ipfs/go-log v0.0.1
 	github.com/ipfs/go-merkledag v0.1.0
+	github.com/libp2p/go-libp2p v0.2.0
+	github.com/libp2p/go-libp2p-connmgr v0.1.0
+	github.com/libp2p/go-libp2p-core v0.0.6
 	github.com/libp2p/go-libp2p-transport v0.0.5 // indirect
 	github.com/libp2p/go-testutil v0.1.0 // indirect
 	github.com/mr-tron/base58 v1.1.2
@@ -38,6 +43,7 @@ require (
 	github.com/stretchr/testify v1.3.0
 	github.com/zserge/webview v0.0.0-20190123072648-16c93bcaeaeb
 	golang.org/x/crypto v0.0.0-20190701094942-4def268fd1a4
+	golang.org/x/net v0.0.0-20190628185345-da137c7871d7
 	google.golang.org/grpc v1.22.0
 	gopkg.in/yaml.v2 v2.2.2
 )

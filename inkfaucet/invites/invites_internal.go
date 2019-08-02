@@ -3,33 +3,82 @@
 package invites
 
 import (
+	"context"
 	"time"
 
 	"github.com/AsynkronIT/protoactor-go/actor"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/gogo/protobuf/proto"
+	logging "github.com/ipfs/go-log"
 	"github.com/mr-tron/base58"
 	"github.com/pkg/errors"
 	"github.com/quorumcontrol/messages/build/go/transactions"
 
 	"github.com/quorumcontrol/jasons-game/inkfaucet/inkfaucet"
+	"github.com/quorumcontrol/jasons-game/network"
 )
+
+var log = logging.Logger("invites")
 
 const inviteInkAmount = uint64(1000)
 
-func (i *InvitesActor) handleInviteRequest(actorCtx actor.Context) {
-	inviteKey, err := crypto.GenerateKey()
-	if err != nil {
-		i.errorResponse(actorCtx, err, "error generating key for invite chaintree")
-	}
+type InvitesActor struct {
+	parentCtx context.Context
+	handler   *actor.PID
+	inkFaucet *actor.PID
+	net       network.Network
+}
 
-	inviteChainTree, err := i.net.CreateChainTreeWithKey(inviteKey)
+type InvitesActorConfig struct {
+	InkFaucet *actor.PID
+	Net       network.Network
+}
+
+func NewInvitesActor(ctx context.Context, cfg InvitesActorConfig) *InvitesActor {
+	return &InvitesActor{
+		parentCtx: ctx,
+		inkFaucet: cfg.InkFaucet,
+		net:       cfg.Net,
+	}
+}
+
+func (i *InvitesActor) Start(arCtx *actor.RootContext) {
+	act := arCtx.Spawn(actor.PropsFromProducer(func() actor.Actor {
+		return i
+	}))
+
+	i.handler = act
+
+	go func() {
+		<-i.parentCtx.Done()
+		arCtx.Stop(act)
+	}()
+}
+
+func (i *InvitesActor) Receive(actorCtx actor.Context) {
+	switch msg := actorCtx.Message().(type) {
+	case *actor.Started:
+		log.Info("invites actor started")
+	case *inkfaucet.InviteRequest:
+		log.Info("invites actor received invite request")
+		i.handleInviteRequest(actorCtx)
+	default:
+		log.Warningf("invites actor received unknown message type %T: %+v", msg, msg)
+	}
+}
+
+func (i *InvitesActor) PID() *actor.PID {
+	return i.handler
+}
+
+func (i *InvitesActor) handleInviteRequest(actorCtx actor.Context) {
+	inviteChainTree, inviteKey, err := i.net.CreateEphemeralChainTree()
 	if err != nil {
 		i.errorResponse(actorCtx, err, "error creating invite chaintree")
 		return
 	}
 
-	log.Debugf("invite actor created ephemeral chaintree: %+v", inviteChainTree)
+	log.Debugf("invite actor created ephemeral chaintree: %+v", *inviteChainTree)
 
 	inkReq := &inkfaucet.InkRequest{
 		Amount:             inviteInkAmount,
@@ -38,7 +87,7 @@ func (i *InvitesActor) handleInviteRequest(actorCtx actor.Context) {
 
 	log.Debugf("invite actor ink request: %+v", *inkReq)
 
-	inviteInkReq := actorCtx.RequestFuture(i.inkActor.PID(), inkReq, 30 * time.Second)
+	inviteInkReq := actorCtx.RequestFuture(i.inkFaucet, inkReq, 30 * time.Second)
 
 	uncastInkResp, err := inviteInkReq.Result()
 	if err != nil {
@@ -71,11 +120,8 @@ func (i *InvitesActor) handleInviteRequest(actorCtx actor.Context) {
 
 	log.Debugf("invite actor received ink to ephemeral chaintree")
 
-	serializedKey := crypto.FromECDSA(inviteKey)
-	encodedKey := base58.Encode(serializedKey)
-
 	actorCtx.Respond(&inkfaucet.InviteResponse{
-		Invite: encodedKey,
+		Invite: base58.Encode(crypto.FromECDSA(inviteKey)),
 	})
 }
 

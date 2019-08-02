@@ -3,7 +3,8 @@ package network
 import (
 	"crypto/ecdsa"
 
-	"github.com/ipfs/go-cid"
+	"github.com/ethereum/go-ethereum/crypto"
+	cid "github.com/ipfs/go-cid"
 
 	"github.com/pkg/errors"
 	"github.com/quorumcontrol/chaintree/chaintree"
@@ -58,7 +59,17 @@ func (t *Tupelo) GetTip(did string) (cid.Cid, error) {
 }
 
 func (t *Tupelo) CreateChainTree(key *ecdsa.PrivateKey) (*consensus.SignedChainTree, error) {
-	tree, err := consensus.NewSignedChainTree(key.PublicKey, t.Store)
+	ephemeralPrivate, err := crypto.GenerateKey()
+	if err != nil {
+		return nil, errors.Wrap(err, "error creating key")
+	}
+
+	transaction, err := chaintree.NewSetOwnershipTransaction([]string{crypto.PubkeyToAddress(key.PublicKey).String()})
+	if err != nil {
+		return nil, errors.Wrap(err, "error creating ownership transaction for chaintree")
+	}
+
+	tree, err := consensus.NewSignedChainTree(ephemeralPrivate.PublicKey, t.Store)
 	if err != nil {
 		return nil, errors.Wrap(err, "error creating new signed chaintree")
 	}
@@ -67,6 +78,10 @@ func (t *Tupelo) CreateChainTree(key *ecdsa.PrivateKey) (*consensus.SignedChainT
 	c.Listen()
 	defer c.Stop()
 
+	_, err = c.PlayTransactions(tree, ephemeralPrivate, nil, []*transactions.Transaction{transaction})
+	if err != nil {
+		return nil, errors.Wrap(err, "error playing transactions")
+	}
 	return tree, nil
 }
 

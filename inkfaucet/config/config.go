@@ -2,7 +2,6 @@ package config
 
 import (
 	"context"
-	"crypto/ecdsa"
 
 	"github.com/ipfs/go-datastore"
 	"github.com/pkg/errors"
@@ -13,10 +12,10 @@ import (
 )
 
 type InkFaucetConfig struct {
-	Local        bool
-	InkOwnerDID  string
-	InkFaucetDID string
-	PrivateKey   *ecdsa.PrivateKey
+	Local       bool
+	S3Region    string
+	S3Bucket    string
+	InkOwnerDID string
 }
 
 type InkFaucet struct {
@@ -26,29 +25,36 @@ type InkFaucet struct {
 }
 
 func Setup(ctx context.Context, cfg InkFaucetConfig) (*InkFaucet, error) {
-	inkFaucet := InkFaucet{}
+	iw := InkFaucet{}
 
 	group, err := network.SetupTupeloNotaryGroup(ctx, cfg.Local)
 	if err != nil {
 		return nil, errors.Wrap(err, "error setting up notary group")
 	}
-	inkFaucet.NotaryGroup = group
+	iw.NotaryGroup = group
 
-	ds := config.MemoryDataStore()
+	ds, err := config.S3DataStore(cfg.Local, cfg.S3Region, cfg.S3Bucket)
+	if err != nil {
+		return nil, errors.Wrap(err, "error getting S3 data store")
+	}
+	iw.DataStore = ds
 
-	inkFaucet.DataStore = ds
+	signingKey, err := network.GetOrCreateStoredPrivateKey(ds)
+	if err != nil {
+		return nil, errors.Wrap(err, "error getting private signingKey")
+	}
 
 	netCfg := &network.RemoteNetworkConfig{
 		NotaryGroup:   group,
 		KeyValueStore: ds,
-		SigningKey:    cfg.PrivateKey,
+		SigningKey:    signingKey,
 	}
 
 	net, err := network.NewRemoteNetworkWithConfig(ctx, netCfg)
 	if err != nil {
 		return nil, errors.Wrap(err, "error setting up remote network")
 	}
-	inkFaucet.Net = net
+	iw.Net = net.(*network.RemoteNetwork)
 
-	return &inkFaucet, nil
+	return &iw, nil
 }

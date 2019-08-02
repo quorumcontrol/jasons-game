@@ -133,34 +133,26 @@ func (p *PlayerTree) SetChainTree(ct *consensus.SignedChainTree) {
 	p.tree = ct
 }
 
-func GetPlayerTree(net network.Network) (*PlayerTree, error) {
+func GetOrCreatePlayerTree(net network.Network) (*PlayerTree, error) {
 	playerChain, err := net.GetChainTreeByName("player")
 	if err != nil {
 		return nil, err
 	}
-
 	if playerChain == nil {
-		return nil, nil
+		playerChain, err = net.CreateNamedChainTree("player")
+		if err != nil {
+			return nil, err
+		}
+
+		playerTree := NewPlayerTree(net, playerChain)
+		if err := playerTree.SetPlayer(&jasonsgame.Player{
+			Name: fmt.Sprintf("newb (%s)", playerChain.MustId()),
+		}); err != nil {
+			return nil, err
+		}
+
+		return playerTree, nil
 	}
 
 	return NewPlayerTree(net, playerChain), nil
-}
-
-func CreatePlayerTree(net network.Network, chainTreeId string) (*PlayerTree, error) {
-	playerChain, err := net.GetTree(chainTreeId)
-	if err != nil {
-		return nil, err
-	}
-	if playerChain == nil {
-		return nil, errors.Errorf("player chaintree %s was not found", chainTreeId)
-	}
-
-	playerTree := NewPlayerTree(net, playerChain)
-	if err := playerTree.SetPlayer(&jasonsgame.Player{
-		Name: fmt.Sprintf("newb (%s)", playerChain.MustId()),
-	}); err != nil {
-		return nil, err
-	}
-
-	return playerTree, nil
 }

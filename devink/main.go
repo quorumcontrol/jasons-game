@@ -7,12 +7,9 @@ import (
 	"encoding/base64"
 	"fmt"
 	"os"
-	"strings"
 
-	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/gogo/protobuf/proto"
 	"github.com/pkg/errors"
-	"github.com/quorumcontrol/tupelo-go-sdk/consensus"
 
 	"github.com/quorumcontrol/jasons-game/devink/devink"
 )
@@ -48,24 +45,7 @@ func main() {
 	}
 
 	if len(os.Args) > 1 && len(os.Args[1]) > 0 {
-		var destinationChainId string
-
-		if strings.HasPrefix(os.Args[1], "did:tupelo:") {
-			destinationChainId = os.Args[1]
-		} else {
-			// assume it's a base64-encoded private key
-			serializedKey, err := base64.StdEncoding.DecodeString(os.Args[1])
-			if err != nil {
-				panic(errors.Wrap(err, "error decoding base64 ink faucet key argument"))
-			}
-
-			key, err := crypto.ToECDSA(serializedKey)
-			if err != nil {
-				panic(errors.Wrap(err, "error deserializing ink faucet key argument"))
-			}
-
-			destinationChainId = consensus.AddrToDid(crypto.PubkeyToAddress(key.PublicKey).String())
-		}
+		destinationChainId := os.Args[1]
 
 		tokenSend, err := devInkSource.SendInk(ctx, destinationChainId, minimumAmount)
 		if err != nil {

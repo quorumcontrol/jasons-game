@@ -30,8 +30,7 @@ func mustSetLogLevel(name, level string) {
 	}
 }
 
-var inkDID string // set by an ldflag at compile time (e.g. go build -ldflags "-X main.inkDID=did:tupelo:blahblah")
-
+// TODO: this should be a CLI command to launch the game with options
 func main() {
 
 	if os.Getenv("PPROF_ENABLED") == "true" {
@@ -62,7 +61,6 @@ func main() {
 	mustSetLogLevel("game", "debug")
 	mustSetLogLevel("gameserver", "debug")
 	mustSetLogLevel("gamenetwork", "debug")
-	mustSetLogLevel("invites", "debug")
 
 	port := 8080
 	grpcServer := grpc.NewServer()
@@ -75,15 +73,7 @@ func main() {
 
 	disableWebView, localnet := ui.SetOptions()
 
-	if inkDID == "" {
-		inkDID = os.Getenv("INK_DID")
-	}
-
-	gsCfg := server.GameServerConfig{
-		LocalNet: *localnet,
-		InkDID:   inkDID,
-	}
-	s := server.NewGameServer(ctx, gsCfg)
+	s := server.NewGameServer(ctx, *localnet)
 
 	jasonsgame.RegisterGameServiceServer(grpcServer, s)
 	reflection.Register(grpcServer)

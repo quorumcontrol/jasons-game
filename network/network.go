@@ -50,14 +50,12 @@ type Network interface {
 	InkNetwork
 	Community() *Community
 	ChangeChainTreeOwner(tree *consensus.SignedChainTree, newKeys []string) (*consensus.SignedChainTree, error)
-	ChangeChainTreeOwnerWithKey(tree *consensus.SignedChainTree, privateKey *ecdsa.PrivateKey, newKeys []string) (*consensus.SignedChainTree, error)
 	CreateChainTree() (*consensus.SignedChainTree, error)
-	CreateChainTreeWithKey(key *ecdsa.PrivateKey) (*consensus.SignedChainTree, error)
+	CreateEphemeralChainTree() (*consensus.SignedChainTree, *ecdsa.PrivateKey, error)
 	CreateNamedChainTree(name string) (*consensus.SignedChainTree, error)
 	GetChainTreeByName(name string) (*consensus.SignedChainTree, error)
 	GetTreeByTip(tip cid.Cid) (*consensus.SignedChainTree, error)
 	GetTree(did string) (*consensus.SignedChainTree, error)
-	DeleteTree(did string) error
 	UpdateChainTree(tree *consensus.SignedChainTree, path string, value interface{}) (*consensus.SignedChainTree, error)
 	TreeStore() TreeStore
 	PublicKey() *ecdsa.PublicKey
@@ -268,27 +266,12 @@ func (n *RemoteNetwork) CreateNamedChainTree(name string) (*consensus.SignedChai
 	return tree, n.KeyValueStore.Put(datastore.NewKey("-n-"+name), []byte(tree.MustId()))
 }
 
-func (n *RemoteNetwork) CreateChainTree() (*consensus.SignedChainTree, error) {
-	key, err := crypto.GenerateKey()
-	if err != nil {
-		return nil, err
-	}
-
+func (n *RemoteNetwork) createChainTree(key *ecdsa.PrivateKey) (*consensus.SignedChainTree, error) {
 	tree, err := n.Tupelo.CreateChainTree(key)
 	if err != nil {
 		return nil, errors.Wrap(err, "error creating tree")
 	}
 	log.Debug("CreateChainTree - created", tree.MustId())
-
-	transaction, err := chaintree.NewSetOwnershipTransaction([]string{crypto.PubkeyToAddress(*n.PublicKey()).String()})
-	if err != nil {
-		return nil, errors.Wrap(err, "error creating ownership transaction for chaintree")
-	}
-
-	_, err = n.Tupelo.PlayTransactions(tree, key, []*transactions.Transaction{transaction})
-	if err != nil {
-		return nil, errors.Wrap(err, "error playing transactions")
-	}
 
 	err = n.TreeStore().SaveTreeMetadata(tree)
 	if err != nil {
@@ -299,20 +282,19 @@ func (n *RemoteNetwork) CreateChainTree() (*consensus.SignedChainTree, error) {
 	return tree, n.KeyValueStore.Put(datastore.NewKey("-n-"+tree.MustId()), []byte(tree.MustId()))
 }
 
-func (n *RemoteNetwork) CreateChainTreeWithKey(key *ecdsa.PrivateKey) (*consensus.SignedChainTree, error) {
-	tree, err := n.Tupelo.CreateChainTree(key)
-	if err != nil {
-		return nil, errors.Wrap(err, "error creating chaintree")
-	}
-	log.Debug("CreateChainTreeWithKey - created", tree.MustId())
+func (n *RemoteNetwork) CreateChainTree() (*consensus.SignedChainTree, error) {
+	return n.createChainTree(n.PrivateKey())
+}
 
-	err = n.TreeStore().SaveTreeMetadata(tree)
+func (n *RemoteNetwork) CreateEphemeralChainTree() (*consensus.SignedChainTree, *ecdsa.PrivateKey, error) {
+	key, err := crypto.GenerateKey()
 	if err != nil {
-		return nil, errors.Wrap(err, "error saving tree")
+		return nil, nil, errors.Wrap(err, "error generating ephemeral private key")
 	}
-	log.Debug("CreateChainTreeWithKey - saved", tree.MustId())
 
-	return tree, n.KeyValueStore.Put(datastore.NewKey("-n-"+tree.MustId()), []byte(tree.MustId()))
+	ct, err := n.createChainTree(key)
+
+	return ct, key, err
 }
 
 func (n *RemoteNetwork) GetChainTreeByName(name string) (*consensus.SignedChainTree, error) {
@@ -356,7 +338,7 @@ func (n *RemoteNetwork) UpdateChainTree(tree *consensus.SignedChainTree, path st
 	return tree, n.TreeStore().SaveTreeMetadata(tree)
 }
 
-func (n *RemoteNetwork) changeChainTreeOwner(tree *consensus.SignedChainTree, privateKey *ecdsa.PrivateKey, newKeys []string) (*consensus.SignedChainTree, error) {
+func (n *RemoteNetwork) ChangeChainTreeOwner(tree *consensus.SignedChainTree, newKeys []string) (*consensus.SignedChainTree, error) {
 	log.Debug("ChangeChainTreeOwner", tree.MustId(), newKeys)
 
 	transaction, err := chaintree.NewSetOwnershipTransaction(newKeys)
@@ -364,20 +346,11 @@ func (n *RemoteNetwork) changeChainTreeOwner(tree *consensus.SignedChainTree, pr
 		return nil, errors.Wrap(err, "error updating chaintree")
 	}
 
-	_, err = n.Tupelo.PlayTransactions(tree, privateKey, []*transactions.Transaction{transaction})
+	_, err = n.Tupelo.PlayTransactions(tree, n.PrivateKey(), []*transactions.Transaction{transaction})
 	if err != nil {
 		return nil, errors.Wrap(err, "error updating chaintree")
 	}
-
 	return tree, n.TreeStore().SaveTreeMetadata(tree)
-}
-
-func (n *RemoteNetwork) ChangeChainTreeOwner(tree *consensus.SignedChainTree, newKeys []string) (*consensus.SignedChainTree, error) {
-	return n.changeChainTreeOwner(tree, n.PrivateKey(), newKeys)
-}
-
-func (n *RemoteNetwork) ChangeChainTreeOwnerWithKey(tree *consensus.SignedChainTree, privateKey *ecdsa.PrivateKey, newKeys []string) (*consensus.SignedChainTree, error) {
-	return n.changeChainTreeOwner(tree, privateKey, newKeys)
 }
 
 type currentStateSubscriptionActor struct {
@@ -399,20 +372,6 @@ func (act *currentStateSubscriptionActor) Receive(actorContext actor.Context) {
 	case *actor.Stopping:
 		act.cancel()
 	}
-}
-
-func (rn *RemoteNetwork) DeleteTree(did string) error {
-	ct, err := rn.GetTree(did)
-	if err != nil {
-		return err
-	}
-
-	err = rn.TreeStore().Remove(context.TODO(), ct.Tip())
-	if err != nil {
-		return err
-	}
-
-	return nil
 }
 
 func (rn *RemoteNetwork) NewCurrentStateSubscriptionProps(did string) *actor.Props {

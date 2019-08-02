@@ -9,18 +9,15 @@ import (
 	"time"
 
 	"github.com/AsynkronIT/protoactor-go/actor"
-	"github.com/ipfs/go-cid"
+	cid "github.com/ipfs/go-cid"
 	logging "github.com/ipfs/go-log"
 	"github.com/pkg/errors"
-	"gopkg.in/yaml.v2"
 
-	"github.com/quorumcontrol/tupelo-go-sdk/consensus"
-
-	"github.com/quorumcontrol/jasons-game/inkfaucet/inkfaucet"
-	"github.com/quorumcontrol/jasons-game/inkfaucet/invites"
 	"github.com/quorumcontrol/jasons-game/network"
 	"github.com/quorumcontrol/jasons-game/pb/jasonsgame"
 	"github.com/quorumcontrol/jasons-game/ui"
+	"github.com/quorumcontrol/tupelo-go-sdk/consensus"
+	"gopkg.in/yaml.v2"
 )
 
 var log = logging.Logger("game")
@@ -42,68 +39,27 @@ type Game struct {
 	inventoryHandler     *PlayerInventoryHandler
 	shoutActor           *actor.PID
 	commandsByActorCache map[*actor.PID]commandList
-	behavior             actor.Behavior
-	inkDID               string
-	invitesActor         *actor.PID
-}
-
-type GameConfig struct {
-	PlayerTree *PlayerTree
-	UiActor    *actor.PID
-	Network    network.Network
-	InkDID     string
 }
 
 type StateChange struct {
 	PID *actor.PID
 }
 
-func NewGameProps(cfg *GameConfig) *actor.Props {
-	g := &Game{
-		ui:         cfg.UiActor,
-		network:    cfg.Network,
-		commands:   defaultCommandList,
-		playerTree: cfg.PlayerTree,
-		behavior:   actor.NewBehavior(),
-		inkDID:     cfg.InkDID,
-	}
-
-	if g.playerTree == nil {
-		g.behavior.Become(g.ReceiveInvitation)
-	} else {
-		g.behavior.Become(g.ReceiveGame)
-	}
-
+func NewGameProps(playerTree *PlayerTree, ui *actor.PID, network network.Network) *actor.Props {
 	return actor.PropsFromProducer(func() actor.Actor {
-		return g
+		return &Game{
+			ui:         ui,
+			network:    network,
+			commands:   defaultCommandList,
+			playerTree: playerTree,
+		}
 	})
 }
 
 func (g *Game) Receive(actorCtx actor.Context) {
-	g.behavior.Receive(actorCtx)
-}
-
-func (g *Game) ReceiveInvitation(actorCtx actor.Context) {
 	switch msg := actorCtx.Message().(type) {
 	case *actor.Started:
-		g.initializeInvitation(actorCtx)
-	case *actor.Stopping:
-		actorCtx.Poison(g.invitesActor)
-	case *jasonsgame.UserInput:
-		g.handleInvitationInput(actorCtx, msg)
-	case *jasonsgame.CommandUpdate:
-		g.sendInvitationCommandUpdate(actorCtx)
-	case *ping:
-		actorCtx.Respond(true)
-	default:
-		log.Warningf("received message of unrecognized type %T in invitation mode: %+v", msg, msg)
-	}
-}
-
-func (g *Game) ReceiveGame(actorCtx actor.Context) {
-	switch msg := actorCtx.Message().(type) {
-	case *actor.Started:
-		g.initializeGame(actorCtx)
+		g.initialize(actorCtx)
 	case *jasonsgame.UserInput:
 		g.handleUserInput(actorCtx, msg)
 	case *jasonsgame.CommandUpdate:
@@ -115,35 +71,12 @@ func (g *Game) ReceiveGame(actorCtx actor.Context) {
 	case *ping:
 		actorCtx.Respond(true)
 	default:
-		log.Warningf("received message of unrecognized type %T: %+v", msg, msg)
+		log.Warningf("received message of unrecognized type")
 	}
 }
 
-func (g *Game) initializeCommon(actorCtx actor.Context) {
+func (g *Game) initialize(actorCtx actor.Context) {
 	actorCtx.Send(g.ui, &ui.SetGame{Game: actorCtx.Self()})
-}
-
-func (g *Game) initializeInvitation(actorCtx actor.Context) {
-	log.Debug("initializing game actor in invitation mode")
-
-	g.initializeCommon(actorCtx)
-
-	invitesActor := invites.NewInvitesActor(context.TODO(), invites.InvitesActorConfig{
-		Net:    g.network,
-		InkDID: g.inkDID,
-	})
-	invitesActor.Start(actor.EmptyRootContext)
-	g.invitesActor = invitesActor.PID()
-
-	g.sendInvitationCommandUpdate(actorCtx)
-
-	g.sendUserMessage(actorCtx, "Welcome to Jason's Game! Please enter your invite code like this: `invitation [code]`.")
-}
-
-func (g *Game) initializeGame(actorCtx actor.Context) {
-	log.Debug("initializing game actor in game mode")
-
-	g.initializeCommon(actorCtx)
 
 	g.shoutActor = actorCtx.Spawn(g.network.Community().NewSubscriberProps(shoutChannel))
 
@@ -179,74 +112,12 @@ func (g *Game) initializeGame(actorCtx actor.Context) {
 	g.sendUserMessage(actorCtx, l)
 }
 
-func (g *Game) acknowledgeReceipt(actorCtx actor.Context) {
+func (g *Game) handleUserInput(actorCtx actor.Context, input *jasonsgame.UserInput) {
 	if sender := actorCtx.Sender(); sender != nil {
 		log.Debugf("responding to parent with CommandReceived")
 		actorCtx.Respond(&jasonsgame.CommandReceived{Sequence: g.messageSequence})
 		g.messageSequence++
 	}
-}
-
-func (g *Game) handleInvitationInput(actorCtx actor.Context, input *jasonsgame.UserInput) {
-	g.acknowledgeReceipt(actorCtx)
-
-	cmdComponents := strings.Split(input.Message, " ")
-	switch cmd := cmdComponents[0]; cmd {
-	case "invitation":
-		log.Debug("received invite submission")
-
-		inviteSubmission := &inkfaucet.InviteSubmission{
-			Invite: cmdComponents[1],
-		}
-
-		log.Debug("sending invite code to invites actor")
-
-		req := actorCtx.RequestFuture(g.invitesActor, inviteSubmission, 10*time.Second)
-
-		uncastInviteResp, err := req.Result()
-		if err != nil {
-			panic("invalid invite code")
-		}
-
-		log.Debugf("received response from invites actor: %+v", uncastInviteResp)
-
-		inviteResp, ok := uncastInviteResp.(*inkfaucet.InviteSubmissionResponse)
-		if !ok {
-			panic("invalid invite code")
-		}
-
-		if inviteResp.GetError() != "" {
-			panic("invalid invite code")
-		}
-
-		g.sendUserMessage(actorCtx, "Invite code accepted. Starting game...")
-
-		log.Debug("creating player tree")
-
-		playerTree, err := CreatePlayerTree(g.network, inviteResp.PlayerChainId)
-		if err != nil {
-			panic("error creating player tree")
-		}
-
-		g.playerTree = playerTree
-
-		log.Debug("putting game actor into game mode")
-
-		g.behavior.Become(g.ReceiveGame)
-
-		log.Debug("initializing game mode")
-
-		g.initializeGame(actorCtx)
-
-	case "help":
-		g.sendUserMessage(actorCtx, "available commands:")
-		g.sendUserMessage(actorCtx, "help")
-		g.sendUserMessage(actorCtx, "invitation")
-	}
-}
-
-func (g *Game) handleUserInput(actorCtx actor.Context, input *jasonsgame.UserInput) {
-	g.acknowledgeReceipt(actorCtx)
 
 	cmd, args := g.commands.findCommand(input.Message)
 	if cmd == nil {
@@ -710,14 +581,6 @@ func (g *Game) sendCommandUpdate(actorCtx actor.Context) {
 	}
 
 	cmdUpdate := &jasonsgame.CommandUpdate{Commands: parsedCommands}
-
-	actorCtx.Send(g.ui, cmdUpdate)
-}
-
-func (g *Game) sendInvitationCommandUpdate(actorCtx actor.Context) {
-	invitationCommands := []string{"help", "invitation"}
-
-	cmdUpdate := &jasonsgame.CommandUpdate{Commands: invitationCommands}
 
 	actorCtx.Send(g.ui, cmdUpdate)
 }
