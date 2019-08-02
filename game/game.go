@@ -160,7 +160,9 @@ func (g *Game) handleUserInput(actorCtx actor.Context, input *jasonsgame.UserInp
 	case "help":
 		g.sendUserMessage(actorCtx, "available commands:")
 		for _, c := range g.commands {
-			g.sendUserMessage(actorCtx, c.Parse())
+			if !c.Hidden() {
+				g.sendUserMessage(actorCtx, c.Parse())
+			}
 		}
 	case "name":
 		err = g.handleName(args)

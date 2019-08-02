@@ -7,27 +7,32 @@ option go_package = "game";
 message RespondInteraction {
   string command = 1;
   string response = 2;
+  bool   hidden = 3;
 }
 
 message ChangeLocationInteraction {
   string command = 1;
   string did = 2;
+  bool   hidden = 3;
 }
 
 message PickUpObjectInteraction {
   string command = 1;
   string did = 2;
+  bool   hidden = 3;
 }
 
 message DropObjectInteraction {
   string command = 1;
   string did = 2;
+  bool   hidden = 3;
 }
 
 message GetTreeValueInteraction {
   string command = 1;
   string did = 2;
   string path = 3;
+  bool   hidden = 4;
 }
 
 message SetTreeValueInteraction {
@@ -35,10 +40,12 @@ message SetTreeValueInteraction {
   string did = 2;
   string path = 3;
   bool   multiple = 4;
+  bool   hidden = 5;
 }
 
 message CipherInteraction {
   string command = 1;
-  bytes sealed_interaction_bytes = 2;
-  bytes failure_interaction_bytes = 3;
+  bytes  sealed_interaction_bytes = 2;
+  bytes  failure_interaction_bytes = 3;
+  bool   hidden = 4;
 }

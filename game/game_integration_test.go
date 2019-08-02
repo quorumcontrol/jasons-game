@@ -63,6 +63,13 @@ func TestFullIntegration(t *testing.T) {
 
 	someTree, err := net.CreateChainTree()
 	require.Nil(t, err)
+	locationTree := NewLocationTree(net, someTree)
+	err = locationTree.AddInteraction(&RespondInteraction{
+		Command:  "atesthiddencommand",
+		Response: "hello",
+		Hidden:   true,
+	})
+	require.Nil(t, err)
 
 	rootCtx.Send(gameActor, &jasonsgame.UserInput{Message: fmt.Sprintf("connect location %s as enter dungeon", someTree.MustId())})
 	time.Sleep(100 * time.Millisecond)
@@ -73,4 +80,22 @@ func TestFullIntegration(t *testing.T) {
 	time.Sleep(100 * time.Millisecond)
 	msgs = filterUserMessages(t, stream.GetMessages())
 	require.Len(t, msgs, 3)
+
+	rootCtx.Send(gameActor, &jasonsgame.UserInput{Message: "atesthiddencommand"})
+	time.Sleep(100 * time.Millisecond)
+	require.Len(t, msgs, 4)
+	require.Equal(t, msgs[3].Message, "hello")
+
+	err = stream.ClearMessages()
+	require.Nil(t, err)
+	rootCtx.Send(gameActor, &jasonsgame.UserInput{Message: "help"})
+	time.Sleep(100 * time.Millisecond)
+	msgs = filterUserMessages(t, stream.GetMessages())
+	includesHidden := false
+	for _, msg := range msgs {
+		if msg.Message == "atesthiddencommand" {
+			includesHidden = true
+		}
+	}
+	require.False(t, includesHidden)
 }
