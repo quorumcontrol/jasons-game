@@ -149,7 +149,10 @@ func (l *LocationActor) handleListInteractionsRequest(actorCtx actor.Context, ms
 		return
 	}
 
-	interactions := []*InteractionResponse{}
+	interactions := []*InteractionResponse{&InteractionResponse{
+		AttachedTo:  "location",
+		Interaction: &LookAroundInteraction{},
+	}}
 
 	if isLocal {
 		interactions = append(interactions, &InteractionResponse{

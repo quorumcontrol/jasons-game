@@ -256,6 +256,8 @@ func (g *Game) handleInteractionInput(actorCtx actor.Context, cmd *interactionCo
 		err = g.handleGetTreeValueInteraction(actorCtx, interaction)
 	case *SetTreeValueInteraction:
 		err = g.handleSetTreeValueInteraction(actorCtx, interaction, args)
+	case *LookAroundInteraction:
+		err = g.handleLocationInventoryList(actorCtx)
 	case *CipherInteraction:
 		nextInteraction, _, err := interaction.Unseal(args)
 		if err != nil {

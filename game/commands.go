@@ -23,7 +23,6 @@ var defaultCommandList = commandList{
 	newHiddenCommand("shout", "shout"),
 	newHiddenCommand("open-portal", "open portal"),
 	newHiddenCommand("refresh", "refresh"),
-	&basicCommand{ name: "location-inventory-list", parse: "look around", helpGroup: "location"}, // Ensures a location always has help
 }
 
 type command interface {

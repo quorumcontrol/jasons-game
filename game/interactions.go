@@ -102,6 +102,18 @@ func (i *DeletePortalInteraction) GetHidden() bool {
 	return false
 }
 
+type LookAroundInteraction struct {
+	Interaction
+}
+
+func (i *LookAroundInteraction) GetCommand() string {
+	return "look around"
+}
+
+func (i *LookAroundInteraction) GetHidden() bool {
+	return false
+}
+
 func (i *SetTreeValueInteraction) SetValue(ctx context.Context, network network.Network, tree *consensus.SignedChainTree, value string) (*consensus.SignedChainTree, error) {
 	var valueToSet interface{} // nolint
 	valueToSet = value
