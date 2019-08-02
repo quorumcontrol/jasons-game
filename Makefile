@@ -67,7 +67,7 @@ test: $(generated) go.mod go.sum $(FIRSTGOPATH)/bin/gotestsum
 
 ci-test: $(generated) go.mod go.sum $(FIRSTGOPATH)/bin/gotestsum
 	mkdir -p test_results/tests
-	gotestsum --junitfile=test_results/tests/results.xml -- -mod=readonly ./...
+	gotestsum --junitfile=test_results/tests/results.xml -- ./...
 
 integration-test: $(generated) go.mod go.sum
 ifdef testpackage
