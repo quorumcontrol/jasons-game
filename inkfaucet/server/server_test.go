@@ -16,7 +16,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/quorumcontrol/jasons-game/devink/devink"
-	iwconfig "github.com/quorumcontrol/jasons-game/inkfaucet/config"
+	ifconfig "github.com/quorumcontrol/jasons-game/inkfaucet/config"
 	"github.com/quorumcontrol/jasons-game/inkfaucet/depositor"
 	"github.com/quorumcontrol/jasons-game/inkfaucet/inkfaucet"
 )
@@ -34,9 +34,8 @@ func TestInkRequests(t *testing.T) {
 	}()
 	require.Nil(t, err)
 
-	cfg := iwconfig.InkFaucetConfig{
+	cfg := ifconfig.InkFaucetConfig{
 		Local:       true,
-		S3Bucket:    "test",
 		InkOwnerDID: devInk.ChainTree.MustId(),
 	}
 

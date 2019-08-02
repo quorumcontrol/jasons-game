@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"crypto/ecdsa"
 	"encoding/base64"
 	"flag"
 	"fmt"
@@ -9,25 +10,28 @@ import (
 	"time"
 
 	"github.com/AsynkronIT/protoactor-go/actor"
+	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/gogo/protobuf/proto"
 	logging "github.com/ipfs/go-log"
 	"github.com/pkg/errors"
 	"github.com/quorumcontrol/messages/build/go/transactions"
+	"github.com/quorumcontrol/tupelo-go-sdk/consensus"
 
 	"github.com/quorumcontrol/jasons-game/build"
 	"github.com/quorumcontrol/jasons-game/inkfaucet/config"
 	"github.com/quorumcontrol/jasons-game/inkfaucet/depositor"
-	"github.com/quorumcontrol/jasons-game/inkfaucet/ink"
 	"github.com/quorumcontrol/jasons-game/inkfaucet/inkfaucet"
 	"github.com/quorumcontrol/jasons-game/inkfaucet/server"
 )
-
-const localBucketName = "tupelo-inkfaucet-local"
 
 func mustSetLogLevel(name, level string) {
 	if err := logging.SetLogLevel(name, level); err != nil {
 		panic(errors.Wrapf(err, "error setting log level of %s to %s", name, level))
 	}
+}
+
+func keyToDID(key *ecdsa.PrivateKey) string {
+	return consensus.AddrToDid(crypto.PubkeyToAddress(key.PublicKey).String())
 }
 
 func main() {
@@ -36,12 +40,11 @@ func main() {
 
 	mustSetLogLevel("*", "warning")
 	mustSetLogLevel("pubsub", "error")
-	mustSetLogLevel("invites", "info")
-	mustSetLogLevel("inkFaucet", "info")
+	mustSetLogLevel("invites", "debug")
+	mustSetLogLevel("inkFaucet", "debug")
 	mustSetLogLevel("gamenetwork", "info")
 
 	local := flag.Bool("local", false, "connect to localnet & use localstack S3 instead of testnet & real S3")
-	outputdid := flag.Bool("outputdid", false, "output inkfaucet DID and exit")
 	deposit := flag.String("deposit", "", "token payload for ink deposit")
 
 	var invite *bool
@@ -51,49 +54,55 @@ func main() {
 
 	flag.Parse()
 
-	var s3Region, s3Bucket string
-
-	if *local {
-		s3Bucket = localBucketName
-	} else {
-		var ok bool
-
-		s3Bucket, ok = os.LookupEnv("INK_FAUCET_S3_BUCKET")
-		if !ok {
-			panic(fmt.Errorf("${INK_FAUCET_S3_BUCKET} is required in non-local mode"))
-		}
-
-		s3Region, ok = os.LookupEnv("AWS_REGION")
-		if !ok {
-			panic(fmt.Errorf("${AWS_REGION} is required in non-local mode"))
-		}
-	}
-
 	inkDID := os.Getenv("INK_DID")
+	inkFaucetEncodedKey := os.Getenv("INK_FAUCET_KEY")
 
-	inkfaucetCfg := config.InkFaucetConfig{
-		Local:       *local,
-		S3Region:    s3Region,
-		S3Bucket:    s3Bucket,
-		InkOwnerDID: inkDID,
-	}
+	var (
+		signingKey   *ecdsa.PrivateKey
+		inkFaucetDID string
+		err          error
+	)
 
-	if *outputdid {
-		fmt.Println("Outputting inkfaucet DID")
-		ctx := context.Background()
-		iw, err := config.Setup(ctx, inkfaucetCfg)
-		if err != nil {
-			panic(err)
+	if inkFaucetEncodedKey == "" {
+		if deposit != nil && *deposit != "" {
+			panic("INK_FAUCET_KEY must be set for deposits")
 		}
 
-		ct, err := iw.Net.GetChainTreeByName(ink.InkFaucetChainTreeName)
-		if err != nil {
-			panic(err)
+		if invite != nil && *invite {
+			panic("INK_FAUCET_KEY must be set for invites")
 		}
 
-		fmt.Printf("INK_FAUCET_DID=%s\n", ct.MustId())
+		fmt.Println("Private key not set; generating a new one")
+		signingKey, err = crypto.GenerateKey()
+		if err != nil {
+			panic(errors.Wrap(err, "error generating private key for ink faucet"))
+		}
+
+		inkFaucetDID = keyToDID(signingKey)
+
+		fmt.Printf("INK_FAUCET_KEY=%s\n", base64.StdEncoding.EncodeToString(crypto.FromECDSA(signingKey)))
+		fmt.Printf("INK_FAUCET_DID=%s\n", inkFaucetDID)
 
 		os.Exit(0)
+	}
+
+	inkFaucetSerializedKey, err := base64.StdEncoding.DecodeString(inkFaucetEncodedKey)
+	if err != nil {
+		panic(errors.Wrap(err, "error decoding ink faucet key"))
+	}
+
+	signingKey, err = crypto.ToECDSA(inkFaucetSerializedKey)
+	if err != nil {
+		panic(errors.Wrap(err, "error unserializing ink faucet key"))
+	}
+
+	inkFaucetDID = keyToDID(signingKey)
+
+	inkfaucetCfg := config.InkFaucetConfig{
+		Local:        *local,
+		InkOwnerDID:  inkDID,
+		InkFaucetDID: inkFaucetDID,
+		PrivateKey:   signingKey,
 	}
 
 	if deposit != nil && *deposit != "" {
@@ -127,15 +136,15 @@ func main() {
 
 	inkFaucetRouter, err := server.New(ctx, inkfaucetCfg)
 	if err != nil {
-		panic(errors.Wrap(err, "error creating new inkfaucet server"))
+		panic(errors.Wrap(err, "error creating new inkFaucet server"))
 	}
 
 	err = inkFaucetRouter.Start(*invite)
 	if err != nil {
-		panic(errors.Wrap(err, "error starting inkfaucet service"))
+		panic(errors.Wrap(err, "error starting inkFaucet service"))
 	}
 
-	if *invite {
+	if invite != nil && *invite {
 		if build.BuildLabel != "internal" {
 			os.Exit(1)
 		}
@@ -143,7 +152,7 @@ func main() {
 		actorCtx := actor.EmptyRootContext
 
 		inviteReq := &inkfaucet.InviteRequest{}
-		inviteActorReq := actorCtx.RequestFuture(inkFaucetRouter.PID(), inviteReq, 35 * time.Second)
+		inviteActorReq := actorCtx.RequestFuture(inkFaucetRouter.PID(), inviteReq, 35*time.Second)
 
 		uncastReq, err := inviteActorReq.Result()
 		if err != nil {

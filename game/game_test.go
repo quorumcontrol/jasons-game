@@ -21,9 +21,13 @@ func setupUiAndGame(t *testing.T, stream *ui.TestStream, net network.Network) (s
 	simulatedUI, err := rootCtx.SpawnNamed(ui.NewUIProps(stream, net), t.Name()+"-ui")
 	require.Nil(t, err)
 
-	playerTree, err := GetOrCreatePlayerTree(net)
+	playerChain, err := net.CreateNamedChainTree("player")
 	require.Nil(t, err)
-	game, err = rootCtx.SpawnNamed(NewGameProps(playerTree, simulatedUI, net), t.Name()+"-game")
+	playerTree, err := CreatePlayerTree(net, playerChain.MustId())
+	require.Nil(t, err)
+
+	gameCfg := &GameConfig{PlayerTree: playerTree, UiActor: simulatedUI, Network: net}
+	game, err = rootCtx.SpawnNamed(NewGameProps(gameCfg), t.Name()+"-game")
 	require.Nil(t, err)
 	return simulatedUI, game
 }
@@ -103,9 +107,13 @@ func TestCallMe(t *testing.T) {
 	require.Nil(t, err)
 	defer rootCtx.Stop(simulatedUI)
 
-	playerTree, err := GetOrCreatePlayerTree(net)
+	playerChain, err := net.CreateNamedChainTree("player")
 	require.Nil(t, err)
-	game, err := rootCtx.SpawnNamed(NewGameProps(playerTree, simulatedUI, net), "test-callme-game")
+	playerTree, err := CreatePlayerTree(net, playerChain.MustId())
+	require.Nil(t, err)
+
+	gameCfg := &GameConfig{PlayerTree: playerTree, UiActor: simulatedUI, Network: net}
+	game, err := rootCtx.SpawnNamed(NewGameProps(gameCfg), "test-callme-game")
 	require.Nil(t, err)
 	defer rootCtx.Stop(game)
 
@@ -114,7 +122,7 @@ func TestCallMe(t *testing.T) {
 	rootCtx.Send(game, &jasonsgame.UserInput{Message: "call me " + newName})
 	time.Sleep(100 * time.Millisecond)
 
-	tree, err := net.GetChainTreeByName("player")
+	tree, err := net.GetTree(playerChain.MustId())
 	require.Nil(t, err)
 
 	pt := NewPlayerTree(net, tree)
@@ -196,7 +204,7 @@ func TestInscriptionInteractions(t *testing.T) {
 	defer rootCtx.Stop(simulatedUI)
 	defer rootCtx.Stop(game)
 
-	playerTree, err := GetOrCreatePlayerTree(net)
+	playerTree, err := GetPlayerTree(net)
 	require.Nil(t, err)
 
 	objTree, err := net.CreateChainTree()
@@ -236,7 +244,7 @@ func TestInscriptionInteractions(t *testing.T) {
 		time.Sleep(50 * time.Millisecond)
 		msgs := filterUserMessages(t, stream.GetMessages())
 		lastMsg := msgs[len(msgs)-1]
-		assert.Equal(t, lastMsg.Message, "this is a magic sword\nwith magical properties")
+		assert.Equal(t, "this is a magic sword\nwith magical properties", lastMsg.Message)
 	})
 
 	t.Run("with a mutli-valued inscription", func(t *testing.T) {
@@ -264,6 +272,6 @@ func TestInscriptionInteractions(t *testing.T) {
 		time.Sleep(50 * time.Millisecond)
 		msgs := filterUserMessages(t, stream.GetMessages())
 		lastMsg := msgs[len(msgs)-1]
-		assert.Equal(t, lastMsg.Message, "with magical properties")
+		assert.Equal(t, "with magical properties", lastMsg.Message)
 	})
 }

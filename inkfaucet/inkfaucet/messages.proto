@@ -2,13 +2,20 @@ syntax = "proto3";
 
 package inkfaucet;
 
-message InviteRequest {
-
-}
+message InviteRequest {}
 
 message InviteResponse {
     string error = 1;
     string invite = 2;
+}
+
+message InviteSubmission {
+    string invite = 1;
+}
+
+message InviteSubmissionResponse {
+    string error = 1;
+    string player_chain_id = 2;
 }
 
 message InkRequest {

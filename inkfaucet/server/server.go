@@ -23,7 +23,7 @@ type InkFaucetRouter struct {
 	inkFaucet    ink.Faucet
 	tokenName    *consensus.TokenName
 	handler      *actor.PID
-	inkActor     *actor.PID
+	inkActor     *ink.InkActor
 	invitesActor *actor.PID
 }
 
@@ -36,6 +36,7 @@ func New(ctx context.Context, cfg config.InkFaucetConfig) (*InkFaucetRouter, err
 	faucetConfig := ink.ChainTreeInkFaucetConfig{
 		Net:         iw.Net,
 		InkOwnerDID: cfg.InkOwnerDID,
+		PrivateKey:  cfg.PrivateKey,
 	}
 
 	ctif, err := ink.NewChainTreeInkFaucet(faucetConfig)
@@ -67,12 +68,12 @@ func (ifr *InkFaucetRouter) Start(allowInvites bool) error {
 
 	inkAct.Start(arCtx)
 
-	ifr.inkActor = inkAct.PID()
+	ifr.inkActor = inkAct
 
 	if allowInvites {
 		invitesActor := invites.NewInvitesActor(ifr.parentCtx, invites.InvitesActorConfig{
-			InkFaucet: inkAct.PID(),
-			Net:       ifr.net,
+			InkActor: ifr.inkActor,
+			Net:      ifr.net,
 		})
 
 		invitesActor.Start(arCtx)
@@ -104,7 +105,7 @@ func (ifr *InkFaucetRouter) Receive(actorCtx actor.Context) {
 		// subscribe to community here?
 	case *inkfaucet.InkRequest:
 		log.Infof("Received InkRequest: %+v", msg)
-		actorCtx.Forward(ifr.inkActor)
+		actorCtx.Forward(ifr.inkActor.PID())
 	case *inkfaucet.InviteRequest:
 		log.Infof("Received InviteRequest: %+v", msg)
 		actorCtx.Forward(ifr.invitesActor)

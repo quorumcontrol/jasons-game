@@ -123,33 +123,33 @@ func (ln *LocalNetwork) CreateNamedChainTree(name string) (*consensus.SignedChai
 	return tree, ln.KeyValueStore.Put(datastore.NewKey("-n-"+name), []byte(tree.MustId()))
 }
 
-func (ln *LocalNetwork) CreateEphemeralChainTree() (*consensus.SignedChainTree, *ecdsa.PrivateKey, error) {
-	ephemeralPrivate, err := crypto.GenerateKey()
+func (ln *LocalNetwork) CreateChainTreeWithKey(key *ecdsa.PrivateKey) (*consensus.SignedChainTree, error) {
+	tree, err := consensus.NewSignedChainTree(key.PublicKey, ln.TreeStore())
 	if err != nil {
-		return nil, nil, errors.Wrap(err, "error creating key")
-	}
-
-	tree, err := consensus.NewSignedChainTree(ephemeralPrivate.PublicKey, ln.TreeStore())
-	if err != nil {
-		return nil, nil, errors.Wrap(err, "error creating tree")
+		return nil, errors.Wrap(err, "error creating tree")
 	}
 
 	newTree, err := ln.ChangeChainTreeOwner(tree, []string{crypto.PubkeyToAddress(ln.key.PublicKey).String()})
 	if err != nil {
-		return nil, nil, errors.Wrap(err, "error changing ownership")
+		return nil, errors.Wrap(err, "error changing ownership")
 	}
 	tree = newTree
 
 	err = ln.TreeStore().SaveTreeMetadata(tree)
 	if err != nil {
-		return nil, nil, errors.Wrap(err, "error saving tree metadata")
+		return nil, errors.Wrap(err, "error saving tree metadata")
 	}
 
-	return tree, ephemeralPrivate, ln.KeyValueStore.Put(datastore.NewKey("-n-"+tree.MustId()), []byte(tree.MustId()))
+	return tree, ln.KeyValueStore.Put(datastore.NewKey("-n-"+tree.MustId()), []byte(tree.MustId()))
 }
 
 func (ln *LocalNetwork) CreateChainTree() (*consensus.SignedChainTree, error) {
-	ct, _, err := ln.CreateEphemeralChainTree()
+	key, err := crypto.GenerateKey()
+	if err != nil {
+		return nil, err
+	}
+
+	ct, err := ln.CreateChainTreeWithKey(key)
 	return ct, err
 }
 
@@ -188,6 +188,16 @@ func (ln *LocalNetwork) ChangeChainTreeOwner(tree *consensus.SignedChainTree, ne
 		return nil, err
 	}
 	return ln.playTransactions(tree, []*transactions.Transaction{transaction})
+}
+
+func (ln *LocalNetwork) ChangeChainTreeOwnerWithKey(tree *consensus.SignedChainTree, privateKey *ecdsa.PrivateKey, newKeys []string) (*consensus.SignedChainTree, error) {
+	// placeholder to fulfill the interface
+	return nil, nil
+}
+
+func (ln *LocalNetwork) DeleteTree(name string) error {
+	// placeholder to fulfill the interface
+	return nil
 }
 
 func (rn *LocalNetwork) NewCurrentStateSubscriptionProps(did string) *actor.Props {

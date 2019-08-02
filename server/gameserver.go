@@ -10,10 +10,10 @@ import (
 	logging "github.com/ipfs/go-log"
 	"github.com/pkg/errors"
 
+	"github.com/quorumcontrol/tupelo-go-sdk/gossip3/types"
+
 	"github.com/quorumcontrol/jasons-game/config"
 	"github.com/quorumcontrol/jasons-game/game"
-
-	"github.com/quorumcontrol/tupelo-go-sdk/gossip3/types"
 
 	"github.com/quorumcontrol/jasons-game/network"
 	"github.com/quorumcontrol/jasons-game/pb/jasonsgame"
@@ -29,21 +29,28 @@ type GameServer struct {
 	group       *types.NotaryGroup
 	parentCtx   context.Context
 	sessionPath string
+	inkDID      string
 }
 
-func NewGameServer(ctx context.Context, connectToLocalnet bool) *GameServer {
-	group, err := network.SetupTupeloNotaryGroup(ctx, connectToLocalnet)
+type GameServerConfig struct {
+	LocalNet bool
+	InkDID   string
+}
+
+func NewGameServer(ctx context.Context, cfg GameServerConfig) *GameServer {
+	group, err := network.SetupTupeloNotaryGroup(ctx, cfg.LocalNet)
 	if err != nil {
 		panic(errors.Wrap(err, "setting up notary group"))
 	}
 
-	cfg := config.EnsureExists(sessionStorageDir)
+	sessionCfg := config.EnsureExists(sessionStorageDir)
 
 	return &GameServer{
 		sessions:    make(map[string]*actor.PID),
 		group:       group,
 		parentCtx:   ctx,
-		sessionPath: cfg.Path,
+		sessionPath: sessionCfg.Path,
+		inkDID:      cfg.InkDID,
 	}
 }
 
@@ -108,17 +115,18 @@ func (gs *GameServer) getOrCreateSession(sess *jasonsgame.Session, stream jasons
 		uiActor = actor.EmptyRootContext.Spawn(ui.NewUIProps(stream, net))
 		gs.sessions[sess.Uuid] = uiActor
 
-		playerTree, err := game.GetOrCreatePlayerTree(net)
+		playerTree, err := game.GetPlayerTree(net)
 		if err != nil {
-			panic(errors.Wrap(err, "error creating player tree"))
+			panic(errors.Wrap(err, "error getting player tree"))
 		}
 
-		actor.EmptyRootContext.Spawn(game.NewGameProps(playerTree, uiActor, net))
-
-		_, err = playerTree.HomeLocation.Id()
-		if err != nil {
-			panic(errors.Wrap(err, "error starting game actor"))
+		gameCfg := &game.GameConfig{
+			PlayerTree: playerTree,
+			UiActor:    uiActor,
+			Network:    net,
+			InkDID:     gs.inkDID,
 		}
+		actor.EmptyRootContext.Spawn(game.NewGameProps(gameCfg))
 	}
 	return uiActor
 }

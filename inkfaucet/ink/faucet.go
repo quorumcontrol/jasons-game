@@ -2,9 +2,11 @@ package ink
 
 import (
 	"context"
+	"crypto/ecdsa"
 	"fmt"
 
 	"github.com/AsynkronIT/protoactor-go/actor"
+	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/gogo/protobuf/proto"
 	logging "github.com/ipfs/go-log"
 	"github.com/pkg/errors"
@@ -14,8 +16,6 @@ import (
 	"github.com/quorumcontrol/jasons-game/inkfaucet/inkfaucet"
 	"github.com/quorumcontrol/jasons-game/network"
 )
-
-const InkFaucetChainTreeName = "inkFaucet"
 
 var log = logging.Logger("inkFaucet")
 
@@ -36,12 +36,13 @@ type ChainTreeInkFaucet struct {
 type ChainTreeInkFaucetConfig struct {
 	Net         network.Network
 	InkOwnerDID string
+	PrivateKey  *ecdsa.PrivateKey
 }
 
 var _ Faucet = &ChainTreeInkFaucet{}
 
 func NewChainTreeInkFaucet(cfg ChainTreeInkFaucetConfig) (*ChainTreeInkFaucet, error) {
-	ct, err := ensureChainTree(cfg.Net)
+	ct, err := ensureChainTree(cfg.Net, cfg.PrivateKey)
 
 	if err != nil {
 		return nil, err
@@ -61,14 +62,16 @@ func NewChainTreeInkFaucet(cfg ChainTreeInkFaucetConfig) (*ChainTreeInkFaucet, e
 // ensureChainTree gets or creates a new inkFaucet chaintree.
 // Note that this chaintree doesn't typically own the ink token; it just contains some
 // that was sent to it.
-func ensureChainTree(net network.Network) (*consensus.SignedChainTree, error) {
-	existing, err := net.GetChainTreeByName(InkFaucetChainTreeName)
+func ensureChainTree(net network.Network, key *ecdsa.PrivateKey) (*consensus.SignedChainTree, error) {
+	did := consensus.AddrToDid(crypto.PubkeyToAddress(key.PublicKey).String())
+
+	existing, err := net.GetTree(did)
 	if err != nil {
 		return nil, errors.Wrap(err, "error checking for existing inkFaucet chaintree")
 	}
 
 	if existing == nil {
-		ct, err := net.CreateNamedChainTree(InkFaucetChainTreeName)
+		ct, err := net.CreateChainTreeWithKey(key)
 		if err != nil {
 			return nil, err
 		}
@@ -115,7 +118,7 @@ func (cti *ChainTreeInkFaucet) RequestInk(amount uint64, destinationChainId stri
 		return nil, errors.Wrap(err, "error requesting ink")
 	}
 
-	log.Debugf("ink faucet chaintree: %s", ct)
+	log.Debugf("ink faucet chaintree: %s", ct.ChainTree.Dag.Dump(context.TODO()))
 
 	inkfaucetTree, err := ct.ChainTree.Tree(context.TODO())
 	if err != nil {
@@ -203,7 +206,7 @@ func (i *InkActor) Receive(actorCtx actor.Context) {
 			return
 		}
 
-		log.Debugf("ink actor got token payload: %+v", *tokenPayload)
+		log.Debugf("ink actor got token payload: %+v", tokenPayload)
 
 		var response *inkfaucet.InkResponse
 
@@ -224,7 +227,7 @@ func (i *InkActor) Receive(actorCtx actor.Context) {
 			Token: serializedTokenPayload,
 		}
 
-		log.Debugf("ink actor sending response: %+v", *response)
+		log.Debugf("ink actor sending response: %+v", response)
 
 		actorCtx.Respond(response)
 	default:

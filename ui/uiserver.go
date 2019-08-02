@@ -8,6 +8,7 @@ import (
 	"github.com/AsynkronIT/protoactor-go/actor"
 	"github.com/gogo/protobuf/proto"
 	logging "github.com/ipfs/go-log"
+
 	"github.com/quorumcontrol/jasons-game/network"
 	"github.com/quorumcontrol/jasons-game/pb/jasonsgame"
 )
@@ -105,14 +106,15 @@ func (us *UIServer) Receive(actorCtx actor.Context) {
 	case *actor.ReceiveTimeout:
 		actorCtx.Send(actorCtx.Self(), &jasonsgame.MessageToUser{Heartbeat: true})
 	case *SetGame:
+		log.Debug("received SetGame")
 		us.game = msg.Game
 	case *SetStream:
+		log.Debug("received SetStream")
 		// free up the previous stream
 		us.sendDone()
 
 		us.stream = msg.Stream
 		us.doneChan = msg.DoneChan
-		actorCtx.Send(actorCtx.Self(), &jasonsgame.MessageToUser{Message: "missed you while you were gone"})
 
 		if us.game != nil {
 			cmdUpdate := &jasonsgame.CommandUpdate{}
