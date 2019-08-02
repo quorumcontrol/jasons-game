@@ -259,17 +259,11 @@ func (g *Game) handleUserInput(actorCtx actor.Context, input *jasonsgame.UserInp
 	switch cmd.Name() {
 	case "exit":
 		g.sendUserMessage(actorCtx, "exit is unsupported in the browser")
-	case "set-description":
-		err = g.handleSetDescription(actorCtx, args)
 	case "tip-zoom":
 		err = g.handleTipZoom(actorCtx, args)
 	case "refresh":
 		err = g.refreshAllInteractions(actorCtx)
 		g.sendUILocation(actorCtx)
-	case "build-portal":
-		err = g.handleBuildPortal(actorCtx, args)
-	case "delete-portal":
-		err = g.handleDeletePortal(actorCtx, args)
 	case "say":
 		actorCtx.Send(g.chatActor, args)
 	case "shout":
@@ -287,12 +281,7 @@ func (g *Game) handleUserInput(actorCtx actor.Context, input *jasonsgame.UserInp
 	case "connect-location":
 		err = g.handleConnectLocation(actorCtx, args)
 	case "help":
-		g.sendUserMessage(actorCtx, "available commands:")
-		for _, c := range g.commands {
-			if !c.Hidden() {
-				g.sendUserMessage(actorCtx, c.Parse())
-			}
-		}
+		err = g.handleHelp(actorCtx, args)
 	case "name":
 		err = g.handleName(args)
 	case "interaction":
@@ -303,6 +292,25 @@ func (g *Game) handleUserInput(actorCtx actor.Context, input *jasonsgame.UserInp
 	if err != nil {
 		g.sendUserMessage(actorCtx, fmt.Sprintf("error with your command: %v", err))
 	}
+}
+
+func (g *Game) handleHelp(actorCtx actor.Context, args string) error {
+	toSend := []string{}
+
+	for _, c := range g.commands {
+		if !c.Hidden() && c.HelpGroup() == args {
+			toSend = append(toSend, c.Parse())
+		}
+	}
+
+	if len(toSend) == 0 {
+		g.sendUserMessage(actorCtx, fmt.Sprintf("Sorry, I am not sure how I can help with '%s'...\n"+
+			"Maybe you can try looking around, asking for help on the location or help on an object.", args))
+		return nil
+	}
+
+	g.sendUserMessage(actorCtx, "available commands:\n  > "+strings.Join(toSend, "\n  > "))
+	return nil
 }
 
 func (g *Game) handleName(name string) error {
@@ -356,29 +364,16 @@ func (g *Game) handleTipZoom(actorCtx actor.Context, tip string) error {
 	return nil
 }
 
-func (g *Game) handleSetDescription(actorCtx actor.Context, desc string) error {
-	response, err := actorCtx.RequestFuture(g.locationActor, &SetLocationDescriptionRequest{Description: desc}, 30*time.Second).Result()
-
-	if err != nil {
-		return errors.Wrap(err, "error setting description")
-	}
-
-	descriptionResponse, ok := response.(*SetLocationDescriptionResponse)
-
-	if !ok || descriptionResponse.Error != nil {
-		return errors.Wrap(descriptionResponse.Error, "error setting description")
-	}
-
-	g.sendUILocation(actorCtx)
-	return nil
-}
-
 func (g *Game) handleInteractionInput(actorCtx actor.Context, cmd *interactionCommand, args string) error {
 	var err error
 
 	switch interaction := cmd.interaction.(type) {
 	case *RespondInteraction:
 		g.sendUserMessage(actorCtx, interaction.Response)
+	case *BuildPortalInteraction:
+		err = g.handleBuildPortal(actorCtx, args)
+	case *DeletePortalInteraction:
+		err = g.handleDeletePortal(actorCtx, args)
 	case *ChangeLocationInteraction:
 		g.setLocation(actorCtx, interaction.Did)
 		g.sendUILocation(actorCtx)
@@ -390,6 +385,8 @@ func (g *Game) handleInteractionInput(actorCtx actor.Context, cmd *interactionCo
 		err = g.handleGetTreeValueInteraction(actorCtx, interaction)
 	case *SetTreeValueInteraction:
 		err = g.handleSetTreeValueInteraction(actorCtx, interaction, args)
+	case *LookAroundInteraction:
+		err = g.handleLocationInventoryList(actorCtx)
 	case *CipherInteraction:
 		nextInteraction, _, err := interaction.Unseal(args)
 		if err != nil {
@@ -423,7 +420,7 @@ func (g *Game) handleSetTreeValueInteraction(actorCtx actor.Context, interaction
 		return errors.Wrap(err, fmt.Sprintf("error setting value on tree %v", interaction.Did))
 	}
 
-	g.sendUserMessage(actorCtx, fmt.Sprintf("set %v", interaction.Path))
+	g.sendUserMessage(actorCtx, fmt.Sprintf("set %v to %v", interaction.Path, args))
 
 	return nil
 }
@@ -808,10 +805,11 @@ func (g *Game) interactionCommandsFor(actorCtx actor.Context, pid *actor.PID) (c
 
 	interactions := interactionsResponse.Interactions
 	interactionCommands := make(commandList, len(interactions))
-	for i, interaction := range interactions {
+	for i, interactionResp := range interactions {
 		interactionCommands[i] = &interactionCommand{
-			parse:       interaction.GetCommand(),
-			interaction: interaction,
+			parse:       interactionResp.Interaction.GetCommand(),
+			interaction: interactionResp.Interaction,
+			helpGroup:   interactionResp.AttachedTo,
 		}
 	}
 	return interactionCommands, nil

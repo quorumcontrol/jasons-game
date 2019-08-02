@@ -92,7 +92,7 @@ func TestFullIntegration(t *testing.T) {
 
 	err = stream.ClearMessages()
 	require.Nil(t, err)
-	rootCtx.Send(gameActor, &jasonsgame.UserInput{Message: "help"})
+	rootCtx.Send(gameActor, &jasonsgame.UserInput{Message: "help location"})
 	time.Sleep(100 * time.Millisecond)
 	msgs = filterUserMessages(t, stream.GetMessages())
 	includesHidden := false

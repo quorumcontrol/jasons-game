@@ -52,8 +52,13 @@ var _ Interaction = (*CipherInteraction)(nil)
 
 type ListInteractionsRequest struct{}
 
+type InteractionResponse struct {
+	AttachedTo  string
+	Interaction Interaction
+}
+
 type ListInteractionsResponse struct {
-	Interactions []Interaction
+	Interactions []*InteractionResponse
 	Error        error
 }
 
@@ -71,6 +76,42 @@ type withInteractions struct {
 type updatableTree interface {
 	getPath([]string) (interface{}, error)
 	updatePath([]string, interface{}) error
+}
+
+type BuildPortalInteraction struct {
+	Interaction
+}
+
+func (i *BuildPortalInteraction) GetCommand() string {
+	return "build portal to"
+}
+
+func (i *BuildPortalInteraction) GetHidden() bool {
+	return false
+}
+
+type DeletePortalInteraction struct {
+	Interaction
+}
+
+func (i *DeletePortalInteraction) GetCommand() string {
+	return "delete portal"
+}
+
+func (i *DeletePortalInteraction) GetHidden() bool {
+	return false
+}
+
+type LookAroundInteraction struct {
+	Interaction
+}
+
+func (i *LookAroundInteraction) GetCommand() string {
+	return "look around"
+}
+
+func (i *LookAroundInteraction) GetHidden() bool {
+	return false
 }
 
 func (i *SetTreeValueInteraction) SetValue(ctx context.Context, network network.Network, tree *consensus.SignedChainTree, value string) (*consensus.SignedChainTree, error) {

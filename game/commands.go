@@ -9,13 +9,12 @@ type commandList []command
 // for now the string parsing is not working
 var defaultCommandList = commandList{
 	newCommand("name", "call me"),
-	newCommand("set-description", "set description"),
-	newCommand("delete-portal", "delete portal"),
-	newCommand("build-portal", "build portal to"),
 	newCommand("create-object", "create object"),
 	newCommand("player-inventory-list", "look in bag"),
 	newCommand("location-inventory-list", "look around"),
 	newCommand("help", "help"),
+	newCommand("help", "help location"),
+	newCommand("help", "help [name of object]"),
 	newHiddenCommand("tip-zoom", "go to tip"),
 	newHiddenCommand("create-location", "create location"),
 	newHiddenCommand("connect-location", "connect location"),
@@ -30,13 +29,15 @@ type command interface {
 	Name() string
 	Parse() string
 	Hidden() bool
+	HelpGroup() string
 }
 
 type basicCommand struct {
 	command
-	name   string
-	parse  string
-	hidden bool
+	name      string
+	parse     string
+	hidden    bool
+	helpGroup string
 }
 
 func (c *basicCommand) Name() string {
@@ -49,6 +50,10 @@ func (c *basicCommand) Parse() string {
 
 func (c *basicCommand) Hidden() bool {
 	return c.hidden
+}
+
+func (c *basicCommand) HelpGroup() string {
+	return c.helpGroup
 }
 
 func newCommand(name, parse string) *basicCommand {
@@ -67,6 +72,7 @@ func newHiddenCommand(name, parse string) *basicCommand {
 type interactionCommand struct {
 	parse       string
 	interaction Interaction
+	helpGroup   string
 }
 
 func (c *interactionCommand) Name() string {
@@ -79,6 +85,10 @@ func (c *interactionCommand) Parse() string {
 
 func (c *interactionCommand) Hidden() bool {
 	return c.interaction.GetHidden()
+}
+
+func (c *interactionCommand) HelpGroup() string {
+	return c.helpGroup
 }
 
 func (cl commandList) findCommand(req string) (command, string) {
