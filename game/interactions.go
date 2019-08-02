@@ -39,6 +39,7 @@ func init() {
 type Interaction interface {
 	proto.Message
 	GetCommand() string
+	GetHidden() bool
 }
 
 var _ Interaction = (*RespondInteraction)(nil)
