@@ -9,23 +9,23 @@ type commandList []command
 // for now the string parsing is not working
 var defaultCommandList = commandList{
 	newCommand("name", "call me"),
-	newCommand("set-description", "set description"),
-	newCommand("delete-portal", "delete portal"),
-	newCommand("build-portal", "build portal to"),
 	newCommand("create-object", "create object"),
 	newCommand("player-inventory-list", "look in bag"),
 	newCommand("location-inventory-list", "look around"),
 	newCommand("help", "help"),
 	newCommand("help", "help location"),
 	newCommand("help", "help [name of object]"),
-	newHiddenCommand("tip-zoom", "go to tip"),
-	newHiddenCommand("create-location", "create location"),
-	newHiddenCommand("connect-location", "connect location"),
-	newHiddenCommand("exit", "exit"),
-	newHiddenCommand("say", "say"),
-	newHiddenCommand("shout", "shout"),
-	newHiddenCommand("open-portal", "open portal"),
-	newHiddenCommand("refresh", "refresh"),
+	newCommand("set-description", "set description").groupIn("location"),
+	newCommand("delete-portal", "delete portal").groupIn("location"),
+	newCommand("build-portal", "build portal to").groupIn("location"),
+	newCommand("tip-zoom", "go to tip").hide(),
+	newCommand("create-location", "create location").hide(),
+	newCommand("connect-location", "connect location").hide(),
+	newCommand("exit", "exit").hide(),
+	newCommand("say", "say").hide(),
+	newCommand("shout", "shout").hide(),
+	newCommand("open-portal", "open portal").hide(),
+	newCommand("refresh", "refresh").hide(),
 }
 
 type command interface {
@@ -37,9 +37,10 @@ type command interface {
 
 type basicCommand struct {
 	command
-	name   string
-	parse  string
-	hidden bool
+	name      string
+	parse     string
+	hidden    bool
+	helpGroup string
 }
 
 func (c *basicCommand) Name() string {
@@ -55,8 +56,17 @@ func (c *basicCommand) Hidden() bool {
 }
 
 func (c *basicCommand) HelpGroup() string {
-	// default
-	return ""
+	return c.helpGroup
+}
+
+func (c *basicCommand) hide() *basicCommand {
+	c.hidden = true
+	return c
+}
+
+func (c *basicCommand) groupIn(group string) *basicCommand {
+	c.helpGroup = group
+	return c
 }
 
 func newCommand(name, parse string) *basicCommand {
