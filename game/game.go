@@ -158,12 +158,7 @@ func (g *Game) handleUserInput(actorCtx actor.Context, input *jasonsgame.UserInp
 	case "connect-location":
 		err = g.handleConnectLocation(actorCtx, args)
 	case "help":
-		g.sendUserMessage(actorCtx, "available commands:")
-		for _, c := range g.commands {
-			if !c.Hidden() {
-				g.sendUserMessage(actorCtx, c.Parse())
-			}
-		}
+		err = g.handleHelp(actorCtx, args)
 	case "name":
 		err = g.handleName(args)
 	case "interaction":
@@ -174,6 +169,25 @@ func (g *Game) handleUserInput(actorCtx actor.Context, input *jasonsgame.UserInp
 	if err != nil {
 		g.sendUserMessage(actorCtx, fmt.Sprintf("error with your command: %v", err))
 	}
+}
+
+func (g *Game) handleHelp(actorCtx actor.Context, args string) error {
+	toSend := []string{}
+
+	for _, c := range g.commands {
+		if !c.Hidden() && c.HelpGroup() == args {
+			toSend = append(toSend, c.Parse())
+		}
+	}
+
+	if len(toSend) == 0 {
+		g.sendUserMessage(actorCtx, fmt.Sprintf("Sorry, I am not sure how I can help with '%s'...\n" +
+																						"Maybe you can try looking around, asking for help on the location or help on an object.", args))
+		return nil
+	}
+
+	g.sendUserMessage(actorCtx, "available commands:\n  > "+strings.Join(toSend, "\n  > "))
+	return nil
 }
 
 func (g *Game) handleName(name string) error {
@@ -671,10 +685,11 @@ func (g *Game) interactionCommandsFor(actorCtx actor.Context, pid *actor.PID) (c
 
 	interactions := interactionsResponse.Interactions
 	interactionCommands := make(commandList, len(interactions))
-	for i, interaction := range interactions {
+	for i, interactionResp := range interactions {
 		interactionCommands[i] = &interactionCommand{
-			parse:       interaction.GetCommand(),
-			interaction: interaction,
+			parse:       interactionResp.Interaction.GetCommand(),
+			interaction: interactionResp.Interaction,
+			helpGroup:   interactionResp.AttachedTo,
 		}
 	}
 	return interactionCommands, nil

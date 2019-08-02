@@ -52,8 +52,13 @@ var _ Interaction = (*CipherInteraction)(nil)
 
 type ListInteractionsRequest struct{}
 
+type InteractionResponse struct {
+	AttachedTo  string
+	Interaction Interaction
+}
+
 type ListInteractionsResponse struct {
-	Interactions []Interaction
+	Interactions []*InteractionResponse
 	Error        error
 }
 

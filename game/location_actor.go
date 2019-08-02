@@ -128,11 +128,18 @@ func (l *LocationActor) Receive(actorCtx actor.Context) {
 }
 
 func (l *LocationActor) handleListInteractionsRequest(actorCtx actor.Context, msg *ListInteractionsRequest) {
-	interactions, err := l.location.InteractionsList()
-
+	locInteractions, err := l.location.InteractionsList()
 	if err != nil {
 		actorCtx.Respond(&ListInteractionsResponse{Error: err})
 		return
+	}
+
+	interactions := make([]*InteractionResponse, len(locInteractions))
+	for i, interaction := range locInteractions {
+		interactions[i] = &InteractionResponse{
+			AttachedTo:  "location",
+			Interaction: interaction,
+		}
 	}
 
 	portal, err := l.location.GetPortal()
@@ -142,9 +149,12 @@ func (l *LocationActor) handleListInteractionsRequest(actorCtx actor.Context, ms
 	}
 
 	if portal != nil {
-		interactions = append(interactions, &ChangeLocationInteraction{
-			Command: "go through portal",
-			Did:     portal.To,
+		interactions = append(interactions, &InteractionResponse{
+			AttachedTo: "location",
+			Interaction: &ChangeLocationInteraction{
+				Command: "go through portal",
+				Did:     portal.To,
+			},
 		})
 	}
 

@@ -16,6 +16,8 @@ var defaultCommandList = commandList{
 	newCommand("player-inventory-list", "look in bag"),
 	newCommand("location-inventory-list", "look around"),
 	newCommand("help", "help"),
+	newCommand("help", "help location"),
+	newCommand("help", "help [name of object]"),
 	newHiddenCommand("tip-zoom", "go to tip"),
 	newHiddenCommand("create-location", "create location"),
 	newHiddenCommand("connect-location", "connect location"),
@@ -30,6 +32,7 @@ type command interface {
 	Name() string
 	Parse() string
 	Hidden() bool
+	HelpGroup() string
 }
 
 type basicCommand struct {
@@ -51,6 +54,11 @@ func (c *basicCommand) Hidden() bool {
 	return c.hidden
 }
 
+func (c *basicCommand) HelpGroup() string {
+	// default
+	return ""
+}
+
 func newCommand(name, parse string) *basicCommand {
 	return &basicCommand{
 		name:  name,
@@ -67,6 +75,7 @@ func newHiddenCommand(name, parse string) *basicCommand {
 type interactionCommand struct {
 	parse       string
 	interaction Interaction
+	helpGroup   string
 }
 
 func (c *interactionCommand) Name() string {
@@ -79,6 +88,10 @@ func (c *interactionCommand) Parse() string {
 
 func (c *interactionCommand) Hidden() bool {
 	return c.interaction.GetHidden()
+}
+
+func (c *interactionCommand) HelpGroup() string {
+	return c.helpGroup
 }
 
 func (cl commandList) findCommand(req string) (command, string) {
