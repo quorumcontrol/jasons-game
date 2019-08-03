@@ -201,11 +201,11 @@ func (l *LocationActor) handleListInteractionsRequest(actorCtx actor.Context, ms
 		return
 	}
 
-	for i, interaction := range locInteractions {
-		interactions[i] = &InteractionResponse{
+	for _, interaction := range locInteractions {
+		interactions = append(interactions, &InteractionResponse{
 			AttachedTo:  "location",
 			Interaction: interaction,
-		}
+		})
 	}
 
 	inventoryInteractionsResp, err := actorCtx.RequestFuture(l.inventoryActor, &ListInteractionsRequest{}, 30*time.Second).Result()
