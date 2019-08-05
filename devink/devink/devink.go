@@ -3,7 +3,7 @@ package devink
 import (
 	"context"
 
-	"github.com/hashicorp/go-uuid"
+	uuid "github.com/hashicorp/go-uuid"
 	logging "github.com/ipfs/go-log"
 	"github.com/pkg/errors"
 	"github.com/quorumcontrol/chaintree/chaintree"
@@ -34,7 +34,7 @@ func inkSendTxId() (string, error) {
 func NewSource(ctx context.Context, dataStoreDir string, connectToLocalnet bool) (*DevInkSource, error) {
 	notaryGroup, err := network.SetupTupeloNotaryGroup(ctx, connectToLocalnet)
 	if err != nil {
-		return nil, errors.Wrap(err, "error setting up local notary group")
+		return nil, errors.Wrap(err, "error setting up notary group")
 	}
 
 	dsDir := config.EnsureExists(dataStoreDir)

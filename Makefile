@@ -14,11 +14,11 @@ FIRSTGOPATH = $(firstword $(subst :, ,$(GOPATH)))
 
 jsmodules = frontend/jasons-game/node_modules
 generated = network/messages.pb.go game/types.pb.go pb/jasonsgame/jasonsgame.pb.go \
-            inkfaucet/inkfaucet/messages.pb.go \
-            frontend/jasons-game/src/js/frontend/remote/jasonsgame_pb.d.ts \
-            frontend/jasons-game/src/js/frontend/remote/jasonsgame_pb.js \
-            frontend/jasons-game/src/js/frontend/remote/jasonsgame_pb_service.d.ts \
-            frontend/jasons-game/src/js/frontend/remote/jasonsgame_pb_service.js
+	    inkfaucet/inkfaucet/messages.pb.go \
+	    frontend/jasons-game/src/js/frontend/remote/jasonsgame_pb.d.ts \
+	    frontend/jasons-game/src/js/frontend/remote/jasonsgame_pb.js \
+	    frontend/jasons-game/src/js/frontend/remote/jasonsgame_pb_service.d.ts \
+	    frontend/jasons-game/src/js/frontend/remote/jasonsgame_pb_service.js
 
 packr = packrd/packed-packr.go main-packr.go
 gosources = $(shell find . -path "./vendor/*" -prune -o -type f -name "*.go" -print)
@@ -33,7 +33,7 @@ ${FIRSTGOPATH}/src/github.com/gogo/protobuf/protobuf:
 	./scripts/protogen.sh
 
 generated: $(generated)
-	
+
 $(jsmodules):
 	cd frontend/jasons-game && npm install
 
