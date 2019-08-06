@@ -378,7 +378,7 @@ func (g *Game) handleInteractionInput(actorCtx actor.Context, cmd *interactionCo
 		g.setLocation(actorCtx, interaction.Did)
 		g.sendUILocation(actorCtx)
 	case *DropObjectInteraction:
-		err = g.handleDropObject(actorCtx, interaction)
+		err = g.handleDropObject(actorCtx, cmd, interaction)
 	case *PickUpObjectInteraction:
 		err = g.handlePickUpObject(actorCtx, interaction)
 	case *GetTreeValueInteraction:
@@ -467,7 +467,11 @@ func (g *Game) handleGetTreeValueInteraction(actorCtx actor.Context, interaction
 	return nil
 }
 
-func (g *Game) handleDropObject(actorCtx actor.Context, interaction *DropObjectInteraction) error {
+func (g *Game) handleDropObject(actorCtx actor.Context, cmd *interactionCommand, interaction *DropObjectInteraction) error {
+	if interaction.Did != cmd.did {
+		return fmt.Errorf("Interaction from %s tried to drop %s - this is not allowed", cmd.did, interaction.Did)
+	}
+
 	response, err := actorCtx.RequestFuture(g.inventoryActor, &TransferObjectRequest{
 		Did: interaction.Did,
 		To:  g.locationDid,
@@ -810,6 +814,7 @@ func (g *Game) interactionCommandsFor(actorCtx actor.Context, pid *actor.PID) (c
 			parse:       interactionResp.Interaction.GetCommand(),
 			interaction: interactionResp.Interaction,
 			helpGroup:   interactionResp.AttachedTo,
+			did:         interactionResp.AttachedToDid,
 		}
 	}
 	return interactionCommands, nil
