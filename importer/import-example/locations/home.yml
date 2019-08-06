@@ -1,9 +1,15 @@
 data:
   description: "you have entered the world of the fairies, in front of you sits a great forest"
 interactions:
-  - type: ChangeLocationInteraction
+  - type: ChainedInteraction
     value:
       command: "enter the forest"
-      did: "{{.Locations.forest}}"
+      interactions:
+        - type: RespondInteraction
+          value:
+            response: "you strap a flashlight to your head and enter the forest"
+        - type: ChangeLocationInteraction
+          value:
+            did: "{{.Locations.forest}}"
 inventory:
   - "{{.Objects.idol}}"

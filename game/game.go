@@ -397,6 +397,21 @@ func (g *Game) handleInteractionInput(actorCtx actor.Context, cmd *interactionCo
 			interaction: nextInteraction,
 		}
 		return g.handleInteractionInput(actorCtx, nextCmd, args)
+	case *ChainedInteraction:
+		interactions, err := interaction.Interactions()
+		if err != nil {
+			return err
+		}
+		for _, nextInteraction := range interactions {
+			nextCmd := &interactionCommand{
+				parse:       interaction.GetCommand(),
+				interaction: nextInteraction,
+			}
+			err = g.handleInteractionInput(actorCtx, nextCmd, args)
+			if err != nil {
+				return err
+			}
+		}
 	default:
 		g.sendUserMessage(actorCtx, fmt.Sprintf("no interaction matching %s, type %v", cmd.Parse(), reflect.TypeOf(interaction)))
 	}

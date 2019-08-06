@@ -34,6 +34,8 @@ func init() {
 	typecaster.AddType(SetTreeValueInteraction{})
 	cbor.RegisterCborType(CipherInteraction{})
 	typecaster.AddType(CipherInteraction{})
+	cbor.RegisterCborType(ChainedInteraction{})
+	typecaster.AddType(ChainedInteraction{})
 }
 
 type Interaction interface {
@@ -49,6 +51,7 @@ var _ Interaction = (*DropObjectInteraction)(nil)
 var _ Interaction = (*GetTreeValueInteraction)(nil)
 var _ Interaction = (*SetTreeValueInteraction)(nil)
 var _ Interaction = (*CipherInteraction)(nil)
+var _ Interaction = (*ChainedInteraction)(nil)
 
 type ListInteractionsRequest struct{}
 
@@ -249,6 +252,38 @@ func interactionFromStoredMap(m map[string]interface{}) (Interaction, error) {
 }
 
 const cipherNonceLength = 24
+
+func NewChainedInteraction(command string, interactions ...Interaction) (*ChainedInteraction, error) {
+	interactionBytes := make([][]byte, len(interactions))
+
+	for i, interaction := range interactions {
+		interactionNode, err := interactionToCborNode(interaction)
+		if err != nil {
+			return nil, errors.Wrap(err, "interaction could not be encoded")
+		}
+		interactionBytes[i] = interactionNode.RawData()
+	}
+
+	return &ChainedInteraction{
+		Command:           command,
+		InteractionsBytes: interactionBytes,
+	}, nil
+}
+
+func (i *ChainedInteraction) Interactions() ([]Interaction, error) {
+	interactionsBytes := i.InteractionsBytes
+
+	interactions := make([]Interaction, len(interactionsBytes))
+	for i, interactionBytes := range interactionsBytes {
+		interaction, err := interactionFromCborBytes(interactionBytes)
+		if err != nil {
+			return nil, errors.Wrap(err, "error decoding interaction")
+		}
+		interactions[i] = interaction
+	}
+
+	return interactions, nil
+}
 
 func NewCipherInteraction(command string, secret string, interactionToSeal Interaction, failureInteraction Interaction) (*CipherInteraction, error) {
 	if interactionToSeal.GetCommand() != "" {
