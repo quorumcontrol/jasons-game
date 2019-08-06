@@ -267,3 +267,64 @@ func TestInscriptionInteractions(t *testing.T) {
 		assert.Equal(t, lastMsg.Message, "with magical properties")
 	})
 }
+
+func TestCantDropFromOtherTree(t *testing.T) {
+	net := network.NewLocalNetwork()
+	stream := ui.NewTestStream()
+
+	simulatedUI, game := setupUiAndGame(t, stream, net)
+	defer rootCtx.Stop(simulatedUI)
+	defer rootCtx.Stop(game)
+
+	playerTree, err := GetPlayerTree(net)
+	require.Nil(t, err)
+
+	objTree, err := net.CreateChainTree()
+	require.Nil(t, err)
+
+	obj := NewObjectTree(net, objTree)
+	err = obj.SetName("obj-to-drop")
+	require.Nil(t, err)
+
+	err = obj.AddInteraction(&DropObjectInteraction{
+		Command: "drop will succeed",
+		Did:     obj.MustId(),
+	})
+	require.Nil(t, err)
+
+	otherObjTree, err := net.CreateChainTree()
+	require.Nil(t, err)
+	otherObj := NewObjectTree(net, otherObjTree)
+	err = otherObj.SetName("obj-triggering-drop")
+	require.Nil(t, err)
+
+	err = otherObj.AddInteraction(&DropObjectInteraction{
+		Command: "drop will fail",
+		Did:     obj.MustId(),
+	})
+	require.Nil(t, err)
+
+	inventoryTree, err := trees.FindInventoryTree(net, playerTree.Did())
+	require.Nil(t, err)
+	err = inventoryTree.Add(obj.MustId())
+	require.Nil(t, err)
+	err = inventoryTree.Add(otherObj.MustId())
+	require.Nil(t, err)
+
+	time.Sleep(50 * time.Millisecond)
+	rootCtx.Send(game, &jasonsgame.UserInput{Message: "drop will fail"})
+	time.Sleep(50 * time.Millisecond)
+	rootCtx.Send(game, &jasonsgame.UserInput{Message: "look around"})
+	time.Sleep(50 * time.Millisecond)
+
+	msgs := filterUserMessages(t, stream.GetMessages())
+	assert.NotContains(t, msgs[len(msgs)-1].Message, "obj-to-drop")
+
+	time.Sleep(50 * time.Millisecond)
+	rootCtx.Send(game, &jasonsgame.UserInput{Message: "drop will succeed"})
+	time.Sleep(50 * time.Millisecond)
+	rootCtx.Send(game, &jasonsgame.UserInput{Message: "look around"})
+	time.Sleep(50 * time.Millisecond)
+	msgs = filterUserMessages(t, stream.GetMessages())
+	assert.Contains(t, msgs[len(msgs)-1].Message, "obj-to-drop")
+}
