@@ -1,6 +1,7 @@
 package game
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/quorumcontrol/jasons-game/network"
@@ -54,4 +55,26 @@ func TestCipherInteraction(t *testing.T) {
 	require.Nil(t, err)
 	require.True(t, didUnseal)
 	require.Equal(t, si.Response, interaction.(*RespondInteraction).Response)
+}
+
+func TestChainedInteraction(t *testing.T) {
+	cmd := "multi response test"
+	interactions := make([]Interaction, 10)
+
+	for i := range interactions {
+		interactions[i] = &RespondInteraction{
+			Response: fmt.Sprintf("test%d", i),
+		}
+	}
+
+	ci, err := NewChainedInteraction(cmd, interactions...)
+	require.Nil(t, err)
+
+	interactionsResp, err := ci.Interactions()
+	require.Nil(t, err)
+	require.Len(t, interactionsResp, len(interactions))
+
+	for i, interaction := range interactionsResp {
+		require.Equal(t, interactions[i].(*RespondInteraction).Response, interaction.(*RespondInteraction).Response)
+	}
 }

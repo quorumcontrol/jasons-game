@@ -193,6 +193,9 @@ func (i *Importer) convertImportInteraction(attrs *ImportInteraction) (game.Inte
 		if err != nil {
 			return interaction, fmt.Errorf("CipherInteraction failure_interaction must be ImportInteraction")
 		}
+		if _, ok := failureImportInteraction.Value["command"]; !ok {
+			failureImportInteraction.Value["command"] = command
+		}
 
 		failureInteraction, err := i.convertImportInteraction(failureImportInteraction)
 		if err != nil {
@@ -202,6 +205,43 @@ func (i *Importer) convertImportInteraction(attrs *ImportInteraction) (game.Inte
 		interaction, err = game.NewCipherInteraction(command, secret, successInteraction, failureInteraction)
 		if err != nil {
 			return interaction, errors.Wrap(err, "error creating CipherInteraction")
+		}
+	case "ChainedInteraction":
+		command, ok := attrs.Value["command"].(string)
+		if !ok {
+			return interaction, fmt.Errorf("ChainedInteraction must have command")
+		}
+		interactionsUncast, ok := attrs.Value["interactions"]
+		if !ok {
+			return interaction, fmt.Errorf("ChainedInteraction must have an array of interactions")
+		}
+
+		interactionSliceUncast, ok := interactionsUncast.([]interface{})
+		if !ok || len(interactionSliceUncast) == 0 {
+			return interaction, fmt.Errorf("ChainedInteraction must have one or more valid Interactions")
+		}
+
+		interactions := make([]game.Interaction, len(interactionSliceUncast))
+		for idx, interactionUncast := range interactionSliceUncast {
+			var importInteraction *ImportInteraction
+			err := i.yamlTypecast(interactionUncast, &importInteraction)
+			if err != nil {
+				return interaction, fmt.Errorf("ChainedInteraction interaction %d must be ImportInteraction", i)
+			}
+			if _, ok := importInteraction.Value["command"]; !ok {
+				importInteraction.Value["command"] = command
+			}
+			interaction, err := i.convertImportInteraction(importInteraction)
+			if err != nil {
+				return interaction, err
+			}
+			interactions[idx] = interaction
+		}
+
+		var err error
+		interaction, err = game.NewChainedInteraction(command, interactions...)
+		if err != nil {
+			return interaction, errors.Wrap(err, "error creating ChainedInteraction")
 		}
 	default:
 		typeURL := fmt.Sprintf("type.googleapis.com/jasonsgame.%s", attrs.Type)

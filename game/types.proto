@@ -43,6 +43,12 @@ message SetTreeValueInteraction {
   bool   hidden = 5;
 }
 
+message ChainedInteraction {
+  string command = 1;
+  repeated bytes interactions_bytes = 2;
+  bool hidden = 3;
+}
+
 message CipherInteraction {
   string command = 1;
   bytes  sealed_interaction_bytes = 2;
