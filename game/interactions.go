@@ -56,8 +56,9 @@ var _ Interaction = (*ChainedInteraction)(nil)
 type ListInteractionsRequest struct{}
 
 type InteractionResponse struct {
-	AttachedTo  string
-	Interaction Interaction
+	AttachedTo    string
+	AttachedToDid string
+	Interaction   Interaction
 }
 
 type ListInteractionsResponse struct {

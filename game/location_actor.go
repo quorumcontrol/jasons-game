@@ -150,13 +150,15 @@ func (l *LocationActor) handleListInteractionsRequest(actorCtx actor.Context, ms
 	}
 
 	interactions := []*InteractionResponse{&InteractionResponse{
-		AttachedTo:  "location",
-		Interaction: &LookAroundInteraction{},
+		AttachedTo:    "location",
+		AttachedToDid: l.did,
+		Interaction:   &LookAroundInteraction{},
 	}}
 
 	if isLocal {
 		interactions = append(interactions, &InteractionResponse{
-			AttachedTo: "location",
+			AttachedTo:    "location",
+			AttachedToDid: l.did,
 			Interaction: &SetTreeValueInteraction{
 				Command: "set description",
 				Did:     l.location.MustId(),
@@ -173,7 +175,8 @@ func (l *LocationActor) handleListInteractionsRequest(actorCtx actor.Context, ms
 
 	if portal != nil {
 		interactions = append(interactions, &InteractionResponse{
-			AttachedTo: "location",
+			AttachedTo:    "location",
+			AttachedToDid: l.did,
 			Interaction: &ChangeLocationInteraction{
 				Command: "go through portal",
 				Did:     portal.To,
@@ -182,15 +185,17 @@ func (l *LocationActor) handleListInteractionsRequest(actorCtx actor.Context, ms
 
 		if isLocal {
 			interactions = append(interactions, &InteractionResponse{
-				AttachedTo:  "location",
-				Interaction: &DeletePortalInteraction{},
+				AttachedTo:    "location",
+				AttachedToDid: l.did,
+				Interaction:   &DeletePortalInteraction{},
 			})
 		}
 	} else {
 		if isLocal {
 			interactions = append(interactions, &InteractionResponse{
-				AttachedTo:  "location",
-				Interaction: &BuildPortalInteraction{},
+				AttachedTo:    "location",
+				AttachedToDid: l.did,
+				Interaction:   &BuildPortalInteraction{},
 			})
 		}
 	}
@@ -203,8 +208,9 @@ func (l *LocationActor) handleListInteractionsRequest(actorCtx actor.Context, ms
 
 	for _, interaction := range locInteractions {
 		interactions = append(interactions, &InteractionResponse{
-			AttachedTo:  "location",
-			Interaction: interaction,
+			AttachedTo:    "location",
+			AttachedToDid: l.did,
+			Interaction:   interaction,
 		})
 	}
 
