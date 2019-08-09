@@ -90,25 +90,6 @@ func CreateObjectTree(net network.Network, name string) (*ObjectTree, error) {
 		return nil, errors.Wrap(err, "error adding interactions to new object")
 	}
 
-	err = obj.AddInteraction(&SetTreeValueInteraction{
-		Command:  "inscribe object " + name,
-		Did:      obj.MustId(),
-		Path:     "inscriptions",
-		Multiple: true,
-	})
-	if err != nil {
-		return nil, errors.Wrap(err, "error adding interactions to new object")
-	}
-
-	err = obj.AddInteraction(&GetTreeValueInteraction{
-		Command: "read inscriptions on object " + name,
-		Did:     obj.MustId(),
-		Path:    "inscriptions",
-	})
-	if err != nil {
-		return nil, errors.Wrap(err, "error adding interactions to new object")
-	}
-
 	return obj, nil
 }
 
