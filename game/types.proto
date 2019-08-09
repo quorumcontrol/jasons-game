@@ -28,6 +28,13 @@ message DropObjectInteraction {
   bool   hidden = 3;
 }
 
+message CreateObjectInteraction {
+  string command = 1;
+  string name = 2;
+  string description = 3;
+  bool   hidden = 4;
+}
+
 message GetTreeValueInteraction {
   string command = 1;
   string did = 2;

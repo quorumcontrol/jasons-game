@@ -36,7 +36,7 @@ func TestImport(t *testing.T) {
 	require.Equal(t, val, "you are now in the forest, what now?")
 	val, _, err = tree.ChainTree.Dag.Resolve(ctx, []string{"tree", "data", "jasons-game", "interactions"})
 	require.Nil(t, err)
-	require.Equal(t, len(val.(map[string]interface{})), 2)
+	require.Equal(t, len(val.(map[string]interface{})), 3)
 	val, _, err = tree.ChainTree.Dag.Resolve(ctx, []string{"tree", "data", "jasons-game", "inventory"})
 	require.Nil(t, err)
 	require.Nil(t, val)

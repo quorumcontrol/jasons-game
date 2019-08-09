@@ -24,6 +24,8 @@ func init() {
 	typecaster.AddType(RespondInteraction{})
 	cbor.RegisterCborType(ChangeLocationInteraction{})
 	typecaster.AddType(ChangeLocationInteraction{})
+	cbor.RegisterCborType(CreateObjectInteraction{})
+	typecaster.AddType(CreateObjectInteraction{})
 	cbor.RegisterCborType(PickUpObjectInteraction{})
 	typecaster.AddType(PickUpObjectInteraction{})
 	cbor.RegisterCborType(DropObjectInteraction{})
@@ -46,6 +48,7 @@ type Interaction interface {
 
 var _ Interaction = (*RespondInteraction)(nil)
 var _ Interaction = (*ChangeLocationInteraction)(nil)
+var _ Interaction = (*CreateObjectInteraction)(nil)
 var _ Interaction = (*PickUpObjectInteraction)(nil)
 var _ Interaction = (*DropObjectInteraction)(nil)
 var _ Interaction = (*GetTreeValueInteraction)(nil)
