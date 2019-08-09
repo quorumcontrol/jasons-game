@@ -1,0 +1,17 @@
+{
+  "name": "jasons-game",
+  "productName": "JasonsGame",
+  "version": "0.0.1",
+  "private": true,
+  "main": "main.js",
+  "devDependencies": {
+    "electron": "^6.0.0",
+    "electron-packager": "^14.0.4"
+  },
+  "dependencies": {
+    "jasons-game-frontend": "file:frontend/jasons-game"
+  },
+  "scripts": {
+    "start": "electron ."
+  }
+}

@@ -12,7 +12,7 @@ export GO111MODULE = on
 
 FIRSTGOPATH = $(firstword $(subst :, ,$(GOPATH)))
 
-jsmodules = frontend/jasons-game/node_modules
+jsmodules = node_modules frontend/jasons-game/node_modules
 generated = network/messages.pb.go game/types.pb.go pb/jasonsgame/jasonsgame.pb.go \
             inkfaucet/inkfaucet/messages.pb.go \
             frontend/jasons-game/src/js/frontend/remote/jasonsgame_pb.d.ts \
@@ -21,7 +21,7 @@ generated = network/messages.pb.go game/types.pb.go pb/jasonsgame/jasonsgame.pb.
             frontend/jasons-game/src/js/frontend/remote/jasonsgame_pb_service.js
 
 packr = packrd/packed-packr.go main-packr.go
-gosources = $(shell find . -path "./vendor/*" -prune -o -type f -name "*.go" -print)
+gosources = $(shell find . -path "./vendor/*" -prune -o -path "./dist/*" -prune -o -type f -name "*.go" -print)
 
 all: frontend-build $(packr) build
 
@@ -34,8 +34,8 @@ ${FIRSTGOPATH}/src/github.com/gogo/protobuf/protobuf:
 
 generated: $(generated)
 	
-$(jsmodules):
-	cd frontend/jasons-game && npm install
+$(jsmodules): package.json package-lock.json frontend/jasons-game/package.json frontend/jasons-game/package-lock.json
+	npm install
 
 $(FIRSTGOPATH)/bin/golangci-lint:
 	./scripts/download-golangci-lint.sh
@@ -43,19 +43,23 @@ $(FIRSTGOPATH)/bin/golangci-lint:
 $(FIRSTGOPATH)/bin/gotestsum:
 	go get gotest.tools/gotestsum
 
-bin/jasonsgame-$(BUILD): $(gosources) $(generated) go.mod go.sum
+bin/jasonsgame-darwin-$(BUILD): $(gosources) $(generated) go.mod go.sum
 	mkdir -p bin
-	go build -tags='desktop $(BUILD)' -ldflags="-X main.inkDID=${INK_DID}" -o ./bin/jasonsgame-$(BUILD)
+	xgo -tags='public' -targets='darwin-10.10/amd64,' -ldflags="-X main.inkDID=${INK_DID}" ./
+	mv github.com/quorumcontrol/jasons-game-darwin-* bin/jasonsgame-darwin-$(BUILD)
 
-build: bin/jasonsgame-$(BUILD)
+bin/jasonsgame-win32-$(BUILD).exe: $(gosources) $(generated) go.mod go.sum
+	mkdir -p bin
+	xgo -tags='public' -targets='windows-6.0/amd64,' -ldflags="-X main.inkDID=${INK_DID}" ./
+	mv github.com/quorumcontrol/jasons-game-windows-* bin/jasonsgame-win32-$(BUILD).exe
 
-JasonsGame-$(BUILD).app/Contents/MacOS/jasonsgame: $(generated) go.mod go.sum frontend-build $(packr)
-	mkdir -p JasonsGame-$(BUILD).app/Contents/MacOS
-	go build -tags='desktop macos_app_bundle $(BUILD)' -o JasonsGame-$(BUILD).app/Contents/MacOS/jasonsgame
+bin/jasonsgame-linux-$(BUILD): $(gosources) $(generated) go.mod go.sum
+	mkdir -p bin
+	xgo -tags='public' -targets='linux/amd64,' -ldflags="-X main.inkDID=${INK_DID}" ./
+	mv github.com/quorumcontrol/jasons-game-linux-* bin/jasonsgame-linux-$(BUILD)
 
-JasonsGame-$(BUILD).app: JasonsGame-$(BUILD).app/Contents/MacOS/jasonsgame
-
-mac-app: JasonsGame-$(BUILD).app
+build: $(jsmodules) bin/jasonsgame-win32-$(BUILD).exe bin/jasonsgame-darwin-$(BUILD) bin/jasonsgame-linux-$(BUILD)
+	node package.js
 
 lint: $(FIRSTGOPATH)/bin/golangci-lint $(generated)
 	$(FIRSTGOPATH)/bin/golangci-lint run --build-tags 'integration public'
@@ -135,7 +139,7 @@ vendor: go.mod go.sum $(FIRSTGOPATH)/bin/modvendor
 prepare: $(gosources) $(generated) $(packr) $(vendor)
 
 $(FIRSTGOPATH)/bin/packr2:
-	go get -u github.com/gobuffalo/packr/v2@662c20c19dde
+	env GO111MODULE=off go get -u github.com/gobuffalo/packr/v2/packr2
 
 $(packr): $(FIRSTGOPATH)/bin/packr2 main.go
 	$(FIRSTGOPATH)/bin/packr2
@@ -147,5 +151,6 @@ clean: $(FIRSTGOPATH)/bin/packr2
 	rm -rf bin
 	rm -rf JasonsGame.app-$(BUILD)/Contents/MacOS
 	rm -f $(generated)
+	rm -rf $(jsmodules)
 
 .PHONY: all build test integration-test localnet clean lint game-server importer jason inkfaucet devink game2 mac-app prepare generated dev down

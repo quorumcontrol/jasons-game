@@ -36,7 +36,6 @@ require (
 	github.com/shibukawa/configdir v0.0.0-20170330084843-e180dbdc8da0
 	github.com/spf13/cobra v0.0.5
 	github.com/stretchr/testify v1.3.0
-	github.com/zserge/webview v0.0.0-20190123072648-16c93bcaeaeb
 	golang.org/x/crypto v0.0.0-20190701094942-4def268fd1a4
 	google.golang.org/grpc v1.22.0
 	gopkg.in/yaml.v2 v2.2.2
