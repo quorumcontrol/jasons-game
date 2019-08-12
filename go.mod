@@ -32,7 +32,7 @@ require (
 	github.com/quorumcontrol/chaintree v0.0.0-20190709145156-03b818830f38
 	github.com/quorumcontrol/community v0.0.0-20190722000000-5f668465bdd9673c3cfbe29771e54f221432cf9c
 	github.com/quorumcontrol/messages/build/go v0.0.0-20190723140659-c8a3565a7c72
-	github.com/quorumcontrol/tupelo-go-sdk v0.5.3-rc2.0.20190729193835-fd24148756d5
+	github.com/quorumcontrol/tupelo-go-sdk v0.5.3-rc2.0.20190805044414-984a8292fa47
 	github.com/shibukawa/configdir v0.0.0-20170330084843-e180dbdc8da0
 	github.com/spf13/cobra v0.0.5
 	github.com/stretchr/testify v1.3.0
