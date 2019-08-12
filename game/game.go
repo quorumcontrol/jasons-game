@@ -43,7 +43,6 @@ type Game struct {
 	shoutActor           *actor.PID
 	commandsByActorCache map[*actor.PID]commandList
 	behavior             actor.Behavior
-	inkDID               string
 	invitesActor         *actor.PID
 }
 
@@ -65,7 +64,6 @@ func NewGameProps(cfg *GameConfig) *actor.Props {
 		commands:   defaultCommandList,
 		playerTree: cfg.PlayerTree,
 		behavior:   actor.NewBehavior(),
-		inkDID:     cfg.InkDID,
 	}
 
 	if g.playerTree == nil {
@@ -129,8 +127,7 @@ func (g *Game) initializeInvitation(actorCtx actor.Context) {
 	g.initializeCommon(actorCtx)
 
 	invitesActor := invites.NewInvitesActor(context.TODO(), invites.InvitesActorConfig{
-		Net:    g.network,
-		InkDID: g.inkDID,
+		Net: g.network,
 	})
 	invitesActor.Start(actor.EmptyRootContext)
 	g.invitesActor = invitesActor.PID()

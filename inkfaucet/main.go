@@ -54,7 +54,6 @@ func main() {
 
 	flag.Parse()
 
-	inkDID := os.Getenv("INK_DID")
 	inkFaucetEncodedKey := os.Getenv("INK_FAUCET_KEY")
 
 	var (
@@ -100,7 +99,6 @@ func main() {
 
 	inkfaucetCfg := config.InkFaucetConfig{
 		Local:        *local,
-		InkOwnerDID:  inkDID,
 		InkFaucetDID: inkFaucetDID,
 		PrivateKey:   signingKey,
 	}

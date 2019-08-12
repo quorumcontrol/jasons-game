@@ -29,7 +29,6 @@ type GameServer struct {
 	group       *types.NotaryGroup
 	parentCtx   context.Context
 	sessionPath string
-	inkDID      string
 }
 
 type GameServerConfig struct {
@@ -50,7 +49,6 @@ func NewGameServer(ctx context.Context, cfg GameServerConfig) *GameServer {
 		group:       group,
 		parentCtx:   ctx,
 		sessionPath: sessionCfg.Path,
-		inkDID:      cfg.InkDID,
 	}
 }
 
@@ -124,7 +122,6 @@ func (gs *GameServer) getOrCreateSession(sess *jasonsgame.Session, stream jasons
 			PlayerTree: playerTree,
 			UiActor:    uiActor,
 			Network:    net,
-			InkDID:     gs.inkDID,
 		}
 		actor.EmptyRootContext.Spawn(game.NewGameProps(gameCfg))
 	}

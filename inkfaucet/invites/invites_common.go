@@ -20,7 +20,6 @@ type InvitesActor struct {
 	parentCtx context.Context
 	handler   *actor.PID
 	inkActor  *ink.InkActor
-	inkDID    string
 	net       network.Network
 }
 
@@ -34,7 +33,6 @@ func NewInvitesActor(ctx context.Context, cfg InvitesActorConfig) *InvitesActor 
 	return &InvitesActor{
 		parentCtx: ctx,
 		inkActor:  cfg.InkActor,
-		inkDID:    cfg.InkDID,
 		net:       cfg.Net,
 	}
 }
@@ -146,10 +144,8 @@ func (i *InvitesActor) handleInviteSubmission(actorCtx actor.Context, msg *inkfa
 		return
 	}
 
-	inkTokenName := &consensus.TokenName{ChainTreeDID: i.inkDID, LocalName: "ink"}
-
 	// TODO: Move all the ink transfer code to its own func
-	tokenLedger := consensus.NewTreeLedger(newInviteTree, inkTokenName)
+	tokenLedger := consensus.NewTreeLedger(newInviteTree, i.net.InkTokenName())
 
 	inkBalance, err := tokenLedger.Balance()
 	if err != nil {
@@ -161,8 +157,10 @@ func (i *InvitesActor) handleInviteSubmission(actorCtx actor.Context, msg *inkfa
 
 	log.Debugf("moving %d ink to player chaintree", inkBalance)
 
-	tokenPayload, err := i.net.SendInk(newInviteChainTree, inkTokenName, inkBalance, playerChainTree.MustId())
+	tokenPayload, err := i.net.SendInk(newInviteChainTree, inkBalance, playerChainTree.MustId())
 	if err != nil {
+		log.Debugf("error creating ink payload: %v", err)
+
 		actorCtx.Respond(&inkfaucet.InviteSubmissionResponse{
 			Error: err.Error(),
 		})
@@ -195,4 +193,3 @@ func (i *InvitesActor) handleInviteSubmission(actorCtx actor.Context, msg *inkfa
 		PlayerChainId: playerChainTree.MustId(),
 	})
 }
-

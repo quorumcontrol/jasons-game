@@ -45,7 +45,7 @@ $(FIRSTGOPATH)/bin/gotestsum:
 
 bin/jasonsgame-$(BUILD): $(gosources) $(generated) go.mod go.sum
 	mkdir -p bin
-	go build -tags='desktop $(BUILD)' -ldflags="-X main.inkDID=${INK_DID}" -o ./bin/jasonsgame-$(BUILD)
+	go build -tags='desktop $(BUILD)' -o ./bin/jasonsgame-$(BUILD)
 
 build: bin/jasonsgame-$(BUILD)
 
@@ -82,9 +82,9 @@ localnet: $(generated) go.mod go.sum
 
 game-server: $(generated) go.mod go.sum
 ifdef testnet
-	env INK_DID=$(INK_DID) docker-compose -p jasons-game -f docker-compose-dev.yml run --rm --service-ports game-testnet
+	docker-compose -p jasons-game -f docker-compose-dev.yml run --rm --service-ports game-testnet
 else
-	env INK_DID=$(INK_DID) docker-compose -p jasons-game -f docker-compose-dev.yml run --rm --service-ports game
+	docker-compose -p jasons-game -f docker-compose-dev.yml run --rm --service-ports game
 endif
 
 importer: $(generated) go.mod go.sum
@@ -95,7 +95,7 @@ else
 endif
 
 game2: $(generated) go.mod go.sum
-	env INK_DID=$(INK_DID) docker-compose -p jasons-game -f docker-compose-dev.yml run --rm --service-ports game2
+	docker-compose -p jasons-game -f docker-compose-dev.yml run --rm --service-ports game2
 
 jason: $(generated) go.mod go.sum
 	docker-compose -p jasons-game -f docker-compose-dev.yml up --force-recreate jason
@@ -110,7 +110,7 @@ devink: $(generated) go.mod go.sum
 	env INK_FAUCET_KEY=$(INK_FAUCET_KEY) docker-compose -f docker-compose-dev.yml run --rm devink
 
 invite: $(generated) go.mod go.sum
-	env INK_DID=$(INK_DID) docker-compose -f docker-compose-dev.yml run --rm invite
+	docker-compose -f docker-compose-dev.yml run --rm invite
 
 dev:
 	scripts/start-dev.sh

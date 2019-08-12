@@ -216,7 +216,12 @@ func (rn *LocalNetwork) NewCurrentStateSubscriptionProps(did string) *actor.Prop
 	})
 }
 
-func (ln *LocalNetwork) SendInk(tree *consensus.SignedChainTree, tokenName *consensus.TokenName, amount uint64, destinationChainId string) (*transactions.TokenPayload, error) {
+func (ln *LocalNetwork) InkTokenName() *consensus.TokenName {
+	// placeholder to fulfill the interface
+	return nil
+}
+
+func (ln *LocalNetwork) SendInk(tree *consensus.SignedChainTree, amount uint64, destinationChainId string) (*transactions.TokenPayload, error) {
 	// placeholder to fulfill the interface
 	return nil, nil
 }
