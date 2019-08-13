@@ -271,7 +271,7 @@ func (g *Game) handleUserInput(actorCtx actor.Context, input *jasonsgame.UserInp
 			log.Errorf("failed to broadcast ShoutMessage: %s", err)
 		}
 	case "create-object":
-		err = g.handleCreateObject(actorCtx, args)
+		err = g.handleCreateObjectFromArgs(actorCtx, args)
 	case "player-inventory-list":
 		err = g.handlePlayerInventoryList(actorCtx)
 	case "location-inventory-list":
@@ -387,6 +387,8 @@ func (g *Game) handleInteractionInput(actorCtx actor.Context, cmd *interactionCo
 		err = g.handleSetTreeValueInteraction(actorCtx, interaction, args)
 	case *LookAroundInteraction:
 		err = g.handleLocationInventoryList(actorCtx)
+	case *CreateObjectInteraction:
+		err = g.handleCreateObject(actorCtx, interaction.Name, interaction.Description)
 	case *CipherInteraction:
 		nextInteraction, _, err := interaction.Unseal(args)
 		if err != nil {
@@ -549,12 +551,15 @@ func (g *Game) handlePickUpObject(actorCtx actor.Context, interaction *PickUpObj
 	return nil
 }
 
-func (g *Game) handleCreateObject(actorCtx actor.Context, args string) error {
+func (g *Game) handleCreateObjectFromArgs(actorCtx actor.Context, args string) error {
 	splitArgs := strings.Split(args, " ")
-	objName := splitArgs[0]
+	return g.handleCreateObject(actorCtx, splitArgs[0], strings.Join(splitArgs[1:], " "))
+}
+
+func (g *Game) handleCreateObject(actorCtx actor.Context, name string, description string) error {
 	response, err := actorCtx.RequestFuture(g.inventoryActor, &CreateObjectRequest{
-		Name:        objName,
-		Description: strings.Join(splitArgs[1:], " "),
+		Name:        name,
+		Description: description,
 	}, 30*time.Second).Result()
 	if err != nil {
 		return err
@@ -565,7 +570,7 @@ func (g *Game) handleCreateObject(actorCtx actor.Context, args string) error {
 		return fmt.Errorf("error casting create object response")
 	}
 
-	g.sendUserMessage(actorCtx, fmt.Sprintf("%s has been created with DID %s and is in your bag of hodling", objName, newObject.Object.Did))
+	g.sendUserMessage(actorCtx, fmt.Sprintf("%s has been created with DID %s and is in your bag of hodling", name, newObject.Object.Did))
 	return nil
 }
 

@@ -2,6 +2,11 @@ data:
   description: "you are now in the forest, what now?"
   somevalue: "this is a getvalue interaction"
 interactions:
+  - type: CreateObjectInteraction
+    value:
+      command: "make torch"
+      name: "torch"
+      description: "a magical torch"
   - type: ChangeLocationInteraction
     value:
       command: "go back"
