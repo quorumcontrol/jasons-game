@@ -1,4 +1,4 @@
-const { app, BrowserWindow } = require('electron');
+const { app, BrowserWindow, Menu } = require('electron');
 const { spawn } = require('child_process');
 const path = require('path');
 
@@ -56,8 +56,36 @@ function createWindow () {
     })
 }
 
+function setupMenu() {
+    if (process.platform === 'darwin') {
+        let menuTemplate = [
+            {
+                label: app.getName(),
+                submenu: [{
+                    label: 'Quit',
+                    accelerator: 'CmdOrCtrl+Q',
+                    click: () => { app.quit(); }
+                }]
+            },
+            {
+                label: 'Edit',
+                submenu: [
+                    { role: 'cut' },
+                    { role: 'copy' },
+                    { role: 'paste' }
+                ]
+            }
+        ];
+        
+        Menu.setApplicationMenu(Menu.buildFromTemplate(menuTemplate));
+    }
+}
+
 app.on('ready', () => {
     console.log("Launching Jason's Game");
+
+    setupMenu();
+
     startGame();
 });
 
