@@ -39,5 +39,6 @@ logs/*
 
 node_modules
 
-/dist/*
-!/dist/.gitkeep
+/out/*
+!/out/.gitkeep
+/github.com/

@@ -1,8 +1,8 @@
 VERSION ?= snapshot
 ifeq ($(VERSION), snapshot)
-	TAG = latest
+  TAG = latest
 else
-	TAG = $(VERSION)
+  TAG = $(VERSION)
 endif
 
 BUILD ?= public
@@ -12,7 +12,6 @@ export GO111MODULE = on
 
 FIRSTGOPATH = $(firstword $(subst :, ,$(GOPATH)))
 
-jsmodules = node_modules frontend/jasons-game/node_modules
 generated = network/messages.pb.go game/types.pb.go pb/jasonsgame/jasonsgame.pb.go \
             inkfaucet/inkfaucet/messages.pb.go \
             frontend/jasons-game/src/js/frontend/remote/jasonsgame_pb.d.ts \
@@ -23,7 +22,28 @@ generated = network/messages.pb.go game/types.pb.go pb/jasonsgame/jasonsgame.pb.
 packr = packrd/packed-packr.go main-packr.go
 gosources = $(shell find . -path "./vendor/*" -prune -o -path "./dist/*" -prune -o -type f -name "*.go" -print)
 
+jsmodules = node_modules frontend/jasons-game/node_modules
+cljssources = $(shell find ./frontend/jasons-game/src -type f -name "*.cljs" -print)
+jsgenerated = frontend/jasons-game/public/js/compiled/base.js
+
 all: frontend-build $(packr) build
+
+# OS detection boilerplate
+
+ifeq ($(OS), Windows_NT)
+  PLATFORM ?= win32
+  EXE_SUFFIX=.exe
+else
+  UNAME := $(shell uname -s)
+  ifeq ($(UNAME), Linux)
+    PLATFORM ?= linux
+  endif
+  ifeq ($(UNAME), Darwin)
+    PLATFORM ?= darwin
+  endif
+endif
+
+# end OS detection boilerplate
 
 # Turn off go mod so that this will install to $GOPATH/src instead of $GOPATH/pkg/mod
 ${FIRSTGOPATH}/src/github.com/gogo/protobuf/protobuf:
@@ -35,7 +55,8 @@ ${FIRSTGOPATH}/src/github.com/gogo/protobuf/protobuf:
 generated: $(generated)
 	
 $(jsmodules): package.json package-lock.json frontend/jasons-game/package.json frontend/jasons-game/package-lock.json
-	npm install
+	# touch node_modules dirs so make doesn't reinstall node modules every time
+	npm install && touch node_modules && touch frontend/jasons-game/node_modules
 
 $(FIRSTGOPATH)/bin/golangci-lint:
 	./scripts/download-golangci-lint.sh
@@ -58,8 +79,27 @@ bin/jasonsgame-linux-$(BUILD): $(gosources) $(generated) go.mod go.sum
 	xgo -tags='public' -targets='linux/amd64,' -ldflags="-X main.inkDID=${INK_DID}" ./
 	mv github.com/quorumcontrol/jasons-game-linux-* bin/jasonsgame-linux-$(BUILD)
 
-build: $(jsmodules) bin/jasonsgame-win32-$(BUILD).exe bin/jasonsgame-darwin-$(BUILD) bin/jasonsgame-linux-$(BUILD)
-	node package.js
+out/make/zip/darwin:
+	npm run make-darwin
+
+out/make/zip/linux:
+	npm run make-linux
+
+out/make/squirrel.windows:
+	npm run make-win32
+
+build-all: out/make/zip/darwin out/make/zip/linux out/make/squirrel.windows
+
+ifeq ($(PLATFORM), all)
+  build: $(jsmodules) bin/jasonsgame-win32-$(BUILD).exe bin/jasonsgame-darwin-$(BUILD) bin/jasonsgame-linux-$(BUILD) build-all
+else
+  ifeq ($(PLATFORM), win32)
+    TARGET=squirrel.windows
+  else
+    TARGET=zip/$(PLATFORM)
+  endif
+  build: $(jsmodules) bin/jasonsgame-$(PLATFORM)-$(BUILD)$(EXE_SUFFIX) out/make/$(TARGET)
+endif
 
 lint: $(FIRSTGOPATH)/bin/golangci-lint $(generated)
 	$(FIRSTGOPATH)/bin/golangci-lint run --build-tags 'integration public'
@@ -123,8 +163,10 @@ down:
 	docker-compose -f docker-compose-dev.yml down
 	docker-compose -f docker-compose-localnet.yml down
 
-frontend-build: $(generated) $(jsmodules)
+frontend/jasons-game/public/js/compiled/base.js: $(jsmodules) $(generated) $(cljssources) frontend/jasons-game/externs/app.txt frontend/jasons-game/shadow-cljs.edn
 	cd frontend/jasons-game && ./node_modules/.bin/shadow-cljs release app
+
+frontend-build: frontend/jasons-game/public/js/compiled/base.js
 
 frontend-dev: $(generated) $(jsmodules)
 	cd frontend/jasons-game && ./node_modules/.bin/shadow-cljs watch app
@@ -149,8 +191,9 @@ clean: $(FIRSTGOPATH)/bin/packr2
 	go clean -tags='internal public' ./...
 	rm -rf vendor
 	rm -rf bin
-	rm -rf JasonsGame.app-$(BUILD)/Contents/MacOS
 	rm -f $(generated)
 	rm -rf $(jsmodules)
+	rm -rf frontend/jasons-game/public/js/compiled
+	rm -rf out/*
 
-.PHONY: all build test integration-test localnet clean lint game-server importer jason inkfaucet devink game2 mac-app prepare generated dev down
+.PHONY: all build build-all test integration-test localnet clean lint game-server importer jason inkfaucet devink game2 mac-app prepare generated dev down

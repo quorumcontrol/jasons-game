@@ -2,18 +2,41 @@ const { app, BrowserWindow } = require('electron');
 const { spawn } = require('child_process');
 const path = require('path');
 
+if (require('electron-squirrel-startup')) {
+    // Windows squirrel installer launches the app during install.
+    // This cuts down on the weirdness from that.
+    return app.quit();
+}
+
 let win;
 let game;
 
 function startGame() {
     runBackend();
+    // TODO: Would be better if the backend signaled us when it was ready...
     setTimeout(createWindow, 3000);
 }
 
 function runBackend() {
     let platform = process.platform;
-    let executable = path.resolve(__dirname, 'bin', 'jasonsgame-' + platform + '-public');
-    game = spawn(executable, [], {stdio: 'inherit'});
+    let exeSuffix = "";
+
+    if (platform === "win32") {
+        exeSuffix = ".exe";
+    }
+
+    let executable = path.resolve(__dirname, '..', '..', 'app.asar.unpacked', 'bin', `jasonsgame-${platform}-public${exeSuffix}`);
+    game = spawn(executable);
+
+    game.on('error', (err) => {
+        throw Error(`Error launching game backend: ${err}`);
+    });
+
+    game.on('exit', (code) => {
+        if (code !== 0) {
+            throw Error(`Game backend process exited with error code: ${code}`);
+        }
+    })
 }
 
 function createWindow () {
@@ -46,8 +69,12 @@ app.on('window-all-closed', () => {
     }
 });
 
-app.on('quit', () => {
-    if (game !== null) {
+app.on('before-quit', () => {
+    if (win) {
+        win.close();
+    }
+
+    if (game) {
         game.kill();
     }
 });
