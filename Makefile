@@ -79,13 +79,13 @@ bin/jasonsgame-linux-$(BUILD): $(gosources) $(generated) go.mod go.sum
 	xgo -tags='public' -targets='linux/amd64,' -ldflags="-X main.inkDID=${INK_DID}" ./
 	mv github.com/quorumcontrol/jasons-game-linux-* bin/jasonsgame-linux-$(BUILD)
 
-out/make/zip/darwin:
+out/make/zip/darwin: frontend/main.js
 	npm run make-darwin
 
-out/make/zip/linux:
+out/make/zip/linux: frontend/main.js
 	npm run make-linux
 
-out/make/squirrel.windows:
+out/make/squirrel.windows: frontend/main.js
 	npm run make-win32
 
 build-all: out/make/zip/darwin out/make/zip/linux out/make/squirrel.windows

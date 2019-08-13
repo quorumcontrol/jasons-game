@@ -39,6 +39,7 @@ require (
 	golang.org/x/crypto v0.0.0-20190701094942-4def268fd1a4
 	google.golang.org/grpc v1.22.0
 	gopkg.in/yaml.v2 v2.2.2
+	gotest.tools/gotestsum v0.3.5 // indirect
 )
 
 replace github.com/libp2p/go-libp2p-pubsub v0.1.0 => github.com/quorumcontrol/go-libp2p-pubsub v0.0.4-0.20190528094025-e4e719f73e7a
