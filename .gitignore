@@ -6,7 +6,6 @@
 *.dylib
 
 bin
-JasonsGame.app/Contents/MacOS/*
 
 # Test binary, build with `go test -c`
 *.test
@@ -32,8 +31,14 @@ log
 *_gen_test.go
 *.pb.go
 
-devdocker/devink_state/*
-!devdocker/devink_state/.gitkeep
+/devdocker/devink_state/*
+!/devdocker/devink_state/.gitkeep
 
 logs/*
 !logs/.gitkeep
+
+node_modules
+
+/out/*
+!/out/.gitkeep
+/github.com/
