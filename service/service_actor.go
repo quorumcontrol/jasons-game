@@ -36,6 +36,20 @@ func NewServiceActorProps(network network.Network, handler handlers.Handler) *ac
 	)
 }
 
+func NewServiceActorPropsWithTree(network network.Network, handler handlers.Handler, tree *consensus.SignedChainTree) *actor.Props {
+	return actor.PropsFromProducer(func() actor.Actor {
+		return &ServiceActor{
+			network: network,
+			handler: handler,
+			tree: tree,
+		}
+	}).WithReceiverMiddleware(
+		middleware.LoggingMiddleware,
+		plugin.Use(&middleware.LogPlugin{}),
+	)
+}
+
+
 func (s *ServiceActor) Receive(actorCtx actor.Context) {
 	switch msg := actorCtx.Message().(type) {
 	case *actor.Started:
@@ -54,28 +68,28 @@ func (s *ServiceActor) Receive(actorCtx actor.Context) {
 }
 
 func (s *ServiceActor) initialize(actorCtx actor.Context) {
-	var serviceTree *consensus.SignedChainTree
 	var err error
 
-	did := consensus.EcdsaPubkeyToDid(*s.network.PublicKey())
+	if s.tree == nil {
+		did := consensus.EcdsaPubkeyToDid(*s.network.PublicKey())
 
-	serviceTree, err = s.network.GetTree(did)
-	if err != nil {
-		panic(fmt.Sprintf("err searching for tree %v\n", err))
-	}
-	if serviceTree == nil {
-		serviceTree, err = consensus.NewSignedChainTree(*s.network.PublicKey(), s.network.TreeStore())
+		s.tree, err = s.network.GetTree(did)
 		if err != nil {
-			panic(errors.Wrap(err, "error creating new signed chaintree"))
+			panic(fmt.Sprintf("err searching for tree %v\n", err))
+		}
+		if s.tree == nil {
+			s.tree, err = consensus.NewSignedChainTree(*s.network.PublicKey(), s.network.TreeStore())
+			if err != nil {
+				panic(errors.Wrap(err, "error creating new signed chaintree"))
+			}
 		}
 	}
 
-	serviceTree, err = s.network.UpdateChainTree(serviceTree, "jasons-game/handler/supports", s.handler.SupportedMessages())
+	s.tree, err = s.network.UpdateChainTree(s.tree, "jasons-game/handler/supports", s.handler.SupportedMessages())
 	if err != nil {
 		panic(errors.Wrap(err, "error updating handler/supports on service tree"))
 	}
 
-	s.tree = serviceTree
 	topic := s.network.Community().TopicFor(s.tree.MustId())
 	s.subscriber = actorCtx.Spawn(s.network.Community().NewSubscriberProps(topic))
 }
