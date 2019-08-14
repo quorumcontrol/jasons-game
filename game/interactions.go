@@ -290,10 +290,6 @@ func (i *ChainedInteraction) Interactions() ([]Interaction, error) {
 }
 
 func NewCipherInteraction(command string, secret string, interactionToSeal Interaction, failureInteraction Interaction) (*CipherInteraction, error) {
-	if interactionToSeal.GetCommand() != "" {
-		return nil, fmt.Errorf("the interactionToSeal.command must be empty - it will be autoset to command + secret")
-	}
-
 	interactionToSealNode, err := interactionToCborNode(interactionToSeal)
 	if err != nil {
 		return nil, errors.Wrap(err, "interactionToSeal could not be encoded")
