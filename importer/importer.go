@@ -6,6 +6,7 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 	"text/template"
 	"unicode"
@@ -104,7 +105,14 @@ func (i *Importer) loadBasicData(tree *consensus.SignedChainTree, data map[strin
 
 	flatPaths := flatmap.Flatten(data)
 
-	for key, val := range flatPaths {
+	// important! order of UpdateChainTree matters, so make sure there is
+	// consistent ordering
+	// beware of the age old gotcha, go map iteration order isn't guaranteed
+	sortedKeys := flatPaths.Keys()
+	sort.Strings(sortedKeys)
+
+	for _, key := range sortedKeys {
+		val := flatPaths[key]
 		tree, err = i.network.UpdateChainTree(tree, fmt.Sprintf("jasons-game/%s", key), val)
 
 		if err != nil {
