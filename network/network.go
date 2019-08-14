@@ -60,6 +60,7 @@ type Network interface {
 	DeleteTree(did string) error
 	UpdateChainTree(tree *consensus.SignedChainTree, path string, value interface{}) (*consensus.SignedChainTree, error)
 	TreeStore() TreeStore
+	PrivateKey() *ecdsa.PrivateKey
 	PublicKey() *ecdsa.PublicKey
 	StartDiscovery(string) error
 	StopDiscovery(string)

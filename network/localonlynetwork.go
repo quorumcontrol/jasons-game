@@ -80,6 +80,10 @@ func (ln *LocalNetwork) PublicKey() *ecdsa.PublicKey {
 	return &ln.key.PublicKey
 }
 
+func (ln *LocalNetwork) PrivateKey() *ecdsa.PrivateKey {
+	return ln.key
+}
+
 func (ln *LocalNetwork) Community() *Community {
 	return ln.community
 }
