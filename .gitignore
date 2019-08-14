@@ -42,3 +42,8 @@ node_modules
 /out/*
 !/out/.gitkeep
 /github.com/
+
+courts/yml/*
+courts/yml.tar.gz
+.gitsecret/keys/random_seed
+!*.secret
