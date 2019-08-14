@@ -16,6 +16,10 @@ type InventoryTree struct {
 	network network.Network
 }
 
+func InventoryBroadcastTopicFor(net network.Network, did string) []byte {
+	return net.Community().TopicFor(did + "/inventory")
+}
+
 func NewInventoryTree(net network.Network, tree *consensus.SignedChainTree) *InventoryTree {
 	return &InventoryTree{
 		tree:    tree,
@@ -41,7 +45,7 @@ func (t *InventoryTree) Tree() *consensus.SignedChainTree {
 }
 
 func (t *InventoryTree) BroadcastTopic() []byte {
-	return t.network.Community().TopicFor(t.tree.MustId() + "/inventory")
+	return InventoryBroadcastTopicFor(t.network, t.tree.MustId())
 }
 
 func (t *InventoryTree) Exists(did string) (bool, error) {
@@ -53,6 +57,28 @@ func (t *InventoryTree) Exists(did string) (bool, error) {
 
 	_, ok := allObjects[did]
 	return ok, nil
+}
+
+func (t *InventoryTree) DidForName(name string) (string, error) {
+	ctx := context.TODO()
+
+	resolvedObjectPath, _ := consensus.DecodePath(fmt.Sprintf("tree/data/%s/%s", ObjectsPath, name))
+
+	didUncasted, _, err := t.tree.ChainTree.Dag.Resolve(ctx, resolvedObjectPath)
+	if err != nil {
+		return "", errors.Wrap(err, "error fetching inventory")
+	}
+
+	if didUncasted == nil {
+		return "", nil
+	}
+
+	did, ok := didUncasted.(string)
+	if !ok {
+		return "", nil
+	}
+
+	return did, nil
 }
 
 func (t *InventoryTree) All() (map[string]string, error) {
