@@ -145,9 +145,19 @@ func (i *Importer) loadInventory(tree *consensus.SignedChainTree, data []string)
 }
 
 func (i *Importer) yamlTypecast(data interface{}, t interface{}) error {
-	asYaml, err := yaml.Marshal(data)
-	if err != nil {
-		return err
+	var asYaml []byte
+	var err error
+
+	switch dataCast := data.(type) {
+	case []byte:
+		asYaml = dataCast
+	case string:
+		asYaml = []byte(dataCast)
+	default:
+		asYaml, err = yaml.Marshal(data)
+		if err != nil {
+			return err
+		}
 	}
 
 	err = yaml.Unmarshal(asYaml, t)
@@ -304,26 +314,33 @@ var reservedKeys = []string{"inventory", "interactions"}
 func (i *Importer) loadLocations(data map[string]*ImportLocation, ids *NameToDids) error {
 	for name, locData := range data {
 		did := ids.Locations[name]
-
-		tree, err := i.network.GetTree(did)
-		if err != nil {
-			return errors.Wrap(err, "fetching location tree")
-		}
-
-		tree, err = i.loadBasicData(tree, locData.Data)
+		err := i.updateLocation(did, locData)
 		if err != nil {
 			return err
 		}
+	}
+	return nil
+}
 
-		tree, err = i.loadInteractions(tree, locData.Interactions)
-		if err != nil {
-			return err
-		}
+func (i *Importer) updateLocation(did string, locData *ImportLocation) error {
+	tree, err := i.network.GetTree(did)
+	if err != nil {
+		return errors.Wrap(err, "fetching location tree")
+	}
 
-		_, err = i.loadInventory(tree, locData.Inventory)
-		if err != nil {
-			return err
-		}
+	tree, err = i.loadBasicData(tree, locData.Data)
+	if err != nil {
+		return err
+	}
+
+	tree, err = i.loadInteractions(tree, locData.Interactions)
+	if err != nil {
+		return err
+	}
+
+	_, err = i.loadInventory(tree, locData.Inventory)
+	if err != nil {
+		return err
 	}
 	return nil
 }
@@ -332,26 +349,35 @@ func (i *Importer) loadObjects(data map[string]*ImportObject, ids *NameToDids) e
 	for name, objData := range data {
 		did := ids.Objects[name]
 
-		tree, err := i.network.GetTree(did)
-		if err != nil {
-			return errors.Wrap(err, "fetching object tree")
-		}
-
 		if _, ok := objData.Data["name"]; !ok {
 			// Files must be named with underscore, but default name in the UI should be hyphenated
 			objData.Data["name"] = strings.ReplaceAll(name, "_", "-")
 		}
 
-		tree, err = i.loadBasicData(tree, objData.Data)
-		if err != nil {
-			return err
-		}
-
-		_, err = i.loadInteractions(tree, objData.Interactions)
+		err := i.updateObject(did, objData)
 		if err != nil {
 			return err
 		}
 	}
+	return nil
+}
+
+func (i *Importer) updateObject(did string, objData *ImportObject) error {
+	tree, err := i.network.GetTree(did)
+	if err != nil {
+		return errors.Wrap(err, "fetching object tree")
+	}
+
+	tree, err = i.loadBasicData(tree, objData.Data)
+	if err != nil {
+		return err
+	}
+
+	_, err = i.loadInteractions(tree, objData.Interactions)
+	if err != nil {
+		return err
+	}
+
 	return nil
 }
 
@@ -378,6 +404,19 @@ func (i *Importer) replaceVariables(data *ImportPayload, vars interface{}) (*Imp
 	}
 
 	return processedYaml, nil
+}
+
+func (i *Importer) UpdateObject(did string, objectData interface{}) error {
+	importObject := &ImportObject{}
+	err := i.yamlTypecast(objectData, importObject)
+	if err != nil {
+		return errors.Wrap(err, fmt.Sprintf("error typecasting for %s", did))
+	}
+	err = i.updateObject(did, importObject)
+	if err != nil {
+		return errors.Wrap(err, fmt.Sprintf("error updating %s", did))
+	}
+	return nil
 }
 
 func (i *Importer) Import(importPath string) (*NameToDids, error) {
