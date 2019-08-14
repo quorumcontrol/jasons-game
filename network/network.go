@@ -89,7 +89,7 @@ type RemoteNetworkConfig struct {
 
 var _ Network = &RemoteNetwork{}
 
-func NewRemoteNetworkWithConfig(ctx context.Context, config *RemoteNetworkConfig) (Network, error) {
+func NewRemoteNetworkWithConfig(ctx context.Context, config *RemoteNetworkConfig) (*RemoteNetwork, error) {
 	var err error
 
 	remote.Start()

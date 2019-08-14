@@ -60,7 +60,7 @@ func NewSource(ctx context.Context, dataStoreDir string, connectToLocalnet bool)
 		return nil, errors.Wrap(err, "error setting up network")
 	}
 
-	net := devnet.DevRemoteNetwork{RemoteNetwork: rNet.(*network.RemoteNetwork)}
+	net := devnet.DevRemoteNetwork{RemoteNetwork: rNet}
 
 	devInkSource, err := net.GetChainTreeByName("dev-ink-source")
 	if err != nil {

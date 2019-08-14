@@ -142,7 +142,8 @@ services:
       - go
       - test
       - -v
-      - -tags='integration internal'
+      - -tags
+      - 'internal integration'
       - -timeout=5m
       - ${TEST_PACKAGE-./...}
     volumes:
