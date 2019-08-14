@@ -195,5 +195,16 @@ clean: $(FIRSTGOPATH)/bin/packr2
 	rm -rf $(jsmodules)
 	rm -rf frontend/jasons-game/public/js/compiled
 	rm -rf out/*
+	rm -f courts/yml.tar.gz
 
-.PHONY: all build build-all test integration-test localnet clean lint game-server importer jason inkfaucet devink game2 mac-app prepare generated dev down
+encrypt: courts/yml/
+	tar -zcf courts/yml.tar.gz courts/yml/
+	git secret add courts/yml.tar.gz
+	git secret hide
+	rm -f courts/yml.tar.gz
+	git add courts/yml.tar.gz.secret
+
+decrypt: courts/yml.tar.gz.secret
+	git secret cat courts/yml.tar.gz.secret | tar -zxf -
+
+.PHONY: all build build-all test integration-test localnet clean lint game-server importer jason inkfaucet devink game2 mac-app prepare generated dev down encrypt decrypt
