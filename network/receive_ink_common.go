@@ -1,6 +1,7 @@
 package network
 
 import (
+	"context"
 	"crypto/ecdsa"
 
 	"github.com/ipfs/go-cid"
@@ -38,6 +39,8 @@ func (n *RemoteNetwork) receiveInk(tree *consensus.SignedChainTree, privateKey *
 	}
 
 	log.Debug("receive ink saved tree metadata")
+
+	log.Debugf("ink faucet chaintree after receive:\n%s", tree.ChainTree.Dag.Dump(context.TODO()))
 
 	return nil
 }

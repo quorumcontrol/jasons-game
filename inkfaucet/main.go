@@ -15,7 +15,6 @@ import (
 	logging "github.com/ipfs/go-log"
 	"github.com/pkg/errors"
 	"github.com/quorumcontrol/messages/build/go/transactions"
-	"github.com/quorumcontrol/tupelo-go-sdk/consensus"
 
 	"github.com/quorumcontrol/jasons-game/build"
 	"github.com/quorumcontrol/jasons-game/inkfaucet/config"
@@ -28,10 +27,6 @@ func mustSetLogLevel(name, level string) {
 	if err := logging.SetLogLevel(name, level); err != nil {
 		panic(errors.Wrapf(err, "error setting log level of %s to %s", name, level))
 	}
-}
-
-func keyToDID(key *ecdsa.PrivateKey) string {
-	return consensus.AddrToDid(crypto.PubkeyToAddress(key.PublicKey).String())
 }
 
 func main() {
@@ -78,7 +73,7 @@ func main() {
 			panic(errors.Wrap(err, "error generating private key for ink faucet"))
 		}
 
-		inkFaucetDID = keyToDID(signingKey)
+		inkFaucetDID = server.KeyToDID(signingKey)
 
 		fmt.Printf("INK_FAUCET_KEY=%s\n", base64.StdEncoding.EncodeToString(crypto.FromECDSA(signingKey)))
 		fmt.Printf("INK_FAUCET_DID=%s\n", inkFaucetDID)
@@ -96,7 +91,7 @@ func main() {
 		panic(errors.Wrap(err, "error unserializing ink faucet key"))
 	}
 
-	inkFaucetDID = keyToDID(signingKey)
+	inkFaucetDID = server.KeyToDID(signingKey)
 
 	inkfaucetCfg := config.InkFaucetConfig{
 		Local:        *local,
