@@ -1,0 +1,31 @@
+artifacts:
+  - inscriptions:
+      type: "type1"
+      material: "material1"
+      age: "age1"
+      weight: "weight1"
+      forged by: "forged1"
+  - inscriptions:
+      type: "type2"
+      material: "material2"
+      age: "age2"
+      weight: "weight2"
+      forged by: "forged2"
+  - inscriptions:
+      type: "type3"
+      material: "material3"
+      age: "age3"
+      weight: "weight3"
+      forged by: "forged3"
+  - inscriptions:
+      type: "type4"
+      material: "material4"
+      age: "age4"
+      weight: "weight4"
+      forged by: "forged4"
+  - inscriptions:
+      type: "type5"
+      material: "material5"
+      age: "age5"
+      weight: "weight5"
+      forged by: "forged5"
