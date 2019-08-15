@@ -4,7 +4,6 @@ package server
 
 import (
 	"context"
-	"fmt"
 	"os"
 	"testing"
 	"time"
@@ -12,7 +11,6 @@ import (
 	"github.com/AsynkronIT/protoactor-go/actor"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/gogo/protobuf/proto"
-	logging "github.com/ipfs/go-log"
 	"github.com/quorumcontrol/messages/build/go/transactions"
 	"github.com/quorumcontrol/tupelo-go-sdk/consensus"
 	"github.com/stretchr/testify/assert"
@@ -25,13 +23,6 @@ import (
 )
 
 func TestInkRequests(t *testing.T) {
-	err := logging.SetLogLevel("inkFaucet", "debug")
-	require.Nil(t, err)
-	err = logging.SetLogLevel("devink", "debug")
-	require.Nil(t, err)
-	err = logging.SetLogLevel("gamenetwork", "debug")
-	require.Nil(t, err)
-
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
