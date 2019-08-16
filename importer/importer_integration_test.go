@@ -43,13 +43,14 @@ func TestImportIntegration(t *testing.T) {
 	defer rootCtx.Stop(simulatedUI)
 	defer rootCtx.Stop(game)
 
+	time.Sleep(100 * time.Second)
+
 	path := "import-example"
 	ids, err := New(net).Import(path)
 	require.Nil(t, err)
-	rootCtx.Send(game, &jasonsgame.UserInput{Message: fmt.Sprintf("connect location %s as enter importer-world", ids.Locations["home"])})
-	time.Sleep(10 * time.Millisecond)
 
 	cmdsAndResponses := []string{
+		fmt.Sprintf("connect location %s as enter importer-world", ids.Locations["home"]), "added a connection",
 		"enter importer-world", "you have entered the world of the fairies, in front of you sits a great forest",
 		"look around", "idol",
 		"touch the idol", "you probably shouldn't do that",
