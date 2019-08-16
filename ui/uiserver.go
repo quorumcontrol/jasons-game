@@ -19,36 +19,6 @@ type remoteStream interface {
 	Send(*jasonsgame.UserInterfaceMessage) error
 }
 
-type TestStream struct {
-	messages []*jasonsgame.UserInterfaceMessage
-	channel  chan *jasonsgame.UserInterfaceMessage
-}
-
-func NewTestStream() *TestStream {
-	return &TestStream{
-		channel: make(chan *jasonsgame.UserInterfaceMessage, 25),
-	}
-}
-
-func (ts *TestStream) Send(msg *jasonsgame.UserInterfaceMessage) error {
-	ts.messages = append(ts.messages, msg)
-	ts.channel <- msg
-	return nil
-}
-
-func (ts *TestStream) GetMessages() []*jasonsgame.UserInterfaceMessage {
-	return ts.messages
-}
-
-func (ts *TestStream) ClearMessages() error {
-	ts.messages = NewTestStream().messages
-	return nil
-}
-
-func (ts *TestStream) Channel() chan *jasonsgame.UserInterfaceMessage {
-	return ts.channel
-}
-
 type doneChan chan struct{}
 
 type UIServer struct {

@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/AsynkronIT/protoactor-go/actor"
+	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/gogo/protobuf/proto"
 	"github.com/quorumcontrol/messages/build/go/transactions"
 	"github.com/quorumcontrol/tupelo-go-sdk/consensus"
@@ -34,9 +35,16 @@ func TestInkRequests(t *testing.T) {
 	}()
 	require.Nil(t, err)
 
+	inkFaucetKey, err := crypto.GenerateKey()
+	require.Nil(t, err)
+
+	inkFaucetDID := KeyToDID(inkFaucetKey)
+
 	cfg := ifconfig.InkFaucetConfig{
-		Local:       true,
-		InkOwnerDID: devInk.ChainTree.MustId(),
+		Local:        true,
+		InkOwnerDID:  devInk.ChainTree.MustId(),
+		InkFaucetDID: inkFaucetDID,
+		PrivateKey:   inkFaucetKey,
 	}
 
 	err = devInk.EnsureToken(ctx)

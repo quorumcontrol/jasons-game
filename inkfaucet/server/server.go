@@ -2,8 +2,10 @@ package server
 
 import (
 	"context"
+	"crypto/ecdsa"
 
 	"github.com/AsynkronIT/protoactor-go/actor"
+	"github.com/ethereum/go-ethereum/crypto"
 	logging "github.com/ipfs/go-log"
 	"github.com/pkg/errors"
 	"github.com/quorumcontrol/tupelo-go-sdk/consensus"
@@ -25,6 +27,10 @@ type InkFaucetRouter struct {
 	handler      *actor.PID
 	inkActor     *ink.InkActor
 	invitesActor *actor.PID
+}
+
+func KeyToDID(key *ecdsa.PrivateKey) string {
+	return consensus.AddrToDid(crypto.PubkeyToAddress(key.PublicKey).String())
 }
 
 func New(ctx context.Context, cfg config.InkFaucetConfig) (*InkFaucetRouter, error) {
@@ -102,7 +108,6 @@ func (ifr *InkFaucetRouter) InkFaucetDID() string {
 func (ifr *InkFaucetRouter) Receive(actorCtx actor.Context) {
 	switch msg := actorCtx.Message().(type) {
 	case *actor.Started:
-		// subscribe to community here?
 	case *inkfaucet.InkRequest:
 		log.Infof("Received InkRequest: %+v", msg)
 		actorCtx.Forward(ifr.inkActor.PID())

@@ -45,12 +45,10 @@ func (id *InkDepositor) Deposit(tokenPayload *transactions.TokenPayload) error {
 		fmt.Printf("error: %v\n", err)
 	}
 
-	ifct, err := id.net.GetTree(id.inkfaucet.ChainTreeDID())
+	_, err = id.net.GetTree(id.inkfaucet.ChainTreeDID())
 	if err != nil {
 		fmt.Printf("error: %v\n", err)
 	}
-
-	fmt.Println("ink faucet chaintree after deposit:", ifct.ChainTree.Dag.Dump(context.TODO()))
 
 	return err
 }
