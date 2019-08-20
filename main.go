@@ -71,7 +71,7 @@ func main() {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	disableWebView, localnet := ui.SetOptions()
+	localnet := ui.SetOptions()
 
 	gsCfg := server.GameServerConfig{
 		LocalNet: *localnet,
@@ -115,16 +115,10 @@ func main() {
 
 	})
 
-	if *disableWebView {
-		fmt.Println("webview disabled")
-		log.Fatal(serv.ListenAndServe())
-		return
-	}
-
 	fmt.Println("listen and serve")
 	go func() {
 		log.Fatal(serv.ListenAndServe())
 	}()
-	fmt.Println("opening webview")
-	ui.OpenWebView()
+
+	<-make(chan struct{})
 }

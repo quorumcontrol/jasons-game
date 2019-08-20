@@ -8,6 +8,7 @@ import (
 	"github.com/AsynkronIT/protoactor-go/actor"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/gogo/protobuf/proto"
+	"github.com/ipfs/go-cid"
 	logging "github.com/ipfs/go-log"
 	"github.com/pkg/errors"
 	"github.com/quorumcontrol/messages/build/go/transactions"
@@ -87,7 +88,28 @@ func ensureChainTree(net network.Network, key *ecdsa.PrivateKey) (*consensus.Sig
 }
 
 func (cti *ChainTreeInkFaucet) chainTree() (*consensus.SignedChainTree, error) {
-	ct, err := cti.net.GetTree(cti.ctDID)
+	var err error
+
+	tip := cid.Undef
+
+	rn, ok := cti.net.(*network.RemoteNetwork)
+	if ok {
+		tip, err = rn.Tupelo.GetTip(cti.ctDID)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	if tip.Equals(cid.Undef) {
+		ct, err := cti.net.GetTree(cti.ctDID)
+		if err != nil {
+			return nil, err
+		}
+
+		return ct, nil
+	}
+
+	ct, err := cti.net.GetTreeByTip(tip)
 	if err != nil {
 		return nil, err
 	}

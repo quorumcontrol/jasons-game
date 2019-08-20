@@ -1,8 +1,6 @@
 package game
 
 import (
-	"fmt"
-	"strings"
 	"testing"
 	"time"
 
@@ -11,7 +9,6 @@ import (
 	"github.com/quorumcontrol/jasons-game/network"
 	"github.com/quorumcontrol/jasons-game/pb/jasonsgame"
 	"github.com/quorumcontrol/jasons-game/ui"
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
@@ -43,40 +40,9 @@ func filterUserMessages(t *testing.T, msgs []*jasonsgame.UserInterfaceMessage) [
 	return usrMsgs
 }
 
-func TestNavigation(t *testing.T) {
-	net := network.NewLocalNetwork()
-	stream := ui.NewTestStream()
-
-	simulatedUI, game := setupUiAndGame(t, stream, net)
-	defer rootCtx.Stop(simulatedUI)
-	defer rootCtx.Stop(game)
-
-	someTree, err := net.CreateChainTree()
-	require.Nil(t, err)
-
-	rootCtx.Send(game, &jasonsgame.UserInput{Message: fmt.Sprintf("connect location %s as enter dungeon", someTree.MustId())})
-	time.Sleep(100 * time.Millisecond)
-	msgs := stream.GetMessages()
-
-	usrMsgs := filterUserMessages(t, msgs)
-	require.Len(t, usrMsgs, 3)
-
-	// Local network doesn't auto-refresh commands because that is tied to a tupelo
-	// state refresh
-	rootCtx.Send(game, &jasonsgame.UserInput{Message: "refresh"})
-	rootCtx.Send(game, &jasonsgame.UserInput{Message: "enter dungeon"})
-	time.Sleep(100 * time.Millisecond)
-	msgs = stream.GetMessages()
-
-	usrMsgs = filterUserMessages(t, msgs)
-
-	require.Len(t, usrMsgs, 5)
-	assert.NotNil(t, usrMsgs[3].GetLocation())
-}
-
 func TestSetDescription(t *testing.T) {
 	net := network.NewLocalNetwork()
-	stream := ui.NewTestStream()
+	stream := ui.NewTestStream(t)
 
 	simulatedUI, game := setupUiAndGame(t, stream, net)
 	defer rootCtx.Stop(simulatedUI)
@@ -84,24 +50,15 @@ func TestSetDescription(t *testing.T) {
 
 	newDescription := "multi word"
 
+	stream.ExpectMessage(newDescription, 2*time.Second)
 	rootCtx.Send(game, &jasonsgame.UserInput{Message: "set description " + newDescription})
-	time.Sleep(100 * time.Millisecond)
-
-	respondedWithDescription := false
-	for _, msg := range stream.GetMessages() {
-		if userMessage := msg.GetUserMessage(); userMessage != nil {
-			if strings.Contains(msg.GetUserMessage().Message, newDescription) {
-				respondedWithDescription = true
-			}
-		}
-	}
-	require.True(t, respondedWithDescription)
+	stream.Wait()
 }
 
 func TestCallMe(t *testing.T) {
 	rootCtx := actor.EmptyRootContext
 	net := network.NewLocalNetwork()
-	stream := ui.NewTestStream()
+	stream := ui.NewTestStream(t)
 
 	simulatedUI, err := rootCtx.SpawnNamed(ui.NewUIProps(stream, net), "test-callme-ui")
 	require.Nil(t, err)
@@ -133,40 +90,26 @@ func TestCallMe(t *testing.T) {
 
 func TestBuildPortal(t *testing.T) {
 	net := network.NewLocalNetwork()
-	stream := ui.NewTestStream()
+	stream := ui.NewTestStream(t)
 
 	simulatedUI, game := setupUiAndGame(t, stream, net)
 	defer rootCtx.Stop(simulatedUI)
 	defer rootCtx.Stop(game)
 
 	did := "did:fakedidtonowhere"
+
+	stream.ExpectMessage("built a portal", 2*time.Second)
 	rootCtx.Send(game, &jasonsgame.UserInput{Message: "build portal to " + did})
-	time.Sleep(100 * time.Millisecond)
+	stream.Wait()
 
-	tree, err := net.GetChainTreeByName("home")
-	require.Nil(t, err)
-	loc := NewLocationTree(net, tree)
-	portal, err := loc.GetPortal()
-	require.Nil(t, err)
-	require.Equal(t, portal.To, did)
-
-	err = stream.ClearMessages()
-	require.Nil(t, err)
+	stream.ExpectMessage(did, 2*time.Second)
 	rootCtx.Send(game, &jasonsgame.UserInput{Message: "look around"})
-	time.Sleep(100 * time.Millisecond)
-
-	respondedWithPortal := false
-	for _, msg := range stream.GetMessages() {
-		if strings.Contains(msg.GetUserMessage().Message, did) {
-			respondedWithPortal = true
-		}
-	}
-	require.True(t, respondedWithPortal)
+	stream.Wait()
 }
 
 func TestGoThroughPortal(t *testing.T) {
 	net := network.NewLocalNetwork()
-	stream := ui.NewTestStream()
+	stream := ui.NewTestStream(t)
 
 	simulatedUI, game := setupUiAndGame(t, stream, net)
 	defer rootCtx.Stop(simulatedUI)
@@ -180,25 +123,20 @@ func TestGoThroughPortal(t *testing.T) {
 	require.Nil(t, err)
 
 	did := remoteTree.MustId()
+	stream.ExpectMessage("built a portal", 2*time.Second)
 	rootCtx.Send(game, &jasonsgame.UserInput{Message: "build portal to" + did})
-	time.Sleep(100 * time.Millisecond)
-	// Local network doesn't auto-refresh commands because that is tied to a tupelo
-	// state refresh
+	stream.Wait()
+
 	rootCtx.Send(game, &jasonsgame.UserInput{Message: "refresh"})
 
-	err = stream.ClearMessages()
-	require.Nil(t, err)
+	stream.ExpectMessage(remoteDescription, 2*time.Second)
 	rootCtx.Send(game, &jasonsgame.UserInput{Message: "go through portal"})
-	time.Sleep(100 * time.Millisecond)
-
-	msgs := stream.GetMessages()
-	lastMsg := msgs[len(msgs)-1]
-	assert.Equal(t, remoteDescription, lastMsg.GetUserMessage().Message)
+	stream.Wait()
 }
 
 func TestInscriptionInteractions(t *testing.T) {
 	net := network.NewLocalNetwork()
-	stream := ui.NewTestStream()
+	stream := ui.NewTestStream(t)
 
 	simulatedUI, game := setupUiAndGame(t, stream, net)
 	defer rootCtx.Stop(simulatedUI)
@@ -235,16 +173,12 @@ func TestInscriptionInteractions(t *testing.T) {
 		require.Nil(t, err)
 		time.Sleep(50 * time.Millisecond)
 		rootCtx.Send(game, &jasonsgame.UserInput{Message: "refresh"})
-		time.Sleep(50 * time.Millisecond)
 		rootCtx.Send(game, &jasonsgame.UserInput{Message: "test1 inscribe this is a magic sword"})
-		time.Sleep(50 * time.Millisecond)
 		rootCtx.Send(game, &jasonsgame.UserInput{Message: "test1 inscribe with magical properties"})
-		time.Sleep(50 * time.Millisecond)
+
+		stream.ExpectMessage("this is a magic sword\nwith magical properties", 2*time.Second)
 		rootCtx.Send(game, &jasonsgame.UserInput{Message: "test1 read inscriptions"})
-		time.Sleep(50 * time.Millisecond)
-		msgs := filterUserMessages(t, stream.GetMessages())
-		lastMsg := msgs[len(msgs)-1]
-		assert.Equal(t, "this is a magic sword\nwith magical properties", lastMsg.Message)
+		stream.Wait()
 	})
 
 	t.Run("with a mutli-valued inscription", func(t *testing.T) {
@@ -263,15 +197,65 @@ func TestInscriptionInteractions(t *testing.T) {
 		require.Nil(t, err)
 		time.Sleep(50 * time.Millisecond)
 		rootCtx.Send(game, &jasonsgame.UserInput{Message: "refresh"})
-		time.Sleep(50 * time.Millisecond)
 		rootCtx.Send(game, &jasonsgame.UserInput{Message: "test2 inscribe this is a magic sword"})
-		time.Sleep(50 * time.Millisecond)
 		rootCtx.Send(game, &jasonsgame.UserInput{Message: "test2 inscribe with magical properties"})
-		time.Sleep(50 * time.Millisecond)
+
+		stream.ExpectMessage("with magical properties", 2*time.Second)
 		rootCtx.Send(game, &jasonsgame.UserInput{Message: "test2 read inscriptions"})
-		time.Sleep(50 * time.Millisecond)
-		msgs := filterUserMessages(t, stream.GetMessages())
-		lastMsg := msgs[len(msgs)-1]
-		assert.Equal(t, "with magical properties", lastMsg.Message)
+		stream.Wait()
 	})
+}
+
+func TestCantDropFromOtherTree(t *testing.T) {
+	net := network.NewLocalNetwork()
+	stream := ui.NewTestStream(t)
+
+	simulatedUI, game := setupUiAndGame(t, stream, net)
+	defer rootCtx.Stop(simulatedUI)
+	defer rootCtx.Stop(game)
+
+	playerTree, err := GetPlayerTree(net)
+	require.Nil(t, err)
+
+	objTree, err := net.CreateChainTree()
+	require.Nil(t, err)
+
+	obj := NewObjectTree(net, objTree)
+	err = obj.SetName("obj-to-drop")
+	require.Nil(t, err)
+
+	err = obj.AddInteraction(&DropObjectInteraction{
+		Command: "drop will succeed",
+		Did:     obj.MustId(),
+	})
+	require.Nil(t, err)
+
+	otherObjTree, err := net.CreateChainTree()
+	require.Nil(t, err)
+	otherObj := NewObjectTree(net, otherObjTree)
+	err = otherObj.SetName("obj-triggering-drop")
+	require.Nil(t, err)
+
+	err = otherObj.AddInteraction(&DropObjectInteraction{
+		Command: "drop will fail",
+		Did:     obj.MustId(),
+	})
+	require.Nil(t, err)
+
+	inventoryTree, err := trees.FindInventoryTree(net, playerTree.Did())
+	require.Nil(t, err)
+	err = inventoryTree.Add(obj.MustId())
+	require.Nil(t, err)
+	err = inventoryTree.Add(otherObj.MustId())
+	require.Nil(t, err)
+
+	stream.ExpectMessage("you look around but don't see anything", 2*time.Second)
+	rootCtx.Send(game, &jasonsgame.UserInput{Message: "drop will fail"})
+	rootCtx.Send(game, &jasonsgame.UserInput{Message: "look around"})
+	stream.Wait()
+
+	stream.ExpectMessage("obj-to-drop", 2*time.Second)
+	rootCtx.Send(game, &jasonsgame.UserInput{Message: "drop will succeed"})
+	rootCtx.Send(game, &jasonsgame.UserInput{Message: "look around"})
+	stream.Wait()
 }

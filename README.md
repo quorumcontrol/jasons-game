@@ -6,12 +6,11 @@ Welcome to Jason's Game. A world created by the players in a virtual space.
 
 * A player is a ChainTree
 * A player owns "lands" (ChainTrees) each of which has a grid of descriptions.
-* Players can navigate these lands via text based commands (eg "north" "sourth")
-* Players may request to build a portal in somone else's land (in progress)
-* Players may chat in the current grid area they are in (in progress)
+* Players can navigate these lands via text based commands (eg "north" "south").
+* Players may request to build a portal in someone else's land (in progress).
+* Players may chat in the current grid area they are in.
 * Building (changing descriptions, etc) costs a token.
-
-Coming Soon: Objects
+* Players may create, drop, and pick up NFT-based objects.
 
 ## Technology Overview
 
@@ -31,10 +30,12 @@ with (e.g. for development and testing), you should append `BUILD=internal` to
 the make commands below. It's a good idea to run `make clean` first or make
 might not realize anything needs to be rebuilt.
 
-`make` - will package up the game and frontend into `bin/jasonsgame`
+`make` - will package up the game into `bin/jasonsgame-[your-platform]-[public|internal]` and the frontend into `out/JasonsGame-[your-platform]-x64`.
     - You can run it with `-localnet=true` to connect to a local network; default is to connect to Quorum Control test net.
-    - You can run it with `-disablewebview=true` to just launch the server instead of the server and a webview window. Then you can point your own browser at the host and port indicated.
-`make mac-app` - will build a macOS app bundle in `JasonsGame.app`
+    - When you run the Electron frontend you can also connect to the backend via a web browser at `http://localhost:8080/`.
+    
+`make PLATFORM=all` - will build binaries and distributables for macOS, Linux, and Windows.
+    - These "distributables" have an Electron frontend built in.
 
 ## Developing
 

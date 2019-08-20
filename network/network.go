@@ -90,7 +90,7 @@ type RemoteNetworkConfig struct {
 
 var _ Network = &RemoteNetwork{}
 
-func NewRemoteNetworkWithConfig(ctx context.Context, config *RemoteNetworkConfig) (Network, error) {
+func NewRemoteNetworkWithConfig(ctx context.Context, config *RemoteNetworkConfig) (*RemoteNetwork, error) {
 	var err error
 
 	remote.Start()
@@ -254,7 +254,7 @@ func (n *RemoteNetwork) PrivateKey() *ecdsa.PrivateKey {
 
 func (n *RemoteNetwork) CreateNamedChainTree(name string) (*consensus.SignedChainTree, error) {
 	log.Debug("CreateNamedChainTree", name)
-	tree, err := n.Tupelo.CreateChainTree(n.PrivateKey())
+	tree, err := n.CreateChainTree()
 	if err != nil {
 		return nil, errors.Wrap(err, "error creating tree")
 	}

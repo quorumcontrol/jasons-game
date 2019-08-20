@@ -353,8 +353,9 @@ func (inv *InventoryActor) handleListInteractionsRequest(actorCtx actor.Context,
 			interactionResp := make([]*InteractionResponse, len(objectInteractions))
 			for i, interaction := range objectInteractions {
 				interactionResp[i] = &InteractionResponse{
-					AttachedTo:  name,
-					Interaction: interaction,
+					AttachedTo:    name,
+					AttachedToDid: object.Did,
+					Interaction:   interaction,
 				}
 			}
 

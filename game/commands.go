@@ -73,6 +73,7 @@ type interactionCommand struct {
 	parse       string
 	interaction Interaction
 	helpGroup   string
+	did         string
 }
 
 func (c *interactionCommand) Name() string {

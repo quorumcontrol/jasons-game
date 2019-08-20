@@ -1,5 +1,6 @@
 {
-  "name": "jasons-game",
+  "name": "jasons-game-frontend",
+  "main": "public/index.html",
   "version": "0.0.1",
   "private": true,
   "devDependencies": {

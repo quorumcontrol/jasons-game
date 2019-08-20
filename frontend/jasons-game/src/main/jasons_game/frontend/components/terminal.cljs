@@ -36,9 +36,9 @@
                          (commands/add-all (commands/empty-mapping)))]
     (.setCommandMapping state new-mapping)))
 
-(defn show [state read-only?]
+(defn show []
   (let [current-input (r/atom "")]
-    (fn [state]
+    (fn [state read-only?]
       [:> ReactTerminalStateless {:emulatorState state
                                   :acceptInput (not read-only?)
                                   :inputStr @current-input
@@ -53,9 +53,11 @@
                                            :height "100vh"
                                            :width "100vw"}
                                   :promptSymbol "$ >"
+                                  :clickToFocus true
                                   :onInputChange (fn [new-input]
                                                    (reset! current-input new-input))
                                   :onStateChange (fn [new-state]
+                                                   (re-frame/dispatch [::disable-input])
                                                    (reset! current-input "")
                                                    (re-frame/dispatch [::change-state new-state]))}])))
 

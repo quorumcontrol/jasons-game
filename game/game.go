@@ -268,7 +268,7 @@ func (g *Game) handleUserInput(actorCtx actor.Context, input *jasonsgame.UserInp
 			log.Errorf("failed to broadcast ShoutMessage: %s", err)
 		}
 	case "create-object":
-		err = g.handleCreateObject(actorCtx, args)
+		err = g.handleCreateObjectFromArgs(actorCtx, args)
 	case "player-inventory-list":
 		err = g.handlePlayerInventoryList(actorCtx)
 	case "location-inventory-list":
@@ -375,7 +375,7 @@ func (g *Game) handleInteractionInput(actorCtx actor.Context, cmd *interactionCo
 		g.setLocation(actorCtx, interaction.Did)
 		g.sendUILocation(actorCtx)
 	case *DropObjectInteraction:
-		err = g.handleDropObject(actorCtx, interaction)
+		err = g.handleDropObject(actorCtx, cmd, interaction)
 	case *PickUpObjectInteraction:
 		err = g.handlePickUpObject(actorCtx, interaction)
 	case *GetTreeValueInteraction:
@@ -384,6 +384,8 @@ func (g *Game) handleInteractionInput(actorCtx actor.Context, cmd *interactionCo
 		err = g.handleSetTreeValueInteraction(actorCtx, interaction, args)
 	case *LookAroundInteraction:
 		err = g.handleLocationInventoryList(actorCtx)
+	case *CreateObjectInteraction:
+		err = g.handleCreateObject(actorCtx, interaction.Name, interaction.Description)
 	case *CipherInteraction:
 		nextInteraction, _, err := interaction.Unseal(args)
 		if err != nil {
@@ -394,6 +396,21 @@ func (g *Game) handleInteractionInput(actorCtx actor.Context, cmd *interactionCo
 			interaction: nextInteraction,
 		}
 		return g.handleInteractionInput(actorCtx, nextCmd, args)
+	case *ChainedInteraction:
+		interactions, err := interaction.Interactions()
+		if err != nil {
+			return err
+		}
+		for _, nextInteraction := range interactions {
+			nextCmd := &interactionCommand{
+				parse:       interaction.GetCommand(),
+				interaction: nextInteraction,
+			}
+			err = g.handleInteractionInput(actorCtx, nextCmd, args)
+			if err != nil {
+				return err
+			}
+		}
 	default:
 		g.sendUserMessage(actorCtx, fmt.Sprintf("no interaction matching %s, type %v", cmd.Parse(), reflect.TypeOf(interaction)))
 	}
@@ -464,7 +481,11 @@ func (g *Game) handleGetTreeValueInteraction(actorCtx actor.Context, interaction
 	return nil
 }
 
-func (g *Game) handleDropObject(actorCtx actor.Context, interaction *DropObjectInteraction) error {
+func (g *Game) handleDropObject(actorCtx actor.Context, cmd *interactionCommand, interaction *DropObjectInteraction) error {
+	if interaction.Did != cmd.did {
+		return fmt.Errorf("Interaction from %s tried to drop %s - this is not allowed", cmd.did, interaction.Did)
+	}
+
 	response, err := actorCtx.RequestFuture(g.inventoryActor, &TransferObjectRequest{
 		Did: interaction.Did,
 		To:  g.locationDid,
@@ -527,12 +548,15 @@ func (g *Game) handlePickUpObject(actorCtx actor.Context, interaction *PickUpObj
 	return nil
 }
 
-func (g *Game) handleCreateObject(actorCtx actor.Context, args string) error {
+func (g *Game) handleCreateObjectFromArgs(actorCtx actor.Context, args string) error {
 	splitArgs := strings.Split(args, " ")
-	objName := splitArgs[0]
+	return g.handleCreateObject(actorCtx, splitArgs[0], strings.Join(splitArgs[1:], " "))
+}
+
+func (g *Game) handleCreateObject(actorCtx actor.Context, name string, description string) error {
 	response, err := actorCtx.RequestFuture(g.inventoryActor, &CreateObjectRequest{
-		Name:        objName,
-		Description: strings.Join(splitArgs[1:], " "),
+		Name:        name,
+		Description: description,
 	}, 30*time.Second).Result()
 	if err != nil {
 		return err
@@ -543,7 +567,7 @@ func (g *Game) handleCreateObject(actorCtx actor.Context, args string) error {
 		return fmt.Errorf("error casting create object response")
 	}
 
-	g.sendUserMessage(actorCtx, fmt.Sprintf("%s has been created with DID %s and is in your bag of hodling", objName, newObject.Object.Did))
+	g.sendUserMessage(actorCtx, fmt.Sprintf("%s has been created with DID %s and is in your bag of hodling", name, newObject.Object.Did))
 	return nil
 }
 
@@ -807,6 +831,7 @@ func (g *Game) interactionCommandsFor(actorCtx actor.Context, pid *actor.PID) (c
 			parse:       interactionResp.Interaction.GetCommand(),
 			interaction: interactionResp.Interaction,
 			helpGroup:   interactionResp.AttachedTo,
+			did:         interactionResp.AttachedToDid,
 		}
 	}
 	return interactionCommands, nil

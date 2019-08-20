@@ -5,7 +5,6 @@ package game
 import (
 	"context"
 	"fmt"
-	"os"
 	"testing"
 	"time"
 
@@ -25,25 +24,12 @@ func TestFullIntegration(t *testing.T) {
 	group, err := network.SetupTupeloNotaryGroup(ctx, true)
 	require.Nil(t, err)
 
-	path := "/tmp/test-full-game"
-
-	err = os.RemoveAll(path)
-	require.Nil(t, err)
-
-	err = os.MkdirAll(path, 0755)
-	require.Nil(t, err)
-
-	defer os.RemoveAll(path)
-
-	ds, err := config.LocalDataStore(path)
-	require.Nil(t, err)
-
-	net, err := network.NewRemoteNetwork(ctx, group, ds)
+	net, err := network.NewRemoteNetwork(ctx, group, config.MemoryDataStore())
 	require.Nil(t, err)
 
 	rootCtx := actor.EmptyRootContext
 
-	stream := ui.NewTestStream()
+	stream := ui.NewTestStream(t)
 
 	uiActor, err := rootCtx.SpawnNamed(ui.NewUIProps(stream, net), "test-integration-ui")
 	require.Nil(t, err)
@@ -68,33 +54,33 @@ func TestFullIntegration(t *testing.T) {
 	someTree, err := net.CreateChainTree()
 	require.Nil(t, err)
 	locationTree := NewLocationTree(net, someTree)
+	err = locationTree.SetDescription("in the dungeon")
+	require.Nil(t, err)
 	err = locationTree.AddInteraction(&RespondInteraction{
 		Command:  "atesthiddencommand",
 		Response: "hello",
 		Hidden:   true,
 	})
 	require.Nil(t, err)
+	time.Sleep(300 * time.Millisecond)
 
+	stream.ExpectMessage("added a connection", 3*time.Second)
 	rootCtx.Send(gameActor, &jasonsgame.UserInput{Message: fmt.Sprintf("connect location %s as enter dungeon", someTree.MustId())})
-	time.Sleep(100 * time.Millisecond)
-	msgs := filterUserMessages(t, stream.GetMessages())
-	require.Len(t, msgs, 2)
+	stream.Wait()
 
+	stream.ExpectMessage("in the dungeon", 3*time.Second)
 	rootCtx.Send(gameActor, &jasonsgame.UserInput{Message: "enter dungeon"})
-	time.Sleep(100 * time.Millisecond)
-	msgs = filterUserMessages(t, stream.GetMessages())
-	require.Len(t, msgs, 3)
+	stream.Wait()
 
+	stream.ExpectMessage("hello", 3*time.Second)
 	rootCtx.Send(gameActor, &jasonsgame.UserInput{Message: "atesthiddencommand"})
-	time.Sleep(100 * time.Millisecond)
-	require.Len(t, msgs, 4)
-	require.Equal(t, msgs[3].Message, "hello")
+	stream.Wait()
 
 	err = stream.ClearMessages()
 	require.Nil(t, err)
 	rootCtx.Send(gameActor, &jasonsgame.UserInput{Message: "help location"})
 	time.Sleep(100 * time.Millisecond)
-	msgs = filterUserMessages(t, stream.GetMessages())
+	msgs := filterUserMessages(t, stream.GetMessages())
 	includesHidden := false
 	for _, msg := range msgs {
 		if msg.Message == "atesthiddencommand" {

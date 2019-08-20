@@ -5,7 +5,7 @@ services:
     build: ./devdocker
     depends_on:
       - inkfaucet
-    command: ["go", "run", "main.go", "-disablewebview=true", "-localnet=true"]
+    command: ["go", "run", "main.go", "-localnet=true"]
     volumes:
       - .:/app:delegated
       - ./devdocker/.tmp:/root/.cache:delegated
@@ -22,7 +22,7 @@ services:
 
   game2:
     build: ./devdocker
-    command: ["go", "run", "main.go", "-disablewebview=true", "-localnet=true"]
+    command: ["go", "run", "main.go", "-localnet=true"]
     depends_on:
       - inkfaucet
     volumes:
@@ -89,7 +89,7 @@ services:
 
   game-testnet:
     build: ./devdocker
-    command: ["go", "run", "main.go", "-disablewebview=true"]
+    command: ["go", "run", "main.go"]
     volumes:
       - .:/app:delegated
       - ./devdocker/.tmp:/root/.cache:delegated
@@ -142,7 +142,8 @@ services:
       - go
       - test
       - -v
-      - -tags='integration internal'
+      - -tags
+      - 'internal integration'
       - -timeout=5m
       - ${TEST_PACKAGE-./...}
     volumes:

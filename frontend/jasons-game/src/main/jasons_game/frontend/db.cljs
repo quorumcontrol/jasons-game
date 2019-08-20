@@ -7,7 +7,7 @@
 (def initial-state {::remote/session (remote/new-session "12345")
                     ::remote/host remote/default-host
                     ::terminal/state (terminal/new-state)
-                    ::terminal/read-only? false})
+                    ::terminal/read-only? true})
 
 (re-frame/reg-event-db
  ::initialize

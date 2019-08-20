@@ -3,12 +3,13 @@
 package importer
 
 import (
+	"context"
 	"fmt"
-	"strings"
 	"testing"
 	"time"
 
 	"github.com/AsynkronIT/protoactor-go/actor"
+	"github.com/quorumcontrol/jasons-game/config"
 	gamepkg "github.com/quorumcontrol/jasons-game/game"
 	"github.com/quorumcontrol/jasons-game/network"
 	"github.com/quorumcontrol/jasons-game/pb/jasonsgame"
@@ -19,9 +20,15 @@ import (
 var rootCtx = actor.EmptyRootContext
 
 func TestImportIntegration(t *testing.T) {
-	net := network.NewLocalNetwork()
-	stream := ui.NewTestStream()
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
 
+	group, err := network.SetupTupeloNotaryGroup(ctx, true)
+	require.Nil(t, err)
+	net, err := network.NewRemoteNetwork(ctx, group, config.MemoryDataStore())
+	require.Nil(t, err)
+
+	stream := ui.NewTestStream(t)
 	simulatedUI, err := rootCtx.SpawnNamed(ui.NewUIProps(stream, net), t.Name()+"-ui")
 	require.Nil(t, err)
 	playerChain, err := net.CreateNamedChainTree("player")
@@ -36,13 +43,14 @@ func TestImportIntegration(t *testing.T) {
 	defer rootCtx.Stop(simulatedUI)
 	defer rootCtx.Stop(game)
 
+	time.Sleep(100 * time.Second)
+
 	path := "import-example"
 	ids, err := New(net).Import(path)
 	require.Nil(t, err)
-	rootCtx.Send(game, &jasonsgame.UserInput{Message: fmt.Sprintf("connect location %s as enter importer-world", ids.Locations["home"])})
-	time.Sleep(10 * time.Millisecond)
 
 	cmdsAndResponses := []string{
+		fmt.Sprintf("connect location %s as enter importer-world", ids.Locations["home"]), "added a connection",
 		"enter importer-world", "you have entered the world of the fairies, in front of you sits a great forest",
 		"look around", "idol",
 		"touch the idol", "you probably shouldn't do that",
@@ -58,18 +66,8 @@ func TestImportIntegration(t *testing.T) {
 		cmd := cmdsAndResponses[i]
 		response := cmdsAndResponses[i+1]
 
+		stream.ExpectMessage(response, 3*time.Second)
 		rootCtx.Send(game, &jasonsgame.UserInput{Message: cmd})
-
-		found := false
-		for !found {
-			select {
-			case msg := <-stream.Channel():
-				if um := msg.GetUserMessage(); um != nil {
-					found = strings.Contains(um.GetMessage(), response)
-				}
-			case <-time.After(1 * time.Second):
-				require.Fail(t, fmt.Sprintf("Timeout waiting for command: %s\nexpected response: %s\nmessages: %v", cmd, response, stream.GetMessages()))
-			}
-		}
+		stream.Wait()
 	}
 }
