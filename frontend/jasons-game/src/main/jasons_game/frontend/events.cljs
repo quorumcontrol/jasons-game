@@ -13,8 +13,7 @@
 (re-frame/reg-event-fx
  :user/input
  (fn-traced [{{::remote/keys [host session]} :db} [_ user-command]]
-   {::remote/send-input {:host host, :session session, :command user-command}
-    :dispatch [::terminal/disable-input]}))
+   {::remote/send-input {:host host, :session session, :command user-command}}))
 
 (re-frame/reg-event-fx
  :user/message
