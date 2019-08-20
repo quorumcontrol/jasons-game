@@ -58,13 +58,12 @@
 
 (defn handle-user-message [resp]
   (let [msg (.getUserMessage resp)]
-    (if (not (.getHeartbeat msg))
-      (do
-        (.log js/console "user message" (.toObject msg))
-        (let [game-msg (-> msg
-                           resp->message
-                           (assoc :user false))]
-          (re-frame/dispatch [:user/message game-msg]))))))
+    (when (not (.getHeartbeat msg))
+      (.log js/console "user message" (.toObject msg))
+      (let [game-msg (-> msg
+                         resp->message
+                         (assoc :user false))]
+        (re-frame/dispatch [:user/message game-msg])))))
 
 (defn handle-command-update [resp]
   (let [msg (.getCommandUpdate resp)]
