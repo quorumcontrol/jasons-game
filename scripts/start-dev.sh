@@ -44,7 +44,7 @@ if [[ -z "${INK_DID}" ]]; then
 fi
 
 echo ''
-echo "DEV: Starting a new inkfaucet service for ${INK_DID}:ink"
+echo "DEV: Creating a new inkfaucet for ${INK_DID}:ink"
 echo ''
 INK_FAUCET_KEY=$(capture_value "make inkfaucet INK_DID=${INK_DID}" "inkfaucetkey.log" "INK_FAUCET_KEY")
 
@@ -56,9 +56,6 @@ fi
 echo ''
 echo "DEV: Ink faucet key: ${INK_FAUCET_KEY}"
 echo ''
-
-make inkfaucet INK_DID=${INK_DID} INK_FAUCET_KEY=${INK_FAUCET_KEY} >logs/inkfaucet.log 2>&1 &
-sleep 30 # give inkfaucet time to bootstrap
 
 echo ''
 echo "DEV: Sending some devink to the inkfaucet"
