@@ -4,7 +4,10 @@ package main
 import (
 	"context"
 	"encoding/base64"
+	"flag"
 	"fmt"
+
+	"github.com/quorumcontrol/tupelo-go-sdk/consensus"
 
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/pkg/errors"
@@ -14,21 +17,24 @@ import (
 	"github.com/quorumcontrol/messages/build/go/transactions"
 )
 
-const local = true
+const inkLocalName = "ink"
 
 func main() {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
+	local := flag.Bool("local", true, "connect to locally running notary group.")
+	flag.Parse()
+
 	var remoteOrLocal string
-	if local {
+	if *local {
 		remoteOrLocal = "local"
 	} else {
 		remoteOrLocal = "remote"
 	}
 
 	fmt.Printf("Setting up a %s notary group...\n", remoteOrLocal)
-	group, err := network.SetupTupeloNotaryGroup(ctx, local)
+	group, err := network.SetupTupeloNotaryGroup(ctx, *local)
 	if err != nil {
 		panic(errors.Wrap(err, "error setting up notary group"))
 	}
@@ -59,7 +65,7 @@ func main() {
 	}
 
 	fmt.Println("Establishing ink token...")
-	establishInkTxn, err := chaintree.NewEstablishTokenTransaction("ink", 0)
+	establishInkTxn, err := chaintree.NewEstablishTokenTransaction(inkLocalName, 0)
 	if err != nil {
 		panic(errors.Wrap(err, "error building establish ink token transaction"))
 	}
@@ -79,10 +85,13 @@ func main() {
 		panic(errors.Wrap(err, "error fetching ink chaintree did"))
 	}
 
+	inkTokenName := consensus.TokenName{ChainTreeDID: inkTreeDID, LocalName: inkLocalName}
+
 	fmt.Println("Successfully created ink chaintree. Save and secure the following output:")
 	fmt.Println("=========================================================================")
 	fmt.Printf("INK_TREE_KEY=%s\n", base64.StdEncoding.EncodeToString(crypto.FromECDSA(signingKey)))
 	fmt.Printf("INK_TREE_DID=%s\n", inkTreeDID)
 	fmt.Printf("INK_TREE_TIP=%s\n", txResp.Tip)
+	fmt.Printf("INK_TOKEN=%s\n", inkTokenName.String())
 	fmt.Println("=========================================================================")
 }
