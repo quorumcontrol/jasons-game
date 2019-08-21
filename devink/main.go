@@ -5,6 +5,7 @@ package main
 import (
 	"context"
 	"encoding/base64"
+	"flag"
 	"fmt"
 	"os"
 	"strings"
@@ -26,7 +27,10 @@ func main() {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	devInkSource, err := devink.NewSource(ctx, dataStoreDir, true)
+	local := flag.Bool("local", true, "connect to locally running notary group.")
+	flag.Parse()
+
+	devInkSource, err := devink.NewSource(ctx, dataStoreDir, local)
 	if err != nil {
 		panic(errors.Wrap(err, "error initializing dev ink"))
 	}

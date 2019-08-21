@@ -2,7 +2,10 @@ package devink
 
 import (
 	"context"
+	"encoding/base64"
+	"fmt"
 
+	"github.com/ethereum/go-ethereum/crypto"
 	uuid "github.com/hashicorp/go-uuid"
 	logging "github.com/ipfs/go-log"
 	"github.com/pkg/errors"
@@ -48,6 +51,7 @@ func NewSource(ctx context.Context, dataStoreDir string, connectToLocalnet bool)
 	if err != nil {
 		return nil, errors.Wrap(err, "error getting private signingKey")
 	}
+	fmt.Printf("INK_TREE_KEY='%s'\n", base64.StdEncoding.EncodeToString(crypto.FromECDSA(signingKey)))
 
 	netCfg := &network.RemoteNetworkConfig{
 		NotaryGroup:   notaryGroup,
@@ -62,15 +66,22 @@ func NewSource(ctx context.Context, dataStoreDir string, connectToLocalnet bool)
 
 	net := devnet.DevRemoteNetwork{RemoteNetwork: rNet}
 
-	devInkSource, err := net.GetChainTreeByName("dev-ink-source")
+	var inkSourceName string
+	if connectToLocalnet {
+		inkSourceName = "dev-ink-source"
+	} else {
+		inkSourceName = "ink-source"
+	}
+
+	devInkSource, err := net.GetChainTreeByName(inkSourceName)
 	if err != nil {
-		return nil, errors.Wrap(err, "error getting dev-ink-source chaintree")
+		return nil, errors.Wrap(err, "error getting ink source chaintree")
 	}
 
 	if devInkSource == nil {
-		devInkSource, err = net.CreateNamedChainTree("dev-ink-source")
+		devInkSource, err = net.CreateNamedChainTree(inkSourceName)
 		if err != nil {
-			return nil, errors.Wrap(err, "error creating dev-ink-source chaintree")
+			return nil, errors.Wrap(err, "error creating ink source chaintree")
 		}
 	}
 
@@ -81,7 +92,7 @@ func (dis *DevInkSource) tokenLedger(ctx context.Context) (*consensus.TreeLedger
 	devInkChainTree := dis.ChainTree
 	devInkSourceTree, err := devInkChainTree.ChainTree.Tree(ctx)
 	if err != nil {
-		return nil, errors.Wrap(err, "error getting dev-ink-source tree")
+		return nil, errors.Wrap(err, "error getting ink source tree")
 	}
 
 	devInkTokenName := &consensus.TokenName{ChainTreeDID: devInkChainTree.MustId(), LocalName: "ink"}
