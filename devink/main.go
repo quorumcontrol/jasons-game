@@ -7,7 +7,6 @@ import (
 	"encoding/base64"
 	"flag"
 	"fmt"
-	"os"
 	"strings"
 
 	"github.com/ethereum/go-ethereum/crypto"
@@ -30,7 +29,7 @@ func main() {
 	local := flag.Bool("local", true, "connect to locally running notary group.")
 	flag.Parse()
 
-	devInkSource, err := devink.NewSource(ctx, dataStoreDir, local)
+	devInkSource, err := devink.NewSource(ctx, dataStoreDir, *local)
 	if err != nil {
 		panic(errors.Wrap(err, "error initializing dev ink"))
 	}
@@ -51,14 +50,14 @@ func main() {
 		panic(err)
 	}
 
-	if len(os.Args) > 1 && len(os.Args[1]) > 0 {
+	if len(flag.Args()) > 0 && len(flag.Arg(0)) > 0 {
 		var destinationChainId string
 
-		if strings.HasPrefix(os.Args[1], "did:tupelo:") {
-			destinationChainId = os.Args[1]
+		if strings.HasPrefix(flag.Arg(0), "did:tupelo:") {
+			destinationChainId = flag.Arg(0)
 		} else {
 			// assume it's a base64-encoded private key
-			serializedKey, err := base64.StdEncoding.DecodeString(os.Args[1])
+			serializedKey, err := base64.StdEncoding.DecodeString(flag.Arg(0))
 			if err != nil {
 				panic(errors.Wrap(err, "error decoding base64 ink faucet key argument"))
 			}
