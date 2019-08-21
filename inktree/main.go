@@ -33,19 +33,19 @@ func main() {
 		remoteOrLocal = "remote"
 	}
 
-	fmt.Printf("Setting up a %s notary group...\n", remoteOrLocal)
+	fmt.Printf("Setting up a %s notary group...\n\n", remoteOrLocal)
 	group, err := network.SetupTupeloNotaryGroup(ctx, *local)
 	if err != nil {
 		panic(errors.Wrap(err, "error setting up notary group"))
 	}
 
-	fmt.Println("Generating a new ink chaintree private key...")
+	fmt.Println("Generating a new ink chaintree private key...\n")
 	signingKey, err := crypto.GenerateKey()
 	if err != nil {
-		panic(errors.Wrap(err, "error generating private key for ink faucet"))
+		panic(errors.Wrap(err, "error generating private key for ink chaintree"))
 	}
 
-	fmt.Println("Setting up remote network...")
+	fmt.Println("Setting up remote network...\n")
 	ds := config.MemoryDataStore()
 	netCfg := &network.RemoteNetworkConfig{
 		NotaryGroup:   group,
@@ -58,13 +58,13 @@ func main() {
 		panic(errors.Wrap(err, "error setting up remote network"))
 	}
 
-	fmt.Println("Creating new ink chaintree...")
+	fmt.Println("Creating new ink chaintree...\n")
 	inkTree, err := net.CreateChainTreeWithKey(signingKey)
 	if err != nil {
 		panic(errors.Wrap(err, "error creating ink chaintree"))
 	}
 
-	fmt.Println("Establishing ink token...")
+	fmt.Println("Establishing ink token...\n")
 	establishInkTxn, err := chaintree.NewEstablishTokenTransaction(inkLocalName, 0)
 	if err != nil {
 		panic(errors.Wrap(err, "error building establish ink token transaction"))
@@ -89,9 +89,9 @@ func main() {
 
 	fmt.Println("Successfully created ink chaintree. Save and secure the following output:")
 	fmt.Println("=========================================================================")
-	fmt.Printf("INK_TREE_KEY=%s\n", base64.StdEncoding.EncodeToString(crypto.FromECDSA(signingKey)))
-	fmt.Printf("INK_TREE_DID=%s\n", inkTreeDID)
-	fmt.Printf("INK_TREE_TIP=%s\n", txResp.Tip)
-	fmt.Printf("INK_TOKEN=%s\n", inkTokenName.String())
+	fmt.Printf("INK_TREE_KEY='%s'\n", base64.StdEncoding.EncodeToString(crypto.FromECDSA(signingKey)))
+	fmt.Printf("INK_TREE_DID='%s'\n", inkTreeDID)
+	fmt.Printf("INK_TREE_TIP='%s'\n", txResp.Tip)
+	fmt.Printf("INK_TOKEN_NAME='%s'\n", inkTokenName.String())
 	fmt.Println("=========================================================================")
 }
