@@ -1,0 +1,7 @@
+data:
+  description: "you are at the weaver"
+interactions:
+  - type: ChangeLocationInteraction
+    value:
+      command: "go back"
+      did: "{{.Locations.starting}}"

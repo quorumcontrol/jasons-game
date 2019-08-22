@@ -1,0 +1,12 @@
+data:
+  description: "you are in mine 200"
+interactions:
+  - type: ChangeLocationInteraction
+    value:
+      command: "go back"
+      did: "{{.Locations.starting}}"
+  - type: CreateObjectInteraction
+    value:
+      command: "extract element"
+      name: "element-c8"
+      description: "element with id of 200"

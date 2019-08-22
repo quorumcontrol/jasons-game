@@ -58,9 +58,13 @@ func CreateObjectTree(net network.Network, name string) (*ObjectTree, error) {
 		return nil, errors.Wrap(err, "error creating object chaintree")
 	}
 
-	obj := NewObjectTree(net, objectChainTree)
+	return CreateObjectOnTree(net, name, objectChainTree)
+}
 
-	err = obj.SetName(name)
+func CreateObjectOnTree(net network.Network, name string, tree *consensus.SignedChainTree) (*ObjectTree, error) {
+	obj := NewObjectTree(net, tree)
+
+	err := obj.SetName(name)
 	if err != nil {
 		return nil, errors.Wrap(err, "error setting name of new object")
 	}
@@ -103,6 +107,10 @@ func (o *ObjectTree) MustId() string {
 
 func (o *ObjectTree) Tip() cid.Cid {
 	return o.tree.Tip()
+}
+
+func (o *ObjectTree) ChainTree() *consensus.SignedChainTree {
+	return o.tree
 }
 
 func (o *ObjectTree) SetName(name string) error {
@@ -152,6 +160,15 @@ func (o *ObjectTree) IsOwnedBy(keyAddrs []string) (bool, error) {
 	return true, nil
 }
 
+func (o *ObjectTree) ChangeChainTreeOwner(newKeys []string) error {
+	newTree, err := o.network.ChangeChainTreeOwner(o.tree, newKeys)
+	if err != nil {
+		return err
+	}
+	o.tree = newTree
+	return nil
+}
+
 func (o *ObjectTree) getProp(prop string) (string, error) {
 	uncastVal, err := o.getPath([]string{prop})
 	if err != nil {
@@ -166,6 +183,10 @@ func (o *ObjectTree) getProp(prop string) (string, error) {
 	return val, nil
 }
 
+func (o *ObjectTree) UpdatePath(path []string, val interface{}) error {
+	return o.updatePath(path, val)
+}
+
 func (o *ObjectTree) updatePath(path []string, val interface{}) error {
 	newTree, err := o.network.UpdateChainTree(o.tree, strings.Join(append([]string{"jasons-game"}, path...), "/"), val)
 	if err != nil {
@@ -173,6 +194,10 @@ func (o *ObjectTree) updatePath(path []string, val interface{}) error {
 	}
 	o.tree = newTree
 	return nil
+}
+
+func (o *ObjectTree) GetPath(path []string) (interface{}, error) {
+	return o.getPath(path)
 }
 
 func (o *ObjectTree) getPath(path []string) (interface{}, error) {

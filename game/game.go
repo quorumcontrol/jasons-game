@@ -509,9 +509,14 @@ func (g *Game) handleDropObject(actorCtx actor.Context, cmd *interactionCommand,
 		return fmt.Errorf("Interaction from %s tried to drop %s - this is not allowed", cmd.did, interaction.Did)
 	}
 
+	locationInventoryDid, err := actorCtx.RequestFuture(g.locationActor, &GetInventoryDid{}, 5*time.Second).Result()
+	if err != nil {
+		return errors.Wrap(err, "error executing drop request")
+	}
+
 	response, err := actorCtx.RequestFuture(g.inventoryActor, &TransferObjectRequest{
 		Did: interaction.Did,
-		To:  g.locationDid,
+		To:  locationInventoryDid.(string),
 	}, 30*time.Second).Result()
 
 	if err != nil {

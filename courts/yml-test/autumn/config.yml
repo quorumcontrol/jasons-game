@@ -1,0 +1,17 @@
+elements:
+- id: 15
+  description: "fail element"
+- id: 100
+  description: "element with id of 100"
+- id: 200
+  description: "element with id of 200"
+- id: 300
+  description: "element with id of 300"
+- id: 600
+  description: "element with id of 600"
+weaver:
+- from: [100, 200]
+  to: 300
+binder:
+- from: [100, 200, 300]
+  to: 600
