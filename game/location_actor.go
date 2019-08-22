@@ -73,27 +73,7 @@ func NewLocationActorProps(cfg *LocationActorConfig) *actor.Props {
 func (l *LocationActor) Receive(actorCtx actor.Context) {
 	switch msg := actorCtx.Message().(type) {
 	case *actor.Started:
-		tree, err := l.network.GetTree(l.did)
-		if err != nil {
-			panic(errors.Wrap(err, "error fetching location"))
-		}
-		if tree == nil {
-			panic("could not find location " + l.did)
-		}
-
-		l.location = NewLocationTree(l.network, tree)
-
-		actorCtx.Spawn(l.network.NewCurrentStateSubscriptionProps(l.did))
-
-		_, err = l.network.Community().SubscribeActor(actorCtx.Self(), l.network.Community().TopicFor(l.did))
-		if err != nil {
-			panic(errors.Wrap(err, "error spawning land actor subscription"))
-		}
-
-		err = l.spawnInventoryActor(actorCtx)
-		if err != nil {
-			panic(errors.Wrap(err, "error spawning inventory actor"))
-		}
+		l.initialize(actorCtx)
 	case *GetLocation:
 		desc, err := l.location.GetDescription()
 		if err != nil {
@@ -151,11 +131,42 @@ func (l *LocationActor) Receive(actorCtx actor.Context) {
 				l.Log.Error(errors.Wrap(err, "could not refresh location"))
 				return
 			}
+
+			err = l.network.TreeStore().UpdateTreeMetadata(refreshedLocation)
+			if err != nil {
+				l.Log.Error(errors.Wrap(err, "could not refresh location"))
+				return
+			}
+
 			l.location = NewLocationTree(l.network, refreshedLocation)
 		}
 		if parentPID := actorCtx.Parent(); parentPID != nil {
 			actorCtx.Send(parentPID, &StateChange{PID: actorCtx.Self()})
 		}
+	}
+}
+
+func (l *LocationActor) initialize(actorCtx actor.Context) {
+	tree, err := l.network.GetTree(l.did)
+	if err != nil {
+		panic(errors.Wrap(err, "error fetching location"))
+	}
+	if tree == nil {
+		panic("could not find location " + l.did)
+	}
+
+	l.location = NewLocationTree(l.network, tree)
+
+	actorCtx.Spawn(l.network.NewCurrentStateSubscriptionProps(l.did))
+
+	_, err = l.network.Community().SubscribeActor(actorCtx.Self(), l.network.Community().TopicFor(l.did))
+	if err != nil {
+		panic(errors.Wrap(err, "error spawning land actor subscription"))
+	}
+
+	err = l.spawnInventoryActor(actorCtx)
+	if err != nil {
+		panic(errors.Wrap(err, "error spawning inventory actor"))
 	}
 }
 

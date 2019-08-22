@@ -68,7 +68,7 @@ func NewSource(ctx context.Context, dataStoreDir string, connectToLocalnet bool)
 	}
 
 	if devInkSource == nil {
-		devInkSource, err = net.CreateNamedChainTree("dev-ink-source")
+		devInkSource, err = net.CreateLocalChainTree("dev-ink-source")
 		if err != nil {
 			return nil, errors.Wrap(err, "error creating dev-ink-source chaintree")
 		}

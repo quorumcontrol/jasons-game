@@ -17,7 +17,7 @@ func TestInventoryActor_CreateObject(t *testing.T) {
 
 	net := network.NewLocalNetwork()
 
-	playerChainTree, err := net.CreateNamedChainTree("player")
+	playerChainTree, err := net.CreateLocalChainTree("player")
 	require.Nil(t, err)
 
 	testPlayer := NewPlayerTree(net, playerChainTree)
@@ -92,7 +92,7 @@ func TestInventoryActor_Receive_NamesMustBeUnique(t *testing.T) {
 
 	net := network.NewLocalNetwork()
 
-	playerChainTree, err := net.CreateNamedChainTree("player")
+	playerChainTree, err := net.CreateLocalChainTree("player")
 	require.Nil(t, err)
 
 	testPlayer := NewPlayerTree(net, playerChainTree)
@@ -127,7 +127,7 @@ func TestInventoryActor_Receive_NamesMustBeUnique(t *testing.T) {
 func TestInventoryActor_TransferObject(t *testing.T) {
 	net := network.NewLocalNetwork()
 
-	playerChainTree, err := net.CreateNamedChainTree("player")
+	playerChainTree, err := net.CreateLocalChainTree("player")
 	require.Nil(t, err)
 	testPlayer := NewPlayerTree(net, playerChainTree)
 

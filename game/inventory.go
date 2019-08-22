@@ -1,12 +1,12 @@
 package game
 
 import (
-	"context"
 	"fmt"
-	"strings"
 
 	"github.com/AsynkronIT/protoactor-go/actor"
 	"github.com/AsynkronIT/protoactor-go/plugin"
+	"github.com/ipfs/go-cid"
+	"github.com/pkg/errors"
 	"github.com/quorumcontrol/tupelo-go-sdk/consensus"
 	"github.com/quorumcontrol/tupelo-go-sdk/gossip3/middleware"
 
@@ -22,6 +22,7 @@ import (
 type InventoryActor struct {
 	middleware.LogAwareHolder
 	did        string
+	inventory  *trees.InventoryTree
 	network    network.Network
 	subscriber *actor.PID
 	handler    handlers.Handler
@@ -101,6 +102,25 @@ func (inv *InventoryActor) Receive(actorCtx actor.Context) {
 	case *ListInteractionsRequest:
 		inv.handleListInteractionsRequest(actorCtx, msg)
 	case *signatures.CurrentState:
+		if string(msg.Signature.ObjectId) == inv.did {
+			newTip, err := cid.Cast(msg.Signature.NewTip)
+			if err != nil {
+				inv.Log.Error(errors.Wrap(err, "could not refresh inventory"))
+				return
+			}
+			refreshedInventory, err := inv.network.GetTreeByTip(newTip)
+			if err != nil {
+				inv.Log.Error(errors.Wrap(err, "could not refresh inventory"))
+				return
+			}
+			err = inv.network.TreeStore().UpdateTreeMetadata(refreshedInventory)
+			if err != nil {
+				inv.Log.Error(errors.Wrap(err, "could not refresh inventory"))
+				return
+			}
+			inv.inventory = trees.NewInventoryTree(inv.network, refreshedInventory)
+		}
+
 		if parentPID := actorCtx.Parent(); parentPID != nil {
 			actorCtx.Send(parentPID, &StateChange{PID: actorCtx.Self()})
 		}
@@ -108,22 +128,23 @@ func (inv *InventoryActor) Receive(actorCtx actor.Context) {
 }
 
 func (inv *InventoryActor) initialize(actorCtx actor.Context) {
-	inventoryTree, err := trees.FindInventoryTree(inv.network, inv.did)
+	var err error
+	inv.inventory, err = trees.FindInventoryTree(inv.network, inv.did)
 	if err != nil {
 		panic(fmt.Sprintf("error finding inventory tree: %v", err))
 	}
 
 	actorCtx.Spawn(inv.network.NewCurrentStateSubscriptionProps(inv.did))
 
-	inv.subscriber = actorCtx.Spawn(inv.network.Community().NewSubscriberProps(inventoryTree.BroadcastTopic()))
+	inv.subscriber = actorCtx.Spawn(inv.network.Community().NewSubscriberProps(inv.inventory.BroadcastTopic()))
 
 	if inv.handler == nil {
-		inv.handler = inv.pickDefaultHandler(actorCtx, inventoryTree)
+		inv.handler = inv.pickDefaultHandler(actorCtx)
 	}
 }
 
-func (inv *InventoryActor) pickDefaultHandler(actorCtx actor.Context, inventoryTree *trees.InventoryTree) handlers.Handler {
-	chaintreeHandler, err := handlers.FindHandlerForTree(inv.network, inventoryTree.MustId())
+func (inv *InventoryActor) pickDefaultHandler(actorCtx actor.Context) handlers.Handler {
+	chaintreeHandler, err := handlers.FindHandlerForTree(inv.network, inv.inventory.MustId())
 	if err != nil {
 		panic(fmt.Sprintf("error finding handler for inventory: %v", err))
 	}
@@ -132,7 +153,7 @@ func (inv *InventoryActor) pickDefaultHandler(actorCtx actor.Context, inventoryT
 	}
 
 	localKeyAddr := consensus.DidToAddr(consensus.EcdsaPubkeyToDid(*inv.network.PublicKey()))
-	isLocal, err := inventoryTree.IsOwnedBy([]string{localKeyAddr})
+	isLocal, err := inv.inventory.IsOwnedBy([]string{localKeyAddr})
 	if err != nil {
 		panic(fmt.Sprintf("error check owner for inventory: %v", err))
 	}
@@ -167,19 +188,7 @@ func (inv *InventoryActor) handleCreateObject(actorCtx actor.Context, msg *Creat
 		}
 	}
 
-	objectsPath, _ := consensus.DecodePath(trees.ObjectsPath)
-
-	newObjectPath := strings.Join(append(objectsPath, name), "/")
-
-	tree, err := inv.network.GetTree(inv.did)
-	if err != nil {
-		err = fmt.Errorf("error fetching source chaintree: %v", err)
-		inv.Log.Error(err)
-		actorCtx.Respond(&CreateObjectResponse{Error: err})
-		return
-	}
-
-	_, err = inv.network.UpdateChainTree(tree, newObjectPath, object.MustId())
+	err = inv.inventory.Add(object.MustId())
 	if err != nil {
 		err = fmt.Errorf("error updating objects in chaintree: %v", err)
 		inv.Log.Error(err)
@@ -208,15 +217,7 @@ func (inv *InventoryActor) handleTransferObject(actorCtx actor.Context, msg *Tra
 		return
 	}
 
-	sourceInventory, err := trees.FindInventoryTree(inv.network, inv.did)
-	if err != nil {
-		err = fmt.Errorf("error fetching source chaintree: %v", err)
-		inv.Log.Error(err)
-		actorCtx.Respond(&TransferObjectResponse{Error: err})
-		return
-	}
-
-	exists, err := sourceInventory.Exists(objectDid)
+	exists, err := inv.inventory.Exists(objectDid)
 	if err != nil {
 		inv.Log.Error(err)
 		actorCtx.Respond(&TransferObjectResponse{Error: err})
@@ -283,31 +284,17 @@ func (inv *InventoryActor) handleListObjects(actorCtx actor.Context, msg *Invent
 
 func (inv *InventoryActor) listObjects(actorCtx actor.Context) (map[string]*Object, error) {
 	var err error
-	ctx := context.TODO()
 
-	tree, err := inv.network.GetTree(inv.did)
-	if err != nil {
-		err = fmt.Errorf("error fetching chaintree: %v", err)
-		inv.Log.Error(err)
-		return nil, err
-	}
-
-	treeObjectsPath, _ := consensus.DecodePath(fmt.Sprintf("tree/data/%s", trees.ObjectsPath))
-	objectsUncasted, _, err := tree.ChainTree.Dag.Resolve(ctx, treeObjectsPath)
-
+	all, err := inv.inventory.All()
 	if err != nil {
 		err = fmt.Errorf("error fetching inventory; error: %v", err)
 		inv.Log.Error(err)
 		return nil, err
 	}
 
-	if objectsUncasted == nil {
-		return make(map[string]*Object), nil
-	}
-
-	objects := make(map[string]*Object, len(objectsUncasted.(map[string]interface{})))
-	for k, v := range objectsUncasted.(map[string]interface{}) {
-		objects[k] = &Object{Did: v.(string)}
+	objects := make(map[string]*Object, len(all))
+	for did, name := range all {
+		objects[name] = &Object{Did: did}
 	}
 
 	return objects, nil

@@ -31,7 +31,7 @@ func TestSummerCourt(t *testing.T) {
 	court := New(ctx, net, "../yml-test")
 	court.Start()
 
-	playerChain, err := net.CreateNamedChainTree("player")
+	playerChain, err := net.CreateLocalChainTree("player")
 	require.Nil(t, err)
 	playerTree, err := game.CreatePlayerTree(net, playerChain.MustId())
 	require.Nil(t, err)

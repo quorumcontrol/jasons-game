@@ -77,6 +77,11 @@ func ensureChainTree(net network.Network, key *ecdsa.PrivateKey) (*consensus.Sig
 			return nil, err
 		}
 
+		err = net.TreeStore().SaveTreeMetadata(ct)
+		if err != nil {
+			return nil, err
+		}
+
 		net.DisallowReceiveInk(ct.MustId())
 
 		return ct, nil

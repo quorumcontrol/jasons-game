@@ -28,6 +28,11 @@ func (i *InvitesActor) handleInviteRequest(actorCtx actor.Context) {
 		i.errorResponse(actorCtx, err, "error creating invite chaintree")
 		return
 	}
+	err = i.net.TreeStore().SaveTreeMetadata(inviteChainTree)
+	if err != nil {
+		i.errorResponse(actorCtx, err, "error saving invite chaintree")
+		return
+	}
 
 	log.Debugf("invite actor created ephemeral chaintree: %+v", inviteChainTree)
 
