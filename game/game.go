@@ -29,6 +29,8 @@ var shoutChannel = []byte("jasons-game-shouting-players")
 
 type ping struct{}
 
+type indentedList []string
+
 type Game struct {
 	ui                   *actor.PID
 	network              network.Network
@@ -295,7 +297,7 @@ func (g *Game) handleUserInput(actorCtx actor.Context, input *jasonsgame.UserInp
 }
 
 func (g *Game) handleHelp(actorCtx actor.Context, args string) error {
-	toSend := []string{}
+	toSend := indentedList{"available commands:"}
 
 	for _, c := range g.commands {
 		if !c.Hidden() && c.HelpGroup() == args {
@@ -303,13 +305,13 @@ func (g *Game) handleHelp(actorCtx actor.Context, args string) error {
 		}
 	}
 
-	if len(toSend) == 0 {
+	if len(toSend) <= 1 {
 		g.sendUserMessage(actorCtx, fmt.Sprintf("Sorry, I am not sure how I can help with '%s'...\n"+
 			"Maybe you can try looking around, asking for help on the location or help on an object.", args))
 		return nil
 	}
 
-	g.sendUserMessage(actorCtx, "available commands:\n  > "+strings.Join(toSend, "\n  > "))
+	g.sendUserMessage(actorCtx, toSend)
 	return nil
 }
 
@@ -601,8 +603,6 @@ func (g *Game) handlePlayerInventoryList(actorCtx actor.Context) error {
 }
 
 func (g *Game) handleLocationInventoryList(actorCtx actor.Context) error {
-	g.sendUILocation(actorCtx)
-
 	response, err := actorCtx.RequestFuture(g.locationActor, &InventoryListRequest{}, 30*time.Second).Result()
 	if err != nil {
 		return err
@@ -617,24 +617,23 @@ func (g *Game) handleLocationInventoryList(actorCtx actor.Context) error {
 		return fmt.Errorf("error getting current location: %v", err)
 	}
 
-	sawSomething := false
+	g.sendUILocation(actorCtx)
 
 	if len(inventoryList.Objects) > 0 {
-		sawSomething = true
-		g.sendUserMessage(actorCtx, "you see the following objects around you:")
+		inventoryListMsg := make(indentedList, len(inventoryList.Objects)+1)
+		inventoryListMsg[0] = "location inventory:"
+		i := 1
 		for objName, obj := range inventoryList.Objects {
-			g.sendUserMessage(actorCtx, fmt.Sprintf("%s (%s)", objName, obj.Did))
+			inventoryListMsg[i] = fmt.Sprintf("%s (%s)", objName, obj.Did)
+			i++
 		}
+		g.sendUserMessage(actorCtx, inventoryListMsg)
 	}
 
 	if l.Portal != nil {
-		sawSomething = true
 		g.sendUserMessage(actorCtx, fmt.Sprintf("you see a mysterious portal leading to %s", l.Portal.To))
 	}
 
-	if !sawSomething {
-		g.sendUserMessage(actorCtx, "you look around but don't see anything")
-	}
 	return nil
 }
 
@@ -717,6 +716,10 @@ func (g *Game) sendUserMessage(actorCtx actor.Context, mesgInter interface{}) {
 	switch msg := mesgInter.(type) {
 	case string:
 		msgToUser.Message = msg
+	case []string:
+		msgToUser.Message = strings.Join(msg, "\n")
+	case indentedList:
+		msgToUser.Message = strings.Join(msg, "\n  > ")
 	case *jasonsgame.Location:
 		msgToUser.Location = msg
 		msgToUser.Message = msg.Description

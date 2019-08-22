@@ -249,9 +249,10 @@ func TestCantDropFromOtherTree(t *testing.T) {
 	err = inventoryTree.Add(otherObj.MustId())
 	require.Nil(t, err)
 
-	stream.ExpectMessage("you look around but don't see anything", 2*time.Second)
+	rootCtx.Send(game, &jasonsgame.UserInput{Message: "refresh"})
+
+	stream.ExpectMessage("not allowed", 2*time.Second)
 	rootCtx.Send(game, &jasonsgame.UserInput{Message: "drop will fail"})
-	rootCtx.Send(game, &jasonsgame.UserInput{Message: "look around"})
 	stream.Wait()
 
 	stream.ExpectMessage("obj-to-drop", 2*time.Second)
