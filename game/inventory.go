@@ -172,6 +172,21 @@ func (inv *InventoryActor) handleCreateObject(actorCtx actor.Context, msg *Creat
 	var err error
 	name := msg.Name
 
+	exists, err := inv.inventory.DidForName(name)
+	if err != nil {
+		err = fmt.Errorf("error checking inventory chaintree: %v", err)
+		inv.Log.Error(err)
+		actorCtx.Respond(&CreateObjectResponse{Error: err})
+		return
+	}
+
+	if len(exists) > 0 {
+		actorCtx.Respond(&CreateObjectResponse{
+			Error: fmt.Errorf("object with name %s already exists; names must be unique", name),
+		})
+		return
+	}
+
 	object, err := CreateObjectTree(inv.network, name)
 
 	if err != nil {

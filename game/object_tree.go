@@ -43,17 +43,7 @@ func CreateObjectTree(net network.Network, name string) (*ObjectTree, error) {
 		return nil, fmt.Errorf("name is required to create an object")
 	}
 
-	chainTreeName := fmt.Sprintf("object:%s", name)
-
-	existingObj, err := net.GetChainTreeByName(chainTreeName)
-	if err != nil {
-		return nil, errors.Wrap(err, fmt.Sprintf("error checking for existing chaintree; object name: %s", name))
-	}
-	if existingObj != nil {
-		return nil, fmt.Errorf("object with name %s already exists; names must be unique", name)
-	}
-
-	objectChainTree, err := net.CreateNamedChainTree(chainTreeName)
+	objectChainTree, err := net.CreateChainTree()
 	if err != nil {
 		return nil, errors.Wrap(err, "error creating object chaintree")
 	}
