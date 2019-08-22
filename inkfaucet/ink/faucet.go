@@ -8,7 +8,7 @@ import (
 	"github.com/AsynkronIT/protoactor-go/actor"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/gogo/protobuf/proto"
-	"github.com/ipfs/go-cid"
+	cid "github.com/ipfs/go-cid"
 	logging "github.com/ipfs/go-log"
 	"github.com/pkg/errors"
 	"github.com/quorumcontrol/messages/build/go/transactions"
@@ -175,7 +175,7 @@ func (cti *ChainTreeInkFaucet) RequestInk(amount uint64, destinationChainId stri
 }
 
 func (cti *ChainTreeInkFaucet) TokenName() *consensus.TokenName {
-	return &consensus.TokenName{ChainTreeDID: cti.inkOwnerId, LocalName: "ink"}
+	return cti.net.InkTokenName()
 }
 
 func (cti *ChainTreeInkFaucet) ChainTreeDID() string {
