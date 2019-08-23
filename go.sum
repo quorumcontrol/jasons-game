@@ -807,6 +807,7 @@ github.com/quorumcontrol/messages/build/go v0.0.0-20190530182608-30c127bffefb/go
 github.com/quorumcontrol/messages/build/go v0.0.0-20190722093818-0def9b3a6501/go.mod h1:QLQVe/V3WcoFNglaJXmoRNs8u+KbsNd5MXeOaa77zgw=
 github.com/quorumcontrol/messages/build/go v0.0.0-20190723140659-c8a3565a7c72 h1:qwwsvUXKWX61goPIFIaUU8YlpU9RqlH1wqO97TlD+gc=
 github.com/quorumcontrol/messages/build/go v0.0.0-20190723140659-c8a3565a7c72/go.mod h1:QLQVe/V3WcoFNglaJXmoRNs8u+KbsNd5MXeOaa77zgw=
+github.com/quorumcontrol/tupelo-go-sdk v0.5.2 h1:eDsshQ/FQF85adofDSLXETwXOKfsua6Jm2/79x1+NwA=
 github.com/quorumcontrol/tupelo-go-sdk v0.5.3-rc1 h1:sfTVH/BZacRWpUNU6NvK5fKmTw8OfN21zl/HOZ/RG7k=
 github.com/quorumcontrol/tupelo-go-sdk v0.5.3-rc1/go.mod h1:VY2n56lrSVcIEYg8dPZGaI58ssJe/g3fuQnmEcUcer4=
 github.com/quorumcontrol/tupelo-go-sdk v0.5.3-rc2.0.20190729193835-fd24148756d5 h1:tMvUXdmnSJ65cGPJoFXKLX3eZ1l2q7BICQSChPgGZiw=

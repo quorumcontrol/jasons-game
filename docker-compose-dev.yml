@@ -144,7 +144,7 @@ services:
       - -v
       - -tags
       - 'internal integration'
-      - -timeout=5m
+      - -timeout=10m
       - ${TEST_PACKAGE-./...}
     volumes:
       - .:/app:delegated

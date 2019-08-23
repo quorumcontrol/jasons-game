@@ -18,6 +18,11 @@ import (
 )
 
 func main() {
+	err := logging.SetLogLevel("importer", "debug")
+	if err != nil {
+		panic(err)
+	}
+
 	importPath := flag.String("path", "", "which directory to import")
 	local := flag.Bool("local", false, "connect to localnet & use localstack S3 instead of testnet & real S3")
 	logLevel := flag.String("log", "debug", "log level for importer")
@@ -27,7 +32,6 @@ func main() {
 		panic(fmt.Errorf("Must set -path to directory to import"))
 	}
 
-	var err error
 	ctx := context.Background()
 
 	err = logging.SetLogLevel("importer", *logLevel)
