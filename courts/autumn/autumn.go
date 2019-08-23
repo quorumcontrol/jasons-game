@@ -3,6 +3,7 @@ package autumn
 import (
 	"context"
 	"crypto/ecdsa"
+	"crypto/sha256"
 	"path/filepath"
 
 	"time"
@@ -187,7 +188,8 @@ func (c *AutumnCourt) Receive(actorCtx actor.Context) {
 }
 
 func findOrCreateNamedTree(net network.Network, name string) (*consensus.SignedChainTree, error) {
-	treeKey, err := consensus.PassPhraseKey(crypto.FromECDSA(net.PrivateKey()), []byte(name))
+	seed := sha256.Sum256([]byte(name))
+	treeKey, err := consensus.PassPhraseKey(crypto.FromECDSA(net.PrivateKey()), seed[:32])
 	if err != nil {
 		return nil, errors.Wrap(err, "setting up named tree keys")
 	}
@@ -207,7 +209,6 @@ func findOrCreateNamedTree(net network.Network, name string) (*consensus.SignedC
 			crypto.PubkeyToAddress(treeKey.PublicKey).String(),
 			crypto.PubkeyToAddress(*net.PublicKey()).String(),
 		})
-
 		if err != nil {
 			return nil, errors.Wrap(err, "chowning court chaintree")
 		}

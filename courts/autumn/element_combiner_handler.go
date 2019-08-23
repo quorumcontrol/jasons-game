@@ -1,8 +1,10 @@
 package autumn
 
 import (
+	"crypto/sha256"
 	"fmt"
 
+	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/gogo/protobuf/proto"
 	"github.com/pkg/errors"
 	"github.com/quorumcontrol/jasons-game/game"
@@ -192,6 +194,7 @@ func (h *ElementCombinerHandler) handlePickupElement(msg *jasonsgame.RequestObje
 	if err != nil {
 		return sender.Errorf("could not fetch player tree")
 	}
+	playerInventory := trees.NewInventoryTree(h.net, playerTree)
 
 	elementsUncast, err := comboObject.GetPath([]string{comboObjectElementsPath})
 	if err != nil {
@@ -213,9 +216,16 @@ func (h *ElementCombinerHandler) handlePickupElement(msg *jasonsgame.RequestObje
 	}
 
 	newElement := h.findCombinedElement(elementIds)
-	log.Debugf("combining %v, result was %v, new name %s", elementIds, newElement.ID, newElement.Name())
+	log.Debugf("combining %v, result was %d (%s)", elementIds, newElement.ID, newElement.Name())
 
-	// TODO: check player can't pickup new element becausee one already exists
+	existing, err := playerInventory.DidForName(newElement.Name())
+	if err != nil {
+		return sender.Errorf("could not fetch player inventory")
+	}
+	// if player already has object, return error
+	if len(existing) > 0 {
+		return sender.Errorf("can not pick up %s, one already exists in your inventory", newElement.Name())
+	}
 
 	err = inventory.Remove(comboObject.MustId())
 	if err != nil {
@@ -235,12 +245,68 @@ func (h *ElementCombinerHandler) handlePickupElement(msg *jasonsgame.RequestObje
 		return sender.Errorf("could not update new element tree")
 	}
 	// TODO inscribe origin elements descriptions ordered by id
+
+	comboObject, err = h.signOrigin(comboObject)
+	if err != nil {
+		return sender.Errorf("could not update new element tree")
+	}
 	err = comboObject.ChangeChainTreeOwner(playerAuths)
 	if err != nil {
 		return sender.Errorf("could not update new element tree")
 	}
 
 	return sender.Send()
+}
+
+func (h *ElementCombinerHandler) signOrigin(object *game.ObjectTree) (*game.ObjectTree, error) {
+	name, err := object.GetName()
+	if err != nil {
+		return object, err
+	}
+	hash := sha256.Sum256([]byte(object.MustId() + name))
+	sig, err := crypto.Sign(hash[:32], h.net.PrivateKey())
+	if err != nil {
+		return object, err
+	}
+	err = object.UpdatePath([]string{"origin-sig"}, sig)
+	return object, err
+}
+
+func (h *ElementCombinerHandler) validateObjectOrigin(object *game.ObjectTree) (bool, error) {
+	elementName, err := object.GetName()
+	if err != nil {
+		return false, err
+	}
+	elementID := elementNameToId(elementName)
+
+	element, ok := h.elements[elementID]
+	if !ok {
+		return false, fmt.Errorf("element %d not found", elementID)
+	}
+	if element.SkipOriginValidation {
+		return true, nil
+	}
+
+	// This verifies that this service created the object, and that
+	// the name was not tampered with
+	originSigUncast, err := object.GetPath([]string{"origin-sig"})
+	if err != nil {
+		return false, fmt.Errorf("error fetching object tree %v", err)
+	}
+	if originSigUncast == nil {
+		return false, fmt.Errorf("object not created by combiner, failing 1")
+	}
+	originSig, ok := originSigUncast.([]byte)
+	if !ok {
+		return false, fmt.Errorf("object not created by combiner, failing 2")
+	}
+	originSigNoRecoveryID := originSig[:len(originSig)-1] // remove recovery ID
+	hash := sha256.Sum256([]byte(object.MustId() + elementName))
+	isValid := crypto.VerifySignature(crypto.FromECDSAPub(h.net.PublicKey()), hash[:32], originSigNoRecoveryID)
+	if !isValid {
+		return false, fmt.Errorf("object not created by combiner, failing 3")
+	}
+	return true, nil
 }
 
 func (h *ElementCombinerHandler) handleReceiveElement(msg *jasonsgame.TransferredObjectMessage) error {
@@ -255,9 +321,14 @@ func (h *ElementCombinerHandler) handleReceiveElement(msg *jasonsgame.Transferre
 		return fmt.Errorf("error fetching object chaintree %s: %v", msg.Object, err)
 	}
 
-	// TODO: check player matches
-	// TODO: check validity of incoming object
-	// TODO: verify this service created all elements, except those spawned in mines
+	isValid, err := h.validateObjectOrigin(incomingObject)
+	if err != nil {
+		log.Error(err)
+		return err
+	}
+	if !isValid {
+		return fmt.Errorf("invalid origin of incoming object")
+	}
 
 	handlerAuths, err := h.handlerAuthentications()
 	if err != nil {

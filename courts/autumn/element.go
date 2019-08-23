@@ -10,8 +10,9 @@ import (
 const elementNamePrefix = "element-"
 
 type element struct {
-	ID          int    `yaml:"id"`
-	Description string `yaml:"description"`
+	ID                   int    `yaml:"id"`
+	Description          string `yaml:"description"`
+	SkipOriginValidation bool   `yaml:"skip_origin_validation"`
 }
 
 func (e *element) Name() string {

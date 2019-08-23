@@ -3,12 +3,15 @@ elements:
   description: "fail element"
 - id: 100
   description: "element with id of 100"
+  skip_origin_validation: true
 - id: 200
   description: "element with id of 200"
+  skip_origin_validation: true
 - id: 300
   description: "element with id of 300"
 - id: 600
   description: "element with id of 600"
+unprotected_elements: [100, 200]
 weaver:
 - from: [100, 200]
   to: 300
