@@ -93,10 +93,10 @@ GameServiceClient.prototype.receiveUIMessages = function receiveUIMessages(reque
       });
     },
     onEnd: function (status, statusMessage, trailers) {
-      listeners.end.forEach(function (handler) {
-        handler();
-      });
       listeners.status.forEach(function (handler) {
+        handler({ code: status, details: statusMessage, metadata: trailers });
+      });
+      listeners.end.forEach(function (handler) {
         handler({ code: status, details: statusMessage, metadata: trailers });
       });
       listeners = null;
@@ -132,10 +132,10 @@ GameServiceClient.prototype.receiveStatMessages = function receiveStatMessages(r
       });
     },
     onEnd: function (status, statusMessage, trailers) {
-      listeners.end.forEach(function (handler) {
-        handler();
-      });
       listeners.status.forEach(function (handler) {
+        handler({ code: status, details: statusMessage, metadata: trailers });
+      });
+      listeners.end.forEach(function (handler) {
         handler({ code: status, details: statusMessage, metadata: trailers });
       });
       listeners = null;

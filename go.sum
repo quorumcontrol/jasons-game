@@ -9,6 +9,8 @@ github.com/AsynkronIT/gonet v0.0.0-20161127091928-0553637be225/go.mod h1:RwIiSK8
 github.com/AsynkronIT/protoactor-go v0.0.0-20190318154652-aa1aa20c2fa0/go.mod h1:epiX5WPp/IREW6YCKc6fAgSc50VZ6nROlNh5mPKSa7s=
 github.com/AsynkronIT/protoactor-go v0.0.0-20190429152931-21e2d03dcae5 h1:FM75licnAU2Jbo+9TxXLJmd712/f4cOwyuZF8uI0TWA=
 github.com/AsynkronIT/protoactor-go v0.0.0-20190429152931-21e2d03dcae5/go.mod h1:zFQR0CTJv3Wb3wCpUR01gvk1ilT+5tGNkSL8GqdNQLU=
+github.com/AsynkronIT/protoactor-go v0.0.0-20190821183243-5bb73de32899 h1:p56NkOVRgmozLlUPeBuFnejRIhm9FR1iBLH+r6F9i38=
+github.com/AsynkronIT/protoactor-go v0.0.0-20190821183243-5bb73de32899/go.mod h1:zFQR0CTJv3Wb3wCpUR01gvk1ilT+5tGNkSL8GqdNQLU=
 github.com/BurntSushi/toml v0.3.1 h1:WXkYYl6Yr3qBf1K79EBnL4mak0OimBfB0XUf9Vl28OQ=
 github.com/BurntSushi/toml v0.3.1/go.mod h1:xHWCNGjB5oqiDr8zfno3MHue2Ht5sIBksp03qcyfWMU=
 github.com/Kubuxu/go-os-helper v0.0.1/go.mod h1:N8B+I7vPCT80IcP58r50u4+gEEcsZETFUpAzWW2ep1Y=
@@ -289,6 +291,8 @@ github.com/ipfs/go-ds-leveldb v0.0.2 h1:P5HB59Zblym0B5XYOeEyw3YtPtbpIqQCavCSWaWE
 github.com/ipfs/go-ds-leveldb v0.0.2/go.mod h1:CWFeBh5IAAscWyG/QRH+lJaAlnLWjsfPSNs4teyPUp0=
 github.com/ipfs/go-ds-measure v0.0.1 h1:PrCueug+yZLkDCOthZTXKinuoCal/GvlAT7cNxzr03g=
 github.com/ipfs/go-ds-measure v0.0.1/go.mod h1:wiH6bepKsgyNKpz3nyb4erwhhIVpIxnZbsjN1QpVbbE=
+github.com/ipfs/go-ds-s3 v0.0.1 h1:0OugsGvXot2xZTC+NnuKJyChAidgZOnF5LGmErfXNfM=
+github.com/ipfs/go-ds-s3 v0.0.1/go.mod h1:hG7FVZ7rg+6RqNmu91nnYA3P3l2OHc/EZvqSciKqVz8=
 github.com/ipfs/go-fs-lock v0.0.1 h1:XHX8uW4jQBYWHj59XXcjg7BHlHxV9ZOYs6Y43yb7/l0=
 github.com/ipfs/go-fs-lock v0.0.1/go.mod h1:DNBekbboPKcxs1aukPSaOtFA3QfSdi5C855v0i9XJ8Y=
 github.com/ipfs/go-ipfs v0.4.22-rc1 h1:XL6Fa6EDS3BKlOuJhFiFfmXEfx0KJT0xyvcnEIUDu0U=
@@ -817,6 +821,8 @@ github.com/rogpeppe/go-internal v1.3.0 h1:RR9dF3JtopPvtkroDZuVD7qquD0bnHlKSqaQhg
 github.com/rogpeppe/go-internal v1.3.0/go.mod h1:M8bDsm7K2OlrFYOpmOWEs/qY81heoFRclV5y23lUDJ4=
 github.com/rs/cors v1.6.0 h1:G9tHG9lebljV9mfp9SNPDL36nCDxmo3zTlAf1YgvzmI=
 github.com/rs/cors v1.6.0/go.mod h1:gFx+x8UowdsKA9AchylcLynDq+nNFfI8FkUZdN/jGCU=
+github.com/rs/cors v1.7.0 h1:+88SsELBHx5r+hZ8TCkggzSstaWNbDvThkVK8H6f9ik=
+github.com/rs/cors v1.7.0/go.mod h1:gFx+x8UowdsKA9AchylcLynDq+nNFfI8FkUZdN/jGCU=
 github.com/russross/blackfriday v1.5.2/go.mod h1:JO/DiYxRf+HjHt06OyowR9PTA263kcR/rfWxYHBV53g=
 github.com/ryanuber/columnize v0.0.0-20160712163229-9b3edd62028f/go.mod h1:sm1tb6uqfes/u+d4ooFouqFdy9/2g9QGwK3SQygK0Ts=
 github.com/ryanuber/go-glob v0.0.0-20170128012129-256dc444b735/go.mod h1:807d1WSdnB0XRJzKNil9Om6lcp/3a0v4qIHxIXzX/Yc=
@@ -998,6 +1004,7 @@ golang.org/x/net v0.0.0-20181217023233-e147a9138326/go.mod h1:mL1N/T3taQHkDXs73r
 golang.org/x/net v0.0.0-20181220203305-927f97764cc3/go.mod h1:mL1N/T3taQHkDXs73rZJwtUhF3w3ftmwwsq0BUmARs4=
 golang.org/x/net v0.0.0-20190213061140-3a22650c66bd/go.mod h1:mL1N/T3taQHkDXs73rZJwtUhF3w3ftmwwsq0BUmARs4=
 golang.org/x/net v0.0.0-20190227160552-c95aed5357e7/go.mod h1:mL1N/T3taQHkDXs73rZJwtUhF3w3ftmwwsq0BUmARs4=
+golang.org/x/net v0.0.0-20190301231341-16b79f2e4e95/go.mod h1:mL1N/T3taQHkDXs73rZJwtUhF3w3ftmwwsq0BUmARs4=
 golang.org/x/net v0.0.0-20190310074541-c10a0554eabf/go.mod h1:mL1N/T3taQHkDXs73rZJwtUhF3w3ftmwwsq0BUmARs4=
 golang.org/x/net v0.0.0-20190311183353-d8887717615a/go.mod h1:t9HGtf8HONx5eT2rtn7q6eTqICYqUVnKs3thJo3Qplg=
 golang.org/x/net v0.0.0-20190313220215-9f648a60d977/go.mod h1:t9HGtf8HONx5eT2rtn7q6eTqICYqUVnKs3thJo3Qplg=

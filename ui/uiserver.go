@@ -98,7 +98,7 @@ func (us *UIServer) Receive(actorCtx actor.Context) {
 
 	case *jasonsgame.MessageToUser:
 		actorCtx.SetReceiveTimeout(5 * time.Second)
-		log.Debugf("message to user: %s", msg.Message)
+		log.Debugf("message to user: %+v", msg)
 		if us.stream == nil {
 			log.Errorf("no valid stream for user message: %v", msg.Message)
 			return
@@ -145,9 +145,12 @@ func (us *UIServer) Receive(actorCtx actor.Context) {
 			if err != nil {
 				log.Errorf("error waiting for future: %v", err)
 			}
-			log.Debugf("received response from game")
+			log.Debugf("received response from game: %+v", res)
 			if sender := actorCtx.Sender(); sender != nil {
+				log.Debug("forwarding response")
 				actorCtx.Respond(res)
+			} else {
+				log.Debug("no sender; not forwarding response")
 			}
 			return
 		}
