@@ -4,22 +4,22 @@
   "version": "0.0.1",
   "private": true,
   "devDependencies": {
-    "shadow-cljs": "2.8.36"
+    "shadow-cljs": "^2.8.51"
   },
   "dependencies": {
-    "@improbable-eng/grpc-web": "^0.9.2",
-    "@types/google-protobuf": "^3.2.7",
+    "@improbable-eng/grpc-web": "^0.11.0",
+    "@types/google-protobuf": "^3.7.1",
     "create-react-class": "^15.6.3",
-    "google-protobuf": "^3.8.0-rc.1",
-    "grpc-web": "^1.0.4",
+    "google-protobuf": "^3.9.1",
+    "grpc-web": "^1.0.6",
     "highlight.js": "^9.15.8",
-    "javascript-terminal": "^1.0.2",
+    "javascript-terminal": "^1.0.3",
     "react": "^16.8.6",
     "react-dom": "^16.8.6",
     "react-flip-move": "^3.0.3",
     "react-highlight.js": "^1.0.7",
-    "react-terminal-component": "^1.4.0",
-    "semantic-ui-react": "^0.86.0",
-    "ts-protoc-gen": "^0.9.0"
+    "react-terminal-component": "^1.4.1",
+    "semantic-ui-react": "^0.88.0",
+    "ts-protoc-gen": "^0.10.0"
   }
 }
