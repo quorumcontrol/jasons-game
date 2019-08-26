@@ -446,7 +446,12 @@ func (n *RemoteNetwork) SendInk(tree *consensus.SignedChainTree, amount uint64, 
 
 	log.Debugf("send ink transaction: %+v", *transaction)
 
-	txResp, err := n.Tupelo.PlayTransactions(tree, n.PrivateKey(), []*transactions.Transaction{transaction})
+	burnTransaction, err := n.inkBurnTransaction(tree)
+	if err != nil {
+		return nil, err
+	}
+
+	txResp, err := n.Tupelo.PlayTransactions(tree, n.PrivateKey(), []*transactions.Transaction{burnTransaction, transaction})
 	if err != nil {
 		return nil, errors.Wrap(err, "error playing ink send token transaction")
 	}
@@ -468,6 +473,20 @@ func (n *RemoteNetwork) SendInk(tree *consensus.SignedChainTree, amount uint64, 
 	log.Debugf("send ink token payload: %+v", *tokenPayload)
 
 	return tokenPayload, nil
+}
+
+func (n *RemoteNetwork) inkBurnTransaction(tree *consensus.SignedChainTree) (*transactions.Transaction, error) {
+	transactionId, err := uuid.NewRandom()
+	if err != nil {
+		return nil, errors.Wrap(err, "error generating ink burn transaction ID")
+	}
+
+	transaction, err := chaintree.NewSendTokenTransaction(transactionId.String(), n.InkTokenName().String(), n.Tupelo.NotaryGroup.Config().BurnAmount, "")
+	if err != nil {
+		return nil, errors.Wrap(err, "error generating ink burn transaction")
+	}
+
+	return transaction, nil
 }
 
 func GameBootstrappers() []string {
