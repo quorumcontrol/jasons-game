@@ -82,21 +82,28 @@ func NewGameProps(cfg *GameConfig) *actor.Props {
 }
 
 func (g *Game) Receive(actorCtx actor.Context) {
+	log.Debugf("received message to dispatch to current behavior: %+v", actorCtx.Message())
 	g.behavior.Receive(actorCtx)
 }
 
 func (g *Game) ReceiveInvitation(actorCtx actor.Context) {
 	switch msg := actorCtx.Message().(type) {
 	case *actor.Started:
+		log.Debug("actor started in invitation mode")
 		g.initializeInvitation(actorCtx)
 	case *actor.Stopping:
+		log.Debug("stopping actor in invitation mode; poisoning invite actor too")
 		actorCtx.Poison(g.invitesActor)
 	case *jasonsgame.UserInput:
+		log.Debugf("actor received user input in invitation mode: %+v", msg)
 		g.handleInvitationInput(actorCtx, msg)
 	case *jasonsgame.CommandUpdate:
+		log.Debugf("received command update request in invitation mode: %+v", msg)
 		g.sendInvitationCommandUpdate(actorCtx)
 	case *ping:
 		actorCtx.Respond(true)
+	case *actor.Terminated:
+		log.Info("actor terminated in invitation mode")
 	default:
 		log.Warningf("received message of unrecognized type %T in invitation mode: %+v", msg, msg)
 	}
@@ -105,17 +112,24 @@ func (g *Game) ReceiveInvitation(actorCtx actor.Context) {
 func (g *Game) ReceiveGame(actorCtx actor.Context) {
 	switch msg := actorCtx.Message().(type) {
 	case *actor.Started:
+		log.Debug("actor started in game mode")
 		g.initializeGame(actorCtx)
 	case *jasonsgame.UserInput:
+		log.Debugf("actor received user input: %+v", msg)
 		g.handleUserInput(actorCtx, msg)
 	case *jasonsgame.CommandUpdate:
+		log.Debugf("actor received command update request: %+v", msg)
 		g.sendCommandUpdate(actorCtx)
 	case *jasonsgame.ChatMessage, *jasonsgame.ShoutMessage:
+		log.Debugf("actor received chat / shout message: %+v", msg)
 		g.sendUserMessage(actorCtx, msg)
 	case *StateChange:
+		log.Debugf("actor received state change message: %+v", msg)
 		g.handleStateChange(actorCtx, msg)
 	case *ping:
 		actorCtx.Respond(true)
+	case *actor.Terminated:
+		log.Infof("actor terminated: %s", msg)
 	default:
 		log.Warningf("received message of unrecognized type %T: %+v", msg, msg)
 	}
@@ -369,6 +383,8 @@ func (g *Game) handleTipZoom(actorCtx actor.Context, tip string) error {
 func (g *Game) handleInteractionInput(actorCtx actor.Context, cmd *interactionCommand, args string) error {
 	var err error
 
+	log.Debugf("handling interaction type %T", cmd.interaction)
+
 	switch interaction := cmd.interaction.(type) {
 	case *RespondInteraction:
 		g.sendUserMessage(actorCtx, interaction.Response)
@@ -377,7 +393,9 @@ func (g *Game) handleInteractionInput(actorCtx actor.Context, cmd *interactionCo
 	case *DeletePortalInteraction:
 		err = g.handleDeletePortal(actorCtx, args)
 	case *ChangeLocationInteraction:
+		log.Debugf("setting new location to %s", interaction.Did)
 		g.setLocation(actorCtx, interaction.Did)
+		log.Debug("sending new location to UI")
 		g.sendUILocation(actorCtx)
 	case *DropObjectInteraction:
 		err = g.handleDropObject(actorCtx, cmd, interaction)
@@ -756,22 +774,29 @@ func (g *Game) sendInvitationCommandUpdate(actorCtx actor.Context) {
 func (g *Game) setLocation(actorCtx actor.Context, locationDid string) {
 	oldLocationActor := g.locationActor
 	if oldLocationActor != nil {
+		log.Debug("found old location actor; sending stop message")
 		actorCtx.Stop(g.locationActor)
 	}
+
+	log.Debug("spawning new location actor")
 	g.locationActor = actorCtx.Spawn(NewLocationActorProps(&LocationActorConfig{
 		Network: g.network,
 		Did:     locationDid,
 	}))
 	g.locationDid = locationDid
 
+	log.Debug("replacing interactions for new location")
 	err := g.replaceInteractionsFor(actorCtx, g.locationActor, oldLocationActor)
 	if err != nil {
 		panic(errors.Wrap(err, "error attaching interactions for location"))
 	}
 
 	if g.chatActor != nil {
+		log.Debug("chat actor found; sending stop message")
 		actorCtx.Stop(g.chatActor)
 	}
+
+	log.Debug("spawning new chat actor")
 	g.chatActor = actorCtx.Spawn(NewChatActorProps(&ChatActorConfig{
 		Did:       locationDid,
 		Community: g.network.Community(),
@@ -795,19 +820,25 @@ func (g *Game) refreshAllInteractions(actorCtx actor.Context) error {
 
 func (g *Game) replaceInteractionsFor(actorCtx actor.Context, pid *actor.PID, oldPid *actor.PID) error {
 	if oldPid != nil {
+		log.Debug("deleting stale commands actor PID from cache")
 		delete(g.commandsByActorCache, oldPid)
 	}
 	return g.refreshInteractionsFor(actorCtx, pid)
 }
 
 func (g *Game) refreshInteractionsFor(actorCtx actor.Context, pid *actor.PID) error {
+	log.Debug("refreshing interactions for location actor")
+
 	if g.commandsByActorCache == nil {
 		g.commandsByActorCache = make(map[*actor.PID]commandList)
 	}
 	var err error
+
+	log.Debug("updating commandsByActorCache")
 	g.commandsByActorCache[pid], err = g.interactionCommandsFor(actorCtx, pid)
 
 	if err != nil {
+		log.Errorf("error updating commandsByActorCache: %+v", err)
 		return err
 	}
 
@@ -816,6 +847,7 @@ func (g *Game) refreshInteractionsFor(actorCtx actor.Context, pid *actor.PID) er
 		newCommands = append(newCommands, commands...)
 	}
 
+	log.Debugf("setting commands to %+v", newCommands)
 	g.setCommands(actorCtx, newCommands)
 	return nil
 }
