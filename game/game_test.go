@@ -55,39 +55,6 @@ func TestSetDescription(t *testing.T) {
 	stream.Wait()
 }
 
-func TestCallMe(t *testing.T) {
-	rootCtx := actor.EmptyRootContext
-	net := network.NewLocalNetwork()
-	stream := ui.NewTestStream(t)
-
-	simulatedUI, err := rootCtx.SpawnNamed(ui.NewUIProps(stream, net), "test-callme-ui")
-	require.Nil(t, err)
-	defer rootCtx.Stop(simulatedUI)
-
-	playerChain, err := net.CreateNamedChainTree("player")
-	require.Nil(t, err)
-	playerTree, err := CreatePlayerTree(net, playerChain.MustId())
-	require.Nil(t, err)
-
-	gameCfg := &GameConfig{PlayerTree: playerTree, UiActor: simulatedUI, Network: net}
-	game, err := rootCtx.SpawnNamed(NewGameProps(gameCfg), "test-callme-game")
-	require.Nil(t, err)
-	defer rootCtx.Stop(game)
-
-	newName := "Johnny B Good"
-
-	rootCtx.Send(game, &jasonsgame.UserInput{Message: "call me " + newName})
-	time.Sleep(100 * time.Millisecond)
-
-	tree, err := net.GetTree(playerChain.MustId())
-	require.Nil(t, err)
-
-	pt := NewPlayerTree(net, tree)
-	player, err := pt.Player()
-	require.Nil(t, err)
-	require.Equal(t, newName, player.Name)
-}
-
 func TestBuildPortal(t *testing.T) {
 	net := network.NewLocalNetwork()
 	stream := ui.NewTestStream(t)
