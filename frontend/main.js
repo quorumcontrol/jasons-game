@@ -22,7 +22,7 @@ function startGame() {
 function runBackendExecutable(path) {
     process.env.GOLOG_FILE = logPath(os.platform());
 
-    game = spawn(path);
+    game = spawn(path, [], {stdio: 'ignore'});
 
     game.on('error', (err) => {
         throw Error(`Error launching game backend: ${err}`);
