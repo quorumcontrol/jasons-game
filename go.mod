@@ -3,10 +3,11 @@ module github.com/quorumcontrol/jasons-game
 go 1.12
 
 require (
-	github.com/AsynkronIT/protoactor-go v0.0.0-20190429152931-21e2d03dcae5
+	github.com/AsynkronIT/protoactor-go v0.0.0-20190821183243-5bb73de32899
 	github.com/btcsuite/btcutil v0.0.0-20190425235716-9e5f4b9a998d
 	github.com/dgraph-io/badger v1.6.0 // indirect
 	github.com/ethereum/go-ethereum v1.8.27
+	github.com/go-stack/stack v1.8.0 // indirect
 	github.com/gobuffalo/packr/v2 v2.5.3-0.20190708182234-662c20c19dde
 	github.com/gogo/protobuf v1.2.1
 	github.com/google/uuid v1.1.1
@@ -33,6 +34,7 @@ require (
 	github.com/quorumcontrol/community v0.0.0-20190722000000-5f668465bdd9673c3cfbe29771e54f221432cf9c
 	github.com/quorumcontrol/messages/build/go v0.0.0-20190723140659-c8a3565a7c72
 	github.com/quorumcontrol/tupelo-go-sdk v0.5.3-rc2.0.20190729193835-fd24148756d5
+	github.com/rs/cors v1.7.0 // indirect
 	github.com/shibukawa/configdir v0.0.0-20170330084843-e180dbdc8da0
 	github.com/spf13/cobra v0.0.5
 	github.com/stretchr/testify v1.3.0
@@ -45,5 +47,3 @@ require (
 replace github.com/libp2p/go-libp2p-pubsub v0.1.0 => github.com/quorumcontrol/go-libp2p-pubsub v0.0.4-0.20190528094025-e4e719f73e7a
 
 replace github.com/gobuffalo/packr/v2 v2.5.1 => github.com/gobuffalo/packr/v2 v2.5.3-0.20190708182234-662c20c19dde
-
-replace github.com/ipfs/go-ds-s3 => github.com/quorumcontrol/go-ds-s3 v0.0.0-20190708184745-fb4c5d307fbc
