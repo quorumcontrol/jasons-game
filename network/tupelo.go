@@ -3,10 +3,8 @@ package network
 import (
 	"crypto/ecdsa"
 
-	"github.com/ipfs/go-cid"
-
+	cid "github.com/ipfs/go-cid"
 	"github.com/pkg/errors"
-	"github.com/quorumcontrol/chaintree/chaintree"
 	"github.com/quorumcontrol/chaintree/nodestore"
 	"github.com/quorumcontrol/messages/build/go/signatures"
 	"github.com/quorumcontrol/messages/build/go/transactions"
@@ -68,18 +66,6 @@ func (t *Tupelo) CreateChainTree(key *ecdsa.PrivateKey) (*consensus.SignedChainT
 	defer c.Stop()
 
 	return tree, nil
-}
-
-func (t *Tupelo) UpdateChainTree(tree *consensus.SignedChainTree, key *ecdsa.PrivateKey, path string, value interface{}) error {
-	log.Debug("UpdateChainTree", "did", tree.MustId(), "path", path, "value", value)
-
-	transaction, err := chaintree.NewSetDataTransaction(path, value)
-	if err != nil {
-		return errors.Wrap(err, "error creating set data transaction")
-	}
-
-	_, err = t.PlayTransactions(tree, key, []*transactions.Transaction{transaction})
-	return err
 }
 
 func (t *Tupelo) PlayTransactions(tree *consensus.SignedChainTree, key *ecdsa.PrivateKey, transactions []*transactions.Transaction) (*consensus.AddBlockResponse, error) {

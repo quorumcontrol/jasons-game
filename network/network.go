@@ -350,7 +350,14 @@ func (n *RemoteNetwork) GetTreeByTip(tip cid.Cid) (*consensus.SignedChainTree, e
 
 func (n *RemoteNetwork) UpdateChainTree(tree *consensus.SignedChainTree, path string, value interface{}) (*consensus.SignedChainTree, error) {
 	log.Debug("updateTree", tree.MustId(), path, value)
-	err := n.Tupelo.UpdateChainTree(tree, n.PrivateKey(), path, value)
+
+	transaction, err := chaintree.NewSetDataTransaction(path, value)
+	if err != nil {
+		return nil, errors.Wrap(err, "error creating set data transaction")
+	}
+
+	_, err = n.Tupelo.PlayTransactions(tree, n.PrivateKey(), []*transactions.Transaction{transaction})
+
 	if err != nil {
 		return nil, errors.Wrap(err, "error updating chaintree")
 	}

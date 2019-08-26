@@ -20,7 +20,7 @@ func TestCreateChainTree(t *testing.T) {
 	require.Nil(t, err)
 
 	net, err := NewRemoteNetworkWithConfig(ctx, &RemoteNetworkConfig{
-		NotaryGroup: group,
+		NotaryGroup:   group,
 		KeyValueStore: config.MemoryDataStore(),
 	})
 	require.Nil(t, err)
@@ -41,7 +41,7 @@ func TestGetTip(t *testing.T) {
 	require.Nil(t, err)
 
 	net, err := NewRemoteNetworkWithConfig(ctx, &RemoteNetworkConfig{
-		NotaryGroup: group,
+		NotaryGroup:   group,
 		KeyValueStore: config.MemoryDataStore(),
 	})
 	require.Nil(t, err)
@@ -53,7 +53,7 @@ func TestGetTip(t *testing.T) {
 
 	tree, err := tup.CreateChainTree(key)
 	require.Nil(t, err)
-	err = tup.UpdateChainTree(tree, key, "foo", "bar")
+	err = net.UpdateChainTree(tree, "foo", "bar")
 	require.Nil(t, err)
 
 	time.Sleep(100 * time.Millisecond)
