@@ -21,6 +21,7 @@ import (
 	"github.com/quorumcontrol/jasons-game/network"
 	"github.com/quorumcontrol/jasons-game/pb/jasonsgame"
 	"github.com/quorumcontrol/jasons-game/ui"
+	"github.com/quorumcontrol/jasons-game/utils/stringslice"
 )
 
 var log = logging.Logger("game")
@@ -314,7 +315,7 @@ func (g *Game) handleHelp(actorCtx actor.Context, args string) error {
 	toSend := indentedList{"available commands:"}
 
 	for _, c := range g.commands {
-		if !c.Hidden() && c.HelpGroup() == args {
+		if !c.Hidden() && c.HelpGroup() == args && !stringslice.Include(toSend, c.Parse()) {
 			toSend = append(toSend, c.Parse())
 		}
 	}
