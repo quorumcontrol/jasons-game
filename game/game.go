@@ -298,8 +298,6 @@ func (g *Game) handleUserInput(actorCtx actor.Context, input *jasonsgame.UserInp
 		err = g.handleConnectLocation(actorCtx, args)
 	case "help":
 		err = g.handleHelp(actorCtx, args)
-	case "name":
-		err = g.handleName(args)
 	case "interaction":
 		err = g.handleInteractionInput(actorCtx, cmd.(*interactionCommand), args)
 	default:
@@ -327,11 +325,6 @@ func (g *Game) handleHelp(actorCtx actor.Context, args string) error {
 
 	g.sendUserMessage(actorCtx, toSend)
 	return nil
-}
-
-func (g *Game) handleName(name string) error {
-	log.Debugf("handling set name to %s", name)
-	return g.playerTree.SetName(name)
 }
 
 func (g *Game) handleBuildPortal(actorCtx actor.Context, toDid string) error {
