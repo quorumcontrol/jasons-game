@@ -1,11 +1,11 @@
 package autumn
 
 import (
-	"crypto/sha256"
+	"context"
 	"fmt"
 
-	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/gogo/protobuf/proto"
+	"github.com/ipfs/go-cid"
 	"github.com/pkg/errors"
 	"github.com/quorumcontrol/jasons-game/game"
 	"github.com/quorumcontrol/jasons-game/game/trees"
@@ -13,6 +13,8 @@ import (
 	broadcastHandlers "github.com/quorumcontrol/jasons-game/handlers/broadcast"
 	"github.com/quorumcontrol/jasons-game/network"
 	"github.com/quorumcontrol/jasons-game/pb/jasonsgame"
+	"github.com/quorumcontrol/jasons-game/utils/stringslice"
+	"github.com/quorumcontrol/tupelo-go-sdk/consensus"
 )
 
 const combinationObjectName = "bowl"
@@ -246,30 +248,12 @@ func (h *ElementCombinerHandler) handlePickupElement(msg *jasonsgame.RequestObje
 	}
 	// TODO inscribe origin elements descriptions ordered by id
 
-	comboObject, err = h.signOrigin(comboObject)
-	if err != nil {
-		return sender.Errorf("could not update new element tree")
-	}
 	err = comboObject.ChangeChainTreeOwner(playerAuths)
 	if err != nil {
 		return sender.Errorf("could not update new element tree")
 	}
 
 	return sender.Send()
-}
-
-func (h *ElementCombinerHandler) signOrigin(object *game.ObjectTree) (*game.ObjectTree, error) {
-	name, err := object.GetName()
-	if err != nil {
-		return object, err
-	}
-	hash := sha256.Sum256([]byte(object.MustId() + name))
-	sig, err := crypto.Sign(hash[:32], h.net.PrivateKey())
-	if err != nil {
-		return object, err
-	}
-	err = object.UpdatePath([]string{"origin-sig"}, sig)
-	return object, err
 }
 
 func (h *ElementCombinerHandler) validateObjectOrigin(object *game.ObjectTree) (bool, error) {
@@ -287,25 +271,58 @@ func (h *ElementCombinerHandler) validateObjectOrigin(object *game.ObjectTree) (
 		return true, nil
 	}
 
-	// This verifies that this service created the object, and that
-	// the name was not tampered with
-	originSigUncast, err := object.GetPath([]string{"origin-sig"})
+	ownershipChanges, err := trees.OwnershipChanges(context.Background(), object.ChainTree().ChainTree)
 	if err != nil {
-		return false, fmt.Errorf("error fetching object tree %v", err)
+		return false, fmt.Errorf("error checking origin of element")
 	}
-	if originSigUncast == nil {
-		return false, fmt.Errorf("object not created by combiner, failing 1")
+
+	handlerAuths, err := h.handlerAuthentications()
+	if err != nil {
+		return false, fmt.Errorf("error checking origin of element")
 	}
-	originSig, ok := originSigUncast.([]byte)
-	if !ok {
+
+	var lastValidTip cid.Cid
+
+	// Iterate from oldest ownership change to current tip, checking each change to see
+	// if it moved out of ownership of this service. Once found, this can be considered the
+	// last valid origin state
+	for i := len(ownershipChanges) - 1; i >= 0; i-- {
+		authsMatchHandler := stringslice.All(ownershipChanges[i].Authentications, func(s string) bool {
+			return stringslice.Include(handlerAuths, s)
+		})
+
+		// This is the last tip not owned fully by this service
+		if !authsMatchHandler {
+			// This ensures this service created the object
+			if i == len(ownershipChanges) {
+				return false, fmt.Errorf("object not created by combiner, failing 1")
+			}
+
+			lastValidTip = ownershipChanges[i].Tip
+			break
+		}
+	}
+
+	if lastValidTip.Equals(cid.Undef) {
 		return false, fmt.Errorf("object not created by combiner, failing 2")
 	}
-	originSigNoRecoveryID := originSig[:len(originSig)-1] // remove recovery ID
-	hash := sha256.Sum256([]byte(object.MustId() + elementName))
-	isValid := crypto.VerifySignature(crypto.FromECDSAPub(h.net.PublicKey()), hash[:32], originSigNoRecoveryID)
-	if !isValid {
-		return false, fmt.Errorf("object not created by combiner, failing 3")
+
+	treeBeforeTransfer, err := object.ChainTree().ChainTree.At(context.Background(), &lastValidTip)
+	if err != nil {
+		return false, fmt.Errorf("error checking origin of element")
 	}
+
+	originObject := game.NewObjectTree(h.net, consensus.NewSignedChainTreeFromChainTree(treeBeforeTransfer))
+
+	originName, err := originObject.GetName()
+	if err != nil {
+		return false, fmt.Errorf("error checking origin of element")
+	}
+
+	if elementName != originName {
+		return false, fmt.Errorf("object name was modified, failing")
+	}
+
 	return true, nil
 }
 
@@ -347,7 +364,19 @@ func (h *ElementCombinerHandler) handleReceiveElement(msg *jasonsgame.Transferre
 		if err != nil {
 			return err
 		}
-	} else {
+
+		ownershipChanges, err := trees.OwnershipChanges(context.Background(), comboObject.ChainTree().ChainTree)
+		if err != nil {
+			return err
+		}
+
+		// This makes sure the player didn't create the object
+		if len(ownershipChanges) != 2 || stringslice.Equal(ownershipChanges[1].Authentications, handlerAuths) {
+			comboObject = nil
+		}
+	}
+
+	if comboObject == nil {
 		// use location tip for deterministically generating the next object so that
 		// this can run distributed and stateless
 		newTree, err := findOrCreateNamedTree(h.net, targetInventory.Tree().Tip().String())
@@ -361,12 +390,12 @@ func (h *ElementCombinerHandler) handleReceiveElement(msg *jasonsgame.Transferre
 			return err
 		}
 
-		err = comboObject.ChangeChainTreeOwner(handlerAuths)
+		err = comboObject.UpdatePath([]string{comboObjectPlayerPath}, msg.From)
 		if err != nil {
 			return err
 		}
 
-		err = comboObject.UpdatePath([]string{comboObjectPlayerPath}, msg.From)
+		err = comboObject.ChangeChainTreeOwner(handlerAuths)
 		if err != nil {
 			return err
 		}

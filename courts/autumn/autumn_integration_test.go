@@ -26,7 +26,10 @@ func TestAutumnCourt(t *testing.T) {
 	net, err := network.NewRemoteNetwork(ctx, group, config.MemoryDataStore())
 	require.Nil(t, err)
 
-	court := New(ctx, net, "../yml-test")
+	courtNet, err := network.NewRemoteNetwork(ctx, group, config.MemoryDataStore())
+	require.Nil(t, err)
+
+	court := New(ctx, courtNet, "../yml-test")
 	court.Start()
 
 	playerChain, err := net.CreateLocalChainTree("player")
@@ -88,7 +91,7 @@ func TestAutumnCourt(t *testing.T) {
 	for i := 0; i < len(cmdsAndResponses); i = i + 2 {
 		cmd := cmdsAndResponses[i]
 		response := cmdsAndResponses[i+1]
-		stream.ExpectMessage(response, 10*time.Second)
+		stream.ExpectMessage(response, 20*time.Second)
 		rootCtx.Send(gamePid, &jasonsgame.UserInput{Message: cmd})
 		stream.Wait()
 	}

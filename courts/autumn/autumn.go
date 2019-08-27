@@ -206,7 +206,6 @@ func findOrCreateNamedTree(net network.Network, name string) (*consensus.SignedC
 		}
 
 		tree, err = net.ChangeChainTreeOwnerWithKey(tree, treeKey, []string{
-			crypto.PubkeyToAddress(treeKey.PublicKey).String(),
 			crypto.PubkeyToAddress(*net.PublicKey()).String(),
 		})
 		if err != nil {
