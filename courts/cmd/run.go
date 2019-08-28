@@ -7,6 +7,7 @@ import (
 	"os/signal"
 
 	"github.com/quorumcontrol/jasons-game/courts/autumn"
+	"github.com/quorumcontrol/jasons-game/courts/spring"
 	"github.com/quorumcontrol/jasons-game/courts/summer"
 	"github.com/spf13/cobra"
 )
@@ -36,6 +37,8 @@ var runCourts = &cobra.Command{
 			switch courtName {
 			case "autumn":
 				court = autumn.New(ctx, net, configDir)
+			case "spring":
+				court = spring.New(ctx, net, configDir)
 			case "summer":
 				court = summer.New(ctx, net, configDir)
 			default:
