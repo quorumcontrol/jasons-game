@@ -33,6 +33,7 @@ message CreateObjectInteraction {
   string name = 2;
   string description = 3;
   bool   hidden = 4;
+  bool   with_inscriptions = 5;
 }
 
 message GetTreeValueInteraction {
