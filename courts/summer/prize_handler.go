@@ -7,6 +7,7 @@ import (
 	"github.com/gogo/protobuf/proto"
 	"github.com/pkg/errors"
 	"github.com/quorumcontrol/jasons-game/courts/config"
+	"github.com/quorumcontrol/jasons-game/courts/court"
 	"github.com/quorumcontrol/jasons-game/game"
 	"github.com/quorumcontrol/jasons-game/game/trees"
 	"github.com/quorumcontrol/jasons-game/handlers"
@@ -53,7 +54,7 @@ func (h *SummerPrizeHandler) setup() error {
 		return err
 	}
 
-	handlerTree, err := findOrCreateNamedTree(h.net, prizeHandlerTreeName)
+	handlerTree, err := court.FindOrCreateNamedTree(h.net, prizeHandlerTreeName)
 	if err != nil {
 		return err
 	}
@@ -142,7 +143,7 @@ func (h *SummerPrizeHandler) spawnObject() error {
 
 	// use location tip for deterministically generating the next object so that
 	// this can run distributed and stateless
-	objectChainTree, err := findOrCreateNamedTree(h.net, locTree.Tip().String())
+	objectChainTree, err := court.FindOrCreateNamedTree(h.net, locTree.Tip().String())
 	if err != nil {
 		return errors.Wrap(err, "error creating new object key")
 	}

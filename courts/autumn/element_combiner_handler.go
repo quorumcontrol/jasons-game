@@ -7,6 +7,7 @@ import (
 	"github.com/gogo/protobuf/proto"
 	"github.com/ipfs/go-cid"
 	"github.com/pkg/errors"
+	"github.com/quorumcontrol/jasons-game/courts/court"
 	"github.com/quorumcontrol/jasons-game/game"
 	"github.com/quorumcontrol/jasons-game/game/trees"
 	"github.com/quorumcontrol/jasons-game/handlers"
@@ -379,7 +380,7 @@ func (h *ElementCombinerHandler) handleReceiveElement(msg *jasonsgame.Transferre
 	if comboObject == nil {
 		// use location tip for deterministically generating the next object so that
 		// this can run distributed and stateless
-		newTree, err := findOrCreateNamedTree(h.net, targetInventory.Tree().Tip().String())
+		newTree, err := court.FindOrCreateNamedTree(h.net, targetInventory.Tree().Tip().String())
 		if err != nil {
 			return errors.Wrap(err, "error creating new object key")
 		}
