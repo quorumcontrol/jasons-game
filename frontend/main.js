@@ -66,7 +66,7 @@ function createWindow () {
         height: 768,
         backgroundColor: '#000000',
         webPreferences: {
-            nodeIntegration: true
+            nodeIntegration: false
         }
     });
 

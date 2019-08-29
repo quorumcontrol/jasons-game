@@ -101,6 +101,17 @@ func main() {
 
 	fs := http.FileServer(box)
 
+	fsWithHeaders := http.HandlerFunc(func(resp http.ResponseWriter, req *http.Request) {
+		headers := resp.Header()
+		headers.Set("Content-Security-Policy", "default-src 'self'; " +
+			"object-src 'none'; " +
+			"style-src-elem 'unsafe-inline' https://cdn.jsdelivr.net https://fonts.googleapis.com; " +
+			"font-src https://cdn.jsdelivr.net https://fonts.gstatic.com data:; " +
+			"script-src 'self' 'sha256-eBU0yMA10wlS8+IouTT5knu2DQmVTyICn7YbqhWu3fw='")
+
+		fs.ServeHTTP(resp, req)
+	})
+
 	serv.Handler = http.HandlerFunc(func(resp http.ResponseWriter, req *http.Request) {
 		if wrappedGrpc.IsGrpcWebRequest(req) {
 			log.Printf("grpc request")
@@ -113,12 +124,12 @@ func main() {
 			headers := resp.Header()
 			headers.Add("Access-Control-Allow-Origin", "*")
 			headers.Add("Access-Control-Allow-Headers", "*")
-			headers.Add("Access-Control-Allow-Methods", "GET, POST,OPTIONS")
+			headers.Add("Access-Control-Allow-Methods", "GET,POST,OPTIONS")
 			resp.WriteHeader(http.StatusOK)
 			return
 		}
 
-		fs.ServeHTTP(resp, req)
+		fsWithHeaders.ServeHTTP(resp, req)
 
 	})
 

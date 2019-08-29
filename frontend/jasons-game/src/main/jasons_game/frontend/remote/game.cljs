@@ -11,11 +11,11 @@
 (def game-receive-usermessages (.-ReceiveUserMessages GameService))
 
 (defn new-session [id]
-  (doto (game-lib/Session.)
+  (doto (game-lib/jasonsgame.Session.)
     (.setUuid id)))
 
 (defn send-user-input [host session input callback]
-  (let [req (doto (game-lib/UserInput.)
+  (let [req (doto (game-lib/jasonsgame.UserInput.)
               (.setMessage input)
               (.setSession session))]
     (unary game-send-command (clj->js {:request req
