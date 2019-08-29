@@ -257,11 +257,7 @@ func (l *LocationActor) handleListInteractionsRequest(actorCtx actor.Context, ms
 		return
 	}
 
-	interactions := []*InteractionResponse{&InteractionResponse{
-		AttachedTo:    "location",
-		AttachedToDid: l.did,
-		Interaction:   &LookAroundInteraction{},
-	}}
+	interactions := []*InteractionResponse{}
 
 	if isLocal {
 		interactions = append(interactions, &InteractionResponse{
@@ -321,6 +317,14 @@ func (l *LocationActor) handleListInteractionsRequest(actorCtx actor.Context, ms
 			Interaction:   interaction,
 		})
 	}
+
+	// appending this after interactions so location can overwrite
+	// the `look around` command
+	interactions = append(interactions, &InteractionResponse{
+		AttachedTo:    "location",
+		AttachedToDid: l.did,
+		Interaction:   &LookAroundInteraction{},
+	})
 
 	inventoryInteractionsResp, err := actorCtx.RequestFuture(l.inventoryActor, &ListInteractionsRequest{}, 30*time.Second).Result()
 	if err != nil {
