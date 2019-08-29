@@ -35,8 +35,9 @@ type InventoryActorConfig struct {
 }
 
 type CreateObjectRequest struct {
-	Name        string
-	Description string
+	Name             string
+	Description      string
+	WithInscriptions bool
 }
 
 type CreateObjectResponse struct {
@@ -199,7 +200,20 @@ func (inv *InventoryActor) handleCreateObject(actorCtx actor.Context, msg *Creat
 	if msg.Description != "" {
 		err := object.SetDescription(msg.Description)
 		if err != nil {
-			inv.Log.Warnw("error setting description of new object", "err", err)
+			err = fmt.Errorf("error setting description of new object: %v", err)
+			inv.Log.Error(err)
+			actorCtx.Respond(&CreateObjectResponse{Error: err})
+			return
+		}
+	}
+
+	if msg.WithInscriptions {
+		err := object.AddDefaultInscriptionInteractions()
+		if err != nil {
+			err = fmt.Errorf("error adding inscription commands: %v", err)
+			inv.Log.Error(err)
+			actorCtx.Respond(&CreateObjectResponse{Error: err})
+			return
 		}
 	}
 

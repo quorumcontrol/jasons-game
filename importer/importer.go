@@ -419,6 +419,19 @@ func (i *Importer) UpdateObject(did string, objectData interface{}) error {
 	return nil
 }
 
+func (i *Importer) UpdateLocation(did string, locationData interface{}) error {
+	importLocation := &ImportLocation{}
+	err := i.yamlTypecast(locationData, importLocation)
+	if err != nil {
+		return errors.Wrap(err, fmt.Sprintf("error typecasting for %s", did))
+	}
+	err = i.updateLocation(did, importLocation)
+	if err != nil {
+		return errors.Wrap(err, fmt.Sprintf("error updating %s", did))
+	}
+	return nil
+}
+
 func (i *Importer) Import(importPath string) (*NameToDids, error) {
 	var err error
 	var data *ImportPayload

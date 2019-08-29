@@ -21,6 +21,7 @@ import (
 	"github.com/quorumcontrol/jasons-game/network"
 	"github.com/quorumcontrol/jasons-game/pb/jasonsgame"
 	"github.com/quorumcontrol/jasons-game/ui"
+	"github.com/quorumcontrol/jasons-game/utils/stringslice"
 )
 
 var log = logging.Logger("game")
@@ -312,7 +313,7 @@ func (g *Game) handleHelp(actorCtx actor.Context, args string) error {
 	toSend := indentedList{"available commands:"}
 
 	for _, c := range g.commands {
-		if !c.Hidden() && c.HelpGroup() == args {
+		if !c.Hidden() && c.HelpGroup() == args && !stringslice.Include(toSend, c.Parse()) {
 			toSend = append(toSend, c.Parse())
 		}
 	}
@@ -401,7 +402,7 @@ func (g *Game) handleInteractionInput(actorCtx actor.Context, cmd *interactionCo
 	case *LookAroundInteraction:
 		err = g.handleLocationInventoryList(actorCtx)
 	case *CreateObjectInteraction:
-		err = g.handleCreateObject(actorCtx, interaction.Name, interaction.Description)
+		err = g.handleCreateObjectInteraction(actorCtx, interaction)
 	case *CipherInteraction:
 		nextInteraction, _, err := interaction.Unseal(args)
 		if err != nil {
@@ -573,16 +574,24 @@ func (g *Game) handlePickUpObject(actorCtx actor.Context, interaction *PickUpObj
 	return nil
 }
 
-func (g *Game) handleCreateObjectFromArgs(actorCtx actor.Context, args string) error {
-	splitArgs := strings.Split(args, " ")
-	return g.handleCreateObject(actorCtx, splitArgs[0], strings.Join(splitArgs[1:], " "))
+func (g *Game) handleCreateObjectInteraction(actorCtx actor.Context, interaction *CreateObjectInteraction) error {
+	return g.handleCreateObjectRequest(actorCtx, &CreateObjectRequest{
+		Name:             interaction.Name,
+		Description:      interaction.Description,
+		WithInscriptions: interaction.WithInscriptions,
+	})
 }
 
-func (g *Game) handleCreateObject(actorCtx actor.Context, name string, description string) error {
-	response, err := actorCtx.RequestFuture(g.inventoryActor, &CreateObjectRequest{
-		Name:        name,
-		Description: description,
-	}, 30*time.Second).Result()
+func (g *Game) handleCreateObjectFromArgs(actorCtx actor.Context, args string) error {
+	splitArgs := strings.Split(args, " ")
+	return g.handleCreateObjectRequest(actorCtx, &CreateObjectRequest{
+		Name:        splitArgs[0],
+		Description: strings.Join(splitArgs[1:], " "),
+	})
+}
+
+func (g *Game) handleCreateObjectRequest(actorCtx actor.Context, req *CreateObjectRequest) error {
+	response, err := actorCtx.RequestFuture(g.inventoryActor, req, 30*time.Second).Result()
 	if err != nil {
 		return err
 	}
@@ -592,7 +601,7 @@ func (g *Game) handleCreateObject(actorCtx actor.Context, name string, descripti
 		return fmt.Errorf("error casting create object response")
 	}
 
-	g.sendUserMessage(actorCtx, fmt.Sprintf("%s has been created with DID %s and is in your bag of hodling", name, newObject.Object.Did))
+	g.sendUserMessage(actorCtx, fmt.Sprintf("%s has been created with DID %s and is in your bag of hodling", req.Name, newObject.Object.Did))
 	return nil
 }
 
