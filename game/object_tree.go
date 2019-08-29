@@ -127,6 +127,33 @@ func (o *ObjectTree) InteractionsList() ([]Interaction, error) {
 	return o.interactionsListFromTree(o)
 }
 
+func (o *ObjectTree) AddDefaultInscriptionInteractions() error {
+	name, err := o.GetName()
+	if err != nil {
+		return err
+	}
+
+	err = o.AddInteraction(&SetTreeValueInteraction{
+		Command:  "inscribe object " + name,
+		Did:      o.MustId(),
+		Path:     "inscriptions",
+		Multiple: true,
+	})
+	if err != nil {
+		return errors.Wrap(err, "error adding interactions to object")
+	}
+
+	err = o.AddInteraction(&GetTreeValueInteraction{
+		Command: "read inscriptions on object " + name,
+		Did:     o.MustId(),
+		Path:    "inscriptions",
+	})
+	if err != nil {
+		return errors.Wrap(err, "error adding interactions to object")
+	}
+	return nil
+}
+
 func (o *ObjectTree) IsOwnedBy(keyAddrs []string) (bool, error) {
 	ctx := context.TODO()
 	authsUncasted, remainingPath, err := o.tree.ChainTree.Dag.Resolve(ctx, strings.Split("tree/"+consensus.TreePathForAuthentications, "/"))
