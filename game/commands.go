@@ -8,7 +8,6 @@ type commandList []command
 
 // for now the string parsing is not working
 var defaultCommandList = commandList{
-	newCommand("name", "call me"),
 	newCommand("create-object", "create object"),
 	newCommand("player-inventory-list", "look in bag"),
 	newCommand("location-inventory-list", "look around"),

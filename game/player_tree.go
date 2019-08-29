@@ -92,15 +92,6 @@ func (pt *PlayerTree) SetPlayer(p *jasonsgame.Player) error {
 	return nil
 }
 
-func (pt *PlayerTree) SetName(name string) error {
-	p, err := pt.Player()
-	if err != nil {
-		return errors.Wrap(err, "error getting player")
-	}
-	p.Name = name
-	return pt.SetPlayer(p)
-}
-
 func (pt *PlayerTree) setTree(tree *consensus.SignedChainTree) {
 	pt.tree = tree
 	pt.did = tree.MustId()
