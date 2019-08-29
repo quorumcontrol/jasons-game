@@ -16,7 +16,7 @@ let game;
 function startGame() {
     runBackend();
     // TODO: Would be better if the backend signaled us when it was ready...
-    setTimeout(createWindow, 3000);
+    setTimeout(createWindow, 1000);
 }
 
 function runBackendExecutable(path) {
@@ -65,12 +65,17 @@ function createWindow () {
         width: 1366,
         height: 768,
         backgroundColor: '#000000',
+        show: false,
         webPreferences: {
             nodeIntegration: false
         }
     });
 
     win.loadURL('http://localhost:8080/');
+
+    win.once('ready-to-show', () => {
+        win.show();
+    });
 
     win.on('closed', () => {
         win = null;
