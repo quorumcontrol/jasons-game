@@ -171,7 +171,7 @@ frontend/jasons-game/public/js/compiled/base.js: $(jsmodules) $(generated) $(clj
 
 frontend-build: frontend/jasons-game/public/js/compiled/base.js
 
-frontend-dev: $(generated) $(jsmodules)
+frontend-dev: $(generated) $(jsmodules) frontend/jasons-game/node_modules/.bin/shadow-cljs
 	cd frontend/jasons-game && ./node_modules/.bin/shadow-cljs watch app
 
 $(FIRSTGOPATH)/bin/modvendor:
