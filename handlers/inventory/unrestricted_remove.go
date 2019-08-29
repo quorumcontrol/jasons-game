@@ -95,7 +95,7 @@ func (h *UnrestrictedRemoveHandler) Handle(msg proto.Message) error {
 		}
 		rollbacks = append(rollbacks, func(err error) error {
 			if _, newErr := h.network.ChangeChainTreeOwner(objectTree, sourceAuths); newErr != nil {
-				err = errors.Wrap(err, newErr.Error())
+				err = errors.Wrap(err, fmt.Sprintf("error rolling back ownership: %v", newErr.Error()))
 			}
 			return err
 		})
@@ -104,6 +104,12 @@ func (h *UnrestrictedRemoveHandler) Handle(msg proto.Message) error {
 		if err != nil {
 			return fmt.Errorf("error updating objects in inventory: %v", handleRollbacks(err, rollbacks))
 		}
+		rollbacks = append(rollbacks, func(err error) error {
+			if newErr := sourceInventory.Add(msg.Object); newErr != nil {
+				err = errors.Wrap(err, fmt.Sprintf("error rolling back inventory: %v", newErr.Error()))
+			}
+			return err
+		})
 
 		future := actor.NewFuture(10 * time.Second)
 		subscriptionReadyFuture := actor.NewFuture(1 * time.Second)

@@ -1,6 +1,7 @@
 package game
 
 import (
+	"context"
 	"fmt"
 	"time"
 
@@ -8,6 +9,7 @@ import (
 	"github.com/AsynkronIT/protoactor-go/plugin"
 	"github.com/ipfs/go-cid"
 	"github.com/pkg/errors"
+	"github.com/quorumcontrol/jasons-game/handlers"
 	"github.com/quorumcontrol/jasons-game/network"
 	"github.com/quorumcontrol/jasons-game/pb/jasonsgame"
 	"github.com/quorumcontrol/messages/build/go/signatures"
@@ -21,6 +23,7 @@ type LocationActor struct {
 	location       *LocationTree
 	network        network.Network
 	inventoryActor *actor.PID
+	inventoryDid   string
 }
 
 type LocationActorConfig struct {
@@ -53,6 +56,8 @@ type DeletePortalResponse struct {
 	Error error
 }
 
+type GetInventoryDid struct{}
+
 func NewLocationActorProps(cfg *LocationActorConfig) *actor.Props {
 	return actor.PropsFromProducer(func() actor.Actor {
 		return &LocationActor{
@@ -68,23 +73,7 @@ func NewLocationActorProps(cfg *LocationActorConfig) *actor.Props {
 func (l *LocationActor) Receive(actorCtx actor.Context) {
 	switch msg := actorCtx.Message().(type) {
 	case *actor.Started:
-		tree, err := l.network.GetTree(l.did)
-		if err != nil {
-			panic("could not find location")
-		}
-		l.location = NewLocationTree(l.network, tree)
-
-		actorCtx.Spawn(l.network.NewCurrentStateSubscriptionProps(l.did))
-
-		_, err = l.network.Community().SubscribeActor(actorCtx.Self(), l.network.Community().TopicFor(l.did))
-		if err != nil {
-			panic(errors.Wrap(err, "error spawning land actor subscription"))
-		}
-
-		l.inventoryActor = actorCtx.Spawn(NewInventoryActorProps(&InventoryActorConfig{
-			Did:     l.did,
-			Network: l.network,
-		}))
+		l.initialize(actorCtx)
 	case *GetLocation:
 		desc, err := l.location.GetDescription()
 		if err != nil {
@@ -121,6 +110,15 @@ func (l *LocationActor) Receive(actorCtx actor.Context) {
 		})
 	case *ListInteractionsRequest:
 		l.handleListInteractionsRequest(actorCtx, msg)
+	case *GetInventoryDid:
+		actorCtx.Respond(l.inventoryDid)
+	case *StateChange:
+		// Forward inventory actor changes when using different tree
+		// when using the same tree, CurrentState below will trigger
+		parentPID := actorCtx.Parent()
+		if parentPID != nil && l.did != l.inventoryDid {
+			actorCtx.Send(parentPID, &StateChange{PID: actorCtx.Self()})
+		}
 	case *signatures.CurrentState:
 		if string(msg.Signature.ObjectId) == l.did {
 			newTip, err := cid.Cast(msg.Signature.NewTip)
@@ -133,12 +131,122 @@ func (l *LocationActor) Receive(actorCtx actor.Context) {
 				l.Log.Error(errors.Wrap(err, "could not refresh location"))
 				return
 			}
+
+			err = l.network.TreeStore().UpdateTreeMetadata(refreshedLocation)
+			if err != nil {
+				l.Log.Error(errors.Wrap(err, "could not refresh location"))
+				return
+			}
+
 			l.location = NewLocationTree(l.network, refreshedLocation)
 		}
 		if parentPID := actorCtx.Parent(); parentPID != nil {
 			actorCtx.Send(parentPID, &StateChange{PID: actorCtx.Self()})
 		}
 	}
+}
+
+func (l *LocationActor) initialize(actorCtx actor.Context) {
+	tree, err := l.network.GetTree(l.did)
+	if err != nil {
+		panic(errors.Wrap(err, "error fetching location"))
+	}
+	if tree == nil {
+		panic("could not find location " + l.did)
+	}
+
+	l.location = NewLocationTree(l.network, tree)
+
+	actorCtx.Spawn(l.network.NewCurrentStateSubscriptionProps(l.did))
+
+	_, err = l.network.Community().SubscribeActor(actorCtx.Self(), l.network.Community().TopicFor(l.did))
+	if err != nil {
+		panic(errors.Wrap(err, "error spawning land actor subscription"))
+	}
+
+	err = l.spawnInventoryActor(actorCtx)
+	if err != nil {
+		panic(errors.Wrap(err, "error spawning inventory actor"))
+	}
+}
+
+func (l *LocationActor) spawnInventoryActor(actorCtx actor.Context) error {
+	// default inventory embbedded inside location
+	l.inventoryDid = l.did
+
+	usePerPlayerInventory, _, err := l.location.tree.ChainTree.Dag.Resolve(context.Background(), []string{"tree", "data", "jasons-game", "use-per-player-inventory"})
+
+	if err != nil {
+		return errors.Wrap(err, "error fetching location inventory")
+	}
+
+	if usePerPlayerInventory != nil && usePerPlayerInventory.(bool) {
+		inventoryChainName := "shared-inventory-for-" + l.did
+		inventoryTree, err := l.network.GetChainTreeByName(inventoryChainName)
+
+		if err != nil {
+			return errors.Wrap(err, "error fetching inventory tree")
+		}
+
+		if inventoryTree == nil {
+			inventoryTree, err = l.network.CreateNamedChainTree(inventoryChainName)
+			if err != nil {
+				return errors.Wrap(err, "error creating inventory tree")
+			}
+
+			inventoryTree, err = l.network.UpdateChainTree(inventoryTree, "jasons-game/inventory-for", l.did)
+			if err != nil {
+				return errors.Wrap(err, "error updating inventory tree")
+			}
+
+			inventoryAuths, err := inventoryTree.Authentications()
+			if err != nil {
+				return errors.Wrap(err, "error fetching inventory auths")
+			}
+
+			locationHandler, err := handlers.FindHandlerForTree(l.network, l.did)
+			if err != nil {
+				return errors.Wrap(err, "error fetching inventory handler")
+			}
+
+			var additionalAuths []string
+
+			if locationHandler != nil {
+				handlerTree, err := l.network.GetTree(locationHandler.Did())
+				if err != nil {
+					return errors.Wrap(err, "error fetching handler tree")
+				}
+
+				additionalAuths, err = handlerTree.Authentications()
+				if err != nil {
+					return errors.Wrap(err, "error fetching handler auths")
+				}
+
+				inventoryTree, err = l.network.UpdateChainTree(inventoryTree, "jasons-game-handler", handlerTree.MustId())
+				if err != nil {
+					return errors.Wrap(err, "error setting new handler attr")
+				}
+			} else {
+				additionalAuths, err = l.location.tree.Authentications()
+				if err != nil {
+					return errors.Wrap(err, "error fetching location auths")
+				}
+			}
+
+			inventoryTree, err = l.network.ChangeChainTreeOwner(inventoryTree, append(inventoryAuths, additionalAuths...))
+			if err != nil {
+				return errors.Wrap(err, "error setting new handler auths")
+			}
+		}
+
+		l.inventoryDid = inventoryTree.MustId()
+	}
+
+	l.inventoryActor = actorCtx.Spawn(NewInventoryActorProps(&InventoryActorConfig{
+		Did:     l.inventoryDid,
+		Network: l.network,
+	}))
+	return nil
 }
 
 func (l *LocationActor) handleListInteractionsRequest(actorCtx actor.Context, msg *ListInteractionsRequest) {
@@ -149,11 +257,7 @@ func (l *LocationActor) handleListInteractionsRequest(actorCtx actor.Context, ms
 		return
 	}
 
-	interactions := []*InteractionResponse{&InteractionResponse{
-		AttachedTo:    "location",
-		AttachedToDid: l.did,
-		Interaction:   &LookAroundInteraction{},
-	}}
+	interactions := []*InteractionResponse{}
 
 	if isLocal {
 		interactions = append(interactions, &InteractionResponse{
@@ -213,6 +317,14 @@ func (l *LocationActor) handleListInteractionsRequest(actorCtx actor.Context, ms
 			Interaction:   interaction,
 		})
 	}
+
+	// appending this after interactions so location can overwrite
+	// the `look around` command
+	interactions = append(interactions, &InteractionResponse{
+		AttachedTo:    "location",
+		AttachedToDid: l.did,
+		Interaction:   &LookAroundInteraction{},
+	})
 
 	inventoryInteractionsResp, err := actorCtx.RequestFuture(l.inventoryActor, &ListInteractionsRequest{}, 30*time.Second).Result()
 	if err != nil {

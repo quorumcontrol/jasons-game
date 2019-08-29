@@ -53,6 +53,7 @@ type Network interface {
 	ChangeChainTreeOwnerWithKey(tree *consensus.SignedChainTree, privateKey *ecdsa.PrivateKey, newKeys []string) (*consensus.SignedChainTree, error)
 	CreateChainTree() (*consensus.SignedChainTree, error)
 	CreateChainTreeWithKey(key *ecdsa.PrivateKey) (*consensus.SignedChainTree, error)
+	CreateLocalChainTree(name string) (*consensus.SignedChainTree, error)
 	CreateNamedChainTree(name string) (*consensus.SignedChainTree, error)
 	GetChainTreeByName(name string) (*consensus.SignedChainTree, error)
 	GetTreeByTip(tip cid.Cid) (*consensus.SignedChainTree, error)
@@ -252,6 +253,20 @@ func (n *RemoteNetwork) PrivateKey() *ecdsa.PrivateKey {
 	return n.signingKey
 }
 
+func (n *RemoteNetwork) CreateLocalChainTree(name string) (*consensus.SignedChainTree, error) {
+	log.Debug("CreateLocalChainTree", name)
+	tree, err := n.CreateNamedChainTree(name)
+	if err != nil {
+		return nil, errors.Wrap(err, "error creating tree")
+	}
+
+	err = n.TreeStore().SaveTreeMetadata(tree)
+	if err != nil {
+		return nil, errors.Wrap(err, "error saving tree")
+	}
+	return tree, nil
+}
+
 func (n *RemoteNetwork) CreateNamedChainTree(name string) (*consensus.SignedChainTree, error) {
 	log.Debug("CreateNamedChainTree", name)
 	tree, err := n.CreateChainTree()
@@ -260,7 +275,7 @@ func (n *RemoteNetwork) CreateNamedChainTree(name string) (*consensus.SignedChai
 	}
 	log.Debug("CreateNamedChainTree - created", name)
 
-	err = n.TreeStore().SaveTreeMetadata(tree)
+	err = n.TreeStore().UpdateTreeMetadata(tree)
 	if err != nil {
 		return nil, errors.Wrap(err, "error saving tree")
 	}
@@ -291,7 +306,7 @@ func (n *RemoteNetwork) CreateChainTree() (*consensus.SignedChainTree, error) {
 		return nil, errors.Wrap(err, "error playing transactions")
 	}
 
-	err = n.TreeStore().SaveTreeMetadata(tree)
+	err = n.TreeStore().UpdateTreeMetadata(tree)
 	if err != nil {
 		return nil, errors.Wrap(err, "error saving tree")
 	}
@@ -307,7 +322,7 @@ func (n *RemoteNetwork) CreateChainTreeWithKey(key *ecdsa.PrivateKey) (*consensu
 	}
 	log.Debug("CreateChainTreeWithKey - created", tree.MustId())
 
-	err = n.TreeStore().SaveTreeMetadata(tree)
+	err = n.TreeStore().UpdateTreeMetadata(tree)
 	if err != nil {
 		return nil, errors.Wrap(err, "error saving tree")
 	}
@@ -354,7 +369,7 @@ func (n *RemoteNetwork) UpdateChainTree(tree *consensus.SignedChainTree, path st
 	if err != nil {
 		return nil, errors.Wrap(err, "error updating chaintree")
 	}
-	return tree, n.TreeStore().SaveTreeMetadata(tree)
+	return tree, n.TreeStore().UpdateTreeMetadata(tree)
 }
 
 func (n *RemoteNetwork) changeChainTreeOwner(tree *consensus.SignedChainTree, privateKey *ecdsa.PrivateKey, newKeys []string) (*consensus.SignedChainTree, error) {
@@ -370,7 +385,7 @@ func (n *RemoteNetwork) changeChainTreeOwner(tree *consensus.SignedChainTree, pr
 		return nil, errors.Wrap(err, "error updating chaintree")
 	}
 
-	return tree, n.TreeStore().SaveTreeMetadata(tree)
+	return tree, n.TreeStore().UpdateTreeMetadata(tree)
 }
 
 func (n *RemoteNetwork) ChangeChainTreeOwner(tree *consensus.SignedChainTree, newKeys []string) (*consensus.SignedChainTree, error) {
@@ -447,7 +462,7 @@ func (n *RemoteNetwork) SendInk(tree *consensus.SignedChainTree, tokenName *cons
 
 	log.Debugf("send ink PlayTransactions response: %+v", txResp)
 
-	err = n.TreeStore().SaveTreeMetadata(tree)
+	err = n.TreeStore().UpdateTreeMetadata(tree)
 	if err != nil {
 		return nil, errors.Wrap(err, "error saving chaintree metadata after ink send transaction")
 	}

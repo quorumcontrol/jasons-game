@@ -31,7 +31,7 @@ func TestImportIntegration(t *testing.T) {
 	stream := ui.NewTestStream(t)
 	simulatedUI, err := rootCtx.SpawnNamed(ui.NewUIProps(stream, net), t.Name()+"-ui")
 	require.Nil(t, err)
-	playerChain, err := net.CreateNamedChainTree("player")
+	playerChain, err := net.CreateLocalChainTree("player")
 	require.Nil(t, err)
 	playerTree, err := gamepkg.CreatePlayerTree(net, playerChain.MustId())
 	require.Nil(t, err)

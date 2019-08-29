@@ -102,6 +102,10 @@ func (ln *LocalNetwork) WaitForDiscovery(ns string, num int, dur time.Duration) 
 	return nil
 }
 
+func (ln *LocalNetwork) CreateLocalChainTree(name string) (*consensus.SignedChainTree, error) {
+	return ln.CreateNamedChainTree(name)
+}
+
 func (ln *LocalNetwork) CreateNamedChainTree(name string) (*consensus.SignedChainTree, error) {
 	ephemeralPrivate, err := crypto.GenerateKey()
 	if err != nil {
@@ -174,8 +178,21 @@ func (ln *LocalNetwork) GetTree(did string) (*consensus.SignedChainTree, error) 
 }
 
 func (ln *LocalNetwork) GetTreeByTip(tip cid.Cid) (*consensus.SignedChainTree, error) {
-	// TODO: if we enable this, we'll need to also do some sort of "insert" for test purposes
-	return nil, fmt.Errorf("unimplemented")
+	rootNode, err := ln.TreeStore().Get(context.Background(), tip)
+	if err != nil {
+		return nil, err
+	}
+
+	didUncast, _, err := rootNode.Resolve([]string{"id"})
+	if err != nil {
+		return nil, err
+	}
+
+	if didUncast == nil {
+		return nil, nil
+	}
+
+	return ln.GetTree(didUncast.(string))
 }
 
 func (ln *LocalNetwork) UpdateChainTree(tree *consensus.SignedChainTree, path string, value interface{}) (*consensus.SignedChainTree, error) {

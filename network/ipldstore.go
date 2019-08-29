@@ -25,6 +25,7 @@ type TreeStore interface {
 
 	GetTree(did string) (*consensus.SignedChainTree, error)
 	SaveTreeMetadata(*consensus.SignedChainTree) error
+	UpdateTreeMetadata(*consensus.SignedChainTree) error
 }
 
 type tipGetter interface {
@@ -52,7 +53,6 @@ func NewIPLDTreeStore(
 
 func (ts *IPLDTreeStore) GetTree(did string) (*consensus.SignedChainTree, error) {
 	ctx := context.TODO()
-	log.Debugf("get local tip")
 	var remote bool
 	tip, err := ts.getLocalTip(did)
 	if err != nil {
@@ -112,6 +112,23 @@ func (ts *IPLDTreeStore) SaveTreeMetadata(tree *consensus.SignedChainTree) error
 	return ts.keyValueApi.Put(didStoreKey(did), tree.Tip().Bytes())
 }
 
+func (ts *IPLDTreeStore) UpdateTreeMetadata(tree *consensus.SignedChainTree) error {
+	did, err := tree.Id()
+	if err != nil {
+		return errors.Wrap(err, "error getting id")
+	}
+
+	has, err := ts.keyValueApi.Has(didStoreKey(did))
+	if err != nil {
+		return errors.Wrap(err, "error checking if tree metadata exists")
+	}
+	if has {
+		return ts.SaveTreeMetadata(tree)
+	}
+
+	return nil
+}
+
 func (ts *IPLDTreeStore) Get(ctx context.Context, nodeCid cid.Cid) (format.Node, error) {
 	return ts.blockApi.Get(ctx, nodeCid)
 }
@@ -145,6 +162,7 @@ func (ts *IPLDTreeStore) RemoveMany(ctx context.Context, nodeCids []cid.Cid) err
 }
 
 func (ts *IPLDTreeStore) getLocalTip(did string) (cid.Cid, error) {
+	log.Debugf("get local tip for %s", did)
 	tipBytes, err := ts.keyValueApi.Get(didStoreKey(did))
 	if err != nil {
 		if err == datastore.ErrNotFound {
@@ -160,6 +178,7 @@ func (ts *IPLDTreeStore) getLocalTip(did string) (cid.Cid, error) {
 }
 
 func (ts *IPLDTreeStore) getRemoteTip(did string) (cid.Cid, error) {
+	log.Debugf("get remote tip for %s", did)
 	tipCid, err := ts.tipGetter.GetTip(did)
 	if err != nil {
 		return cid.Undef, errors.Wrap(err, "error getting remote tip")

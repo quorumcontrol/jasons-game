@@ -10,7 +10,6 @@ type commandList []command
 var defaultCommandList = commandList{
 	newCommand("create-object", "create object"),
 	newCommand("player-inventory-list", "look in bag"),
-	newCommand("location-inventory-list", "look around"),
 	newCommand("help", "help"),
 	newCommand("help", "help location"),
 	newCommand("help", "help [name of object]"),
