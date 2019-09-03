@@ -7,7 +7,6 @@ require (
 	github.com/btcsuite/btcutil v0.0.0-20190425235716-9e5f4b9a998d
 	github.com/dgraph-io/badger v1.6.0 // indirect
 	github.com/ethereum/go-ethereum v1.8.27
-	github.com/go-stack/stack v1.8.0 // indirect
 	github.com/gobuffalo/packr/v2 v2.5.3-0.20190708182234-662c20c19dde
 	github.com/gogo/protobuf v1.2.1
 	github.com/google/uuid v1.1.1
