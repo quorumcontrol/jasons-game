@@ -439,31 +439,10 @@ func (n *RemoteNetwork) InkTokenName() *consensus.TokenName {
 }
 
 func (n *RemoteNetwork) SendInk(tree *consensus.SignedChainTree, amount uint64, destinationChainId string) (*transactions.TokenPayload, error) {
-	transactionId, err := uuid.NewRandom()
-	if err != nil {
-		return nil, errors.Wrap(err, "error generating send token transaction ID")
-	}
-
-	log.Debugf("send ink transaction id: %s", transactionId)
-
-	transaction, err := chaintree.NewSendTokenTransaction(transactionId.String(), n.InkTokenName().String(), amount, destinationChainId)
-	if err != nil {
-		return nil, errors.Wrap(err, "error generating ink send token transaction")
-	}
-
-	log.Debugf("send ink transaction: %+v", *transaction)
-
-	burnTransaction, err := n.inkBurnTransaction(tree)
+	tokenPayload, err := n.Tupelo.SendInk(tree, n.PrivateKey(), amount, destinationChainId)
 	if err != nil {
 		return nil, err
 	}
-
-	txResp, err := n.Tupelo.PlayTransactions(tree, n.PrivateKey(), []*transactions.Transaction{burnTransaction, transaction})
-	if err != nil {
-		return nil, errors.Wrap(err, "error playing ink send token transaction")
-	}
-
-	log.Debugf("send ink PlayTransactions response: %+v", txResp)
 
 	err = n.TreeStore().SaveTreeMetadata(tree)
 	if err != nil {
@@ -472,7 +451,6 @@ func (n *RemoteNetwork) SendInk(tree *consensus.SignedChainTree, amount uint64, 
 
 	log.Debug("send ink saved tree metadata")
 
-	tokenPayload, err := n.Tupelo.TokenPayloadForTransaction(tree, n.InkTokenName(), transactionId.String(), &txResp.Signature)
 	if err != nil {
 		return nil, errors.Wrap(err, "error getting token payload for ink send")
 	}

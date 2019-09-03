@@ -4,22 +4,13 @@ import (
 	"context"
 	"crypto/ecdsa"
 
-	cid "github.com/ipfs/go-cid"
 	"github.com/pkg/errors"
-	"github.com/quorumcontrol/chaintree/chaintree"
 	"github.com/quorumcontrol/messages/build/go/transactions"
 	"github.com/quorumcontrol/tupelo-go-sdk/consensus"
 )
 
 func (n *RemoteNetwork) receiveInk(tree *consensus.SignedChainTree, privateKey *ecdsa.PrivateKey, tokenPayload *transactions.TokenPayload) error {
-	decodedTip, err := cid.Decode(tokenPayload.Tip)
-	if err != nil {
-		return errors.Wrapf(err, "error decoding token payload tip: %s", tokenPayload.Tip)
-	}
-
-	log.Debugf("receive ink decoded token payload tip: %s", decodedTip)
-
-	transaction, err := chaintree.NewReceiveTokenTransaction(tokenPayload.TransactionId, decodedTip.Bytes(), tokenPayload.Signature, tokenPayload.Leaves)
+	transaction, err := n.Tupelo.ReceiveInkTransaction(tree, privateKey, tokenPayload)
 	if err != nil {
 		return errors.Wrap(err, "error generating ink receive token transaction")
 	}
