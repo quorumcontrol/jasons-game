@@ -3,6 +3,7 @@ package network
 import (
 	"context"
 	"crypto/ecdsa"
+	"crypto/sha256"
 	"fmt"
 	"time"
 
@@ -104,6 +105,23 @@ func (ln *LocalNetwork) WaitForDiscovery(ns string, num int, dur time.Duration) 
 
 func (ln *LocalNetwork) CreateLocalChainTree(name string) (*consensus.SignedChainTree, error) {
 	return ln.CreateNamedChainTree(name)
+}
+
+// in real network, passphrase tree is stateless - but for localnetwork, we can assume its a local
+// tree, so just use the passphrase for a "named chaintree"
+func (ln *LocalNetwork) FindOrCreatePassphraseTree(passphrase string) (*consensus.SignedChainTree, error) {
+	seed := sha256.Sum256([]byte(passphrase))
+	name := string(seed[:32])
+
+	tree, err := ln.GetChainTreeByName(name)
+	if err != nil {
+		return nil, errors.Wrap(err, "getting passphrase chaintree")
+	}
+
+	if tree == nil {
+		return ln.CreateNamedChainTree(name)
+	}
+	return tree, nil
 }
 
 func (ln *LocalNetwork) CreateNamedChainTree(name string) (*consensus.SignedChainTree, error) {

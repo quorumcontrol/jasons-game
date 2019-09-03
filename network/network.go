@@ -3,6 +3,7 @@ package network
 import (
 	"context"
 	"crypto/ecdsa"
+	"crypto/sha256"
 	"fmt"
 	"os"
 	"strings"
@@ -55,6 +56,7 @@ type Network interface {
 	CreateChainTreeWithKey(key *ecdsa.PrivateKey) (*consensus.SignedChainTree, error)
 	CreateLocalChainTree(name string) (*consensus.SignedChainTree, error)
 	CreateNamedChainTree(name string) (*consensus.SignedChainTree, error)
+	FindOrCreatePassphraseTree(passphrase string) (*consensus.SignedChainTree, error)
 	GetChainTreeByName(name string) (*consensus.SignedChainTree, error)
 	GetTreeByTip(tip cid.Cid) (*consensus.SignedChainTree, error)
 	GetTree(did string) (*consensus.SignedChainTree, error)
@@ -251,6 +253,34 @@ func GetOrCreateStoredPrivateKey(ds datastore.Batching) (key *ecdsa.PrivateKey, 
 
 func (n *RemoteNetwork) PrivateKey() *ecdsa.PrivateKey {
 	return n.signingKey
+}
+
+func (n *RemoteNetwork) FindOrCreatePassphraseTree(passphrase string) (*consensus.SignedChainTree, error) {
+	seed := sha256.Sum256([]byte(passphrase))
+	treeKey, err := consensus.PassPhraseKey(crypto.FromECDSA(n.PrivateKey()), seed[:32])
+	if err != nil {
+		return nil, errors.Wrap(err, "setting up passphrase tree keys")
+	}
+
+	tree, err := n.GetTree(consensus.EcdsaPubkeyToDid(treeKey.PublicKey))
+	if err != nil {
+		return nil, errors.Wrap(err, "getting passphrase chaintree")
+	}
+
+	if tree == nil {
+		tree, err = n.CreateChainTreeWithKey(treeKey)
+		if err != nil {
+			return nil, errors.Wrap(err, "setting up passphrase chaintree")
+		}
+
+		tree, err = n.ChangeChainTreeOwnerWithKey(tree, treeKey, []string{
+			crypto.PubkeyToAddress(*n.PublicKey()).String(),
+		})
+		if err != nil {
+			return nil, errors.Wrap(err, "chowning passphrase chaintree")
+		}
+	}
+	return tree, nil
 }
 
 func (n *RemoteNetwork) CreateLocalChainTree(name string) (*consensus.SignedChainTree, error) {
