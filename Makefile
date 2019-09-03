@@ -166,7 +166,7 @@ down:
 frontend/jasons-game/node_modules/.bin/shadow-cljs:
 	cd frontend/jasons-game && npm i
 
-frontend/jasons-game/public/js/compiled/base.js: $(jsmodules) $(generated) $(cljssources) frontend/jasons-game/externs/app.txt frontend/jasons-game/shadow-cljs.edn frontend/jasons-game/node_modules/.bin/shadow-cljs
+$(jsgenerated): $(jsmodules) $(generated) $(cljssources) frontend/jasons-game/externs/app.txt frontend/jasons-game/shadow-cljs.edn frontend/jasons-game/node_modules/.bin/shadow-cljs
 	cd frontend/jasons-game && ./node_modules/.bin/shadow-cljs release app
 
 frontend-build: frontend/jasons-game/public/js/compiled/base.js
@@ -186,7 +186,7 @@ prepare: $(gosources) $(generated) $(packr) $(vendor)
 $(FIRSTGOPATH)/bin/packr2:
 	env GO111MODULE=off go get -u github.com/gobuffalo/packr/v2/packr2
 
-$(packr): $(FIRSTGOPATH)/bin/packr2 main.go
+$(packr): $(FIRSTGOPATH)/bin/packr2 main.go $(jsgenerated) frontend/jasons-game/public/index.html
 	$(FIRSTGOPATH)/bin/packr2
 
 clean: $(FIRSTGOPATH)/bin/packr2
