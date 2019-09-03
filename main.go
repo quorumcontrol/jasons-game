@@ -105,7 +105,7 @@ func main() {
 		headers := resp.Header()
 		headers.Set("Content-Security-Policy", "default-src 'self'; " +
 			"object-src 'none'; " +
-			"style-src-elem 'unsafe-inline' https://cdn.jsdelivr.net https://fonts.googleapis.com; " +
+			"style-src 'unsafe-inline' https://cdn.jsdelivr.net https://fonts.googleapis.com; " +
 			"font-src https://cdn.jsdelivr.net https://fonts.gstatic.com data:; " +
 			"script-src 'self' 'sha256-eBU0yMA10wlS8+IouTT5knu2DQmVTyICn7YbqhWu3fw='")
 
