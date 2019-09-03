@@ -83,26 +83,18 @@ func (c *Court) Import(configPath string) error {
 		return errors.Wrap(err, "setting up court tree")
 	}
 
-	ids, err := c.Ids()
+	importIds, err := importer.New(c.net).Import(filepath.Join(configPath, c.name, "import"))
 	if err != nil {
-		return errors.Wrap(err, "checking court tree")
+		return err
 	}
 
-	// tree is empty, import
-	if ids == nil {
-		importIds, err := importer.New(c.net).Import(filepath.Join(configPath, c.name, "import"))
-		if err != nil {
-			return err
-		}
+	_, err = c.net.UpdateChainTree(tree, "ids", map[string]interface{}{
+		"Locations": importIds.Locations,
+		"Objects":   importIds.Objects,
+	})
 
-		_, err = c.net.UpdateChainTree(tree, "ids", map[string]interface{}{
-			"Locations": importIds.Locations,
-			"Objects":   importIds.Objects,
-		})
-
-		if err != nil {
-			return err
-		}
+	if err != nil {
+		return err
 	}
 	return nil
 }
