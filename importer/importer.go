@@ -2,6 +2,8 @@ package importer
 
 import (
 	"bytes"
+	"context"
+	"crypto/sha256"
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -11,6 +13,7 @@ import (
 	"text/template"
 	"unicode"
 
+	"github.com/ethereum/go-ethereum/common/hexutil"
 	ptypes "github.com/gogo/protobuf/types"
 	"github.com/imdario/mergo"
 	logging "github.com/ipfs/go-log"
@@ -71,7 +74,7 @@ func (i *Importer) createTrees(data *ImportPayload) (*NameToDids, error) {
 	}
 
 	for key := range data.Locations {
-		tree, err := i.network.CreateChainTree()
+		tree, err := i.network.FindOrCreatePassphraseTree("locations/" + key)
 		if err != nil {
 			return nil, err
 		}
@@ -80,7 +83,7 @@ func (i *Importer) createTrees(data *ImportPayload) (*NameToDids, error) {
 	}
 
 	for key := range data.Objects {
-		tree, err := i.network.CreateChainTree()
+		tree, err := i.network.FindOrCreatePassphraseTree("objects/" + key)
 		if err != nil {
 			return nil, err
 		}
@@ -323,26 +326,26 @@ func (i *Importer) loadLocations(data map[string]*ImportLocation, ids *NameToDid
 }
 
 func (i *Importer) updateLocation(did string, locData *ImportLocation) error {
-	tree, err := i.network.GetTree(did)
-	if err != nil {
-		return errors.Wrap(err, "fetching location tree")
-	}
+	return i.updateTreeIfChanged(did, locData, func(tree *consensus.SignedChainTree) error {
+		var err error
 
-	tree, err = i.loadBasicData(tree, locData.Data)
-	if err != nil {
-		return err
-	}
+		tree, err = i.loadBasicData(tree, locData.Data)
+		if err != nil {
+			return err
+		}
 
-	tree, err = i.loadInteractions(tree, locData.Interactions)
-	if err != nil {
-		return err
-	}
+		tree, err = i.loadInteractions(tree, locData.Interactions)
+		if err != nil {
+			return err
+		}
 
-	_, err = i.loadInventory(tree, locData.Inventory)
-	if err != nil {
-		return err
-	}
-	return nil
+		_, err = i.loadInventory(tree, locData.Inventory)
+		if err != nil {
+			return err
+		}
+
+		return nil
+	})
 }
 
 func (i *Importer) loadObjects(data map[string]*ImportObject, ids *NameToDids) error {
@@ -363,19 +366,67 @@ func (i *Importer) loadObjects(data map[string]*ImportObject, ids *NameToDids) e
 }
 
 func (i *Importer) updateObject(did string, objData *ImportObject) error {
+	return i.updateTreeIfChanged(did, objData, func(tree *consensus.SignedChainTree) error {
+		var err error
+		tree, err = i.loadBasicData(tree, objData.Data)
+		if err != nil {
+			return err
+		}
+
+		_, err = i.loadInteractions(tree, objData.Interactions)
+		if err != nil {
+			return err
+		}
+		return nil
+	})
+}
+
+func (i *Importer) updateTreeIfChanged(did string, treeData interface{}, updateFunction func(tree *consensus.SignedChainTree) error) error {
 	tree, err := i.network.GetTree(did)
 	if err != nil {
-		return errors.Wrap(err, "fetching object tree")
+		return err
 	}
 
-	tree, err = i.loadBasicData(tree, objData.Data)
+	importHashPath := []string{"tree", "data", "import-hash"}
+	hashVal, _, err := tree.ChainTree.Dag.Resolve(context.Background(), importHashPath)
 	if err != nil {
 		return err
 	}
 
-	_, err = i.loadInteractions(tree, objData.Interactions)
+	treeDataYaml, err := yaml.Marshal(treeData)
 	if err != nil {
 		return err
+	}
+	newHash := sha256.Sum256(treeDataYaml)
+	newHashStr := hexutil.Encode(newHash[:32])
+
+	hashValStr, hashValStrOk := hashVal.(string)
+
+	// needs updated
+	if !hashValStrOk || newHashStr != hashValStr {
+		// reset tree back to an empty state for reimporting
+		tree, err = i.network.UpdateChainTree(tree, "", make(map[string]interface{}))
+		if err != nil {
+			return err
+		}
+
+		// call update function for new data
+		err = updateFunction(tree)
+		if err != nil {
+			return err
+		}
+
+		// get latest tree
+		tree, err = i.network.GetTree(did)
+		if err != nil {
+			return err
+		}
+
+		// set new hash
+		_, err = i.network.UpdateChainTree(tree, strings.Join(importHashPath[2:], "/"), newHashStr)
+		if err != nil {
+			return err
+		}
 	}
 
 	return nil

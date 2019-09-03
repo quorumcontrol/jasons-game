@@ -2,11 +2,9 @@ package court
 
 import (
 	"context"
-	"crypto/sha256"
 	"path/filepath"
 
 	"github.com/AsynkronIT/protoactor-go/actor"
-	"github.com/ethereum/go-ethereum/crypto"
 
 	"github.com/pkg/errors"
 
@@ -123,30 +121,5 @@ func SpawnCourt(ctx context.Context, act actor.Actor) {
 }
 
 func FindOrCreateNamedTree(net network.Network, name string) (*consensus.SignedChainTree, error) {
-	seed := sha256.Sum256([]byte(name))
-	treeKey, err := consensus.PassPhraseKey(crypto.FromECDSA(net.PrivateKey()), seed[:32])
-	if err != nil {
-		return nil, errors.Wrap(err, "setting up named tree keys")
-	}
-
-	tree, err := net.GetTree(consensus.EcdsaPubkeyToDid(treeKey.PublicKey))
-	if err != nil {
-		return nil, errors.Wrap(err, "getting named chaintree")
-	}
-
-	if tree == nil {
-		tree, err = net.CreateChainTreeWithKey(treeKey)
-		if err != nil {
-			return nil, errors.Wrap(err, "setting up named chaintree")
-		}
-
-		tree, err = net.ChangeChainTreeOwnerWithKey(tree, treeKey, []string{
-			crypto.PubkeyToAddress(*net.PublicKey()).String(),
-		})
-		if err != nil {
-			return nil, errors.Wrap(err, "chowning court chaintree")
-		}
-	}
-
-	return tree, nil
+	return net.FindOrCreatePassphraseTree(name)
 }
