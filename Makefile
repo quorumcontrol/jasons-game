@@ -205,7 +205,7 @@ encrypt: courts/yml/
 	git secret add courts/yml.tar.gz
 	git secret hide
 	rm -f courts/yml.tar.gz
-	git add courts/yml.tar.gz.secret
+	git add courts/yml.tar.gz.secret .gitsecret/paths/mapping.cfg
 
 decrypt: courts/yml.tar.gz.secret
 	git secret cat courts/yml.tar.gz.secret | tar -zxf -
