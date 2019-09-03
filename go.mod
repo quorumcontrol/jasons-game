@@ -7,9 +7,8 @@ require (
 	github.com/btcsuite/btcutil v0.0.0-20190425235716-9e5f4b9a998d
 	github.com/dgraph-io/badger v1.6.0 // indirect
 	github.com/ethereum/go-ethereum v1.8.27
-	github.com/go-stack/stack v1.8.0 // indirect
 	github.com/gobuffalo/packr/v2 v2.5.3-0.20190708182234-662c20c19dde
-	github.com/gogo/protobuf v1.2.1
+	github.com/gogo/protobuf v1.3.0
 	github.com/google/uuid v1.1.1
 	github.com/gorilla/mux v1.7.1
 	github.com/hashicorp/go-uuid v1.0.1
@@ -36,7 +35,10 @@ require (
 	github.com/shibukawa/configdir v0.0.0-20170330084843-e180dbdc8da0
 	github.com/spf13/cobra v0.0.5
 	github.com/stretchr/testify v1.3.0
-	golang.org/x/crypto v0.0.0-20190701094942-4def268fd1a4
+	golang.org/x/crypto v0.0.0-20190829043050-9756ffdc2472
+	golang.org/x/net v0.0.0-20190827160401-ba9fcec4b297 // indirect
+	golang.org/x/sys v0.0.0-20190902133755-9109b7679e13 // indirect
+	golang.org/x/tools v0.0.0-20190903163617-be0da057c5e3 // indirect
 	google.golang.org/grpc v1.22.0
 	gopkg.in/yaml.v2 v2.2.2
 	gotest.tools/gotestsum v0.3.5 // indirect
