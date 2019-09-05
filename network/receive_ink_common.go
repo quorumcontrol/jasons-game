@@ -10,19 +10,10 @@ import (
 )
 
 func (n *RemoteNetwork) receiveInk(tree *consensus.SignedChainTree, privateKey *ecdsa.PrivateKey, tokenPayload *transactions.TokenPayload) error {
-	transaction, err := n.Tupelo.ReceiveInkTransaction(tree, privateKey, tokenPayload)
+	err := n.Tupelo.ReceiveInk(tree, privateKey, tokenPayload)
 	if err != nil {
-		return errors.Wrap(err, "error generating ink receive token transaction")
+		return errors.Wrap(err, "error receiving ink")
 	}
-
-	log.Debugf("receive ink transaction: %+v", transaction)
-
-	txResp, err := n.Tupelo.PlayTransactions(tree, privateKey, []*transactions.Transaction{transaction})
-	if err != nil {
-		return errors.Wrap(err, "error playing ink receive token transaction")
-	}
-
-	log.Debugf("receive ink PlayTransactions response: %+v", txResp)
 
 	err = n.TreeStore().SaveTreeMetadata(tree)
 	if err != nil {

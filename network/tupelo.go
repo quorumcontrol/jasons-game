@@ -70,15 +70,15 @@ func (t *Tupelo) CreateChainTree(key *ecdsa.PrivateKey) (*consensus.SignedChainT
 	return tree, nil
 }
 
-func (t *Tupelo) SendInk(inkHolder *consensus.SignedChainTree, key *ecdsa.PrivateKey, amount uint64, destinationChainId string) (*transactions.TokenPayload, error) {
-	c := client.New(t.NotaryGroup, inkHolder.MustId(), t.PubSubSystem)
+func (t *Tupelo) SendInk(source *consensus.SignedChainTree, key *ecdsa.PrivateKey, amount uint64, destinationChainId string) (*transactions.TokenPayload, error) {
+	c := client.New(t.NotaryGroup, source.MustId(), t.PubSubSystem)
 	c.Listen()
 	defer c.Stop()
 
-	return t.sendInk(c, inkHolder, key, amount, destinationChainId)
+	return t.sendInk(c, source, key, amount, destinationChainId)
 }
 
-func (t *Tupelo) sendInk(c *client.Client, inkHolder *consensus.SignedChainTree, key *ecdsa.PrivateKey, amount uint64, destinationChainId string) (*transactions.TokenPayload, error) {
+func (t *Tupelo) sendInk(c *client.Client, source *consensus.SignedChainTree, key *ecdsa.PrivateKey, amount uint64, destinationChainId string) (*transactions.TokenPayload, error) {
 	transaction, transactionId, err := t.sendInkTransaction(destinationChainId, amount)
 	if err != nil {
 		return nil, errors.Wrap(err, "error generating ink send token transaction")
@@ -86,28 +86,47 @@ func (t *Tupelo) sendInk(c *client.Client, inkHolder *consensus.SignedChainTree,
 
 	log.Debugf("send ink transaction: %+v", *transaction)
 
-	txResp, err := t.playTransactions(c, inkHolder, key, []*transactions.Transaction{transaction})
+	txResp, err := t.playTransactions(c, source, key, []*transactions.Transaction{transaction})
 	if err != nil {
 		return nil, errors.Wrap(err, "error playing ink send token transaction")
 	}
 
 	tokenNameString := t.NotaryGroup.Config().TransactionToken
 	tokenName := consensus.TokenNameFromString(tokenNameString)
-	tokenPayload, err := t.TokenPayloadForTransaction(inkHolder, &tokenName, transactionId.String(), &txResp.Signature)
+	tokenPayload, err := t.TokenPayloadForTransaction(source, &tokenName, transactionId.String(), &txResp.Signature)
 
 	return tokenPayload, nil
 }
 
-func (t *Tupelo) ReceiveInkTransaction(tree *consensus.SignedChainTree, key *ecdsa.PrivateKey, tokenPayload *transactions.TokenPayload) (*transactions.Transaction, error) {
-	decodedTip, err := cid.Decode(tokenPayload.Tip)
+func (t *Tupelo) ReceiveInk(tree *consensus.SignedChainTree, key *ecdsa.PrivateKey, tokenPayload *transactions.TokenPayload) error {
+	c := client.New(t.NotaryGroup, tree.MustId(), t.PubSubSystem)
+	c.Listen()
+	defer c.Stop()
+
+	return t.receiveInk(c, tree, key, tokenPayload)
+}
+
+func (t *Tupelo) receiveInk(c *client.Client, tree *consensus.SignedChainTree, privateKey *ecdsa.PrivateKey, tokenPayload *transactions.TokenPayload) error {
+	transaction, err := t.receiveInkTransaction(tree, privateKey, tokenPayload)
 	if err != nil {
-		return nil, errors.Wrapf(err, "error decoding token payload tip: %s", tokenPayload.Tip)
+		return errors.Wrap(err, "error generating ink receive token transaction")
 	}
 
-	log.Debugf("receive ink decoded token payload tip: %s", decodedTip)
+	_, err = t.playTransactions(c, tree, privateKey, []*transactions.Transaction{transaction})
+	if err != nil {
+		return errors.Wrap(err, "error playing ink receive token transaction")
+	}
 
-	return chaintree.NewReceiveTokenTransaction(tokenPayload.TransactionId, decodedTip.Bytes(), tokenPayload.Signature, tokenPayload.Leaves)
+	return nil
+}
 
+func (t *Tupelo) depositInk(c *client.Client, key *ecdsa.PrivateKey, tree *consensus.SignedChainTree, inkHolder *consensus.SignedChainTree) (*transactions.Transaction, error) {
+	depositPayload, err := t.sendInk(c, inkHolder, key, t.NotaryGroup.Config().BurnAmount, tree.MustId())
+	if err != nil {
+		return nil, errors.Wrap(err, "error sending ink")
+	}
+
+	return t.receiveInkTransaction(tree, key, depositPayload)
 }
 
 func (t *Tupelo) PlayTransactions(tree *consensus.SignedChainTree, key *ecdsa.PrivateKey, transactions []*transactions.Transaction, inkHolder *consensus.SignedChainTree) (*consensus.AddBlockResponse, error) {
@@ -115,15 +134,13 @@ func (t *Tupelo) PlayTransactions(tree *consensus.SignedChainTree, key *ecdsa.Pr
 	c.Listen()
 	defer c.Stop()
 
-	depositPayload, err := t.sendInk(c, inkHolder, key, t.NotaryGroup.Config().BurnAmount, tree.MustId())
+	depositTx, err := t.depositInk(c, key, tree, inkHolder)
 	if err != nil {
 		return nil, errors.Wrap(err, "error depositing ink")
 	}
 
-	depositTx, err := t.ReceiveInkTransaction(tree, key, tokenPayload)
-
-	t.playTransactions(c, tree, key, append(transactions, depositTx))
-
+	txnsWithDeposit := append(transactions, depositTx)
+	return t.playTransactions(c, tree, key, txnsWithDeposit)
 }
 
 func (t *Tupelo) playTransactions(c *client.Client, tree *consensus.SignedChainTree, key *ecdsa.PrivateKey, transactions []*transactions.Transaction) (*consensus.AddBlockResponse, error) {
@@ -139,7 +156,7 @@ func (t *Tupelo) playTransactions(c *client.Client, tree *consensus.SignedChainT
 			return nil, errors.Wrap(err, "error generating ink burn transaction")
 		}
 
-		transactions := append(transactions, burnTransaction)
+		return c.PlayTransactions(tree, key, tipPtr, append(transactions, burnTransaction))
 	}
 
 	return c.PlayTransactions(tree, key, tipPtr, transactions)
@@ -147,6 +164,15 @@ func (t *Tupelo) playTransactions(c *client.Client, tree *consensus.SignedChainT
 
 func (t *Tupelo) shouldBurn() bool {
 	return t.NotaryGroup.Config().BurnAmount > 0 && t.NotaryGroup.Config().TransactionToken != ""
+}
+
+func (t *Tupelo) inkBurnTransaction() (*transactions.Transaction, error) {
+	burnTx, _, err := t.sendInkTransaction("", t.NotaryGroup.Config().BurnAmount)
+	if err != nil {
+		return nil, err
+	}
+
+	return burnTx, nil
 }
 
 func (t *Tupelo) sendInkTransaction(destId string, amount uint64) (*transactions.Transaction, *uuid.UUID, error) {
@@ -163,13 +189,16 @@ func (t *Tupelo) sendInkTransaction(destId string, amount uint64) (*transactions
 	return transaction, &transactionId, nil
 }
 
-func (t *Tupelo) inkBurnTransaction() (*transactions.Transaction, error) {
-	burnTx, txId, err := t.sendInkTransaction("", t.NotaryGroup.Config().BurnAmount)
+func (t *Tupelo) receiveInkTransaction(tree *consensus.SignedChainTree, key *ecdsa.PrivateKey, tokenPayload *transactions.TokenPayload) (*transactions.Transaction, error) {
+	decodedTip, err := cid.Decode(tokenPayload.Tip)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrapf(err, "error decoding token payload tip: %s", tokenPayload.Tip)
 	}
 
-	return burnTx, nil
+	log.Debugf("receive ink decoded token payload tip: %s", decodedTip)
+
+	return chaintree.NewReceiveTokenTransaction(tokenPayload.TransactionId, decodedTip.Bytes(), tokenPayload.Signature, tokenPayload.Leaves)
+
 }
 
 func (t *Tupelo) TokenPayloadForTransaction(tree *consensus.SignedChainTree, tokenName *consensus.TokenName, sendTokenTxId string, sendTxSig *signatures.Signature) (*transactions.TokenPayload, error) {

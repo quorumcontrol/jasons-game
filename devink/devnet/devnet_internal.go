@@ -21,7 +21,7 @@ type DevNetwork interface {
 var _ DevNetwork = &DevRemoteNetwork{}
 
 func (n *DevRemoteNetwork) PlayTransactions(tree *consensus.SignedChainTree, transactions []*transactions.Transaction) (*consensus.SignedChainTree, *consensus.AddBlockResponse, error) {
-	txResp, err := n.Tupelo.PlayTransactions(tree, n.PrivateKey(), transactions)
+	txResp, err := n.Tupelo.PlayTransactions(tree, n.PrivateKey(), transactions, n.RemoteNetwork.InkHolder)
 	if err != nil {
 		return nil, nil, err
 	}

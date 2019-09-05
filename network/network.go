@@ -78,6 +78,7 @@ type RemoteNetwork struct {
 	ipldp2pHost   *p2p.LibP2PHost
 	community     *Community
 	signingKey    *ecdsa.PrivateKey
+	InkHolder     *consensus.SignedChainTree
 }
 
 type RemoteNetworkConfig struct {
@@ -286,7 +287,7 @@ func (n *RemoteNetwork) CreateChainTree() (*consensus.SignedChainTree, error) {
 		return nil, errors.Wrap(err, "error creating ownership transaction for chaintree")
 	}
 
-	_, err = n.Tupelo.PlayTransactions(tree, key, []*transactions.Transaction{transaction})
+	_, err = n.Tupelo.PlayTransactions(tree, key, []*transactions.Transaction{transaction}, n.InkHolder)
 	if err != nil {
 		return nil, errors.Wrap(err, "error playing transactions")
 	}
@@ -356,7 +357,7 @@ func (n *RemoteNetwork) UpdateChainTree(tree *consensus.SignedChainTree, path st
 		return nil, errors.Wrap(err, "error creating set data transaction")
 	}
 
-	_, err = n.Tupelo.PlayTransactions(tree, n.PrivateKey(), []*transactions.Transaction{transaction})
+	_, err = n.Tupelo.PlayTransactions(tree, n.PrivateKey(), []*transactions.Transaction{transaction}, n.InkHolder)
 
 	if err != nil {
 		return nil, errors.Wrap(err, "error updating chaintree")
@@ -372,7 +373,7 @@ func (n *RemoteNetwork) changeChainTreeOwner(tree *consensus.SignedChainTree, pr
 		return nil, errors.Wrap(err, "error updating chaintree")
 	}
 
-	_, err = n.Tupelo.PlayTransactions(tree, privateKey, []*transactions.Transaction{transaction})
+	_, err = n.Tupelo.PlayTransactions(tree, privateKey, []*transactions.Transaction{transaction}, n.InkHolder)
 	if err != nil {
 		return nil, errors.Wrap(err, "error updating chaintree")
 	}
