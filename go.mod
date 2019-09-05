@@ -25,8 +25,6 @@ require (
 	github.com/ipfs/go-ipld-format v0.0.2
 	github.com/ipfs/go-log v0.0.1
 	github.com/ipfs/go-merkledag v0.1.0
-	github.com/libp2p/go-libp2p-transport v0.0.5 // indirect
-	github.com/libp2p/go-testutil v0.1.0 // indirect
 	github.com/mr-tron/base58 v1.1.2
 	github.com/pkg/errors v0.8.1
 	github.com/quorumcontrol/chaintree v0.0.0-20190709145156-03b818830f38
@@ -38,6 +36,7 @@ require (
 	github.com/stretchr/testify v1.3.0
 	golang.org/x/crypto v0.0.0-20190701094942-4def268fd1a4
 	golang.org/x/net v0.0.0-20190628185345-da137c7871d7
+	golang.org/x/xerrors v0.0.0-20190528162220-0421b64034aa // for go-1.13. see: https://github.com/golang/go/issues/32246
 	google.golang.org/grpc v1.22.0
 	gopkg.in/yaml.v2 v2.2.2
 	gotest.tools/gotestsum v0.3.5 // indirect
