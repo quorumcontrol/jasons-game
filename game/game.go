@@ -61,6 +61,10 @@ type StateChange struct {
 	PID *actor.PID
 }
 
+// TODO: remove me along with all conditional blocks using
+// this var once ink is ready
+const tempDevelopmentBuild = true
+
 func NewGameProps(cfg *GameConfig) *actor.Props {
 	g := &Game{
 		ui:         cfg.UiActor,
@@ -69,6 +73,17 @@ func NewGameProps(cfg *GameConfig) *actor.Props {
 		playerTree: cfg.PlayerTree,
 		behavior:   actor.NewBehavior(),
 		inkDID:     cfg.InkDID,
+	}
+
+	// TODO: Remove me once ink is ready
+	if tempDevelopmentBuild {
+		if g.playerTree == nil {
+			newPlayerChainTree, err := g.network.CreateLocalChainTree("player")
+			if err != nil {
+				panic("Could not create default player tree")
+			}
+			g.playerTree, err = CreatePlayerTree(g.network, newPlayerChainTree.MustId())
+		}
 	}
 
 	if g.playerTree == nil {
@@ -194,6 +209,11 @@ func (g *Game) initializeGame(actorCtx actor.Context) {
 	}
 
 	g.sendUserMessage(actorCtx, l)
+
+	// TODO: Remove me once ink is ready
+	if tempDevelopmentBuild {
+		g.sendUserMessage(actorCtx, "THIS IS DEVELOPMENT BUILD, DO NOT SEND EXTERNALLY")
+	}
 }
 
 func (g *Game) acknowledgeReceipt(actorCtx actor.Context) {
