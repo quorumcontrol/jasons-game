@@ -6,7 +6,7 @@ require (
 	github.com/AsynkronIT/protoactor-go v0.0.0-20190821183243-5bb73de32899
 	github.com/btcsuite/btcutil v0.0.0-20190425235716-9e5f4b9a998d
 	github.com/dgraph-io/badger v1.6.0 // indirect
-	github.com/ethereum/go-ethereum v1.8.27
+	github.com/ethereum/go-ethereum v1.9.3
 	github.com/gobuffalo/packr/v2 v2.5.3-0.20190708182234-662c20c19dde
 	github.com/gogo/protobuf v1.3.0
 	github.com/google/uuid v1.1.1
@@ -27,9 +27,10 @@ require (
 	github.com/ipfs/go-merkledag v0.1.0
 	github.com/mr-tron/base58 v1.1.2
 	github.com/pkg/errors v0.8.1
+	github.com/prometheus/common v0.6.0 // indirect
 	github.com/quorumcontrol/chaintree v0.8.1
-	github.com/quorumcontrol/community v0.0.0-20190722000000-5f668465bdd9673c3cfbe29771e54f221432cf9c
-	github.com/quorumcontrol/messages/build/go v0.0.0-20190723140659-c8a3565a7c72
+	github.com/quorumcontrol/community v0.0.3-0.20190904093829-3b0b04242da8
+	github.com/quorumcontrol/messages/build/go v0.0.0-20190904072359-c4c4068cde98cf0244eb91d63db0cfab979c42b5
 	github.com/quorumcontrol/tupelo-go-sdk v0.5.3-rc2.0.20190827115629-6406e12c2317
 	github.com/rs/cors v1.7.0 // indirect
 	github.com/shibukawa/configdir v0.0.0-20170330084843-e180dbdc8da0
