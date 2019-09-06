@@ -105,12 +105,11 @@ func (r *RespawnActor) respawnTree(actorCtx actor.Context) (*consensus.SignedCha
 }
 
 func (r *RespawnActor) generateRandomArtifact(salt []byte) (*consensus.SignedChainTree, error) {
-	treeKey, err := consensus.PassPhraseKey(crypto.FromECDSA(r.network.PrivateKey()), salt)
+	tree, err := r.network.FindOrCreatePassphraseTree(string(salt))
 	if err != nil {
-		return nil, errors.Wrap(err, "error creating new object key")
+		return nil, errors.Wrap(err, "error creating new object tree")
 	}
-
-	did := consensus.EcdsaPubkeyToDid(treeKey.PublicKey)
+	did := tree.MustId()
 
 	// Pick object to spawn deterministically based on chaintree id
 	randSeed := binary.BigEndian.Uint64([]byte(consensus.DidToAddr(did)[2:])[0:8])
@@ -136,18 +135,6 @@ func (r *RespawnActor) generateRandomArtifact(salt []byte) (*consensus.SignedCha
 	processedYaml, err := config.ReplaceVariables(string(r.cfg.ObjectTemplate), variables)
 	if err != nil {
 		return nil, errors.Wrap(err, "error parsing ObjectTemplate")
-	}
-
-	tree, err := r.network.CreateChainTreeWithKey(treeKey)
-	if err != nil {
-		return nil, errors.Wrap(err, "error creating new object tree")
-	}
-
-	_, err = r.network.ChangeChainTreeOwnerWithKey(tree, treeKey, []string{
-		crypto.PubkeyToAddress(*r.network.PublicKey()).String(),
-	})
-	if err != nil {
-		return nil, errors.Wrap(err, "error chowning new object")
 	}
 
 	err = importer.New(r.network).UpdateObject(did, processedYaml)
