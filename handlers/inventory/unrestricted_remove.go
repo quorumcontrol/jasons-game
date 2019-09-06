@@ -111,7 +111,7 @@ func (h *UnrestrictedRemoveHandler) Handle(msg proto.Message) error {
 			return err
 		})
 
-		future := actor.NewFuture(10 * time.Second)
+		future := actor.NewFuture(20 * time.Second)
 		subscriptionReadyFuture := actor.NewFuture(1 * time.Second)
 		pid := actor.EmptyRootContext.Spawn(actor.PropsFromFunc(func(actorCtx actor.Context) {
 			switch msg := actorCtx.Message().(type) {
