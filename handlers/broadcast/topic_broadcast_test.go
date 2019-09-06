@@ -6,7 +6,7 @@ import (
 	"time"
 
 	"github.com/gogo/protobuf/proto"
-	"github.com/quorumcontrol/community/pb/messages"
+	messages "github.com/quorumcontrol/messages/build/go/community"
 	"github.com/quorumcontrol/jasons-game/network"
 	"github.com/quorumcontrol/jasons-game/pb/jasonsgame"
 	"github.com/stretchr/testify/require"
