@@ -9,8 +9,8 @@ type GameServiceSendCommand = {
   readonly service: typeof GameService;
   readonly requestStream: false;
   readonly responseStream: false;
-  readonly requestType: typeof jasonsgame_pb.UserInput;
-  readonly responseType: typeof jasonsgame_pb.CommandReceived;
+  readonly requestType: typeof jasonsgame_pb.jasonsgame.UserInput;
+  readonly responseType: typeof jasonsgame_pb.jasonsgame.CommandReceived;
 };
 
 type GameServiceReceiveUIMessages = {
@@ -18,8 +18,8 @@ type GameServiceReceiveUIMessages = {
   readonly service: typeof GameService;
   readonly requestStream: false;
   readonly responseStream: true;
-  readonly requestType: typeof jasonsgame_pb.Session;
-  readonly responseType: typeof jasonsgame_pb.UserInterfaceMessage;
+  readonly requestType: typeof jasonsgame_pb.jasonsgame.Session;
+  readonly responseType: typeof jasonsgame_pb.jasonsgame.UserInterfaceMessage;
 };
 
 type GameServiceReceiveStatMessages = {
@@ -27,8 +27,8 @@ type GameServiceReceiveStatMessages = {
   readonly service: typeof GameService;
   readonly requestStream: false;
   readonly responseStream: true;
-  readonly requestType: typeof jasonsgame_pb.Session;
-  readonly responseType: typeof jasonsgame_pb.Stats;
+  readonly requestType: typeof jasonsgame_pb.jasonsgame.Session;
+  readonly responseType: typeof jasonsgame_pb.jasonsgame.Stats;
 };
 
 export class GameService {
@@ -47,14 +47,14 @@ interface UnaryResponse {
 interface ResponseStream<T> {
   cancel(): void;
   on(type: 'data', handler: (message: T) => void): ResponseStream<T>;
-  on(type: 'end', handler: () => void): ResponseStream<T>;
+  on(type: 'end', handler: (status?: Status) => void): ResponseStream<T>;
   on(type: 'status', handler: (status: Status) => void): ResponseStream<T>;
 }
 interface RequestStream<T> {
   write(message: T): RequestStream<T>;
   end(): void;
   cancel(): void;
-  on(type: 'end', handler: () => void): RequestStream<T>;
+  on(type: 'end', handler: (status?: Status) => void): RequestStream<T>;
   on(type: 'status', handler: (status: Status) => void): RequestStream<T>;
 }
 interface BidirectionalStream<ReqT, ResT> {
@@ -62,7 +62,7 @@ interface BidirectionalStream<ReqT, ResT> {
   end(): void;
   cancel(): void;
   on(type: 'data', handler: (message: ResT) => void): BidirectionalStream<ReqT, ResT>;
-  on(type: 'end', handler: () => void): BidirectionalStream<ReqT, ResT>;
+  on(type: 'end', handler: (status?: Status) => void): BidirectionalStream<ReqT, ResT>;
   on(type: 'status', handler: (status: Status) => void): BidirectionalStream<ReqT, ResT>;
 }
 
@@ -71,15 +71,15 @@ export class GameServiceClient {
 
   constructor(serviceHost: string, options?: grpc.RpcOptions);
   sendCommand(
-    requestMessage: jasonsgame_pb.UserInput,
+    requestMessage: jasonsgame_pb.jasonsgame.UserInput,
     metadata: grpc.Metadata,
-    callback: (error: ServiceError|null, responseMessage: jasonsgame_pb.CommandReceived|null) => void
+    callback: (error: ServiceError|null, responseMessage: jasonsgame_pb.jasonsgame.CommandReceived|null) => void
   ): UnaryResponse;
   sendCommand(
-    requestMessage: jasonsgame_pb.UserInput,
-    callback: (error: ServiceError|null, responseMessage: jasonsgame_pb.CommandReceived|null) => void
+    requestMessage: jasonsgame_pb.jasonsgame.UserInput,
+    callback: (error: ServiceError|null, responseMessage: jasonsgame_pb.jasonsgame.CommandReceived|null) => void
   ): UnaryResponse;
-  receiveUIMessages(requestMessage: jasonsgame_pb.Session, metadata?: grpc.Metadata): ResponseStream<jasonsgame_pb.UserInterfaceMessage>;
-  receiveStatMessages(requestMessage: jasonsgame_pb.Session, metadata?: grpc.Metadata): ResponseStream<jasonsgame_pb.Stats>;
+  receiveUIMessages(requestMessage: jasonsgame_pb.jasonsgame.Session, metadata?: grpc.Metadata): ResponseStream<jasonsgame_pb.jasonsgame.UserInterfaceMessage>;
+  receiveStatMessages(requestMessage: jasonsgame_pb.jasonsgame.Session, metadata?: grpc.Metadata): ResponseStream<jasonsgame_pb.jasonsgame.Stats>;
 }
 

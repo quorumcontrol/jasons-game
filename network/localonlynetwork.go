@@ -3,6 +3,7 @@ package network
 import (
 	"context"
 	"crypto/ecdsa"
+	"crypto/sha256"
 	"fmt"
 	"time"
 
@@ -80,6 +81,10 @@ func (ln *LocalNetwork) PublicKey() *ecdsa.PublicKey {
 	return &ln.key.PublicKey
 }
 
+func (ln *LocalNetwork) PrivateKey() *ecdsa.PrivateKey {
+	return ln.key
+}
+
 func (ln *LocalNetwork) Community() *Community {
 	return ln.community
 }
@@ -96,6 +101,27 @@ func (ln *LocalNetwork) StopDiscovery(_ string) {
 func (ln *LocalNetwork) WaitForDiscovery(ns string, num int, dur time.Duration) error {
 	//noop
 	return nil
+}
+
+func (ln *LocalNetwork) CreateLocalChainTree(name string) (*consensus.SignedChainTree, error) {
+	return ln.CreateNamedChainTree(name)
+}
+
+// in real network, passphrase tree is stateless - but for localnetwork, we can assume its a local
+// tree, so just use the passphrase for a "named chaintree"
+func (ln *LocalNetwork) FindOrCreatePassphraseTree(passphrase string) (*consensus.SignedChainTree, error) {
+	seed := sha256.Sum256([]byte(passphrase))
+	name := string(seed[:32])
+
+	tree, err := ln.GetChainTreeByName(name)
+	if err != nil {
+		return nil, errors.Wrap(err, "getting passphrase chaintree")
+	}
+
+	if tree == nil {
+		return ln.CreateNamedChainTree(name)
+	}
+	return tree, nil
 }
 
 func (ln *LocalNetwork) CreateNamedChainTree(name string) (*consensus.SignedChainTree, error) {
@@ -170,8 +196,21 @@ func (ln *LocalNetwork) GetTree(did string) (*consensus.SignedChainTree, error) 
 }
 
 func (ln *LocalNetwork) GetTreeByTip(tip cid.Cid) (*consensus.SignedChainTree, error) {
-	// TODO: if we enable this, we'll need to also do some sort of "insert" for test purposes
-	return nil, fmt.Errorf("unimplemented")
+	rootNode, err := ln.TreeStore().Get(context.Background(), tip)
+	if err != nil {
+		return nil, err
+	}
+
+	didUncast, _, err := rootNode.Resolve([]string{"id"})
+	if err != nil {
+		return nil, err
+	}
+
+	if didUncast == nil {
+		return nil, nil
+	}
+
+	return ln.GetTree(didUncast.(string))
 }
 
 func (ln *LocalNetwork) UpdateChainTree(tree *consensus.SignedChainTree, path string, value interface{}) (*consensus.SignedChainTree, error) {

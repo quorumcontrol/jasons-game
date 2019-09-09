@@ -47,7 +47,7 @@ endif
 
 # Turn off go mod so that this will install to $GOPATH/src instead of $GOPATH/pkg/mod
 ${FIRSTGOPATH}/src/github.com/gogo/protobuf/protobuf:
-	env GO111MODULE=off go get github.com/gogo/protobuf/...
+	env GO111MODULE=off go get -u github.com/gogo/protobuf/...
 
 %.pb.go %_pb.d.ts %_pb_service.d.ts %_pb.js %_pb_service.js: %.proto $(FIRSTGOPATH)/src/github.com/gogo/protobuf/protobuf $(jsmodules)
 	./scripts/protogen.sh
@@ -163,12 +163,15 @@ down:
 	docker-compose -f docker-compose-dev.yml down
 	docker-compose -f docker-compose-localnet.yml down
 
-frontend/jasons-game/public/js/compiled/base.js: $(jsmodules) $(generated) $(cljssources) frontend/jasons-game/externs/app.txt frontend/jasons-game/shadow-cljs.edn
+frontend/jasons-game/node_modules/.bin/shadow-cljs:
+	cd frontend/jasons-game && npm i
+
+$(jsgenerated): $(jsmodules) $(generated) $(cljssources) frontend/jasons-game/externs/app.txt frontend/jasons-game/shadow-cljs.edn frontend/jasons-game/node_modules/.bin/shadow-cljs
 	cd frontend/jasons-game && ./node_modules/.bin/shadow-cljs release app
 
 frontend-build: frontend/jasons-game/public/js/compiled/base.js
 
-frontend-dev: $(generated) $(jsmodules)
+frontend-dev: $(generated) $(jsmodules) frontend/jasons-game/node_modules/.bin/shadow-cljs
 	cd frontend/jasons-game && ./node_modules/.bin/shadow-cljs watch app
 
 $(FIRSTGOPATH)/bin/modvendor:
@@ -183,7 +186,7 @@ prepare: $(gosources) $(generated) $(packr) $(vendor)
 $(FIRSTGOPATH)/bin/packr2:
 	env GO111MODULE=off go get -u github.com/gobuffalo/packr/v2/packr2
 
-$(packr): $(FIRSTGOPATH)/bin/packr2 main.go
+$(packr): $(FIRSTGOPATH)/bin/packr2 main.go $(jsgenerated) frontend/jasons-game/public/index.html
 	$(FIRSTGOPATH)/bin/packr2
 
 clean: $(FIRSTGOPATH)/bin/packr2
@@ -195,5 +198,16 @@ clean: $(FIRSTGOPATH)/bin/packr2
 	rm -rf $(jsmodules)
 	rm -rf frontend/jasons-game/public/js/compiled
 	rm -rf out/*
+	rm -f courts/yml.tar.gz
 
-.PHONY: all build build-all test integration-test localnet clean lint game-server importer jason inkfaucet devink game2 mac-app prepare generated dev down
+encrypt: courts/yml/
+	tar -zcf courts/yml.tar.gz courts/yml/
+	git secret add courts/yml.tar.gz
+	git secret hide
+	rm -f courts/yml.tar.gz
+	git add courts/yml.tar.gz.secret .gitsecret/paths/mapping.cfg
+
+decrypt: courts/yml.tar.gz.secret
+	git secret cat courts/yml.tar.gz.secret | tar -zxf -
+
+.PHONY: all build build-all test integration-test localnet clean lint game-server importer jason inkfaucet devink game2 mac-app prepare generated dev down encrypt decrypt

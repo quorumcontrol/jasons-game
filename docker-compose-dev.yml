@@ -42,8 +42,6 @@ services:
   inkfaucet:
     build: ./devdocker
     command: ["go", "run", "-tags=internal", "inkfaucet/main.go", "-local=true", "-deposit=${TOKEN_PAYLOAD}"]
-    depends_on:
-      - localstack
     volumes:
       - .:/app:delegated
       - ./devdocker/.tmp:/root/.cache:delegated
@@ -73,8 +71,6 @@ services:
   invite:
     build: ./devdocker
     command: ["go", "run", "-tags=internal", "inkfaucet/main.go", "-local=true", "-invite=true"]
-    depends_on:
-      - localstack
     volumes:
       - .:/app:delegated
       - ./devdocker/.tmp:/root/.cache:delegated
@@ -131,11 +127,6 @@ services:
       GOPATH: /go
       BUILD: internal
 
-  localstack:
-    image: localstack/localstack
-    environment:
-      - SERVICES=s3
-
   integration:
     build: ./devdocker
     command:
@@ -144,7 +135,7 @@ services:
       - -v
       - -tags
       - 'internal integration'
-      - -timeout=5m
+      - -timeout=10m
       - ${TEST_PACKAGE-./...}
     volumes:
       - .:/app:delegated

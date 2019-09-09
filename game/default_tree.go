@@ -8,7 +8,7 @@ import (
 func createHome(n network.Network) (*LocationTree, error) {
 	log.Debug("creating new home")
 
-	homeTree, err := n.CreateNamedChainTree("home")
+	homeTree, err := n.CreateLocalChainTree("home")
 	if err != nil {
 		return nil, errors.Wrap(err, "error creating tree")
 	}

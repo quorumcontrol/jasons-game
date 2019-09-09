@@ -35,7 +35,7 @@ func TestFullIntegration(t *testing.T) {
 	require.Nil(t, err)
 	defer rootCtx.Stop(uiActor)
 
-	playerChain, err := net.CreateNamedChainTree("player")
+	playerChain, err := net.CreateLocalChainTree("player")
 	require.Nil(t, err)
 	playerTree, err := CreatePlayerTree(net, playerChain.MustId())
 	require.Nil(t, err)

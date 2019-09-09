@@ -1,0 +1,7 @@
+spawning:
+  - locations:
+      - "{{.Locations.loc1}}"
+      - "{{.Locations.loc2}}"
+    forgers:
+      - forged1
+      - forged2

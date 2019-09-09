@@ -1,6 +1,8 @@
 const { app, BrowserWindow, Menu } = require('electron');
 const { spawn } = require('child_process');
 const path = require('path');
+const fs = require('fs');
+const os = require('os');
 
 if (require('electron-squirrel-startup')) {
     // Windows squirrel installer launches the app during install.
@@ -14,7 +16,23 @@ let game;
 function startGame() {
     runBackend();
     // TODO: Would be better if the backend signaled us when it was ready...
-    setTimeout(createWindow, 3000);
+    setTimeout(createWindow, 1000);
+}
+
+function runBackendExecutable(path) {
+    process.env.GOLOG_FILE = logPath(os.platform());
+
+    game = spawn(path, [], {stdio: 'ignore'});
+
+    game.on('error', (err) => {
+        throw Error(`Error launching game backend: ${err}`);
+    });
+
+    game.on('exit', (code) => {
+        if (code && code !== 0) {
+            throw Error(`Game backend process exited with error code: ${code}`);
+        }
+    });
 }
 
 function runBackend() {
@@ -25,18 +43,21 @@ function runBackend() {
         exeSuffix = ".exe";
     }
 
-    let executable = path.resolve(__dirname, '..', '..', 'app.asar.unpacked', 'bin', `jasonsgame-${platform}-public${exeSuffix}`);
-    game = spawn(executable);
+    let asarPath = path.resolve(__dirname, '..', '..', 'app.asar.unpacked', 'bin', `jasonsgame-${platform}-public${exeSuffix}`);
+    let devPath = path.resolve(__dirname, '..', 'bin', `jasonsgame-${platform}-public${exeSuffix}`);
 
-    game.on('error', (err) => {
-        throw Error(`Error launching game backend: ${err}`);
-    });
-
-    game.on('exit', (code) => {
-        if (code !== 0) {
-            throw Error(`Game backend process exited with error code: ${code}`);
+    fs.access(asarPath, fs.constants.F_OK, (err) => {
+        if (err) {
+            fs.access(devPath, fs.constants.F_OK, (devErr) => {
+               if (devErr) {
+                   throw(`Error finding game backend executable: ${err}`)
+               }
+               runBackendExecutable(devPath);
+            });
+        } else {
+            runBackendExecutable(asarPath);
         }
-    })
+    });
 }
 
 function createWindow () {
@@ -44,16 +65,45 @@ function createWindow () {
         width: 1366,
         height: 768,
         backgroundColor: '#000000',
+        show: false,
         webPreferences: {
-            nodeIntegration: true
+            nodeIntegration: false
         }
     });
 
     win.loadURL('http://localhost:8080/');
 
+    win.once('ready-to-show', () => {
+        win.show();
+    });
+
     win.on('closed', () => {
         win = null;
     })
+}
+
+function logPath(platform) {
+    let homeDir = os.homedir ? os.homedir() : process.env.HOME;
+
+    let dir;
+    switch (platform) {
+        case 'darwin': {
+            dir = path.join(homeDir, 'Library', 'Logs');
+            break;
+        }
+
+        case 'win32': {
+            dir = path.join(homeDir, 'AppData', 'Roaming');
+            break;
+        }
+
+        default: {
+            dir = path.join(homeDir, '.config', 'JasonsGame');
+            break;
+        }
+    }
+
+    return path.join(dir, 'jasonsgame.log');
 }
 
 function setupMenu() {
@@ -74,7 +124,10 @@ function setupMenu() {
                     { role: 'copy' },
                     { role: 'paste' }
                 ]
-            }
+            },
+            { role: 'viewMenu' },
+            { role: 'windowMenu' },
+            { role: 'helpMenu' }
         ];
         
         Menu.setApplicationMenu(Menu.buildFromTemplate(menuTemplate));

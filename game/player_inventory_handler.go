@@ -23,6 +23,7 @@ type InventoryChangeEvent struct {
 	Did     string
 	Action  string
 	Message string
+	Error   string
 }
 
 var PlayerInventoryHandlerMessages = handlers.HandlerMessageList{
@@ -52,26 +53,49 @@ func (h *PlayerInventoryHandler) Handle(msg proto.Message) error {
 		})
 		return nil
 	case *jasonsgame.TransferredObjectMessage:
+		var err error
+
+		// This defer ensures either a success or failure is always sent
+		defer func() {
+			h.expectedObjs.Delete(msg.Object)
+
+			if err != nil {
+				h.events.Publish(&InventoryChangeEvent{
+					Did:     msg.Object,
+					Action:  "add",
+					Error:   err.Error(),
+				})
+			} else {
+				h.events.Publish(&InventoryChangeEvent{
+					Did:     msg.Object,
+					Action:  "add",
+					Message: msg.Message,
+				})
+			}
+		}()
+
 		if msg.To != h.did {
-			return fmt.Errorf("Message not intended for this player")
+			err = fmt.Errorf("Message not intended for this player")
+			return err
 		}
 
 		isExpected, _ := h.expectedObjs.Load(msg.Object)
 		if isExpected == nil || !isExpected.(bool) {
-			return fmt.Errorf("Receive was rejected by player")
+			err = fmt.Errorf("Receive was rejected by player")
+			return err
 		}
 
-		err := inventoryHandlers.NewUnrestrictedAddHandler(h.network).Handle(msg)
+		if msg.Error != "" {
+			err = fmt.Errorf(msg.Error)
+			return err
+		}
+
+		err = inventoryHandlers.NewUnrestrictedAddHandler(h.network).Handle(msg)
 		if err != nil {
 			return err
 		}
 
-		h.expectedObjs.Delete(msg.Object)
-		h.events.Publish(&InventoryChangeEvent{
-			Did:     msg.Object,
-			Action:  "add",
-			Message: msg.Message,
-		})
+		// defer from top will send successfull response
 		return nil
 	default:
 		return handlers.ErrUnsupportedMessageType

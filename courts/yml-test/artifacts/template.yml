@@ -1,0 +1,14 @@
+data:
+  name: "{{.Name}}"
+  description: "A test artifact"
+  inscriptions:
+    type: "{{.Type}}"
+    material: "{{.Material}}"
+    age: "{{.Age}}"
+    weight: "{{.Weight}}"
+    forged by: "{{.ForgedBy}}"
+interactions:
+  - type:  PickUpObjectInteraction
+    value:
+      command: "pick up {{.Name}}"
+      did: "{{.Did}}"

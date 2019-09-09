@@ -39,12 +39,15 @@ func main() {
 	mustSetLogLevel("inkFaucet", "debug")
 	mustSetLogLevel("gamenetwork", "info")
 
-	local := flag.Bool("local", false, "connect to localnet & use localstack S3 instead of testnet & real S3")
+	local := flag.Bool("local", false, "connect to localnet")
 	deposit := flag.String("deposit", "", "token payload for ink deposit")
 
 	var invite *bool
 	if build.BuildLabel == "internal" {
 		invite = flag.Bool("invite", false, "generate a new player invite code")
+	} else {
+		falseVar := false
+		invite = &falseVar
 	}
 
 	flag.Parse()
@@ -162,5 +165,6 @@ func main() {
 		os.Exit(0)
 	}
 
-	<-make(chan struct{})
+	flag.Usage()
+	os.Exit(1)
 }

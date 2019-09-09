@@ -93,6 +93,7 @@ message TransferredObjectMessage {
     string to = 2;
     string object = 3;
     string message = 4;
+    string error = 5;
 }
 
 message RequestObjectTransferMessage {

@@ -20,7 +20,7 @@
 (def game-receive-usermessages (.-ReceiveUIMessages GameService))
 
 (def ui-message-types
-  (-> game-lib/UserInterfaceMessage .-UiMessageCase js->clj keywordize-keys))
+  (-> game-lib/jasonsgame.UserInterfaceMessage .-UiMessageCase js->clj keywordize-keys))
 
 (defn user-message? [msg]
   (-> msg
@@ -33,11 +33,11 @@
       (= (:COMMAND_UPDATE ui-message-types))))
 
 (defn new-session [id]
-  (doto (game-lib/Session.)
+  (doto (game-lib/jasonsgame.Session.)
     (.setUuid id)))
 
 (defn send-user-input [host session input callback]
-  (let [req (doto (game-lib/UserInput.)
+  (let [req (doto (game-lib/jasonsgame.UserInput.)
               (.setMessage input)
               (.setSession session))]
     (unary game-send-command (clj->js {:request req
@@ -58,12 +58,14 @@
 
 (defn handle-user-message [resp]
   (let [msg (.getUserMessage resp)]
-    (when (not (.getHeartbeat msg))
-      (.log js/console "user message" (.toObject msg))
-      (let [game-msg (-> msg
-                         resp->message
-                         (assoc :user false))]
-        (re-frame/dispatch [:user/message game-msg])))))
+    (if (.getHeartbeat msg)
+      (re-frame/dispatch [:user/heartbeat])
+      (do
+        (.log js/console "user message" (.toObject msg))
+        (let [game-msg (-> msg
+                           resp->message
+                           (assoc :user false))]
+          (re-frame/dispatch [:user/message game-msg]))))))
 
 (defn handle-command-update [resp]
   (let [msg (.getCommandUpdate resp)]

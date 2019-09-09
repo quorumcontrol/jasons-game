@@ -16,6 +16,10 @@ type InventoryTree struct {
 	network network.Network
 }
 
+func InventoryBroadcastTopicFor(net network.Network, did string) []byte {
+	return net.Community().TopicFor(did + "/inventory")
+}
+
 func NewInventoryTree(net network.Network, tree *consensus.SignedChainTree) *InventoryTree {
 	return &InventoryTree{
 		tree:    tree,
@@ -41,7 +45,7 @@ func (t *InventoryTree) Tree() *consensus.SignedChainTree {
 }
 
 func (t *InventoryTree) BroadcastTopic() []byte {
-	return t.network.Community().TopicFor(t.tree.MustId() + "/inventory")
+	return InventoryBroadcastTopicFor(t.network, t.tree.MustId())
 }
 
 func (t *InventoryTree) Exists(did string) (bool, error) {
@@ -53,6 +57,28 @@ func (t *InventoryTree) Exists(did string) (bool, error) {
 
 	_, ok := allObjects[did]
 	return ok, nil
+}
+
+func (t *InventoryTree) DidForName(name string) (string, error) {
+	ctx := context.TODO()
+
+	resolvedObjectPath, _ := consensus.DecodePath(fmt.Sprintf("tree/data/%s/%s", ObjectsPath, name))
+
+	didUncasted, _, err := t.tree.ChainTree.Dag.Resolve(ctx, resolvedObjectPath)
+	if err != nil {
+		return "", errors.Wrap(err, "error fetching inventory")
+	}
+
+	if didUncasted == nil {
+		return "", nil
+	}
+
+	did, ok := didUncasted.(string)
+	if !ok {
+		return "", nil
+	}
+
+	return did, nil
 }
 
 func (t *InventoryTree) All() (map[string]string, error) {
@@ -93,6 +119,67 @@ func (t *InventoryTree) Remove(did string) error {
 }
 
 func (t *InventoryTree) Add(did string) error {
+	ctx := context.TODO()
+
+	allObjects, err := t.All()
+	if err != nil {
+		return err
+	}
+
+	_, ok := allObjects[did]
+	if ok {
+		return nil
+	}
+
+	objectTree, err := t.network.GetTree(did)
+	if err != nil {
+		return err
+	}
+
+	uncastObjectName, _, err := objectTree.ChainTree.Dag.Resolve(ctx, []string{"tree", "data", "jasons-game", "name"})
+	if err != nil {
+		return err
+	}
+
+	name, ok := uncastObjectName.(string)
+	if !ok {
+		return fmt.Errorf("error casting name to string; type is %T", uncastObjectName)
+	}
+
+	allObjects[did] = name
+	err = t.updateObjects(allObjects)
+	return err
+}
+
+// Add and overwrite
+func (t *InventoryTree) ForceAdd(did string) error {
+	ctx := context.TODO()
+
+	allObjects, err := t.All()
+	if err != nil {
+		return err
+	}
+	objectTree, err := t.network.GetTree(did)
+	if err != nil {
+		return err
+	}
+
+	uncastObjectName, _, err := objectTree.ChainTree.Dag.Resolve(ctx, []string{"tree", "data", "jasons-game", "name"})
+	if err != nil {
+		return err
+	}
+
+	name, ok := uncastObjectName.(string)
+	if !ok {
+		return fmt.Errorf("error casting name to string; type is %T", uncastObjectName)
+	}
+
+	allObjects[did] = name
+	err = t.updateObjects(allObjects)
+	return err
+}
+
+func (t *InventoryTree) Get(did string) error {
 	ctx := context.TODO()
 
 	allObjects, err := t.All()

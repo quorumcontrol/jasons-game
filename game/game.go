@@ -21,6 +21,7 @@ import (
 	"github.com/quorumcontrol/jasons-game/network"
 	"github.com/quorumcontrol/jasons-game/pb/jasonsgame"
 	"github.com/quorumcontrol/jasons-game/ui"
+	"github.com/quorumcontrol/jasons-game/utils/stringslice"
 )
 
 var log = logging.Logger("game")
@@ -28,6 +29,8 @@ var log = logging.Logger("game")
 var shoutChannel = []byte("jasons-game-shouting-players")
 
 type ping struct{}
+
+type indentedList []string
 
 type Game struct {
 	ui                   *actor.PID
@@ -78,21 +81,28 @@ func NewGameProps(cfg *GameConfig) *actor.Props {
 }
 
 func (g *Game) Receive(actorCtx actor.Context) {
+	log.Debugf("received message to dispatch to current behavior: %+v", actorCtx.Message())
 	g.behavior.Receive(actorCtx)
 }
 
 func (g *Game) ReceiveInvitation(actorCtx actor.Context) {
 	switch msg := actorCtx.Message().(type) {
 	case *actor.Started:
+		log.Debug("actor started in invitation mode")
 		g.initializeInvitation(actorCtx)
 	case *actor.Stopping:
+		log.Debug("stopping actor in invitation mode; poisoning invite actor too")
 		actorCtx.Poison(g.invitesActor)
 	case *jasonsgame.UserInput:
+		log.Debugf("actor received user input in invitation mode: %+v", msg)
 		g.handleInvitationInput(actorCtx, msg)
 	case *jasonsgame.CommandUpdate:
+		log.Debugf("received command update request in invitation mode: %+v", msg)
 		g.sendInvitationCommandUpdate(actorCtx)
 	case *ping:
 		actorCtx.Respond(true)
+	case *actor.Terminated:
+		log.Info("actor terminated in invitation mode")
 	default:
 		log.Warningf("received message of unrecognized type %T in invitation mode: %+v", msg, msg)
 	}
@@ -101,17 +111,24 @@ func (g *Game) ReceiveInvitation(actorCtx actor.Context) {
 func (g *Game) ReceiveGame(actorCtx actor.Context) {
 	switch msg := actorCtx.Message().(type) {
 	case *actor.Started:
+		log.Debug("actor started in game mode")
 		g.initializeGame(actorCtx)
 	case *jasonsgame.UserInput:
+		log.Debugf("actor received user input: %+v", msg)
 		g.handleUserInput(actorCtx, msg)
 	case *jasonsgame.CommandUpdate:
+		log.Debugf("actor received command update request: %+v", msg)
 		g.sendCommandUpdate(actorCtx)
 	case *jasonsgame.ChatMessage, *jasonsgame.ShoutMessage:
+		log.Debugf("actor received chat / shout message: %+v", msg)
 		g.sendUserMessage(actorCtx, msg)
 	case *StateChange:
+		log.Debugf("actor received state change message: %+v", msg)
 		g.handleStateChange(actorCtx, msg)
 	case *ping:
 		actorCtx.Respond(true)
+	case *actor.Terminated:
+		log.Infof("actor terminated: %s", msg)
 	default:
 		log.Warningf("received message of unrecognized type %T: %+v", msg, msg)
 	}
@@ -279,8 +296,6 @@ func (g *Game) handleUserInput(actorCtx actor.Context, input *jasonsgame.UserInp
 		err = g.handleConnectLocation(actorCtx, args)
 	case "help":
 		err = g.handleHelp(actorCtx, args)
-	case "name":
-		err = g.handleName(args)
 	case "interaction":
 		err = g.handleInteractionInput(actorCtx, cmd.(*interactionCommand), args)
 	default:
@@ -292,27 +307,22 @@ func (g *Game) handleUserInput(actorCtx actor.Context, input *jasonsgame.UserInp
 }
 
 func (g *Game) handleHelp(actorCtx actor.Context, args string) error {
-	toSend := []string{}
+	toSend := indentedList{"available commands:"}
 
 	for _, c := range g.commands {
-		if !c.Hidden() && c.HelpGroup() == args {
+		if !c.Hidden() && c.HelpGroup() == args && !stringslice.Include(toSend, c.Parse()) {
 			toSend = append(toSend, c.Parse())
 		}
 	}
 
-	if len(toSend) == 0 {
+	if len(toSend) <= 1 {
 		g.sendUserMessage(actorCtx, fmt.Sprintf("Sorry, I am not sure how I can help with '%s'...\n"+
 			"Maybe you can try looking around, asking for help on the location or help on an object.", args))
 		return nil
 	}
 
-	g.sendUserMessage(actorCtx, "available commands:\n  > "+strings.Join(toSend, "\n  > "))
+	g.sendUserMessage(actorCtx, toSend)
 	return nil
-}
-
-func (g *Game) handleName(name string) error {
-	log.Debugf("handling set name to %s", name)
-	return g.playerTree.SetName(name)
 }
 
 func (g *Game) handleBuildPortal(actorCtx actor.Context, toDid string) error {
@@ -364,6 +374,8 @@ func (g *Game) handleTipZoom(actorCtx actor.Context, tip string) error {
 func (g *Game) handleInteractionInput(actorCtx actor.Context, cmd *interactionCommand, args string) error {
 	var err error
 
+	log.Debugf("handling interaction type %T", cmd.interaction)
+
 	switch interaction := cmd.interaction.(type) {
 	case *RespondInteraction:
 		g.sendUserMessage(actorCtx, interaction.Response)
@@ -372,7 +384,9 @@ func (g *Game) handleInteractionInput(actorCtx actor.Context, cmd *interactionCo
 	case *DeletePortalInteraction:
 		err = g.handleDeletePortal(actorCtx, args)
 	case *ChangeLocationInteraction:
+		log.Debugf("setting new location to %s", interaction.Did)
 		g.setLocation(actorCtx, interaction.Did)
+		log.Debug("sending new location to UI")
 		g.sendUILocation(actorCtx)
 	case *DropObjectInteraction:
 		err = g.handleDropObject(actorCtx, cmd, interaction)
@@ -385,7 +399,7 @@ func (g *Game) handleInteractionInput(actorCtx actor.Context, cmd *interactionCo
 	case *LookAroundInteraction:
 		err = g.handleLocationInventoryList(actorCtx)
 	case *CreateObjectInteraction:
-		err = g.handleCreateObject(actorCtx, interaction.Name, interaction.Description)
+		err = g.handleCreateObjectInteraction(actorCtx, interaction)
 	case *CipherInteraction:
 		nextInteraction, _, err := interaction.Unseal(args)
 		if err != nil {
@@ -486,9 +500,14 @@ func (g *Game) handleDropObject(actorCtx actor.Context, cmd *interactionCommand,
 		return fmt.Errorf("Interaction from %s tried to drop %s - this is not allowed", cmd.did, interaction.Did)
 	}
 
+	locationInventoryDid, err := actorCtx.RequestFuture(g.locationActor, &GetInventoryDid{}, 5*time.Second).Result()
+	if err != nil {
+		return errors.Wrap(err, "error executing drop request")
+	}
+
 	response, err := actorCtx.RequestFuture(g.inventoryActor, &TransferObjectRequest{
 		Did: interaction.Did,
-		To:  g.locationDid,
+		To:  locationInventoryDid.(string),
 	}, 30*time.Second).Result()
 
 	if err != nil {
@@ -539,6 +558,10 @@ func (g *Game) handlePickUpObject(actorCtx actor.Context, interaction *PickUpObj
 
 	changeEvent := <-changeEventCh
 
+	if changeEvent.Error != "" {
+		return fmt.Errorf(changeEvent.Error)
+	}
+
 	if changeEvent.Message != "" {
 		g.sendUserMessage(actorCtx, changeEvent.Message)
 	} else {
@@ -548,16 +571,24 @@ func (g *Game) handlePickUpObject(actorCtx actor.Context, interaction *PickUpObj
 	return nil
 }
 
-func (g *Game) handleCreateObjectFromArgs(actorCtx actor.Context, args string) error {
-	splitArgs := strings.Split(args, " ")
-	return g.handleCreateObject(actorCtx, splitArgs[0], strings.Join(splitArgs[1:], " "))
+func (g *Game) handleCreateObjectInteraction(actorCtx actor.Context, interaction *CreateObjectInteraction) error {
+	return g.handleCreateObjectRequest(actorCtx, &CreateObjectRequest{
+		Name:             interaction.Name,
+		Description:      interaction.Description,
+		WithInscriptions: interaction.WithInscriptions,
+	})
 }
 
-func (g *Game) handleCreateObject(actorCtx actor.Context, name string, description string) error {
-	response, err := actorCtx.RequestFuture(g.inventoryActor, &CreateObjectRequest{
-		Name:        name,
-		Description: description,
-	}, 30*time.Second).Result()
+func (g *Game) handleCreateObjectFromArgs(actorCtx actor.Context, args string) error {
+	splitArgs := strings.Split(args, " ")
+	return g.handleCreateObjectRequest(actorCtx, &CreateObjectRequest{
+		Name:        splitArgs[0],
+		Description: strings.Join(splitArgs[1:], " "),
+	})
+}
+
+func (g *Game) handleCreateObjectRequest(actorCtx actor.Context, req *CreateObjectRequest) error {
+	response, err := actorCtx.RequestFuture(g.inventoryActor, req, 30*time.Second).Result()
 	if err != nil {
 		return err
 	}
@@ -567,7 +598,7 @@ func (g *Game) handleCreateObject(actorCtx actor.Context, name string, descripti
 		return fmt.Errorf("error casting create object response")
 	}
 
-	g.sendUserMessage(actorCtx, fmt.Sprintf("%s has been created with DID %s and is in your bag of hodling", name, newObject.Object.Did))
+	g.sendUserMessage(actorCtx, fmt.Sprintf("%s has been created with DID %s and is in your bag of hodling", req.Name, newObject.Object.Did))
 	return nil
 }
 
@@ -594,8 +625,6 @@ func (g *Game) handlePlayerInventoryList(actorCtx actor.Context) error {
 }
 
 func (g *Game) handleLocationInventoryList(actorCtx actor.Context) error {
-	g.sendUILocation(actorCtx)
-
 	response, err := actorCtx.RequestFuture(g.locationActor, &InventoryListRequest{}, 30*time.Second).Result()
 	if err != nil {
 		return err
@@ -610,24 +639,23 @@ func (g *Game) handleLocationInventoryList(actorCtx actor.Context) error {
 		return fmt.Errorf("error getting current location: %v", err)
 	}
 
-	sawSomething := false
+	g.sendUILocation(actorCtx)
 
 	if len(inventoryList.Objects) > 0 {
-		sawSomething = true
-		g.sendUserMessage(actorCtx, "you see the following objects around you:")
+		inventoryListMsg := make(indentedList, len(inventoryList.Objects)+1)
+		inventoryListMsg[0] = "location inventory:"
+		i := 1
 		for objName, obj := range inventoryList.Objects {
-			g.sendUserMessage(actorCtx, fmt.Sprintf("%s (%s)", objName, obj.Did))
+			inventoryListMsg[i] = fmt.Sprintf("%s (%s)", objName, obj.Did)
+			i++
 		}
+		g.sendUserMessage(actorCtx, inventoryListMsg)
 	}
 
 	if l.Portal != nil {
-		sawSomething = true
 		g.sendUserMessage(actorCtx, fmt.Sprintf("you see a mysterious portal leading to %s", l.Portal.To))
 	}
 
-	if !sawSomething {
-		g.sendUserMessage(actorCtx, "you look around but don't see anything")
-	}
 	return nil
 }
 
@@ -710,6 +738,10 @@ func (g *Game) sendUserMessage(actorCtx actor.Context, mesgInter interface{}) {
 	switch msg := mesgInter.(type) {
 	case string:
 		msgToUser.Message = msg
+	case []string:
+		msgToUser.Message = strings.Join(msg, "\n")
+	case indentedList:
+		msgToUser.Message = strings.Join(msg, "\n  > ")
 	case *jasonsgame.Location:
 		msgToUser.Location = msg
 		msgToUser.Message = msg.Description
@@ -746,22 +778,29 @@ func (g *Game) sendInvitationCommandUpdate(actorCtx actor.Context) {
 func (g *Game) setLocation(actorCtx actor.Context, locationDid string) {
 	oldLocationActor := g.locationActor
 	if oldLocationActor != nil {
+		log.Debug("found old location actor; sending stop message")
 		actorCtx.Stop(g.locationActor)
 	}
+
+	log.Debug("spawning new location actor")
 	g.locationActor = actorCtx.Spawn(NewLocationActorProps(&LocationActorConfig{
 		Network: g.network,
 		Did:     locationDid,
 	}))
 	g.locationDid = locationDid
 
+	log.Debug("replacing interactions for new location")
 	err := g.replaceInteractionsFor(actorCtx, g.locationActor, oldLocationActor)
 	if err != nil {
 		panic(errors.Wrap(err, "error attaching interactions for location"))
 	}
 
 	if g.chatActor != nil {
+		log.Debug("chat actor found; sending stop message")
 		actorCtx.Stop(g.chatActor)
 	}
+
+	log.Debug("spawning new chat actor")
 	g.chatActor = actorCtx.Spawn(NewChatActorProps(&ChatActorConfig{
 		Did:       locationDid,
 		Community: g.network.Community(),
@@ -785,19 +824,25 @@ func (g *Game) refreshAllInteractions(actorCtx actor.Context) error {
 
 func (g *Game) replaceInteractionsFor(actorCtx actor.Context, pid *actor.PID, oldPid *actor.PID) error {
 	if oldPid != nil {
+		log.Debug("deleting stale commands actor PID from cache")
 		delete(g.commandsByActorCache, oldPid)
 	}
 	return g.refreshInteractionsFor(actorCtx, pid)
 }
 
 func (g *Game) refreshInteractionsFor(actorCtx actor.Context, pid *actor.PID) error {
+	log.Debug("refreshing interactions for location actor")
+
 	if g.commandsByActorCache == nil {
 		g.commandsByActorCache = make(map[*actor.PID]commandList)
 	}
 	var err error
+
+	log.Debug("updating commandsByActorCache")
 	g.commandsByActorCache[pid], err = g.interactionCommandsFor(actorCtx, pid)
 
 	if err != nil {
+		log.Errorf("error updating commandsByActorCache: %+v", err)
 		return err
 	}
 
@@ -806,6 +851,7 @@ func (g *Game) refreshInteractionsFor(actorCtx actor.Context, pid *actor.PID) er
 		newCommands = append(newCommands, commands...)
 	}
 
+	log.Debugf("setting commands to %+v", newCommands)
 	g.setCommands(actorCtx, newCommands)
 	return nil
 }

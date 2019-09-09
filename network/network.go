@@ -3,6 +3,7 @@ package network
 import (
 	"context"
 	"crypto/ecdsa"
+	"crypto/sha256"
 	"fmt"
 	"os"
 	"strings"
@@ -55,13 +56,16 @@ type Network interface {
 	ChangeChainTreeOwnerWithKey(tree *consensus.SignedChainTree, privateKey *ecdsa.PrivateKey, newKeys []string) (*consensus.SignedChainTree, error)
 	CreateChainTree() (*consensus.SignedChainTree, error)
 	CreateChainTreeWithKey(key *ecdsa.PrivateKey) (*consensus.SignedChainTree, error)
+	CreateLocalChainTree(name string) (*consensus.SignedChainTree, error)
 	CreateNamedChainTree(name string) (*consensus.SignedChainTree, error)
+	FindOrCreatePassphraseTree(passphrase string) (*consensus.SignedChainTree, error)
 	GetChainTreeByName(name string) (*consensus.SignedChainTree, error)
 	GetTreeByTip(tip cid.Cid) (*consensus.SignedChainTree, error)
 	GetTree(did string) (*consensus.SignedChainTree, error)
 	DeleteTree(did string) error
 	UpdateChainTree(tree *consensus.SignedChainTree, path string, value interface{}) (*consensus.SignedChainTree, error)
 	TreeStore() TreeStore
+	PrivateKey() *ecdsa.PrivateKey
 	PublicKey() *ecdsa.PublicKey
 	StartDiscovery(string) error
 	StopDiscovery(string)
@@ -253,6 +257,48 @@ func (n *RemoteNetwork) PrivateKey() *ecdsa.PrivateKey {
 	return n.signingKey
 }
 
+func (n *RemoteNetwork) FindOrCreatePassphraseTree(passphrase string) (*consensus.SignedChainTree, error) {
+	seed := sha256.Sum256([]byte(passphrase))
+	treeKey, err := consensus.PassPhraseKey(crypto.FromECDSA(n.PrivateKey()), seed[:32])
+	if err != nil {
+		return nil, errors.Wrap(err, "setting up passphrase tree keys")
+	}
+
+	tree, err := n.GetTree(consensus.EcdsaPubkeyToDid(treeKey.PublicKey))
+	if err != nil {
+		return nil, errors.Wrap(err, "getting passphrase chaintree")
+	}
+
+	if tree == nil {
+		tree, err = n.CreateChainTreeWithKey(treeKey)
+		if err != nil {
+			return nil, errors.Wrap(err, "setting up passphrase chaintree")
+		}
+
+		tree, err = n.ChangeChainTreeOwnerWithKey(tree, treeKey, []string{
+			crypto.PubkeyToAddress(*n.PublicKey()).String(),
+		})
+		if err != nil {
+			return nil, errors.Wrap(err, "chowning passphrase chaintree")
+		}
+	}
+	return tree, nil
+}
+
+func (n *RemoteNetwork) CreateLocalChainTree(name string) (*consensus.SignedChainTree, error) {
+	log.Debug("CreateLocalChainTree", name)
+	tree, err := n.CreateNamedChainTree(name)
+	if err != nil {
+		return nil, errors.Wrap(err, "error creating tree")
+	}
+
+	err = n.TreeStore().SaveTreeMetadata(tree)
+	if err != nil {
+		return nil, errors.Wrap(err, "error saving tree")
+	}
+	return tree, nil
+}
+
 func (n *RemoteNetwork) CreateNamedChainTree(name string) (*consensus.SignedChainTree, error) {
 	log.Debug("CreateNamedChainTree", name)
 	tree, err := n.CreateChainTree()
@@ -261,7 +307,7 @@ func (n *RemoteNetwork) CreateNamedChainTree(name string) (*consensus.SignedChai
 	}
 	log.Debug("CreateNamedChainTree - created", name)
 
-	err = n.TreeStore().SaveTreeMetadata(tree)
+	err = n.TreeStore().UpdateTreeMetadata(tree)
 	if err != nil {
 		return nil, errors.Wrap(err, "error saving tree")
 	}
@@ -297,7 +343,7 @@ func (n *RemoteNetwork) CreateChainTree() (*consensus.SignedChainTree, error) {
 		return nil, errors.Wrap(err, "error playing transactions")
 	}
 
-	err = n.TreeStore().SaveTreeMetadata(tree)
+	err = n.TreeStore().UpdateTreeMetadata(tree)
 	if err != nil {
 		return nil, errors.Wrap(err, "error saving tree")
 	}
@@ -313,7 +359,7 @@ func (n *RemoteNetwork) CreateChainTreeWithKey(key *ecdsa.PrivateKey) (*consensu
 	}
 	log.Debug("CreateChainTreeWithKey - created", tree.MustId())
 
-	err = n.TreeStore().SaveTreeMetadata(tree)
+	err = n.TreeStore().UpdateTreeMetadata(tree)
 	if err != nil {
 		return nil, errors.Wrap(err, "error saving tree")
 	}
@@ -372,7 +418,7 @@ func (n *RemoteNetwork) UpdateChainTree(tree *consensus.SignedChainTree, path st
 		return nil, errors.Wrap(err, "error updating chaintree")
 	}
 
-	return tree, n.TreeStore().SaveTreeMetadata(tree)
+	return tree, n.TreeStore().UpdateTreeMetadata(tree)
 }
 
 func (n *RemoteNetwork) changeChainTreeOwner(tree *consensus.SignedChainTree, privateKey *ecdsa.PrivateKey, newKeys []string) (*consensus.SignedChainTree, error) {
@@ -393,7 +439,7 @@ func (n *RemoteNetwork) changeChainTreeOwner(tree *consensus.SignedChainTree, pr
 		return nil, errors.Wrap(err, "error updating chaintree")
 	}
 
-	return tree, n.TreeStore().SaveTreeMetadata(tree)
+	return tree, n.TreeStore().UpdateTreeMetadata(tree)
 }
 
 func (n *RemoteNetwork) ChangeChainTreeOwner(tree *consensus.SignedChainTree, newKeys []string) (*consensus.SignedChainTree, error) {
@@ -483,9 +529,7 @@ func (n *RemoteNetwork) SendInk(amount uint64, destinationChainId string) (*tran
 		return nil, errors.Wrap(err, "error getting token payload for ink send")
 	}
 
-	log.Debugf("send ink token payload: %+v", *tokenPayload)
-
-	err = n.TreeStore().SaveTreeMetadata(well)
+	err = n.TreeStore().UpdateTreeMetadata(well)
 	if err != nil {
 		return nil, errors.Wrap(err, "error saving chaintree metadata after ink send transaction")
 	}

@@ -106,7 +106,7 @@ func (i *InvitesActor) handleInviteSubmission(actorCtx actor.Context, msg *inkfa
 		return
 	}
 
-	playerChainTree, err := i.net.CreateNamedChainTree("player")
+	playerChainTree, err := i.net.CreateLocalChainTree("player")
 	if err != nil {
 		actorCtx.Respond(&inkfaucet.InviteSubmissionResponse{
 			Error: err.Error(),

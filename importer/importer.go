@@ -2,14 +2,18 @@ package importer
 
 import (
 	"bytes"
+	"context"
+	"crypto/sha256"
 	"fmt"
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 	"text/template"
 	"unicode"
 
+	"github.com/ethereum/go-ethereum/common/hexutil"
 	ptypes "github.com/gogo/protobuf/types"
 	"github.com/imdario/mergo"
 	logging "github.com/ipfs/go-log"
@@ -70,7 +74,7 @@ func (i *Importer) createTrees(data *ImportPayload) (*NameToDids, error) {
 	}
 
 	for key := range data.Locations {
-		tree, err := i.network.CreateChainTree()
+		tree, err := i.network.FindOrCreatePassphraseTree("locations/" + key)
 		if err != nil {
 			return nil, err
 		}
@@ -79,7 +83,7 @@ func (i *Importer) createTrees(data *ImportPayload) (*NameToDids, error) {
 	}
 
 	for key := range data.Objects {
-		tree, err := i.network.CreateChainTree()
+		tree, err := i.network.FindOrCreatePassphraseTree("objects/" + key)
 		if err != nil {
 			return nil, err
 		}
@@ -104,7 +108,14 @@ func (i *Importer) loadBasicData(tree *consensus.SignedChainTree, data map[strin
 
 	flatPaths := flatmap.Flatten(data)
 
-	for key, val := range flatPaths {
+	// important! order of UpdateChainTree matters, so make sure there is
+	// consistent ordering
+	// beware of the age old gotcha, go map iteration order isn't guaranteed
+	sortedKeys := flatPaths.Keys()
+	sort.Strings(sortedKeys)
+
+	for _, key := range sortedKeys {
+		val := flatPaths[key]
 		tree, err = i.network.UpdateChainTree(tree, fmt.Sprintf("jasons-game/%s", key), val)
 
 		if err != nil {
@@ -137,9 +148,19 @@ func (i *Importer) loadInventory(tree *consensus.SignedChainTree, data []string)
 }
 
 func (i *Importer) yamlTypecast(data interface{}, t interface{}) error {
-	asYaml, err := yaml.Marshal(data)
-	if err != nil {
-		return err
+	var asYaml []byte
+	var err error
+
+	switch dataCast := data.(type) {
+	case []byte:
+		asYaml = dataCast
+	case string:
+		asYaml = []byte(dataCast)
+	default:
+		asYaml, err = yaml.Marshal(data)
+		if err != nil {
+			return err
+		}
 	}
 
 	err = yaml.Unmarshal(asYaml, t)
@@ -296,11 +317,17 @@ var reservedKeys = []string{"inventory", "interactions"}
 func (i *Importer) loadLocations(data map[string]*ImportLocation, ids *NameToDids) error {
 	for name, locData := range data {
 		did := ids.Locations[name]
-
-		tree, err := i.network.GetTree(did)
+		err := i.updateLocation(did, locData)
 		if err != nil {
-			return errors.Wrap(err, "fetching location tree")
+			return err
 		}
+	}
+	return nil
+}
+
+func (i *Importer) updateLocation(did string, locData *ImportLocation) error {
+	return i.updateTreeIfChanged(did, locData, func(tree *consensus.SignedChainTree) error {
+		var err error
 
 		tree, err = i.loadBasicData(tree, locData.Data)
 		if err != nil {
@@ -316,24 +343,31 @@ func (i *Importer) loadLocations(data map[string]*ImportLocation, ids *NameToDid
 		if err != nil {
 			return err
 		}
-	}
-	return nil
+
+		return nil
+	})
 }
 
 func (i *Importer) loadObjects(data map[string]*ImportObject, ids *NameToDids) error {
 	for name, objData := range data {
 		did := ids.Objects[name]
 
-		tree, err := i.network.GetTree(did)
-		if err != nil {
-			return errors.Wrap(err, "fetching object tree")
-		}
-
 		if _, ok := objData.Data["name"]; !ok {
 			// Files must be named with underscore, but default name in the UI should be hyphenated
 			objData.Data["name"] = strings.ReplaceAll(name, "_", "-")
 		}
 
+		err := i.updateObject(did, objData)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (i *Importer) updateObject(did string, objData *ImportObject) error {
+	return i.updateTreeIfChanged(did, objData, func(tree *consensus.SignedChainTree) error {
+		var err error
 		tree, err = i.loadBasicData(tree, objData.Data)
 		if err != nil {
 			return err
@@ -343,7 +377,58 @@ func (i *Importer) loadObjects(data map[string]*ImportObject, ids *NameToDids) e
 		if err != nil {
 			return err
 		}
+		return nil
+	})
+}
+
+func (i *Importer) updateTreeIfChanged(did string, treeData interface{}, updateFunction func(tree *consensus.SignedChainTree) error) error {
+	tree, err := i.network.GetTree(did)
+	if err != nil {
+		return err
 	}
+
+	importHashPath := []string{"tree", "data", "import-hash"}
+	hashVal, _, err := tree.ChainTree.Dag.Resolve(context.Background(), importHashPath)
+	if err != nil {
+		return err
+	}
+
+	treeDataYaml, err := yaml.Marshal(treeData)
+	if err != nil {
+		return err
+	}
+	newHash := sha256.Sum256(treeDataYaml)
+	newHashStr := hexutil.Encode(newHash[:32])
+
+	hashValStr, hashValStrOk := hashVal.(string)
+
+	// needs updated
+	if !hashValStrOk || newHashStr != hashValStr {
+		// reset tree back to an empty state for reimporting
+		tree, err = i.network.UpdateChainTree(tree, "", make(map[string]interface{}))
+		if err != nil {
+			return err
+		}
+
+		// call update function for new data
+		err = updateFunction(tree)
+		if err != nil {
+			return err
+		}
+
+		// get latest tree
+		tree, err = i.network.GetTree(did)
+		if err != nil {
+			return err
+		}
+
+		// set new hash
+		_, err = i.network.UpdateChainTree(tree, strings.Join(importHashPath[2:], "/"), newHashStr)
+		if err != nil {
+			return err
+		}
+	}
+
 	return nil
 }
 
@@ -370,6 +455,32 @@ func (i *Importer) replaceVariables(data *ImportPayload, vars interface{}) (*Imp
 	}
 
 	return processedYaml, nil
+}
+
+func (i *Importer) UpdateObject(did string, objectData interface{}) error {
+	importObject := &ImportObject{}
+	err := i.yamlTypecast(objectData, importObject)
+	if err != nil {
+		return errors.Wrap(err, fmt.Sprintf("error typecasting for %s", did))
+	}
+	err = i.updateObject(did, importObject)
+	if err != nil {
+		return errors.Wrap(err, fmt.Sprintf("error updating %s", did))
+	}
+	return nil
+}
+
+func (i *Importer) UpdateLocation(did string, locationData interface{}) error {
+	importLocation := &ImportLocation{}
+	err := i.yamlTypecast(locationData, importLocation)
+	if err != nil {
+		return errors.Wrap(err, fmt.Sprintf("error typecasting for %s", did))
+	}
+	err = i.updateLocation(did, importLocation)
+	if err != nil {
+		return errors.Wrap(err, fmt.Sprintf("error updating %s", did))
+	}
+	return nil
 }
 
 func (i *Importer) Import(importPath string) (*NameToDids, error) {

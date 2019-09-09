@@ -1,0 +1,19 @@
+data:
+  description: "test autumn court hub"
+interactions:
+  - type: ChangeLocationInteraction
+    value:
+      command: "visit weaver"
+      did: "{{.Locations.weaver}}"
+  - type: ChangeLocationInteraction
+    value:
+      command: "visit binder"
+      did: "{{.Locations.binder}}"
+  - type: ChangeLocationInteraction
+    value:
+      command: "visit mine 100"
+      did: "{{.Locations.mine100}}"
+  - type: ChangeLocationInteraction
+    value:
+      command: "visit mine 200"
+      did: "{{.Locations.mine200}}"

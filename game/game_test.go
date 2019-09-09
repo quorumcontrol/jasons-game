@@ -18,7 +18,7 @@ func setupUiAndGame(t *testing.T, stream *ui.TestStream, net network.Network) (s
 	simulatedUI, err := rootCtx.SpawnNamed(ui.NewUIProps(stream, net), t.Name()+"-ui")
 	require.Nil(t, err)
 
-	playerChain, err := net.CreateNamedChainTree("player")
+	playerChain, err := net.CreateLocalChainTree("player")
 	require.Nil(t, err)
 	playerTree, err := CreatePlayerTree(net, playerChain.MustId())
 	require.Nil(t, err)
@@ -53,39 +53,6 @@ func TestSetDescription(t *testing.T) {
 	stream.ExpectMessage(newDescription, 2*time.Second)
 	rootCtx.Send(game, &jasonsgame.UserInput{Message: "set description " + newDescription})
 	stream.Wait()
-}
-
-func TestCallMe(t *testing.T) {
-	rootCtx := actor.EmptyRootContext
-	net := network.NewLocalNetwork()
-	stream := ui.NewTestStream(t)
-
-	simulatedUI, err := rootCtx.SpawnNamed(ui.NewUIProps(stream, net), "test-callme-ui")
-	require.Nil(t, err)
-	defer rootCtx.Stop(simulatedUI)
-
-	playerChain, err := net.CreateNamedChainTree("player")
-	require.Nil(t, err)
-	playerTree, err := CreatePlayerTree(net, playerChain.MustId())
-	require.Nil(t, err)
-
-	gameCfg := &GameConfig{PlayerTree: playerTree, UiActor: simulatedUI, Network: net}
-	game, err := rootCtx.SpawnNamed(NewGameProps(gameCfg), "test-callme-game")
-	require.Nil(t, err)
-	defer rootCtx.Stop(game)
-
-	newName := "Johnny B Good"
-
-	rootCtx.Send(game, &jasonsgame.UserInput{Message: "call me " + newName})
-	time.Sleep(100 * time.Millisecond)
-
-	tree, err := net.GetTree(playerChain.MustId())
-	require.Nil(t, err)
-
-	pt := NewPlayerTree(net, tree)
-	player, err := pt.Player()
-	require.Nil(t, err)
-	require.Equal(t, newName, player.Name)
 }
 
 func TestBuildPortal(t *testing.T) {
@@ -249,9 +216,10 @@ func TestCantDropFromOtherTree(t *testing.T) {
 	err = inventoryTree.Add(otherObj.MustId())
 	require.Nil(t, err)
 
-	stream.ExpectMessage("you look around but don't see anything", 2*time.Second)
+	rootCtx.Send(game, &jasonsgame.UserInput{Message: "refresh"})
+
+	stream.ExpectMessage("not allowed", 2*time.Second)
 	rootCtx.Send(game, &jasonsgame.UserInput{Message: "drop will fail"})
-	rootCtx.Send(game, &jasonsgame.UserInput{Message: "look around"})
 	stream.Wait()
 
 	stream.ExpectMessage("obj-to-drop", 2*time.Second)

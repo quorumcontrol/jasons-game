@@ -73,7 +73,7 @@ func TestInkRequests(t *testing.T) {
 	err = server.Start(false)
 	require.Nil(t, err)
 
-	inkRecipient, err := devInk.Net.CreateNamedChainTree("ink-recipient")
+	inkRecipient, err := devInk.Net.CreateLocalChainTree("ink-recipient")
 	require.Nil(t, err)
 
 	rootContext := actor.EmptyRootContext

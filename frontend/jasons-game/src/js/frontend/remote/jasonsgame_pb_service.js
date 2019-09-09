@@ -15,8 +15,8 @@ GameService.SendCommand = {
   service: GameService,
   requestStream: false,
   responseStream: false,
-  requestType: jasonsgame_pb.UserInput,
-  responseType: jasonsgame_pb.CommandReceived
+  requestType: jasonsgame_pb.jasonsgame.UserInput,
+  responseType: jasonsgame_pb.jasonsgame.CommandReceived
 };
 
 GameService.ReceiveUIMessages = {
@@ -24,8 +24,8 @@ GameService.ReceiveUIMessages = {
   service: GameService,
   requestStream: false,
   responseStream: true,
-  requestType: jasonsgame_pb.Session,
-  responseType: jasonsgame_pb.UserInterfaceMessage
+  requestType: jasonsgame_pb.jasonsgame.Session,
+  responseType: jasonsgame_pb.jasonsgame.UserInterfaceMessage
 };
 
 GameService.ReceiveStatMessages = {
@@ -33,8 +33,8 @@ GameService.ReceiveStatMessages = {
   service: GameService,
   requestStream: false,
   responseStream: true,
-  requestType: jasonsgame_pb.Session,
-  responseType: jasonsgame_pb.Stats
+  requestType: jasonsgame_pb.jasonsgame.Session,
+  responseType: jasonsgame_pb.jasonsgame.Stats
 };
 
 exports.GameService = GameService;
@@ -93,10 +93,10 @@ GameServiceClient.prototype.receiveUIMessages = function receiveUIMessages(reque
       });
     },
     onEnd: function (status, statusMessage, trailers) {
-      listeners.end.forEach(function (handler) {
-        handler();
-      });
       listeners.status.forEach(function (handler) {
+        handler({ code: status, details: statusMessage, metadata: trailers });
+      });
+      listeners.end.forEach(function (handler) {
         handler({ code: status, details: statusMessage, metadata: trailers });
       });
       listeners = null;
@@ -132,10 +132,10 @@ GameServiceClient.prototype.receiveStatMessages = function receiveStatMessages(r
       });
     },
     onEnd: function (status, statusMessage, trailers) {
-      listeners.end.forEach(function (handler) {
-        handler();
-      });
       listeners.status.forEach(function (handler) {
+        handler({ code: status, details: statusMessage, metadata: trailers });
+      });
+      listeners.end.forEach(function (handler) {
         handler({ code: status, details: statusMessage, metadata: trailers });
       });
       listeners = null;
