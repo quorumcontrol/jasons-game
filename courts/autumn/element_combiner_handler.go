@@ -4,8 +4,8 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/gogo/protobuf/proto"
-	"github.com/ipfs/go-cid"
 	"github.com/pkg/errors"
 	"github.com/quorumcontrol/jasons-game/courts/court"
 	"github.com/quorumcontrol/jasons-game/game"
@@ -14,7 +14,6 @@ import (
 	broadcastHandlers "github.com/quorumcontrol/jasons-game/handlers/broadcast"
 	"github.com/quorumcontrol/jasons-game/network"
 	"github.com/quorumcontrol/jasons-game/pb/jasonsgame"
-	"github.com/quorumcontrol/jasons-game/utils/stringslice"
 	"github.com/quorumcontrol/tupelo-go-sdk/consensus"
 )
 
@@ -100,6 +99,10 @@ func (h *ElementCombinerHandler) handlerAuthentications() ([]string, error) {
 	return handlerTree.Authentications()
 }
 
+func (h *ElementCombinerHandler) originAuthentications() []string {
+	return []string{crypto.PubkeyToAddress(*h.net.PublicKey()).String()}
+}
+
 type responseSender struct {
 	source  *jasonsgame.RequestObjectTransferMessage
 	handler handlers.Handler
@@ -161,6 +164,8 @@ func (h *ElementCombinerHandler) findCombinedElement(ids []int) *element {
 }
 
 func (h *ElementCombinerHandler) handlePickupElement(msg *jasonsgame.RequestObjectTransferMessage) error {
+	log.Debugf("handlePickupElement: received RequestObjectTransferMessage: from=%s to=%s obj=%s", msg.From, msg.To, msg.Object)
+
 	sender := newResponseSender(h.net, msg)
 
 	inventory, err := trees.FindInventoryTree(h.net, msg.From)
@@ -174,7 +179,13 @@ func (h *ElementCombinerHandler) handlePickupElement(msg *jasonsgame.RequestObje
 	}
 
 	if comboDid == "" {
+		log.Debugf("handlePickupElement: no combination object not in inventory: from=%s obj=%s", msg.From, msg.Object)
 		return sender.Errorf("no elements to combine")
+	}
+
+	if comboDid != msg.Object {
+		log.Debugf("handlePickupElement: wrong combination object in inventory: from=%s obj=%s combo=%s", msg.From, msg.Object, comboDid)
+		return sender.Errorf("wrong object did for %s", combinationObjectName)
 	}
 
 	comboObject, err := game.FindObjectTree(h.net, comboDid)
@@ -215,11 +226,12 @@ func (h *ElementCombinerHandler) handlePickupElement(msg *jasonsgame.RequestObje
 	}
 
 	if len(elementIds) < 2 {
+		log.Debugf("handlePickupElement: not enough element: obj=%s", msg.Object)
 		return sender.Errorf("you must drop at least 2 objects to be combined")
 	}
 
 	newElement := h.findCombinedElement(elementIds)
-	log.Debugf("combining %v, result was %d (%s)", elementIds, newElement.ID, newElement.Name())
+	log.Debugf("handlePickupElement: combining: obj=%s elementIds=%s newElement=%s", msg.Object, elementIds, newElement.Name())
 
 	existing, err := playerInventory.DidForName(newElement.Name())
 	if err != nil {
@@ -258,59 +270,48 @@ func (h *ElementCombinerHandler) handlePickupElement(msg *jasonsgame.RequestObje
 }
 
 func (h *ElementCombinerHandler) validateObjectOrigin(object *game.ObjectTree) (bool, error) {
+	ctx := context.Background()
 	elementName, err := object.GetName()
 	if err != nil {
 		return false, err
 	}
 	elementID := elementNameToId(elementName)
+	log.Debugf("validateObjectOrigin: starting validation: obj=%s name=%s id=%d", object.MustId(), elementName, elementID)
 
 	element, ok := h.elements[elementID]
 	if !ok {
+		log.Debugf("validateObjectOrigin: element not found: obj=%s", object.MustId())
 		return false, fmt.Errorf("element %d not found", elementID)
 	}
 	if element.SkipOriginValidation {
+		log.Debugf("validateObjectOrigin: skpping origin validation: obj=%s", object.MustId())
 		return true, nil
 	}
 
-	ownershipChanges, err := trees.OwnershipChanges(context.Background(), object.ChainTree().ChainTree)
+	ownershipChanges, err := trees.OwnershipChanges(ctx, object.ChainTree().ChainTree)
+	if err != nil {
+		return false, fmt.Errorf("error checking origin of element: %v", err)
+	}
+
+	if len(ownershipChanges) < 2 {
+		log.Debugf("validateObjectOrigin: invalid ownership history, less than 2 ownership changes: obj=%s", object.MustId())
+		return false, nil
+	}
+
+	beforeTransferOwnership := ownershipChanges[len(ownershipChanges)-2]
+
+	treeBeforeTransfer, err := object.ChainTree().ChainTree.At(ctx, &beforeTransferOwnership.Tip)
 	if err != nil {
 		return false, fmt.Errorf("error checking origin of element")
 	}
 
-	handlerAuths, err := h.handlerAuthentications()
+	validOrigin, err := trees.VerifyOwnershipAt(ctx, treeBeforeTransfer, 0, h.originAuthentications())
 	if err != nil {
 		return false, fmt.Errorf("error checking origin of element")
 	}
-
-	var lastValidTip cid.Cid
-
-	// Iterate from oldest ownership change to current tip, checking each change to see
-	// if it moved out of ownership of this service. Once found, this can be considered the
-	// last valid origin state
-	for i := len(ownershipChanges) - 1; i >= 0; i-- {
-		authsMatchHandler := stringslice.All(ownershipChanges[i].Authentications, func(s string) bool {
-			return stringslice.Include(handlerAuths, s)
-		})
-
-		// This is the last tip not owned fully by this service
-		if !authsMatchHandler {
-			// This ensures this service created the object
-			if i == len(ownershipChanges) {
-				return false, fmt.Errorf("object not created by combiner, failing 1")
-			}
-
-			lastValidTip = ownershipChanges[i].Tip
-			break
-		}
-	}
-
-	if lastValidTip.Equals(cid.Undef) {
-		return false, fmt.Errorf("object not created by combiner, failing 2")
-	}
-
-	treeBeforeTransfer, err := object.ChainTree().ChainTree.At(context.Background(), &lastValidTip)
-	if err != nil {
-		return false, fmt.Errorf("error checking origin of element")
+	if !validOrigin {
+		log.Debugf("validateObjectOrigin: invalid ownership history, authentication at block 0 was not network key: obj=%s", object.MustId())
+		return false, nil
 	}
 
 	originObject := game.NewObjectTree(h.net, consensus.NewSignedChainTreeFromChainTree(treeBeforeTransfer))
@@ -321,13 +322,17 @@ func (h *ElementCombinerHandler) validateObjectOrigin(object *game.ObjectTree) (
 	}
 
 	if elementName != originName {
-		return false, fmt.Errorf("object name was modified, failing")
+		log.Debugf("validateObjectOrigin: invalid object, name was modified: obj=%s", object.MustId())
+		return false, nil
 	}
 
 	return true, nil
 }
 
 func (h *ElementCombinerHandler) handleReceiveElement(msg *jasonsgame.TransferredObjectMessage) error {
+	ctx := context.Background()
+	log.Debugf("handleReceiveElement: received TransferredObjectMessage: from=%s to=%s obj=%s", msg.From, msg.To, msg.Object)
+
 	// This is a player specific inventory for this location
 	targetInventory, err := trees.FindInventoryTree(h.net, msg.To)
 	if err != nil {
@@ -344,9 +349,18 @@ func (h *ElementCombinerHandler) handleReceiveElement(msg *jasonsgame.Transferre
 		log.Error(err)
 		return err
 	}
+	// Player tried to hack the object, lets destroy it
 	if !isValid {
-		return fmt.Errorf("invalid origin of incoming object")
+		log.Debugf("handleReceiveElement: object is NOT valid, destroying it: obj=%s", msg.Object)
+
+		err = incomingObject.ChangeChainTreeOwner([]string{})
+		if err != nil {
+			return fmt.Errorf("error destroying object: %v", err)
+		}
+
+		return nil
 	}
+	log.Debugf("handleReceiveElement: object is valid, continuing: obj=%s", msg.Object)
 
 	handlerAuths, err := h.handlerAuthentications()
 	if err != nil {
@@ -361,18 +375,18 @@ func (h *ElementCombinerHandler) handleReceiveElement(msg *jasonsgame.Transferre
 	var comboObject *game.ObjectTree
 
 	if len(existingComboDid) > 0 {
+		log.Debugf("handleReceiveElement: found existing combo object: obj=%s comboObj=%s", msg.Object, existingComboDid)
 		comboObject, err = game.FindObjectTree(h.net, existingComboDid)
 		if err != nil {
 			return err
 		}
 
-		ownershipChanges, err := trees.OwnershipChanges(context.Background(), comboObject.ChainTree().ChainTree)
+		validOrigin, err := trees.VerifyOwnershipAt(ctx, comboObject.ChainTree().ChainTree, 0, h.originAuthentications())
 		if err != nil {
 			return err
 		}
-
-		// This makes sure the player didn't create the object
-		if len(ownershipChanges) != 2 || stringslice.Equal(ownershipChanges[1].Authentications, handlerAuths) {
+		if !validOrigin {
+			log.Debugf("handleReceiveElement: existing combo object is invalid, will create new one")
 			comboObject = nil
 		}
 	}
@@ -384,19 +398,47 @@ func (h *ElementCombinerHandler) handleReceiveElement(msg *jasonsgame.Transferre
 		if err != nil {
 			return errors.Wrap(err, "error creating new object key")
 		}
+		log.Debugf("handleReceiveElement: created new combo object: obj=%s comboObj=%s", msg.Object, newTree.MustId())
 
-		// TODO: customize object interactions
-		comboObject, err = game.CreateObjectOnTree(h.net, combinationObjectName, newTree)
+		// Sometimes a tree can be created, but not fully make it to adding to inventory,
+		// which gives it some corrupt / inflight state, if thats the case, reset it
+		if trees.MustHeight(ctx, newTree.ChainTree) > 1 {
+			newTree, err = h.net.UpdateChainTree(newTree, "", make(map[string]interface{}))
+			if err != nil {
+				return errors.Wrap(err, "error reset new object key")
+			}
+		}
+
+		comboObject = game.NewObjectTree(h.net, newTree)
+
+		err = comboObject.SetName(combinationObjectName)
+		if err != nil {
+			return err
+		}
+
+		err = comboObject.AddInteraction(&game.PickUpObjectInteraction{
+			Command: "submit offering",
+			Did:     comboObject.MustId(),
+		})
+		if err != nil {
+			return err
+		}
+
+		err = comboObject.AddInteraction(&game.GetTreeValueInteraction{
+			Command: "examine object " + combinationObjectName,
+			Did:     comboObject.MustId(),
+			Path:    "description",
+		})
+		if err != nil {
+			return err
+		}
+
+		err = comboObject.SetDescription("inside the bowl you have prepared:")
 		if err != nil {
 			return err
 		}
 
 		err = comboObject.UpdatePath([]string{comboObjectPlayerPath}, msg.From)
-		if err != nil {
-			return err
-		}
-
-		err = comboObject.ChangeChainTreeOwner(handlerAuths)
 		if err != nil {
 			return err
 		}
@@ -407,7 +449,18 @@ func (h *ElementCombinerHandler) handleReceiveElement(msg *jasonsgame.Transferre
 		return err
 	}
 
+	log.Debugf("handleReceiveElement: added incoming %s object to combo: obj=%s comboObj=%s", incomingObjectName, msg.Object, comboObject.MustId())
+
 	err = comboObject.UpdatePath([]string{comboObjectElementsPath, incomingObjectName}, incomingObject.MustId())
+	if err != nil {
+		return err
+	}
+
+	description, err := comboObject.GetDescription()
+	if err != nil {
+		return err
+	}
+	err = comboObject.SetDescription(description + "\n  > " + incomingObjectName)
 	if err != nil {
 		return err
 	}
@@ -421,6 +474,8 @@ func (h *ElementCombinerHandler) handleReceiveElement(msg *jasonsgame.Transferre
 	if err != nil {
 		return err
 	}
+	log.Debugf("handleReceiveElement: combo object has been updated: obj=%s comboObj=%s", msg.Object, comboObject.MustId())
+
 	return nil
 }
 

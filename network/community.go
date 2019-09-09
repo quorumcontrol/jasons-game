@@ -10,7 +10,7 @@ import (
 	"github.com/gogo/protobuf/proto"
 	"github.com/quorumcontrol/community/client"
 	"github.com/quorumcontrol/community/config"
-	"github.com/quorumcontrol/community/pb/messages"
+	messages "github.com/quorumcontrol/messages/build/go/community"
 	"github.com/quorumcontrol/tupelo-go-sdk/gossip3/middleware"
 	"github.com/quorumcontrol/tupelo-go-sdk/p2p"
 	"github.com/quorumcontrol/tupelo-go-sdk/tracing"

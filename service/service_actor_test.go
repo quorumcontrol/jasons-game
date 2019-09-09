@@ -7,7 +7,7 @@ import (
 
 	"github.com/AsynkronIT/protoactor-go/actor"
 	"github.com/gogo/protobuf/proto"
-	"github.com/quorumcontrol/community/pb/messages"
+	messages "github.com/quorumcontrol/messages/build/go/community"
 	"github.com/stretchr/testify/require"
 
 	"github.com/quorumcontrol/jasons-game/handlers/broadcast"
