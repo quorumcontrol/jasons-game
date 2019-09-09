@@ -29,6 +29,14 @@ func New(ctx context.Context, net network.Network, name string) *Court {
 	}
 }
 
+func (c *Court) Name() string {
+	return c.name
+}
+
+func (c *Court) Network() network.Network {
+	return c.net
+}
+
 func (c *Court) Ids() (map[string]interface{}, error) {
 	ids, err := c.Resolve([]string{"tree", "data", "ids"})
 	if err != nil {
@@ -78,7 +86,7 @@ func (c *Court) Resolve(path []string) (interface{}, error) {
 
 // Import court chaintress from path
 func (c *Court) Import(configPath string) error {
-	tree, err := FindOrCreateNamedTree(c.net, c.name)
+	tree, err := c.ChainTree()
 	if err != nil {
 		return errors.Wrap(err, "setting up court tree")
 	}

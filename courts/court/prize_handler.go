@@ -1,13 +1,12 @@
-package summer
+package court
 
 import (
 	"fmt"
-	"path/filepath"
 
 	"github.com/gogo/protobuf/proto"
 	"github.com/pkg/errors"
+	"github.com/prometheus/common/log"
 	"github.com/quorumcontrol/jasons-game/courts/config"
-	"github.com/quorumcontrol/jasons-game/courts/court"
 	"github.com/quorumcontrol/jasons-game/game"
 	"github.com/quorumcontrol/jasons-game/game/trees"
 	"github.com/quorumcontrol/jasons-game/handlers"
@@ -15,30 +14,43 @@ import (
 	"github.com/quorumcontrol/jasons-game/importer"
 	"github.com/quorumcontrol/jasons-game/network"
 	"github.com/quorumcontrol/jasons-game/pb/jasonsgame"
+	"github.com/quorumcontrol/tupelo-go-sdk/consensus"
 )
 
 type prizeConfig struct {
-	Location       string                   `yaml:"location"`
-	Spawn          *importer.ImportObject   `yaml:"spawn"`
-	Prize          *importer.ImportObject   `yaml:"prize"`
-	LocationUpdate *importer.ImportLocation `yaml:"location_update"`
+	Location string                 `yaml:"location"`
+	Spawn    *importer.ImportObject `yaml:"spawn"`
+	Prize    *importer.ImportObject `yaml:"prize"`
 }
 
-type SummerPrizeHandler struct {
+type PrizeHandlerConfig struct {
+	Court           *Court
+	PrizeConfigPath string
+	ValidatorFunc   func(msg *jasonsgame.RequestObjectTransferMessage) (bool, error)
+	CleanupFunc     func(msg *jasonsgame.RequestObjectTransferMessage) error
+}
+
+type PrizeHandler struct {
+	court         *Court
 	net           network.Network
-	court         *SummerCourt
-	currentObject string
-	cfg           *prizeConfig
+	tree          *consensus.SignedChainTree
+	validatorFunc func(msg *jasonsgame.RequestObjectTransferMessage) (bool, error)
+	cleanupFunc   func(msg *jasonsgame.RequestObjectTransferMessage) error
+	prizeCfg      *prizeConfig
+	prizeCfgPath  string
 }
 
-var SummerPrizeHandlerMessages = handlers.HandlerMessageList{
+var PrizeHandlerMessages = handlers.HandlerMessageList{
 	proto.MessageName((*jasonsgame.RequestObjectTransferMessage)(nil)),
 }
 
-func NewSummerPrizeHandler(court *SummerCourt) (*SummerPrizeHandler, error) {
-	handler := &SummerPrizeHandler{
-		net:   court.net,
-		court: court,
+func NewPrizeHandler(config *PrizeHandlerConfig) (*PrizeHandler, error) {
+	handler := &PrizeHandler{
+		court:         config.Court,
+		net:           config.Court.Network(),
+		validatorFunc: config.ValidatorFunc,
+		cleanupFunc:   config.CleanupFunc,
+		prizeCfgPath:  config.PrizeConfigPath,
 	}
 	err := handler.setup()
 	if err != nil {
@@ -47,27 +59,31 @@ func NewSummerPrizeHandler(court *SummerCourt) (*SummerPrizeHandler, error) {
 	return handler, nil
 }
 
-func (h *SummerPrizeHandler) setup() error {
+func (h *PrizeHandler) Tree() *consensus.SignedChainTree {
+	return h.tree
+}
+
+func (h *PrizeHandler) setup() error {
 	var err error
-	h.cfg, err = h.parseConfig()
+	h.prizeCfg, err = h.parseConfig()
 	if err != nil {
 		return err
 	}
 
-	handlerTree, err := court.FindOrCreateNamedTree(h.net, prizeHandlerTreeName)
+	h.tree, err = h.net.FindOrCreatePassphraseTree(h.court.Name() + "-prize-handler")
 	if err != nil {
 		return err
 	}
 
-	if h.cfg.Location == "" {
-		return errors.Wrap(err, "must set Location in prize_config.yml")
+	if h.prizeCfg.Location == "" {
+		return errors.Wrap(err, "must set Location in "+h.prizeCfgPath)
 	}
-	locTree, err := h.net.GetTree(h.cfg.Location)
+	locTree, err := h.net.GetTree(h.prizeCfg.Location)
 	if err != nil {
 		return errors.Wrap(err, "getting loc tree")
 	}
 	location := game.NewLocationTree(h.net, locTree)
-	err = location.SetHandler(handlerTree.MustId())
+	err = location.SetHandler(h.tree.MustId())
 	if err != nil {
 		return errors.Wrap(err, "getting loc tree")
 	}
@@ -80,70 +96,59 @@ func (h *SummerPrizeHandler) setup() error {
 	return nil
 }
 
-func (h *SummerPrizeHandler) parseConfig(additionalArgs ...map[string]interface{}) (*prizeConfig, error) {
-	vars, err := h.court.ids()
+func (h *PrizeHandler) parseConfig(additionalArgs ...map[string]interface{}) (*prizeConfig, error) {
+	vars, err := h.court.Ids()
 	if err != nil {
 		return nil, errors.Wrap(err, "error fetching ids for court")
 	}
 
 	cfg := &prizeConfig{}
-	err = config.ReadYaml(filepath.Join(h.court.configPath, "summer/prize_config.yml"), cfg, append(additionalArgs, vars)...)
+	err = config.ReadYaml(h.prizeCfgPath, cfg, append(additionalArgs, vars)...)
 	if err != nil {
-		return nil, errors.Wrap(err, "error processing prize_config.yml")
+		return nil, errors.Wrap(err, "error processing "+h.prizeCfgPath)
 	}
 
 	return cfg, nil
 }
 
-func (h *SummerPrizeHandler) objectExists(name string) (bool, error) {
-	var err error
-
-	locTree, err := h.net.GetTree(h.cfg.Location)
+func (h *PrizeHandler) currentObjectDid() (string, error) {
+	locTree, err := h.net.GetTree(h.prizeCfg.Location)
 	if err != nil {
-		return false, errors.Wrap(err, "getting loc tree")
+		return "", errors.Wrap(err, "getting loc tree")
 	}
 
 	locInventory := trees.NewInventoryTree(h.net, locTree)
 
-	if h.currentObject == "" {
-		h.currentObject, err = locInventory.DidForName(name)
+	spawnName := h.prizeCfg.Spawn.Data["name"].(string)
 
-		if err != nil {
-			return false, errors.Wrap(err, "error fetching location inventory")
-		}
-	}
-
-	exists, err := locInventory.Exists(h.currentObject)
-
-	if err != nil {
-		return false, errors.Wrap(err, "error checking location inventory")
-	}
-
-	return exists, nil
+	return locInventory.DidForName(spawnName)
 }
 
-func (h *SummerPrizeHandler) spawnObject() error {
-	spawnName := h.cfg.Spawn.Data["name"].(string)
+func (h *PrizeHandler) currentObjectExists() (bool, error) {
+	did, err := h.currentObjectDid()
+	return len(did) > 0, err
+}
 
-	exists, err := h.objectExists(spawnName)
+func (h *PrizeHandler) spawnObject() error {
+	exists, err := h.currentObjectExists()
 	if err != nil {
 		return err
 	}
 
 	// object still exists, skip
 	if exists {
-		log.Debugf("prizehandler: skipping spawning new object, already exists at %s", h.cfg.Location)
+		log.Debugf("prizehandler: skipping spawning new object, already exists at %s", h.prizeCfg.Location)
 		return nil
 	}
 
-	locTree, err := h.net.GetTree(h.cfg.Location)
+	locTree, err := h.net.GetTree(h.prizeCfg.Location)
 	if err != nil {
 		return errors.Wrap(err, "getting loc tree")
 	}
 
 	// use location tip for deterministically generating the next object so that
 	// this can run distributed and stateless
-	objectChainTree, err := court.FindOrCreateNamedTree(h.net, locTree.Tip().String())
+	objectChainTree, err := h.net.FindOrCreatePassphraseTree(locTree.Tip().String())
 	if err != nil {
 		return errors.Wrap(err, "error creating new object key")
 	}
@@ -164,8 +169,7 @@ func (h *SummerPrizeHandler) spawnObject() error {
 		return err
 	}
 
-	h.currentObject = objectChainTree.MustId()
-	log.Debugf("prizehandler: new object %s spawned at %s", h.currentObject, cfg.Location)
+	log.Debugf("prizehandler: new object %s spawned at %s", objectChainTree.MustId(), cfg.Location)
 
 	return nil
 }
@@ -219,11 +223,15 @@ func (s *responseSender) Errorf(str string, args ...interface{}) error {
 	return err
 }
 
-func (h *SummerPrizeHandler) handleTransfer(msg *jasonsgame.RequestObjectTransferMessage) error {
+func (h *PrizeHandler) handleTransfer(msg *jasonsgame.RequestObjectTransferMessage) error {
 	sender := newResponseSender(h.net, msg)
 
 	objectDid := msg.Object
-	if objectDid != h.currentObject {
+	currentObjectDid, err := h.currentObjectDid()
+	if err != nil {
+		return sender.Errorf("could not fetch prize did")
+	}
+	if objectDid != currentObjectDid {
 		return sender.Errorf("current object has changed")
 	}
 
@@ -236,7 +244,7 @@ func (h *SummerPrizeHandler) handleTransfer(msg *jasonsgame.RequestObjectTransfe
 	if err != nil {
 		return sender.Errorf("could not fetch player inventory")
 	}
-	existingPlayerDid, err := playerInventory.DidForName(h.cfg.Prize.Data["name"].(string))
+	existingPlayerDid, err := playerInventory.DidForName(h.prizeCfg.Prize.Data["name"].(string))
 	if err != nil {
 		return sender.Errorf("fetching object in player inventory")
 	}
@@ -248,8 +256,15 @@ func (h *SummerPrizeHandler) handleTransfer(msg *jasonsgame.RequestObjectTransfe
 		return sender.Errorf("prize already exists in player inventory")
 	}
 
+	if h.validatorFunc != nil {
+		valid, err := h.validatorFunc(msg)
+		if err != nil || !valid {
+			return sender.Errorf("could not validate %v", err)
+		}
+	}
+
 	// Delete object from location inventory
-	locTree, err := h.net.GetTree(h.cfg.Location)
+	locTree, err := h.net.GetTree(h.prizeCfg.Location)
 	if err != nil {
 		return sender.Errorf("could not fetch location tree")
 	}
@@ -262,7 +277,7 @@ func (h *SummerPrizeHandler) handleTransfer(msg *jasonsgame.RequestObjectTransfe
 	// Spawn new object
 	err = h.spawnObject()
 	if err != nil {
-		log.Errorf(errors.Wrap(err, "error spawning new object").Error())
+		log.Error(errors.Wrap(err, "error spawning new object"))
 		defer func() {
 			panic("panic on respawn")
 		}()
@@ -300,15 +315,22 @@ func (h *SummerPrizeHandler) handleTransfer(msg *jasonsgame.RequestObjectTransfe
 		return sender.Errorf("could not update object ownership")
 	}
 
+	if h.cleanupFunc != nil {
+		err = h.cleanupFunc(msg)
+		if err != nil {
+			log.Error(errors.Wrap(err, "error on cleanup"))
+		}
+	}
+
 	return sender.Send()
 }
 
-func (h *SummerPrizeHandler) Handle(msg proto.Message) error {
+func (h *PrizeHandler) Handle(msg proto.Message) error {
 	switch msg := msg.(type) {
 	case *jasonsgame.RequestObjectTransferMessage:
 		err := h.handleTransfer(msg)
 		if err != nil {
-			log.Errorf("SummerPrizeHandler: %v", err)
+			log.Errorf("PrizeHandler: %v", err)
 		}
 		return nil
 	default:
@@ -316,10 +338,10 @@ func (h *SummerPrizeHandler) Handle(msg proto.Message) error {
 	}
 }
 
-func (h *SummerPrizeHandler) Supports(msg proto.Message) bool {
-	return SummerPrizeHandlerMessages.Contains(msg)
+func (h *PrizeHandler) Supports(msg proto.Message) bool {
+	return PrizeHandlerMessages.Contains(msg)
 }
 
-func (h *SummerPrizeHandler) SupportedMessages() []string {
-	return SummerPrizeHandlerMessages
+func (h *PrizeHandler) SupportedMessages() []string {
+	return PrizeHandlerMessages
 }
