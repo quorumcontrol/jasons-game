@@ -123,15 +123,14 @@ func (c *SummerCourt) setupArtifactPickupAndSpawn(actorCtx actor.Context, config
 }
 
 func (c *SummerCourt) setupWinningPrizeHandler(actorCtx actor.Context, config *summerConfig) {
-	handlerTree, err := court.FindOrCreateNamedTree(c.net, prizeHandlerTreeName)
+	handler, err := court.NewPrizeHandler(&court.PrizeHandlerConfig{
+		Court:           c.court,
+		PrizeConfigPath: filepath.Join(c.configPath, "summer/prize_config.yml"),
+	})
 	if err != nil {
 		panic(err)
 	}
-	handler, err := NewSummerPrizeHandler(c)
-	if err != nil {
-		panic(err)
-	}
-	servicePID, err := actorCtx.SpawnNamed(service.NewServiceActorPropsWithTree(c.net, handler, handlerTree), prizeHandlerTreeName)
+	servicePID, err := actorCtx.SpawnNamed(service.NewServiceActorPropsWithTree(c.net, handler, handler.Tree()), prizeHandlerTreeName)
 	if err != nil {
 		panic(err)
 	}
