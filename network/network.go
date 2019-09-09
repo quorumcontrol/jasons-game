@@ -31,6 +31,7 @@ var log = logging.Logger("gamenetwork")
 const BlockTopic = "jasons-game-tupelo-world-blocks"
 const ShoutTopic = "jasons-game-shouting-players"
 const GeneralTopic = "jasons-game-general"
+const inkWellName = "inkwell"
 
 var DefaultGameBootstrappers = []string{
 	"/ip4/3.13.69.217/tcp/34011/ipfs/16Uiu2HAmSXDGtQTaNPVzQQkdYuZ221k5668tUYeEEpnzE7UEteFn",
@@ -41,10 +42,10 @@ var DefaultGameBootstrappers = []string{
 
 type InkNetwork interface {
 	InkTokenName() *consensus.TokenName
-	SendInk(tree *consensus.SignedChainTree, amount uint64, destinationChainId string) (*transactions.TokenPayload, error)
-	ReceiveInk(tree *consensus.SignedChainTree, tokenPayload *transactions.TokenPayload) error
+	DepositInk(source *consensus.SignedChainTree, key *ecdsa.PrivateKey, amount uint64) error
+	SendInk(amount uint64, destinationChainId string) (*transactions.TokenPayload, error)
+	ReceiveInk(tokenPayload *transactions.TokenPayload) error
 	ReceiveInkOnEphemeralChainTree(tree *consensus.SignedChainTree, privateKey *ecdsa.PrivateKey, tokenPayload *transactions.TokenPayload) error
-	DisallowReceiveInk(chaintreeId string)
 }
 
 type Network interface {
@@ -78,7 +79,6 @@ type RemoteNetwork struct {
 	ipldp2pHost   *p2p.LibP2PHost
 	community     *Community
 	signingKey    *ecdsa.PrivateKey
-	InkHolder     *consensus.SignedChainTree
 }
 
 type RemoteNetworkConfig struct {
@@ -287,7 +287,12 @@ func (n *RemoteNetwork) CreateChainTree() (*consensus.SignedChainTree, error) {
 		return nil, errors.Wrap(err, "error creating ownership transaction for chaintree")
 	}
 
-	_, err = n.Tupelo.PlayTransactions(tree, key, []*transactions.Transaction{transaction}, n.InkHolder)
+	well, err := n.inkWell()
+	if err != nil {
+		return nil, errors.Wrap(err, "error fetching inkwell")
+	}
+
+	_, err = n.Tupelo.PlayTransactions(tree, key, []*transactions.Transaction{transaction}, well)
 	if err != nil {
 		return nil, errors.Wrap(err, "error playing transactions")
 	}
@@ -357,11 +362,16 @@ func (n *RemoteNetwork) UpdateChainTree(tree *consensus.SignedChainTree, path st
 		return nil, errors.Wrap(err, "error creating set data transaction")
 	}
 
-	_, err = n.Tupelo.PlayTransactions(tree, n.PrivateKey(), []*transactions.Transaction{transaction}, n.InkHolder)
+	well, err := n.inkWell()
+	if err != nil {
+		return nil, errors.Wrap(err, "error fetching inkwell")
+	}
 
+	_, err = n.Tupelo.PlayTransactions(tree, n.PrivateKey(), []*transactions.Transaction{transaction}, well)
 	if err != nil {
 		return nil, errors.Wrap(err, "error updating chaintree")
 	}
+
 	return tree, n.TreeStore().SaveTreeMetadata(tree)
 }
 
@@ -373,7 +383,12 @@ func (n *RemoteNetwork) changeChainTreeOwner(tree *consensus.SignedChainTree, pr
 		return nil, errors.Wrap(err, "error updating chaintree")
 	}
 
-	_, err = n.Tupelo.PlayTransactions(tree, privateKey, []*transactions.Transaction{transaction}, n.InkHolder)
+	well, err := n.inkWell()
+	if err != nil {
+		return nil, errors.Wrap(err, "error fetching inkwell")
+	}
+
+	_, err = n.Tupelo.PlayTransactions(tree, privateKey, []*transactions.Transaction{transaction}, well)
 	if err != nil {
 		return nil, errors.Wrap(err, "error updating chaintree")
 	}
@@ -433,30 +448,49 @@ func (rn *RemoteNetwork) NewCurrentStateSubscriptionProps(did string) *actor.Pro
 	})
 }
 
+func (n *RemoteNetwork) inkWell() (*consensus.SignedChainTree, error) {
+	well, err := n.GetChainTreeByName(inkWellName)
+	if err != nil {
+		return nil, errors.Wrap(err, "error looking up inkwell chaintree")
+	}
+
+	if well != nil {
+		return well, nil
+	}
+
+	well, err = n.CreateNamedChainTree(inkWellName)
+	if err != nil {
+		return nil, errors.Wrap(err, "error creating inkwell chaintree")
+	}
+
+	return well, nil
+}
+
 func (n *RemoteNetwork) InkTokenName() *consensus.TokenName {
 	tokenNameString := n.Tupelo.NotaryGroup.Config().TransactionToken
 	tokenName := consensus.TokenNameFromString(tokenNameString)
 	return &tokenName
 }
 
-func (n *RemoteNetwork) SendInk(tree *consensus.SignedChainTree, amount uint64, destinationChainId string) (*transactions.TokenPayload, error) {
-	tokenPayload, err := n.Tupelo.SendInk(tree, n.PrivateKey(), amount, destinationChainId)
+func (n *RemoteNetwork) SendInk(amount uint64, destinationChainId string) (*transactions.TokenPayload, error) {
+	well, err := n.inkWell()
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "error fetching inkwell")
 	}
 
-	err = n.TreeStore().SaveTreeMetadata(tree)
-	if err != nil {
-		return nil, errors.Wrap(err, "error saving chaintree metadata after ink send transaction")
-	}
-
-	log.Debug("send ink saved tree metadata")
-
+	tokenPayload, err := n.Tupelo.SendInk(well, n.PrivateKey(), amount, destinationChainId)
 	if err != nil {
 		return nil, errors.Wrap(err, "error getting token payload for ink send")
 	}
 
 	log.Debugf("send ink token payload: %+v", *tokenPayload)
+
+	err = n.TreeStore().SaveTreeMetadata(well)
+	if err != nil {
+		return nil, errors.Wrap(err, "error saving chaintree metadata after ink send transaction")
+	}
+
+	log.Debug("send ink saved tree metadata")
 
 	return tokenPayload, nil
 }

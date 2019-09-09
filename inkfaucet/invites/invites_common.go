@@ -116,36 +116,10 @@ func (i *InvitesActor) handleInviteSubmission(actorCtx actor.Context, msg *inkfa
 
 	log.Debug("created new player chaintree")
 
-	playerChainTreeOwners, err := playerChainTree.Authentications()
-	if err != nil {
-		actorCtx.Respond(&inkfaucet.InviteSubmissionResponse{
-			Error: err.Error(),
-		})
-		return
-	}
-
-	log.Debug("get player chaintree owner")
-
-	newInviteChainTree, err := i.net.ChangeChainTreeOwnerWithKey(inviteChainTree, key, playerChainTreeOwners)
-	if err != nil {
-		actorCtx.Respond(&inkfaucet.InviteSubmissionResponse{
-			Error: err.Error(),
-		})
-		return
-	}
-
-	log.Debug("changed owner of invite chaintree to player")
-
-	newInviteTree, err := newInviteChainTree.ChainTree.Tree(context.TODO())
-	if err != nil {
-		actorCtx.Respond(&inkfaucet.InviteSubmissionResponse{
-			Error: err.Error(),
-		})
-		return
-	}
+	inviteTree, err := inviteChainTree.ChainTree.Tree(context.TODO())
 
 	// TODO: Move all the ink transfer code to its own func
-	tokenLedger := consensus.NewTreeLedger(newInviteTree, i.net.InkTokenName())
+	tokenLedger := consensus.NewTreeLedger(inviteTree, i.net.InkTokenName())
 
 	inkBalance, err := tokenLedger.Balance()
 	if err != nil {
@@ -155,11 +129,11 @@ func (i *InvitesActor) handleInviteSubmission(actorCtx actor.Context, msg *inkfa
 		return
 	}
 
-	log.Debugf("moving %d ink to player chaintree", inkBalance)
+	log.Debugf("depositing %d ink for player", inkBalance)
 
-	tokenPayload, err := i.net.SendInk(newInviteChainTree, inkBalance, playerChainTree.MustId())
+	err = i.net.DepositInk(inviteChainTree, key, inkBalance)
 	if err != nil {
-		log.Debugf("error creating ink payload: %v", err)
+		log.Debugf("error depositing ink: %v", err)
 
 		actorCtx.Respond(&inkfaucet.InviteSubmissionResponse{
 			Error: err.Error(),
@@ -167,17 +141,7 @@ func (i *InvitesActor) handleInviteSubmission(actorCtx actor.Context, msg *inkfa
 		return
 	}
 
-	log.Debug("sent ink to player")
-
-	err = i.net.ReceiveInk(playerChainTree, tokenPayload)
-	if err != nil {
-		actorCtx.Respond(&inkfaucet.InviteSubmissionResponse{
-			Error: err.Error(),
-		})
-		return
-	}
-
-	log.Debug("player chaintree has received ink")
+	log.Debug("deposited  ink for player")
 
 	err = i.net.DeleteTree(inviteChainTreeDID)
 	if err != nil {

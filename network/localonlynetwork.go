@@ -221,12 +221,17 @@ func (ln *LocalNetwork) InkTokenName() *consensus.TokenName {
 	return nil
 }
 
-func (ln *LocalNetwork) SendInk(tree *consensus.SignedChainTree, amount uint64, destinationChainId string) (*transactions.TokenPayload, error) {
+func (ln *LocalNetwork) DepositInk(source *consensus.SignedChainTree, key *ecdsa.PrivateKey, amount uint64) error {
+	// placeholder to fulfill the interface
+	return nil
+}
+
+func (ln *LocalNetwork) SendInk(amount uint64, destinationChainId string) (*transactions.TokenPayload, error) {
 	// placeholder to fulfill the interface
 	return nil, nil
 }
 
-func (ln *LocalNetwork) ReceiveInk(tree *consensus.SignedChainTree, tokenPayload *transactions.TokenPayload) error {
+func (ln *LocalNetwork) ReceiveInk(tokenPayload *transactions.TokenPayload) error {
 	// placeholder to fulfill the interface
 	return nil
 }
@@ -234,10 +239,6 @@ func (ln *LocalNetwork) ReceiveInk(tree *consensus.SignedChainTree, tokenPayload
 func (ln *LocalNetwork) ReceiveInkOnEphemeralChainTree(tree *consensus.SignedChainTree, privateKey *ecdsa.PrivateKey, tokenPayload *transactions.TokenPayload) error {
 	// placeholder to fulfill the interface
 	return nil
-}
-
-func (ln *LocalNetwork) DisallowReceiveInk(chaintreeId string) {
-	// placeholder to fulfill the interface
 }
 
 func (ln *LocalNetwork) playTransactions(tree *consensus.SignedChainTree, transactions []*transactions.Transaction) (*consensus.SignedChainTree, error) {

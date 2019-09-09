@@ -77,12 +77,8 @@ func ensureChainTree(net network.Network, key *ecdsa.PrivateKey) (*consensus.Sig
 			return nil, err
 		}
 
-		net.DisallowReceiveInk(ct.MustId())
-
 		return ct, nil
 	}
-
-	net.DisallowReceiveInk(existing.MustId())
 
 	return existing, nil
 }
@@ -118,12 +114,7 @@ func (cti *ChainTreeInkFaucet) chainTree() (*consensus.SignedChainTree, error) {
 }
 
 func (cti *ChainTreeInkFaucet) DepositInk(tokenPayload *transactions.TokenPayload) error {
-	ct, err := cti.chainTree()
-	if err != nil {
-		return errors.Wrap(err, "error depositing ink")
-	}
-
-	return cti.net.ReceiveInk(ct, tokenPayload)
+	return cti.net.ReceiveInk(tokenPayload)
 }
 
 func (cti *ChainTreeInkFaucet) RequestInk(amount uint64, destinationChainId string) (*transactions.TokenPayload, error) {
@@ -171,7 +162,7 @@ func (cti *ChainTreeInkFaucet) RequestInk(amount uint64, destinationChainId stri
 		return nil, errors.Errorf("ink token balance %d is insufficient to fulfill request for %d", tokenBalance, amount)
 	}
 
-	return cti.net.SendInk(ct, amount, destinationChainId)
+	return cti.net.SendInk(amount, destinationChainId)
 }
 
 func (cti *ChainTreeInkFaucet) TokenName() *consensus.TokenName {

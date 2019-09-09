@@ -17,12 +17,12 @@ func (n *RemoteNetwork) receiveInk(tree *consensus.SignedChainTree, privateKey *
 
 	err = n.TreeStore().SaveTreeMetadata(tree)
 	if err != nil {
-		return errors.Wrap(err, "error saving chaintree metadata after ink receive transaction")
+		return errors.Wrap(err, "error saving inkwell metadata after ink receive transaction")
 	}
 
-	log.Debug("receive ink saved tree metadata")
+	log.Debug("receive ink saved inkwell metadata")
 
-	log.Debugf("ink faucet chaintree after receive:\n%s", tree.ChainTree.Dag.Dump(context.TODO()))
+	log.Debugf("inkwell chaintree after receive:\n%s", tree.ChainTree.Dag.Dump(context.TODO()))
 
 	return nil
 }
