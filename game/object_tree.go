@@ -9,6 +9,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/quorumcontrol/tupelo-go-sdk/consensus"
 
+	"github.com/quorumcontrol/jasons-game/game/trees"
 	"github.com/quorumcontrol/jasons-game/network"
 )
 
@@ -155,26 +156,7 @@ func (o *ObjectTree) AddDefaultInscriptionInteractions() error {
 }
 
 func (o *ObjectTree) IsOwnedBy(keyAddrs []string) (bool, error) {
-	ctx := context.TODO()
-	authsUncasted, remainingPath, err := o.tree.ChainTree.Dag.Resolve(ctx, strings.Split("tree/"+consensus.TreePathForAuthentications, "/"))
-	if err != nil {
-		return false, err
-	}
-	if len(remainingPath) > 0 {
-		return false, fmt.Errorf("error resolving object: path elements remaining: %v", remainingPath)
-	}
-
-	for _, storedAddr := range authsUncasted.([]interface{}) {
-		found := false
-		for _, check := range keyAddrs {
-			found = found || (storedAddr.(string) == check)
-		}
-		if !found {
-			return false, nil
-		}
-	}
-
-	return true, nil
+	return trees.VerifyOwnership(context.Background(), o.tree.ChainTree, keyAddrs)
 }
 
 func (o *ObjectTree) ChangeChainTreeOwner(newKeys []string) error {
