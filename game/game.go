@@ -787,8 +787,9 @@ func (g *Game) setLocation(actorCtx actor.Context, locationDid string) {
 
 	log.Debug("spawning new location actor")
 	g.locationActor = actorCtx.Spawn(NewLocationActorProps(&LocationActorConfig{
-		Network: g.network,
-		Did:     locationDid,
+		Network:   g.network,
+		Did:       locationDid,
+		PlayerDid: g.playerTree.Did(),
 	}))
 	g.locationDid = locationDid
 

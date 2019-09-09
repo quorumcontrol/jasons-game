@@ -141,8 +141,9 @@ func TestInventoryActor_TransferObject(t *testing.T) {
 	homeTree, err := createHome(net)
 	require.Nil(t, err)
 	homeActor, err := rootCtx.SpawnNamed(NewLocationActorProps(&LocationActorConfig{
-		Did:     homeTree.MustId(),
-		Network: net,
+		Did:       homeTree.MustId(),
+		Network:   net,
+		PlayerDid: playerChainTree.MustId(),
 	}), "home")
 	require.Nil(t, err)
 	defer rootCtx.Stop(homeActor)

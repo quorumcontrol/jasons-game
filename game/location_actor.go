@@ -3,6 +3,7 @@ package game
 import (
 	"context"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/AsynkronIT/protoactor-go/actor"
@@ -20,6 +21,7 @@ import (
 type LocationActor struct {
 	middleware.LogAwareHolder
 	did            string
+	playerDid      string
 	location       *LocationTree
 	network        network.Network
 	inventoryActor *actor.PID
@@ -27,8 +29,9 @@ type LocationActor struct {
 }
 
 type LocationActorConfig struct {
-	Network network.Network
-	Did     string
+	Network   network.Network
+	Did       string
+	PlayerDid string
 }
 
 type GetLocation struct{}
@@ -61,8 +64,9 @@ type GetInventoryDid struct{}
 func NewLocationActorProps(cfg *LocationActorConfig) *actor.Props {
 	return actor.PropsFromProducer(func() actor.Actor {
 		return &LocationActor{
-			did:     cfg.Did,
-			network: cfg.Network,
+			did:       cfg.Did,
+			network:   cfg.Network,
+			playerDid: cfg.PlayerDid,
 		}
 	}).WithReceiverMiddleware(
 		middleware.LoggingMiddleware,
@@ -180,16 +184,31 @@ func (l *LocationActor) spawnInventoryActor(actorCtx actor.Context) error {
 		return errors.Wrap(err, "error fetching location inventory")
 	}
 
-	if usePerPlayerInventory != nil && usePerPlayerInventory.(bool) {
-		inventoryChainName := "shared-inventory-for-" + l.did
-		inventoryTree, err := l.network.GetChainTreeByName(inventoryChainName)
+	inventoryLookupPath := []string{"tree", "data", "jasons-game", "location-inventories", l.did}
 
+	if usePerPlayerInventory != nil && usePerPlayerInventory.(bool) {
+		playerTree, err := l.network.GetTree(l.playerDid)
 		if err != nil {
-			return errors.Wrap(err, "error fetching inventory tree")
+			return errors.Wrap(err, "error fetching player chain")
+		}
+
+		inventoryDidUncast, _, err := playerTree.ChainTree.Dag.Resolve(context.Background(), inventoryLookupPath)
+		if err != nil {
+			return errors.Wrap(err, "error fetching player chain data")
+		}
+
+		var inventoryTree *consensus.SignedChainTree
+
+		if inventoryDidUncast != nil && inventoryDidUncast.(string) != "" {
+			inventoryTree, err = l.network.GetChainTreeByName(inventoryDidUncast.(string))
+
+			if err != nil {
+				return errors.Wrap(err, "error fetching player inventory for location")
+			}
 		}
 
 		if inventoryTree == nil {
-			inventoryTree, err = l.network.CreateNamedChainTree(inventoryChainName)
+			inventoryTree, err = l.network.CreateChainTree()
 			if err != nil {
 				return errors.Wrap(err, "error creating inventory tree")
 			}
@@ -236,6 +255,11 @@ func (l *LocationActor) spawnInventoryActor(actorCtx actor.Context) error {
 			inventoryTree, err = l.network.ChangeChainTreeOwner(inventoryTree, append(inventoryAuths, additionalAuths...))
 			if err != nil {
 				return errors.Wrap(err, "error setting new handler auths")
+			}
+
+			_, err = l.network.UpdateChainTree(playerTree, strings.Join(inventoryLookupPath[2:], "/"), inventoryTree.MustId())
+			if err != nil {
+				return errors.Wrap(err, "error updating player tree")
 			}
 		}
 
