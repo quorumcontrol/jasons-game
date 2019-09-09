@@ -45,7 +45,7 @@ node_modules
 
 /target/
 
-courts/yml/*
+courts/yml
 courts/yml.tar.gz
 .gitsecret/keys/random_seed
 !*.secret
