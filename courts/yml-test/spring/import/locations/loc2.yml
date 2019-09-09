@@ -1,0 +1,19 @@
+data:
+  description: "loc2 description"
+interactions:
+  - type: ChangeLocationInteraction
+    value:
+      command: "go main"
+      did: "{{.Locations.main}}"
+  - type: ChangeLocationInteraction
+    value:
+      command: "go loc1"
+      did: "{{.Locations.loc1}}"
+  - type: ChangeLocationInteraction
+    value:
+      command: "go loc2"
+      did: "{{.Locations.loc2}}"
+  - type: ChangeLocationInteraction
+    value:
+      command: "go loc3"
+      did: "{{.Locations.loc3}}"
