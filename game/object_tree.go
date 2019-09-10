@@ -87,6 +87,14 @@ func CreateObjectOnTree(net network.Network, name string, tree *consensus.Signed
 	return obj, nil
 }
 
+func (o *ObjectTree) AtTip(tip cid.Cid) (*ObjectTree, error) {
+	tree, err := o.network.GetTreeByTip(tip)
+	if err != nil {
+		return nil, err
+	}
+	return NewObjectTree(o.network, tree), nil
+}
+
 func (o *ObjectTree) Id() (string, error) {
 	return o.tree.Id()
 }

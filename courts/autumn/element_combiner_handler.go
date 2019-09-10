@@ -14,7 +14,6 @@ import (
 	broadcastHandlers "github.com/quorumcontrol/jasons-game/handlers/broadcast"
 	"github.com/quorumcontrol/jasons-game/network"
 	"github.com/quorumcontrol/jasons-game/pb/jasonsgame"
-	"github.com/quorumcontrol/tupelo-go-sdk/consensus"
 )
 
 const combinationObjectName = "bowl"
@@ -269,64 +268,25 @@ func (h *ElementCombinerHandler) handlePickupElement(msg *jasonsgame.RequestObje
 	return sender.Send()
 }
 
-func (h *ElementCombinerHandler) validateObjectOrigin(object *game.ObjectTree) (bool, error) {
-	ctx := context.Background()
+func (h *ElementCombinerHandler) isValidElement(object *game.ObjectTree) (bool, error) {
 	elementName, err := object.GetName()
 	if err != nil {
 		return false, err
 	}
 	elementID := elementNameToId(elementName)
-	log.Debugf("validateObjectOrigin: starting validation: obj=%s name=%s id=%d", object.MustId(), elementName, elementID)
+	log.Debugf("isValidElement: starting validation: obj=%s name=%s id=%d", object.MustId(), elementName, elementID)
 
 	element, ok := h.elements[elementID]
 	if !ok {
-		log.Debugf("validateObjectOrigin: element not found: obj=%s", object.MustId())
+		log.Debugf("isValidElement: element not found: obj=%s", object.MustId())
 		return false, fmt.Errorf("element %d not found", elementID)
 	}
 	if element.SkipOriginValidation {
-		log.Debugf("validateObjectOrigin: skpping origin validation: obj=%s", object.MustId())
+		log.Debugf("isValidElement: skpping origin validation: obj=%s", object.MustId())
 		return true, nil
 	}
 
-	ownershipChanges, err := trees.OwnershipChanges(ctx, object.ChainTree().ChainTree)
-	if err != nil {
-		return false, fmt.Errorf("error checking origin of element: %v", err)
-	}
-
-	if len(ownershipChanges) < 2 {
-		log.Debugf("validateObjectOrigin: invalid ownership history, less than 2 ownership changes: obj=%s", object.MustId())
-		return false, nil
-	}
-
-	beforeTransferOwnership := ownershipChanges[len(ownershipChanges)-2]
-
-	treeBeforeTransfer, err := object.ChainTree().ChainTree.At(ctx, &beforeTransferOwnership.Tip)
-	if err != nil {
-		return false, fmt.Errorf("error checking origin of element")
-	}
-
-	validOrigin, err := trees.VerifyOwnershipAt(ctx, treeBeforeTransfer, 0, h.originAuthentications())
-	if err != nil {
-		return false, fmt.Errorf("error checking origin of element")
-	}
-	if !validOrigin {
-		log.Debugf("validateObjectOrigin: invalid ownership history, authentication at block 0 was not network key: obj=%s", object.MustId())
-		return false, nil
-	}
-
-	originObject := game.NewObjectTree(h.net, consensus.NewSignedChainTreeFromChainTree(treeBeforeTransfer))
-
-	originName, err := originObject.GetName()
-	if err != nil {
-		return false, fmt.Errorf("error checking origin of element")
-	}
-
-	if elementName != originName {
-		log.Debugf("validateObjectOrigin: invalid object, name was modified: obj=%s", object.MustId())
-		return false, nil
-	}
-
-	return true, nil
+	return validateElementOrigin(object, h.originAuthentications())
 }
 
 func (h *ElementCombinerHandler) handleReceiveElement(msg *jasonsgame.TransferredObjectMessage) error {
@@ -344,7 +304,7 @@ func (h *ElementCombinerHandler) handleReceiveElement(msg *jasonsgame.Transferre
 		return fmt.Errorf("error fetching object chaintree %s: %v", msg.Object, err)
 	}
 
-	isValid, err := h.validateObjectOrigin(incomingObject)
+	isValid, err := h.isValidElement(incomingObject)
 	if err != nil {
 		log.Error(err)
 		return err

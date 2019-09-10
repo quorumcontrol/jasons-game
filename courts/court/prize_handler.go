@@ -259,7 +259,7 @@ func (h *PrizeHandler) handleTransfer(msg *jasonsgame.RequestObjectTransferMessa
 	if h.validatorFunc != nil {
 		valid, err := h.validatorFunc(msg)
 		if err != nil || !valid {
-			return sender.Errorf("could not validate %v", err)
+			return sender.Errorf("could not validate: %v", err)
 		}
 	}
 
