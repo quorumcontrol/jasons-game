@@ -3,6 +3,7 @@ package network
 import (
 	"context"
 
+	lru "github.com/hashicorp/golang-lru"
 	cid "github.com/ipfs/go-cid"
 	"github.com/ipfs/go-datastore"
 	cbornode "github.com/ipfs/go-ipld-cbor"
@@ -37,6 +38,7 @@ type IPLDTreeStore struct {
 	blockApi    format.DAGService
 	keyValueApi datastore.Batching
 	tipGetter   tipGetter
+	tipCache    *lru.Cache
 }
 
 func NewIPLDTreeStore(
@@ -44,28 +46,71 @@ func NewIPLDTreeStore(
 	keyValueApi datastore.Batching,
 	tipGetter tipGetter,
 ) *IPLDTreeStore {
+	cache, err := lru.New(100)
+	if err != nil {
+		panic("error creating LRU, should never happen")
+	}
+
 	return &IPLDTreeStore{
 		blockApi:    blockApi,
 		keyValueApi: keyValueApi,
 		tipGetter:   tipGetter,
+		tipCache:    cache,
 	}
+}
+
+func (ts *IPLDTreeStore) getTip(did string) (tip cid.Cid, remote bool, err error) {
+	ctx := context.TODO()
+
+	tip, err = ts.getLocalTip(did)
+	if err != nil {
+		return tip, remote, errors.Wrap(err, "error getting local tip")
+	}
+
+	if !tip.Equals(cid.Undef) {
+		return tip, remote, nil
+	}
+
+	// we didn't find it locally, let's go out and find it from the tipGetter (Tupelo)
+	remote = true
+	tip, err = ts.getRemoteTip(did)
+	if err != nil {
+		return tip, remote, errors.Wrap(err, "error getting remote tip")
+	}
+
+	// ensure that remote signer didn't return us a stale tip
+	// this can happen when blocks are played rapidly
+	// and not all signers have processed the block
+	cachedTip, found := ts.tipCache.Get(did)
+	if found && !cachedTip.(cid.Cid).Equals(tip) {
+		cachedTree := dag.NewDag(context.Background(), cachedTip.(cid.Cid), ts)
+		cachedHeight, _, err := cachedTree.Resolve(ctx, []string{"height"})
+		if err != nil || cachedHeight == nil {
+			log.Errorf("error checking cached height, continuing with remote tip")
+			return tip, remote, nil
+		}
+
+		remoteTree := dag.NewDag(context.Background(), tip, ts)
+		remoteHeight, _, err := remoteTree.Resolve(ctx, []string{"height"})
+		if err != nil || remoteHeight == nil {
+			log.Errorf("error checking remote height, continuing with remote tip")
+			return tip, remote, nil
+		}
+		// our local transactions have produced a more recent valid tip, so use it
+		if cachedHeight.(uint64) > remoteHeight.(uint64) {
+			return cachedTip.(cid.Cid), remote, nil
+		}
+	}
+
+	return tip, remote, nil
 }
 
 func (ts *IPLDTreeStore) GetTree(did string) (*consensus.SignedChainTree, error) {
 	ctx := context.TODO()
-	var remote bool
-	tip, err := ts.getLocalTip(did)
-	if err != nil {
-		return nil, errors.Wrap(err, "error getting local tip")
-	}
 
-	if tip.Equals(cid.Undef) {
-		remote = true
-		// if we didn't find it locally, let's go out and find it from the tipGetter (Tupelo)
-		tip, err = ts.getRemoteTip(did)
-		if err != nil {
-			return nil, errors.Wrap(err, "error getting remote tip")
-		}
+	tip, remote, err := ts.getTip(did)
+	if err != nil {
+		return nil, err
 	}
 
 	if tip.Equals(cid.Undef) {
@@ -109,6 +154,8 @@ func (ts *IPLDTreeStore) SaveTreeMetadata(tree *consensus.SignedChainTree) error
 	if err != nil {
 		return errors.Wrap(err, "error setting sigs")
 	}
+
+	ts.tipCache.Add(did, tree.Tip())
 	return ts.keyValueApi.Put(didStoreKey(did), tree.Tip().Bytes())
 }
 
@@ -126,6 +173,7 @@ func (ts *IPLDTreeStore) UpdateTreeMetadata(tree *consensus.SignedChainTree) err
 		return ts.SaveTreeMetadata(tree)
 	}
 
+	ts.tipCache.Add(did, tree.Tip())
 	return nil
 }
 
