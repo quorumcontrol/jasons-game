@@ -30,7 +30,7 @@ require (
 	github.com/prometheus/common v0.6.0 // indirect
 	github.com/quorumcontrol/chaintree v0.8.1
 	github.com/quorumcontrol/community v0.0.3-0.20190904093829-3b0b04242da8
-	github.com/quorumcontrol/messages/build/go v0.0.0-20190904072359-c4c4068cde98cf0244eb91d63db0cfab979c42b5
+	github.com/quorumcontrol/messages/build/go v0.0.0-20190905114134-c6a62c1e2f40
 	github.com/quorumcontrol/tupelo-go-sdk v0.5.3-rc2.0.20190827115629-6406e12c2317
 	github.com/rs/cors v1.7.0 // indirect
 	github.com/shibukawa/configdir v0.0.0-20170330084843-e180dbdc8da0
@@ -40,7 +40,7 @@ require (
 	golang.org/x/net v0.0.0-20190827160401-ba9fcec4b297
 	golang.org/x/sys v0.0.0-20190902133755-9109b7679e13 // indirect
 	golang.org/x/tools v0.0.0-20190903163617-be0da057c5e3 // indirect
-	golang.org/x/xerrors v0.0.0-20190717185122-a985d3407aa7 // for go-1.13. see: https://github.com/golang/go/issues/32246
+	golang.org/x/xerrors v0.0.0-20190717185122-a985d3407aa7
 	google.golang.org/grpc v1.22.0
 	gopkg.in/yaml.v2 v2.2.2
 	gotest.tools/gotestsum v0.3.5 // indirect
