@@ -179,39 +179,6 @@ func (t *InventoryTree) ForceAdd(did string) error {
 	return err
 }
 
-func (t *InventoryTree) Get(did string) error {
-	ctx := context.TODO()
-
-	allObjects, err := t.All()
-	if err != nil {
-		return err
-	}
-
-	_, ok := allObjects[did]
-	if ok {
-		return nil
-	}
-
-	objectTree, err := t.network.GetTree(did)
-	if err != nil {
-		return err
-	}
-
-	uncastObjectName, _, err := objectTree.ChainTree.Dag.Resolve(ctx, []string{"tree", "data", "jasons-game", "name"})
-	if err != nil {
-		return err
-	}
-
-	name, ok := uncastObjectName.(string)
-	if !ok {
-		return fmt.Errorf("error casting name to string; type is %T", uncastObjectName)
-	}
-
-	allObjects[did] = name
-	err = t.updateObjects(allObjects)
-	return err
-}
-
 func (t *InventoryTree) Authentications() ([]string, error) {
 	return t.tree.Authentications()
 }
