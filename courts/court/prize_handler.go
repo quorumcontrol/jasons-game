@@ -63,6 +63,10 @@ func (h *PrizeHandler) Tree() *consensus.SignedChainTree {
 	return h.tree
 }
 
+func (h *PrizeHandler) Name() string {
+	return h.court.Name() + "-prize-handler"
+}
+
 func (h *PrizeHandler) setup() error {
 	var err error
 	h.prizeCfg, err = h.parseConfig()
@@ -70,7 +74,7 @@ func (h *PrizeHandler) setup() error {
 		return err
 	}
 
-	h.tree, err = h.net.FindOrCreatePassphraseTree(h.court.Name() + "-prize-handler")
+	h.tree, err = h.net.FindOrCreatePassphraseTree(h.Name())
 	if err != nil {
 		return err
 	}

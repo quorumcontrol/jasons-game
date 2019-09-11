@@ -56,16 +56,11 @@ func (c *SummerCourt) setupWinningPrizeHandler(actorCtx actor.Context) {
 	if err != nil {
 		panic(err)
 	}
-	servicePID, err := actorCtx.SpawnNamed(service.NewServiceActorPropsWithTree(c.net, handler, handler.Tree()), prizeHandlerTreeName)
+	_, err = c.court.SpawnHandler(actorCtx, handler)
 	if err != nil {
 		panic(err)
 	}
-	// This is the same as the handlerTree.MustId(), but just ensures it has started up
-	handlerDid, err := actorCtx.RequestFuture(servicePID, &service.GetServiceDid{}, 30*time.Second).Result()
-	if err != nil {
-		panic(err)
-	}
-	log.Infof("%s handler started with did %s", prizeHandlerTreeName, handlerDid)
+	log.Infof("%s handler started with did %s", handler.Name(), handler.Tree().MustId())
 }
 
 func (c *SummerCourt) initialize(actorCtx actor.Context) {
