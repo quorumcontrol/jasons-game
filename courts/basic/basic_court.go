@@ -1,4 +1,4 @@
-package summer
+package basic
 
 import (
 	"context"
@@ -11,29 +11,29 @@ import (
 	"github.com/quorumcontrol/jasons-game/network"
 )
 
-var log = logging.Logger("summer")
-
-type SummerCourt struct {
+type BasicCourt struct {
 	ctx        context.Context
 	net        network.Network
 	court      *court.Court
 	configPath string
+	log        logging.StandardLogger
 }
 
-func New(ctx context.Context, net network.Network, configPath string) *SummerCourt {
-	return &SummerCourt{
+func New(ctx context.Context, net network.Network, configPath string, name string) *BasicCourt {
+	return &BasicCourt{
 		ctx:        ctx,
 		net:        net,
-		court:      court.New(ctx, net, "summer"),
+		court:      court.New(ctx, net, name),
 		configPath: configPath,
+		log:        logging.Logger(name),
 	}
 }
 
-func (c *SummerCourt) Start() {
+func (c *BasicCourt) Start() {
 	court.SpawnCourt(c.ctx, c)
 }
 
-func (c *SummerCourt) setupArtifactHandler(actorCtx actor.Context) {
+func (c *BasicCourt) setupArtifactHandler(actorCtx actor.Context) {
 	handler, err := court.NewArtifactSpawnHandler(&court.ArtifactSpawnHandlerConfig{
 		Court:      c.court,
 		ConfigPath: c.configPath,
@@ -45,13 +45,13 @@ func (c *SummerCourt) setupArtifactHandler(actorCtx actor.Context) {
 	if err != nil {
 		panic(err)
 	}
-	log.Infof("%s handler started with did %s", handler.Name(), handler.Tree().MustId())
+	c.log.Infof("%s handler started with did %s", handler.Name(), handler.Tree().MustId())
 }
 
-func (c *SummerCourt) setupWinningPrizeHandler(actorCtx actor.Context) {
+func (c *BasicCourt) setupWinningPrizeHandler(actorCtx actor.Context) {
 	handler, err := court.NewPrizeHandler(&court.PrizeHandlerConfig{
 		Court:           c.court,
-		PrizeConfigPath: filepath.Join(c.configPath, "summer/prize_config.yml"),
+		PrizeConfigPath: filepath.Join(c.configPath, c.court.Name(), "prize_config.yml"),
 	})
 	if err != nil {
 		panic(err)
@@ -60,10 +60,10 @@ func (c *SummerCourt) setupWinningPrizeHandler(actorCtx actor.Context) {
 	if err != nil {
 		panic(err)
 	}
-	log.Infof("%s handler started with did %s", handler.Name(), handler.Tree().MustId())
+	c.log.Infof("%s handler started with did %s", handler.Name(), handler.Tree().MustId())
 }
 
-func (c *SummerCourt) initialize(actorCtx actor.Context) {
+func (c *BasicCourt) initialize(actorCtx actor.Context) {
 	err := c.court.Import(c.configPath)
 	if err != nil {
 		panic(err)
@@ -73,7 +73,7 @@ func (c *SummerCourt) initialize(actorCtx actor.Context) {
 	c.setupWinningPrizeHandler(actorCtx)
 }
 
-func (c *SummerCourt) Receive(actorCtx actor.Context) {
+func (c *BasicCourt) Receive(actorCtx actor.Context) {
 	switch actorCtx.Message().(type) {
 	case *actor.Started:
 		c.initialize(actorCtx)

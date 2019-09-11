@@ -1,6 +1,6 @@
 // +build integration
 
-package summer
+package basic
 
 import (
 	"context"
@@ -18,7 +18,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestSummerCourt(t *testing.T) {
+func TestBasicCourt(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
@@ -28,7 +28,7 @@ func TestSummerCourt(t *testing.T) {
 	net, err := network.NewRemoteNetwork(ctx, group, config.MemoryDataStore())
 	require.Nil(t, err)
 
-	court := New(ctx, net, "../yml-test")
+	court := New(ctx, net, "../yml-test", "basic")
 	court.Start()
 
 	playerChain, err := net.CreateLocalChainTree("player")
@@ -69,7 +69,7 @@ func TestSummerCourt(t *testing.T) {
 	playerChain = playerTree.ChainTree()
 
 	// Check artifact respawn, should be in loc1 and loc2 only
-	for i := 1;  i<=5; i++ {
+	for i := 1; i <= 5; i++ {
 		time.Sleep(2 * time.Second)
 
 		for locationName, did := range locationIds {
@@ -86,7 +86,7 @@ func TestSummerCourt(t *testing.T) {
 				require.Fail(t, "artifact spawned in loc3, should have only spawned in loc1 / loc2")
 			}
 
-			stream.ExpectMessage(locationName + " description", 2*time.Second)
+			stream.ExpectMessage(locationName+" description", 2*time.Second)
 			rootCtx.Send(gamePid, &jasonsgame.UserInput{Message: "go " + locationName})
 			stream.Wait()
 			time.Sleep(50 * time.Millisecond)
@@ -113,7 +113,7 @@ func TestSummerCourt(t *testing.T) {
 	}
 
 	// Check winning prize respawn, should be in loc3
-	for i := 1;  i<=2; i++ {
+	for i := 1; i <= 2; i++ {
 		time.Sleep(2 * time.Second)
 
 		stream.ExpectMessage("loc3 description", 2*time.Second)
@@ -121,12 +121,12 @@ func TestSummerCourt(t *testing.T) {
 		stream.Wait()
 		time.Sleep(50 * time.Millisecond)
 
-		stream.ExpectMessage("Woah did you kill it?", 2*time.Second)
+		stream.ExpectMessage("won basic", 2*time.Second)
 		rootCtx.Send(gamePid, &jasonsgame.UserInput{Message: "pick up spawn-obj"})
 		stream.Wait()
 		time.Sleep(50 * time.Millisecond)
 
-		stream.ExpectMessage("test-summer-prize", 2*time.Second)
+		stream.ExpectMessage("test-basic-prize", 2*time.Second)
 		rootCtx.Send(gamePid, &jasonsgame.UserInput{Message: "look in bag"})
 		stream.Wait()
 
@@ -134,13 +134,13 @@ func TestSummerCourt(t *testing.T) {
 		// got transformed into the prize with the right data
 		playerInventory, err := trees.FindInventoryTree(net, playerChain.MustId())
 		require.Nil(t, err)
-		objDid, err := playerInventory.DidForName("test-summer-prize")
+		objDid, err := playerInventory.DidForName("test-basic-prize")
 		require.Nil(t, err)
 		objectTree, err := game.FindObjectTree(net, objDid)
 		require.Nil(t, err)
 		desc, err := objectTree.GetDescription()
 		require.Nil(t, err)
-		require.Equal(t, desc, "the test won the summer court")
+		require.Equal(t, desc, "the test won the basic court")
 		interactions, err := objectTree.InteractionsList()
 		require.Nil(t, err)
 		require.Len(t, interactions, 0)
