@@ -8,7 +8,6 @@ import (
 	"path/filepath"
 
 	"github.com/AsynkronIT/protoactor-go/actor"
-	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ipfs/go-cid"
 	logging "github.com/ipfs/go-log"
 	"github.com/pkg/errors"
@@ -76,37 +75,7 @@ func (r *RespawnActor) PID() *actor.PID {
 }
 
 func (r *RespawnActor) respawnTree(actorCtx actor.Context) (*consensus.SignedChainTree, error) {
-	treeKey, err := consensus.PassPhraseKey(crypto.FromECDSA(r.network.PrivateKey()), []byte("artifact-respawner"))
-	if err != nil {
-		return nil, errors.Wrap(err, "error creating new respwaner key")
-	}
-	treeDid := consensus.EcdsaPubkeyToDid(treeKey.PublicKey)
-
-	log.Debugf("respawnTree looking for %s", treeDid)
-	tree, err := r.network.GetTree(treeDid)
-	if err != nil {
-		return nil, errors.Wrap(err, "error fetching latest object tip")
-	}
-
-	if tree == nil {
-		log.Debugf("respawnTree %s does not exist yet, creating", treeDid)
-
-		tree, err = r.network.CreateChainTreeWithKey(treeKey)
-		if err != nil {
-			return nil, errors.Wrap(err, "error creating new respwaner tree")
-		}
-
-		tree, err = r.network.ChangeChainTreeOwnerWithKey(tree, treeKey, []string{
-			crypto.PubkeyToAddress(*r.network.PublicKey()).String(),
-		})
-		if err != nil {
-			return nil, errors.Wrap(err, "error chowning new respwaner")
-		}
-
-		log.Debugf("respawnTree %s created", treeDid)
-	}
-
-	return tree, nil
+	return r.network.FindOrCreatePassphraseTree("artifact-respawner")
 }
 
 func (r *RespawnActor) generateRandomArtifact(salt []byte) (*consensus.SignedChainTree, error) {
