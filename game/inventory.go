@@ -248,6 +248,29 @@ func (inv *InventoryActor) handleTransferObject(actorCtx actor.Context, msg *Tra
 		return
 	}
 
+	// do a quick and dirty check to see if the object already exists in the destination and short circuit if so
+	destTree, err := trees.FindInventoryTree(inv.network, msg.To)
+	if err != nil {
+		err = fmt.Errorf("error retrieving object tree for destination: %v", err)
+		inv.Log.Error(err)
+		actorCtx.Respond(&TransferObjectResponse{Error: err})
+		return
+	}
+
+	existsInDest, err := destTree.Exists(objectDid)
+	if err != nil {
+		err = fmt.Errorf("error checking for existence of object in destination inventory: %v", err)
+		inv.Log.Error(err)
+		actorCtx.Respond(&TransferObjectResponse{Error: err})
+		return
+	}
+
+	if existsInDest {
+		// short circuit here w/o error so that this is idempotent
+		actorCtx.Respond(&TransferObjectResponse{})
+		return
+	}
+
 	exists, err := inv.inventory.Exists(objectDid)
 	if err != nil {
 		inv.Log.Error(err)

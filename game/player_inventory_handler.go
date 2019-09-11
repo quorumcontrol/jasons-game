@@ -95,7 +95,7 @@ func (h *PlayerInventoryHandler) Handle(msg proto.Message) error {
 			return err
 		}
 
-		// defer from top will send successfull response
+		// defer from top will send successful response
 		return nil
 	default:
 		return handlers.ErrUnsupportedMessageType
