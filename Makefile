@@ -208,6 +208,7 @@ encrypt: courts/yml/
 	git add courts/yml.tar.gz.secret .gitsecret/paths/mapping.cfg
 
 decrypt: courts/yml.tar.gz.secret
+	rm -rf courts/yml/
 	git secret cat courts/yml.tar.gz.secret | tar -zxf -
 
 .PHONY: all build build-all test integration-test localnet clean lint game-server importer jason inkfaucet devink game2 mac-app prepare generated dev down encrypt decrypt
