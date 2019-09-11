@@ -49,7 +49,7 @@ func TestSummerCourt(t *testing.T) {
 
 	time.Sleep(10 * time.Second)
 
-	ids, err := court.ids()
+	ids, err := court.court.Ids()
 	require.Nil(t, err)
 	require.NotNil(t, ids)
 	locationIds := make(map[string]string)

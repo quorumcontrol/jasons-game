@@ -1,17 +1,20 @@
 package court
 
 import (
+	"fmt"
 	"context"
+	"time"
 	"path/filepath"
 
 	"github.com/AsynkronIT/protoactor-go/actor"
 
 	"github.com/pkg/errors"
 
+	"github.com/quorumcontrol/jasons-game/handlers"
 	"github.com/quorumcontrol/jasons-game/importer"
-
 	"github.com/quorumcontrol/jasons-game/network"
 	"github.com/quorumcontrol/tupelo-go-sdk/consensus"
+	"github.com/quorumcontrol/jasons-game/service"
 )
 
 type Court struct {
@@ -106,6 +109,29 @@ func (c *Court) Import(configPath string) error {
 	}
 	return nil
 }
+
+type courtHandler interface {
+	handlers.Handler
+	Name() string
+	Tree() *consensus.SignedChainTree
+}
+
+func (c *Court) SpawnHandler(actorCtx actor.Context, handler courtHandler) (*actor.PID, error) {
+	servicePID, err := actorCtx.SpawnNamed(service.NewServiceActorPropsWithTree(c.net, handler, handler.Tree()), handler.Name())
+	if err != nil {
+		return nil, err
+	}
+	// This should be the same as the handler.Tree().MustId(), but just ensures it has started up
+	handlerDid, err := actorCtx.RequestFuture(servicePID, &service.GetServiceDid{}, 30*time.Second).Result()
+	if err != nil {
+		return nil, err
+	}
+	if handlerDid != handler.Tree().MustId() {
+		return nil, fmt.Errorf("mismatch dids between handler and source tree - should never happen")
+	}
+	return servicePID, nil
+}
+
 
 func SpawnCourt(ctx context.Context, act actor.Actor) {
 	actorCtx := actor.EmptyRootContext
