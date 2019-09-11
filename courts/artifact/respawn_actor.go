@@ -55,7 +55,12 @@ func NewRespawnActor(ctx context.Context, cfg *RespawnActorConfig) (*RespawnActo
 	}, nil
 }
 
-func (r *RespawnActor) Start(actorCtx actor.Context) {
+type startStopContext interface {
+	actor.SpawnerContext
+	Stop(pid *actor.PID)
+}
+
+func (r *RespawnActor) Start(actorCtx startStopContext) {
 	r.pid = actorCtx.Spawn(actor.PropsFromProducer(func() actor.Actor {
 		return r
 	}))
