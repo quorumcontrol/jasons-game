@@ -575,11 +575,20 @@ func (g *Game) handlePickUpObject(actorCtx actor.Context, interaction *PickUpObj
 }
 
 func (g *Game) handleCreateObjectInteraction(actorCtx actor.Context, interaction *CreateObjectInteraction) error {
-	return g.handleCreateObjectRequest(actorCtx, &CreateObjectRequest{
+	err := g.handleCreateObjectRequest(actorCtx, &CreateObjectRequest{
 		Name:             interaction.Name,
 		Description:      interaction.Description,
 		WithInscriptions: interaction.WithInscriptions,
 	})
+
+	if err == ErrExists {
+		g.sendUserMessage(actorCtx,
+			fmt.Sprintf("You already have a \"%s\" in your bag of hodling. Put that somewhere else and maybe you can pick this one up too.",
+				interaction.Name))
+		return nil
+	}
+
+	return err
 }
 
 func (g *Game) handleCreateObjectFromArgs(actorCtx actor.Context, args string) error {

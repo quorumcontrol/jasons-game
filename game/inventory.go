@@ -19,6 +19,8 @@ import (
 	"github.com/quorumcontrol/messages/build/go/signatures"
 )
 
+var ErrExists = errors.New("inventory: object already exists")
+
 type InventoryActor struct {
 	middleware.LogAwareHolder
 	did        string
@@ -183,7 +185,7 @@ func (inv *InventoryActor) handleCreateObject(actorCtx actor.Context, msg *Creat
 
 	if len(exists) > 0 {
 		actorCtx.Respond(&CreateObjectResponse{
-			Error: fmt.Errorf("object with name %s already exists; names must be unique", name),
+			Error: ErrExists,
 		})
 		return
 	}
