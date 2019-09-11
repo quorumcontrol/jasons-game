@@ -574,6 +574,12 @@ func (g *Game) handlePickUpObject(actorCtx actor.Context, interaction *PickUpObj
 	return nil
 }
 
+func (g *Game) objectAlreadyExistsResponse(actorCtx actor.Context, objName string) {
+	g.sendUserMessage(actorCtx,
+		fmt.Sprintf("You already have an object named \"%s\" in your bag of hodling. Put that somewhere else and maybe you can pick this one up too.",
+			objName))
+}
+
 func (g *Game) handleCreateObjectInteraction(actorCtx actor.Context, interaction *CreateObjectInteraction) error {
 	err := g.handleCreateObjectRequest(actorCtx, &CreateObjectRequest{
 		Name:             interaction.Name,
@@ -581,10 +587,10 @@ func (g *Game) handleCreateObjectInteraction(actorCtx actor.Context, interaction
 		WithInscriptions: interaction.WithInscriptions,
 	})
 
+	fmt.Printf("RESPONSE FROM handleCreateObjectRequest: %+v\n", err)
+
 	if err == ErrExists {
-		g.sendUserMessage(actorCtx,
-			fmt.Sprintf("You already have a \"%s\" in your bag of hodling. Put that somewhere else and maybe you can pick this one up too.",
-				interaction.Name))
+		g.objectAlreadyExistsResponse(actorCtx, interaction.Name)
 		return nil
 	}
 
@@ -593,24 +599,40 @@ func (g *Game) handleCreateObjectInteraction(actorCtx actor.Context, interaction
 
 func (g *Game) handleCreateObjectFromArgs(actorCtx actor.Context, args string) error {
 	splitArgs := strings.Split(args, " ")
-	return g.handleCreateObjectRequest(actorCtx, &CreateObjectRequest{
-		Name:        splitArgs[0],
+	name := splitArgs[0]
+	err := g.handleCreateObjectRequest(actorCtx, &CreateObjectRequest{
+		Name:        name,
 		Description: strings.Join(splitArgs[1:], " "),
 	})
+
+	if err == ErrExists {
+		g.objectAlreadyExistsResponse(actorCtx, name)
+		return nil
+	}
+
+	return err
 }
 
 func (g *Game) handleCreateObjectRequest(actorCtx actor.Context, req *CreateObjectRequest) error {
 	response, err := actorCtx.RequestFuture(g.inventoryActor, req, 30*time.Second).Result()
+	fmt.Printf("RESPONSE FROM inventory actor: %+v\n", response)
+	fmt.Printf("ERROR FROM inventory actor: %+v\n", err)
 	if err != nil {
 		return err
 	}
 
-	newObject, ok := response.(*CreateObjectResponse)
+	createObjectResp, ok := response.(*CreateObjectResponse)
 	if !ok {
 		return fmt.Errorf("error casting create object response")
 	}
 
-	g.sendUserMessage(actorCtx, fmt.Sprintf("%s has been created with DID %s and is in your bag of hodling", req.Name, newObject.Object.Did))
+	if createObjectResp.Error != nil {
+		return createObjectResp.Error
+	}
+
+	newObject := createObjectResp.Object
+
+	g.sendUserMessage(actorCtx, fmt.Sprintf("%s has been created with DID %s and is in your bag of hodling", req.Name, newObject.Did))
 	return nil
 }
 
