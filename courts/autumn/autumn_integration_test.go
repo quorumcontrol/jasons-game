@@ -71,7 +71,7 @@ func TestAutumnCourt(t *testing.T) {
 		"visit weaver", "you are at the weaver",
 		"drop object element-64", "object has been dropped",
 		"drop object element-c8", "object has been dropped",
-		"pick up object " + combinationObjectName, combinationSuccessMsg,
+		"submit offering", combinationSuccessMsg,
 		"look in bag", "element-12c",
 		"go back", "test autumn court hub",
 		"visit mine 100", "you are in mine 100",
@@ -84,14 +84,16 @@ func TestAutumnCourt(t *testing.T) {
 		"drop object element-64", "object has been dropped",
 		"drop object element-c8", "object has been dropped",
 		"drop object element-12c", "object has been dropped",
-		"pick up object " + combinationObjectName, combinationSuccessMsg,
+		"submit offering", combinationSuccessMsg,
 		"look in bag", "element-258",
+		"pick up spawn-obj", "test won",
+		"look in bag", "test-spring-prize",
 	}
 
 	for i := 0; i < len(cmdsAndResponses); i = i + 2 {
 		cmd := cmdsAndResponses[i]
 		response := cmdsAndResponses[i+1]
-		stream.ExpectMessage(response, 20*time.Second)
+		stream.ExpectMessage(response, 30*time.Second)
 		rootCtx.Send(gamePid, &jasonsgame.UserInput{Message: cmd})
 		stream.Wait()
 	}

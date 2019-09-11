@@ -1,3 +1,6 @@
+prize_fail_msg: "prize fail message"
+winning_element: 600
+
 elements:
 - id: 15
   description: "fail element"
@@ -11,7 +14,7 @@ elements:
   description: "element with id of 300"
 - id: 600
   description: "element with id of 600"
-unprotected_elements: [100, 200]
+
 weaver:
 - from: [100, 200]
   to: 300
