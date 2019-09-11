@@ -605,14 +605,24 @@ func (g *Game) handleCreateObjectRequest(actorCtx actor.Context, req *CreateObje
 	return nil
 }
 
-func (g *Game) handlePlayerInventoryList(actorCtx actor.Context) error {
-	response, err := actorCtx.RequestFuture(g.inventoryActor, &InventoryListRequest{}, 30*time.Second).Result()
+func (g *Game) getInventoryList(actorCtx actor.Context, pid *actor.PID) (*InventoryListResponse, error) {
+	response, err := actorCtx.RequestFuture(pid, &InventoryListRequest{}, 30*time.Second).Result()
 	if err != nil {
-		return err
+		return nil, err
 	}
+
 	inventoryList, ok := response.(*InventoryListResponse)
 	if !ok {
-		return fmt.Errorf("error casting InventoryListResponse")
+		return nil, fmt.Errorf("error casting InventoryListResponse")
+	}
+
+	return inventoryList, nil
+}
+
+func (g *Game) handlePlayerInventoryList(actorCtx actor.Context) error {
+	inventoryList, err := g.getInventoryList(actorCtx, g.inventoryActor)
+	if err != nil {
+		return fmt.Errorf("error getting player inventory list: %v", err)
 	}
 
 	if len(inventoryList.Objects) == 0 {
@@ -628,13 +638,9 @@ func (g *Game) handlePlayerInventoryList(actorCtx actor.Context) error {
 }
 
 func (g *Game) handleLocationInventoryList(actorCtx actor.Context) error {
-	response, err := actorCtx.RequestFuture(g.locationActor, &InventoryListRequest{}, 30*time.Second).Result()
+	inventoryList, err := g.getInventoryList(actorCtx, g.locationActor)
 	if err != nil {
-		return err
-	}
-	inventoryList, ok := response.(*InventoryListResponse)
-	if !ok {
-		return fmt.Errorf("error casting InventoryListResponse")
+		return fmt.Errorf("error getting location inventory list: %v", err)
 	}
 
 	l, err := g.getCurrentLocation(actorCtx)
