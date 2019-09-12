@@ -32,6 +32,9 @@ var runCourts = &cobra.Command{
 			panic("must specify at least one --court")
 		}
 
+		mustSetLogLevel("importer", logLevel)
+		mustSetLogLevel("respawner", logLevel)
+
 		for _, courtName := range courtsList {
 			var court courtStarter
 
@@ -49,7 +52,7 @@ var runCourts = &cobra.Command{
 			default:
 				panic("unknown court named " + courtName)
 			}
-
+			mustSetLogLevel(courtName, logLevel)
 			court.Start()
 		}
 

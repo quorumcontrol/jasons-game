@@ -9,6 +9,7 @@ import (
 )
 
 var localNetworkFlag bool
+var logLevel string
 var configDir string
 
 func Execute() {
@@ -31,13 +32,11 @@ var rootCmd = &cobra.Command{
 
 func init() {
 	rootCmd.PersistentFlags().BoolVar(&localNetworkFlag, "local", false, "should this use local tupelo/jason, defaults to false")
+	rootCmd.PersistentFlags().StringVarP(&logLevel, "log-level", "L", "info", "logging level (debug|info|warn|error)")
 	rootCmd.PersistentFlags().StringVar(&configDir, "config", "", "path to yaml config directory")
 	if err := rootCmd.MarkPersistentFlagRequired("config"); err != nil {
 		panic(err)
 	}
-
-	mustSetLogLevel("importer", "info")
-	mustSetLogLevel("respawner", "info")
 }
 
 func mustSetLogLevel(name string, level string) {

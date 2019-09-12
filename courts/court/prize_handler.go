@@ -5,7 +5,6 @@ import (
 
 	"github.com/gogo/protobuf/proto"
 	"github.com/pkg/errors"
-	"github.com/prometheus/common/log"
 	"github.com/quorumcontrol/jasons-game/courts/config"
 	"github.com/quorumcontrol/jasons-game/game"
 	"github.com/quorumcontrol/jasons-game/game/trees"
@@ -141,7 +140,7 @@ func (h *PrizeHandler) spawnObject() error {
 
 	// object still exists, skip
 	if exists {
-		log.Debugf("prizehandler: skipping spawning new object, already exists at %s", h.prizeCfg.Location)
+		h.court.log.Debugf("prizehandler: skipping spawning new object, already exists at %s", h.prizeCfg.Location)
 		return nil
 	}
 
@@ -173,7 +172,7 @@ func (h *PrizeHandler) spawnObject() error {
 		return err
 	}
 
-	log.Debugf("prizehandler: new object %s spawned at %s", objectChainTree.MustId(), cfg.Location)
+	h.court.log.Debugf("prizehandler: new object %s spawned at %s", objectChainTree.MustId(), cfg.Location)
 
 	return nil
 }
@@ -200,7 +199,6 @@ func newResponseSender(net network.Network, source *jasonsgame.RequestObjectTran
 }
 
 func (s *responseSender) Send() error {
-	log.Debugf("prizehandler: sending prize %s to %s", s.source.To, s.source.Object)
 	err := s.handler.Handle(&jasonsgame.TransferredObjectMessage{
 		From:    s.source.From,
 		To:      s.source.To,
@@ -281,7 +279,7 @@ func (h *PrizeHandler) handleTransfer(msg *jasonsgame.RequestObjectTransferMessa
 	// Spawn new object
 	err = h.spawnObject()
 	if err != nil {
-		log.Error(errors.Wrap(err, "error spawning new object"))
+		h.court.log.Error(errors.Wrap(err, "error spawning new object"))
 		defer func() {
 			panic("panic on respawn")
 		}()
@@ -322,10 +320,11 @@ func (h *PrizeHandler) handleTransfer(msg *jasonsgame.RequestObjectTransferMessa
 	if h.cleanupFunc != nil {
 		err = h.cleanupFunc(msg)
 		if err != nil {
-			log.Error(errors.Wrap(err, "error on cleanup"))
+			h.court.log.Error(errors.Wrap(err, "error on cleanup"))
 		}
 	}
 
+	h.court.log.Debugf("prizehandler: sending prize %s to %s", msg.To, msg.Object)
 	return sender.Send()
 }
 
@@ -334,7 +333,7 @@ func (h *PrizeHandler) Handle(msg proto.Message) error {
 	case *jasonsgame.RequestObjectTransferMessage:
 		err := h.handleTransfer(msg)
 		if err != nil {
-			log.Errorf("PrizeHandler: %v", err)
+			h.court.log.Errorf("prizehandler: %v", err)
 		}
 		return nil
 	default:

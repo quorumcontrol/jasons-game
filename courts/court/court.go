@@ -1,19 +1,19 @@
 package court
 
 import (
-	"fmt"
 	"context"
-	"time"
+	"fmt"
 	"path/filepath"
+	"time"
 
 	"github.com/AsynkronIT/protoactor-go/actor"
-
+	logging "github.com/ipfs/go-log"
 	"github.com/pkg/errors"
+	"github.com/quorumcontrol/tupelo-go-sdk/consensus"
 
 	"github.com/quorumcontrol/jasons-game/handlers"
 	"github.com/quorumcontrol/jasons-game/importer"
 	"github.com/quorumcontrol/jasons-game/network"
-	"github.com/quorumcontrol/tupelo-go-sdk/consensus"
 	"github.com/quorumcontrol/jasons-game/service"
 )
 
@@ -22,6 +22,7 @@ type Court struct {
 	net  network.Network
 	name string
 	did  string
+	log  logging.StandardLogger
 }
 
 func New(ctx context.Context, net network.Network, name string) *Court {
@@ -29,6 +30,7 @@ func New(ctx context.Context, net network.Network, name string) *Court {
 		ctx:  ctx,
 		net:  net,
 		name: name,
+		log:  logging.Logger(name),
 	}
 }
 
@@ -129,9 +131,10 @@ func (c *Court) SpawnHandler(actorCtx actor.Context, handler courtHandler) (*act
 	if handlerDid != handler.Tree().MustId() {
 		return nil, fmt.Errorf("mismatch dids between handler and source tree - should never happen")
 	}
+	c.log.Infof("%s handler started with did %s", handler.Name(), handler.Tree().MustId())
+
 	return servicePID, nil
 }
-
 
 func SpawnCourt(ctx context.Context, act actor.Actor) {
 	actorCtx := actor.EmptyRootContext

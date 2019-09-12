@@ -85,7 +85,6 @@ func (c *AutumnCourt) spawnPrizeHandler(actorCtx actor.Context) {
 	if err != nil {
 		panic(err)
 	}
-	log.Infof("%s handler started with did %s", handler.Name(), handler.Tree().MustId())
 }
 
 func (c *AutumnCourt) setupArtifactHandler(actorCtx actor.Context) {
@@ -100,7 +99,6 @@ func (c *AutumnCourt) setupArtifactHandler(actorCtx actor.Context) {
 	if err != nil {
 		panic(err)
 	}
-	log.Infof("%s handler started with did %s", handler.Name(), handler.Tree().MustId())
 }
 
 func (c *AutumnCourt) setupCombinationHandler(actorCtx actor.Context, name string, elements []*element, combinations []*elementCombination) {

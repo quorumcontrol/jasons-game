@@ -5,7 +5,6 @@ import (
 	"path/filepath"
 
 	"github.com/AsynkronIT/protoactor-go/actor"
-	logging "github.com/ipfs/go-log"
 
 	"github.com/quorumcontrol/jasons-game/courts/court"
 	"github.com/quorumcontrol/jasons-game/network"
@@ -16,7 +15,6 @@ type BasicCourt struct {
 	net        network.Network
 	court      *court.Court
 	configPath string
-	log        logging.StandardLogger
 }
 
 func New(ctx context.Context, net network.Network, configPath string, name string) *BasicCourt {
@@ -25,7 +23,6 @@ func New(ctx context.Context, net network.Network, configPath string, name strin
 		net:        net,
 		court:      court.New(ctx, net, name),
 		configPath: configPath,
-		log:        logging.Logger(name),
 	}
 }
 
@@ -45,7 +42,6 @@ func (c *BasicCourt) setupArtifactHandler(actorCtx actor.Context) {
 	if err != nil {
 		panic(err)
 	}
-	c.log.Infof("%s handler started with did %s", handler.Name(), handler.Tree().MustId())
 }
 
 func (c *BasicCourt) setupWinningPrizeHandler(actorCtx actor.Context) {
@@ -60,7 +56,6 @@ func (c *BasicCourt) setupWinningPrizeHandler(actorCtx actor.Context) {
 	if err != nil {
 		panic(err)
 	}
-	c.log.Infof("%s handler started with did %s", handler.Name(), handler.Tree().MustId())
 }
 
 func (c *BasicCourt) initialize(actorCtx actor.Context) {
