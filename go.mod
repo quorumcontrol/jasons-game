@@ -9,6 +9,7 @@ require (
 	github.com/ethereum/go-ethereum v1.9.3
 	github.com/gobuffalo/packr/v2 v2.5.3-0.20190708182234-662c20c19dde
 	github.com/gogo/protobuf v1.3.0
+	github.com/golang/protobuf v1.3.2
 	github.com/google/uuid v1.1.1
 	github.com/gorilla/mux v1.7.1
 	github.com/hashicorp/go-uuid v1.0.1
@@ -27,7 +28,7 @@ require (
 	github.com/ipfs/go-merkledag v0.1.0
 	github.com/mr-tron/base58 v1.1.2
 	github.com/pkg/errors v0.8.1
-	github.com/prometheus/common v0.6.0 // indirect
+	github.com/prometheus/common v0.6.0
 	github.com/quorumcontrol/chaintree v0.8.1
 	github.com/quorumcontrol/community v0.0.3-0.20190904093829-3b0b04242da8
 	github.com/quorumcontrol/messages/build/go v0.0.0-20190904072359-c4c4068cde98cf0244eb91d63db0cfab979c42b5
@@ -39,10 +40,8 @@ require (
 	golang.org/x/crypto v0.0.0-20190829043050-9756ffdc2472
 	golang.org/x/net v0.0.0-20190827160401-ba9fcec4b297 // indirect
 	golang.org/x/sys v0.0.0-20190902133755-9109b7679e13 // indirect
-	golang.org/x/tools v0.0.0-20190903163617-be0da057c5e3 // indirect
 	google.golang.org/grpc v1.22.0
 	gopkg.in/yaml.v2 v2.2.2
-	gotest.tools/gotestsum v0.3.5 // indirect
 )
 
 replace github.com/libp2p/go-libp2p-pubsub v0.1.0 => github.com/quorumcontrol/go-libp2p-pubsub v0.0.4-0.20190528094025-e4e719f73e7a

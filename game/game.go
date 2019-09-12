@@ -574,45 +574,86 @@ func (g *Game) handlePickUpObject(actorCtx actor.Context, interaction *PickUpObj
 	return nil
 }
 
+func (g *Game) objectAlreadyExistsResponse(actorCtx actor.Context, objName string) {
+	g.sendUserMessage(actorCtx,
+		fmt.Sprintf("You already have an object named \"%s\" in your bag of hodling. Put that somewhere else and maybe you can pick this one up too.",
+			objName))
+}
+
 func (g *Game) handleCreateObjectInteraction(actorCtx actor.Context, interaction *CreateObjectInteraction) error {
-	return g.handleCreateObjectRequest(actorCtx, &CreateObjectRequest{
+	err := g.handleCreateObjectRequest(actorCtx, &CreateObjectRequest{
 		Name:             interaction.Name,
 		Description:      interaction.Description,
 		WithInscriptions: interaction.WithInscriptions,
 	})
+
+	fmt.Printf("RESPONSE FROM handleCreateObjectRequest: %+v\n", err)
+
+	if err == ErrExists {
+		g.objectAlreadyExistsResponse(actorCtx, interaction.Name)
+		return nil
+	}
+
+	return err
 }
 
 func (g *Game) handleCreateObjectFromArgs(actorCtx actor.Context, args string) error {
 	splitArgs := strings.Split(args, " ")
-	return g.handleCreateObjectRequest(actorCtx, &CreateObjectRequest{
-		Name:        splitArgs[0],
+	name := splitArgs[0]
+	err := g.handleCreateObjectRequest(actorCtx, &CreateObjectRequest{
+		Name:        name,
 		Description: strings.Join(splitArgs[1:], " "),
 	})
+
+	if err == ErrExists {
+		g.objectAlreadyExistsResponse(actorCtx, name)
+		return nil
+	}
+
+	return err
 }
 
 func (g *Game) handleCreateObjectRequest(actorCtx actor.Context, req *CreateObjectRequest) error {
 	response, err := actorCtx.RequestFuture(g.inventoryActor, req, 30*time.Second).Result()
+	fmt.Printf("RESPONSE FROM inventory actor: %+v\n", response)
+	fmt.Printf("ERROR FROM inventory actor: %+v\n", err)
 	if err != nil {
 		return err
 	}
 
-	newObject, ok := response.(*CreateObjectResponse)
+	createObjectResp, ok := response.(*CreateObjectResponse)
 	if !ok {
 		return fmt.Errorf("error casting create object response")
 	}
 
-	g.sendUserMessage(actorCtx, fmt.Sprintf("%s has been created with DID %s and is in your bag of hodling", req.Name, newObject.Object.Did))
+	if createObjectResp.Error != nil {
+		return createObjectResp.Error
+	}
+
+	newObject := createObjectResp.Object
+
+	g.sendUserMessage(actorCtx, fmt.Sprintf("%s has been created with DID %s and is in your bag of hodling", req.Name, newObject.Did))
 	return nil
 }
 
-func (g *Game) handlePlayerInventoryList(actorCtx actor.Context) error {
-	response, err := actorCtx.RequestFuture(g.inventoryActor, &InventoryListRequest{}, 30*time.Second).Result()
+func (g *Game) getInventoryList(actorCtx actor.Context, pid *actor.PID) (*InventoryListResponse, error) {
+	response, err := actorCtx.RequestFuture(pid, &InventoryListRequest{}, 30*time.Second).Result()
 	if err != nil {
-		return err
+		return nil, err
 	}
+
 	inventoryList, ok := response.(*InventoryListResponse)
 	if !ok {
-		return fmt.Errorf("error casting InventoryListResponse")
+		return nil, fmt.Errorf("error casting InventoryListResponse")
+	}
+
+	return inventoryList, nil
+}
+
+func (g *Game) handlePlayerInventoryList(actorCtx actor.Context) error {
+	inventoryList, err := g.getInventoryList(actorCtx, g.inventoryActor)
+	if err != nil {
+		return fmt.Errorf("error getting player inventory list: %v", err)
 	}
 
 	if len(inventoryList.Objects) == 0 {
@@ -628,13 +669,9 @@ func (g *Game) handlePlayerInventoryList(actorCtx actor.Context) error {
 }
 
 func (g *Game) handleLocationInventoryList(actorCtx actor.Context) error {
-	response, err := actorCtx.RequestFuture(g.locationActor, &InventoryListRequest{}, 30*time.Second).Result()
+	inventoryList, err := g.getInventoryList(actorCtx, g.locationActor)
 	if err != nil {
-		return err
-	}
-	inventoryList, ok := response.(*InventoryListResponse)
-	if !ok {
-		return fmt.Errorf("error casting InventoryListResponse")
+		return fmt.Errorf("error getting location inventory list: %v", err)
 	}
 
 	l, err := g.getCurrentLocation(actorCtx)
