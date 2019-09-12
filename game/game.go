@@ -552,7 +552,7 @@ func (g *Game) handlePickUpObject(actorCtx actor.Context, interaction *PickUpObj
 
 	resp, ok := response.(*TransferObjectResponse)
 	if !ok {
-		return fmt.Errorf("error casting pickup object response")
+		return fmt.Errorf("error casting pick up object response")
 	}
 
 	if resp.Error != nil {

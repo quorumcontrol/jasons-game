@@ -130,7 +130,7 @@ func TestBasicCourt(t *testing.T) {
 		rootCtx.Send(gamePid, &jasonsgame.UserInput{Message: "look in bag"})
 		stream.Wait()
 
-		// Check to make sure the object that the user requested to pickup
+		// Check to make sure the object that the user requested to pick up
 		// got transformed into the prize with the right data
 		playerInventory, err := trees.FindInventoryTree(net, playerChain.MustId())
 		require.Nil(t, err)
