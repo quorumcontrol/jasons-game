@@ -169,7 +169,7 @@ func TestInventoryActor_TransferObject(t *testing.T) {
 	require.Nil(t, playerInventory.Error)
 	require.Equal(t, len(playerInventory.Objects), 0)
 
-	// Give time for location to pickup change and refresh
+	// Give time for location to pick up change and refresh
 	time.Sleep(500 * time.Millisecond)
 
 	response, err = rootCtx.RequestFuture(homeActor, &InventoryListRequest{}, 1*time.Second).Result()

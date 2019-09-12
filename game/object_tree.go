@@ -61,7 +61,7 @@ func CreateObjectOnTree(net network.Network, name string, tree *consensus.Signed
 	}
 
 	err = obj.AddInteraction(&DropObjectInteraction{
-		Command: "drop object " + name,
+		Command: "drop " + name,
 		Did:     obj.MustId(),
 	})
 	if err != nil {
@@ -69,7 +69,7 @@ func CreateObjectOnTree(net network.Network, name string, tree *consensus.Signed
 	}
 
 	err = obj.AddInteraction(&PickUpObjectInteraction{
-		Command: "pick up object " + name,
+		Command: "pick up " + name,
 		Did:     obj.MustId(),
 	})
 	if err != nil {
@@ -77,7 +77,7 @@ func CreateObjectOnTree(net network.Network, name string, tree *consensus.Signed
 	}
 
 	err = obj.AddInteraction(&GetTreeValueInteraction{
-		Command: "examine object " + name,
+		Command: "look at " + name,
 		Did:     obj.MustId(),
 		Path:    "description",
 	})
@@ -143,7 +143,7 @@ func (o *ObjectTree) AddDefaultInscriptionInteractions() error {
 	}
 
 	err = o.AddInteraction(&SetTreeValueInteraction{
-		Command:  "inscribe object " + name,
+		Command:  fmt.Sprintf("inscribe %s with", name),
 		Did:      o.MustId(),
 		Path:     "inscriptions",
 		Multiple: true,
@@ -153,7 +153,7 @@ func (o *ObjectTree) AddDefaultInscriptionInteractions() error {
 	}
 
 	err = o.AddInteraction(&GetTreeValueInteraction{
-		Command: "read inscriptions on object " + name,
+		Command: "read inscriptions on " + name,
 		Did:     o.MustId(),
 		Path:    "inscriptions",
 	})

@@ -88,11 +88,11 @@ func TestSpringCourt(t *testing.T) {
 
 	cmdsAndResponses := []string{
 		"go loc1", "loc1 description",
-		"drop object page-1", "object has been dropped",
+		"drop page-1", "object has been dropped",
 		"go loc2", "loc2 description",
-		"drop object page-2", "object has been dropped",
+		"drop page-2", "object has been dropped",
 		"go loc3", "loc3 description",
-		"drop object page-3", "object has been dropped",
+		"drop page-3", "object has been dropped",
 		"go main", "main description",
 		"pick up spawn-obj", "test won",
 		"look in bag", "test-spring-prize",
@@ -115,11 +115,11 @@ func TestSpringCourtFail(t *testing.T) {
 
 	cmdsAndResponses := []string{
 		"go loc1", "loc1 description",
-		"drop object page-1", "object has been dropped",
+		"drop page-1", "object has been dropped",
 		"go loc2", "loc2 description",
-		"drop object page-3", "object has been dropped",
+		"drop page-3", "object has been dropped",
 		"go loc3", "loc3 description",
-		"drop object page-2", "object has been dropped",
+		"drop page-2", "object has been dropped",
 		"go main", "main description",
 		"pick up spawn-obj", "your pedestal placement is incorrect",
 		"look in bag", "empty",

@@ -219,7 +219,7 @@ func (s *responseSender) Errorf(str string, args ...interface{}) error {
 		From:   s.source.From,
 		To:     s.source.To,
 		Object: s.source.Object,
-		Error:  fmt.Sprintf("error on pickup: %s - try again", err.Error()),
+		Error:  fmt.Sprintf("error on pick up: %s - try again", err.Error()),
 	})
 	if handlerErr != nil {
 		err = errors.Wrap(err, handlerErr.Error())

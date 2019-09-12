@@ -385,7 +385,7 @@ func (h *ElementCombinerHandler) handleReceiveElement(msg *jasonsgame.Transferre
 		}
 
 		err = comboObject.AddInteraction(&game.GetTreeValueInteraction{
-			Command: "examine object " + combinationObjectName,
+			Command: "look at " + combinationObjectName,
 			Did:     comboObject.MustId(),
 			Path:    "description",
 		})
