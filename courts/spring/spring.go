@@ -16,7 +16,6 @@ import (
 	"github.com/quorumcontrol/jasons-game/courts/config"
 	"github.com/quorumcontrol/jasons-game/courts/court"
 	"github.com/quorumcontrol/jasons-game/network"
-	"github.com/quorumcontrol/jasons-game/service"
 )
 
 var log = logging.Logger("spring")
@@ -116,15 +115,10 @@ func (c *SpringCourt) spawnPrizeHandler(actorCtx actor.Context) error {
 		return errors.Wrap(err, "creating prize handler")
 	}
 
-	servicePID, err := actorCtx.SpawnNamed(service.NewServiceActorPropsWithTree(c.net, handler, handler.Tree()), "spring-prize-handler")
+	_, err = c.court.SpawnHandler(actorCtx, handler)
 	if err != nil {
 		return err
 	}
-	handlerDid, err := actorCtx.RequestFuture(servicePID, &service.GetServiceDid{}, 30*time.Second).Result()
-	if err != nil {
-		return err
-	}
-	log.Errorf("spring prizehandler started with did %s", handlerDid)
 
 	return nil
 }

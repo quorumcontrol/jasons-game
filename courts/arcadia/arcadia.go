@@ -4,13 +4,10 @@ import (
 	"context"
 
 	"github.com/AsynkronIT/protoactor-go/actor"
-	logging "github.com/ipfs/go-log"
 
 	"github.com/quorumcontrol/jasons-game/courts/court"
 	"github.com/quorumcontrol/jasons-game/network"
 )
-
-var log = logging.Logger("arcadia")
 
 type ArcadiaCourt struct {
 	ctx        context.Context
@@ -44,7 +41,6 @@ func (c *ArcadiaCourt) setupArtifactHandler(actorCtx actor.Context) {
 	if err != nil {
 		panic(err)
 	}
-	log.Infof("%s handler started with did %s", handler.Name(), handler.Tree().MustId())
 }
 
 func (c *ArcadiaCourt) initialize(actorCtx actor.Context) {

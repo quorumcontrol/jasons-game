@@ -4,8 +4,6 @@ import (
 	"context"
 	"path/filepath"
 
-	"time"
-
 	"github.com/AsynkronIT/protoactor-go/actor"
 	logging "github.com/ipfs/go-log"
 
@@ -14,7 +12,6 @@ import (
 	"github.com/quorumcontrol/jasons-game/courts/config"
 	"github.com/quorumcontrol/jasons-game/courts/court"
 	"github.com/quorumcontrol/jasons-game/network"
-	"github.com/quorumcontrol/jasons-game/service"
 )
 
 var log = logging.Logger("autumn")
@@ -85,7 +82,6 @@ func (c *AutumnCourt) spawnPrizeHandler(actorCtx actor.Context) {
 	if err != nil {
 		panic(err)
 	}
-	log.Infof("%s handler started with did %s", handler.Name(), handler.Tree().MustId())
 }
 
 func (c *AutumnCourt) setupArtifactHandler(actorCtx actor.Context) {
@@ -100,7 +96,6 @@ func (c *AutumnCourt) setupArtifactHandler(actorCtx actor.Context) {
 	if err != nil {
 		panic(err)
 	}
-	log.Infof("%s handler started with did %s", handler.Name(), handler.Tree().MustId())
 }
 
 func (c *AutumnCourt) setupCombinationHandler(actorCtx actor.Context, name string, elements []*element, combinations []*elementCombination) {
@@ -113,14 +108,8 @@ func (c *AutumnCourt) setupCombinationHandler(actorCtx actor.Context, name strin
 		panic("Could not find location for " + name)
 	}
 
-	handlerName := name + "-handler"
-	handlerTree, err := court.FindOrCreateNamedTree(c.net, handlerName)
-	if err != nil {
-		panic(err)
-	}
-
 	handler, err := NewElementCombinerHandler(&ElementCombinerHandlerConfig{
-		Did:          handlerTree.MustId(),
+		Name:         name,
 		Network:      c.net,
 		Location:     locationDid,
 		Elements:     elements,
@@ -129,16 +118,10 @@ func (c *AutumnCourt) setupCombinationHandler(actorCtx actor.Context, name strin
 	if err != nil {
 		panic(err)
 	}
-	servicePID, err := actorCtx.SpawnNamed(service.NewServiceActorPropsWithTree(c.net, handler, handlerTree), handlerName)
+	_, err = c.court.SpawnHandler(actorCtx, handler)
 	if err != nil {
 		panic(err)
 	}
-	// This is the same as the handlerTree.MustId(), but just ensures it has started up
-	handlerDid, err := actorCtx.RequestFuture(servicePID, &service.GetServiceDid{}, 30*time.Second).Result()
-	if err != nil {
-		panic(err)
-	}
-	log.Infof("%s handler started with did %s", handlerName, handlerDid)
 }
 
 func (c *AutumnCourt) initialize(actorCtx actor.Context) {
@@ -151,7 +134,6 @@ func (c *AutumnCourt) initialize(actorCtx actor.Context) {
 
 	c.setupCombinationHandler(actorCtx, "weaver", c.config.Elements, c.config.Weaver)
 	c.setupCombinationHandler(actorCtx, "binder", c.config.Elements, c.config.Binder)
-
 	c.setupArtifactHandler(actorCtx)
 	c.spawnPrizeHandler(actorCtx)
 }

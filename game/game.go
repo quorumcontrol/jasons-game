@@ -587,8 +587,6 @@ func (g *Game) handleCreateObjectInteraction(actorCtx actor.Context, interaction
 		WithInscriptions: interaction.WithInscriptions,
 	})
 
-	fmt.Printf("RESPONSE FROM handleCreateObjectRequest: %+v\n", err)
-
 	if err == ErrExists {
 		g.objectAlreadyExistsResponse(actorCtx, interaction.Name)
 		return nil
@@ -615,8 +613,6 @@ func (g *Game) handleCreateObjectFromArgs(actorCtx actor.Context, args string) e
 
 func (g *Game) handleCreateObjectRequest(actorCtx actor.Context, req *CreateObjectRequest) error {
 	response, err := actorCtx.RequestFuture(g.inventoryActor, req, 30*time.Second).Result()
-	fmt.Printf("RESPONSE FROM inventory actor: %+v\n", response)
-	fmt.Printf("ERROR FROM inventory actor: %+v\n", err)
 	if err != nil {
 		return err
 	}
