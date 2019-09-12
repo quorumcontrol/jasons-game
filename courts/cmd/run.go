@@ -6,6 +6,7 @@ import (
 	"os"
 	"os/signal"
 
+	"github.com/quorumcontrol/jasons-game/courts/arcadia"
 	"github.com/quorumcontrol/jasons-game/courts/autumn"
 	"github.com/quorumcontrol/jasons-game/courts/basic"
 	"github.com/quorumcontrol/jasons-game/courts/spring"
@@ -35,6 +36,8 @@ var runCourts = &cobra.Command{
 			var court courtStarter
 
 			switch courtName {
+			case "arcadia":
+				court = arcadia.New(ctx, net, configDir)
 			case "autumn":
 				court = autumn.New(ctx, net, configDir)
 			case "spring":

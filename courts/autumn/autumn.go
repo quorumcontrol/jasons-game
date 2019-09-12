@@ -75,23 +75,32 @@ func (c *AutumnCourt) parseConfig() *autumnConfig {
 	return cfg
 }
 
-func (c *AutumnCourt) spawnPrizeHandler(actorCtx actor.Context) error {
+func (c *AutumnCourt) spawnPrizeHandler(actorCtx actor.Context) {
 	handler, err := NewAutumnPrizeHandler(c)
 	if err != nil {
-		return errors.Wrap(err, "creating prize handler")
+		panic(errors.Wrap(err, "creating prize handler"))
 	}
 
-	servicePID, err := actorCtx.SpawnNamed(service.NewServiceActorPropsWithTree(c.net, handler, handler.Tree()), "autumn-prize-handler")
+	_, err = c.court.SpawnHandler(actorCtx, handler)
 	if err != nil {
-		return err
+		panic(err)
 	}
-	handlerDid, err := actorCtx.RequestFuture(servicePID, &service.GetServiceDid{}, 30*time.Second).Result()
-	if err != nil {
-		return err
-	}
-	log.Errorf("autumn prizehandler started with did %s", handlerDid)
+	log.Infof("%s handler started with did %s", handler.Name(), handler.Tree().MustId())
+}
 
-	return nil
+func (c *AutumnCourt) setupArtifactHandler(actorCtx actor.Context) {
+	handler, err := court.NewArtifactSpawnHandler(&court.ArtifactSpawnHandlerConfig{
+		Court:      c.court,
+		ConfigPath: c.configPath,
+	})
+	if err != nil {
+		panic(err)
+	}
+	_, err = c.court.SpawnHandler(actorCtx, handler)
+	if err != nil {
+		panic(err)
+	}
+	log.Infof("%s handler started with did %s", handler.Name(), handler.Tree().MustId())
 }
 
 func (c *AutumnCourt) setupCombinationHandler(actorCtx actor.Context, name string, elements []*element, combinations []*elementCombination) {
@@ -143,10 +152,8 @@ func (c *AutumnCourt) initialize(actorCtx actor.Context) {
 	c.setupCombinationHandler(actorCtx, "weaver", c.config.Elements, c.config.Weaver)
 	c.setupCombinationHandler(actorCtx, "binder", c.config.Elements, c.config.Binder)
 
-	err = c.spawnPrizeHandler(actorCtx)
-	if err != nil {
-		panic(err)
-	}
+	c.setupArtifactHandler(actorCtx)
+	c.spawnPrizeHandler(actorCtx)
 }
 
 func (c *AutumnCourt) Receive(actorCtx actor.Context) {
