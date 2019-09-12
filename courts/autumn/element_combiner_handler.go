@@ -33,6 +33,7 @@ type ElementCombinerHandler struct {
 	location        string
 	elements        map[int]*element
 	combinationsMap elementCombinationMap
+	minRequired     int
 }
 
 type ElementCombinerHandlerConfig struct {
@@ -58,6 +59,13 @@ func NewElementCombinerHandler(cfg *ElementCombinerHandlerConfig) (*ElementCombi
 	}
 
 	h.combinationsMap.Fill(cfg.Combinations)
+
+	h.minRequired = len(cfg.Combinations[0].From)
+	for _, combo := range cfg.Combinations {
+		if len(combo.From) < h.minRequired {
+			h.minRequired = len(combo.From)
+		}
+	}
 
 	for _, element := range cfg.Elements {
 		h.elements[element.ID] = element
@@ -236,9 +244,9 @@ func (h *ElementCombinerHandler) handlePickupElement(msg *jasonsgame.RequestObje
 		i++
 	}
 
-	if len(elementIds) < 2 {
+	if len(elementIds) < h.minRequired {
 		log.Debugf("handlePickupElement: not enough element: obj=%s", msg.Object)
-		return sender.Errorf("you must drop at least 2 objects to be combined")
+		return sender.Errorf("you must drop at least %d objects to be combined", h.minRequired)
 	}
 
 	newElement := h.findCombinedElement(elementIds)
