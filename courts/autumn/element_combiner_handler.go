@@ -14,6 +14,7 @@ import (
 	broadcastHandlers "github.com/quorumcontrol/jasons-game/handlers/broadcast"
 	"github.com/quorumcontrol/jasons-game/network"
 	"github.com/quorumcontrol/jasons-game/pb/jasonsgame"
+	"github.com/quorumcontrol/tupelo-go-sdk/consensus"
 )
 
 const combinationObjectName = "bowl"
@@ -27,14 +28,15 @@ const comboObjectElementsPath = "elements"
 
 type ElementCombinerHandler struct {
 	net             network.Network
-	did             string
+	tree            *consensus.SignedChainTree
+	name            string
 	location        string
 	elements        map[int]*element
 	combinationsMap elementCombinationMap
 }
 
 type ElementCombinerHandlerConfig struct {
-	Did          string
+	Name         string
 	Network      network.Network
 	Location     string
 	Elements     []*element
@@ -49,7 +51,7 @@ var ElementCombinerHandlerMessages = handlers.HandlerMessageList{
 func NewElementCombinerHandler(cfg *ElementCombinerHandlerConfig) (*ElementCombinerHandler, error) {
 	h := &ElementCombinerHandler{
 		net:             cfg.Network,
-		did:             cfg.Did,
+		name:            cfg.Name,
 		location:        cfg.Location,
 		elements:        make(map[int]*element),
 		combinationsMap: make(elementCombinationMap),
@@ -69,7 +71,21 @@ func NewElementCombinerHandler(cfg *ElementCombinerHandlerConfig) (*ElementCombi
 	return h, nil
 }
 
+func (h *ElementCombinerHandler) Name() string {
+	return h.name
+}
+
+func (h *ElementCombinerHandler) Tree() *consensus.SignedChainTree {
+	return h.tree
+}
+
 func (h *ElementCombinerHandler) setup() error {
+	var err error
+	h.tree, err = h.net.FindOrCreatePassphraseTree("element-combiner-" + h.Name())
+	if err != nil {
+		return err
+	}
+
 	locTree, err := h.net.GetTree(h.location)
 	if err != nil {
 		return errors.Wrap(err, "getting loc tree")
@@ -82,7 +98,7 @@ func (h *ElementCombinerHandler) setup() error {
 	}
 
 	location := game.NewLocationTree(h.net, locTree)
-	err = location.SetHandler(h.did)
+	err = location.SetHandler(h.Tree().MustId())
 	if err != nil {
 		return errors.Wrap(err, "getting loc tree")
 	}
@@ -91,11 +107,7 @@ func (h *ElementCombinerHandler) setup() error {
 }
 
 func (h *ElementCombinerHandler) handlerAuthentications() ([]string, error) {
-	handlerTree, err := h.net.GetTree(h.did)
-	if err != nil {
-		return nil, err
-	}
-	return handlerTree.Authentications()
+	return h.tree.Authentications()
 }
 
 func (h *ElementCombinerHandler) originAuthentications() []string {
@@ -230,7 +242,7 @@ func (h *ElementCombinerHandler) handlePickupElement(msg *jasonsgame.RequestObje
 	}
 
 	newElement := h.findCombinedElement(elementIds)
-	log.Debugf("handlePickupElement: combining: obj=%s elementIds=%s newElement=%s", msg.Object, elementIds, newElement.Name())
+	log.Debugf("handlePickupElement: combining: obj=%s elementIds=%v newElement=%s", msg.Object, elementIds, newElement.Name())
 
 	existing, err := playerInventory.DidForName(newElement.Name())
 	if err != nil {
