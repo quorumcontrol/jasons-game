@@ -1,7 +1,10 @@
 package court
 
 import (
+	"context"
 	"fmt"
+	"sync"
+	"time"
 
 	"github.com/gogo/protobuf/proto"
 	"github.com/pkg/errors"
@@ -37,6 +40,7 @@ type PrizeHandler struct {
 	cleanupFunc   func(msg *jasonsgame.RequestObjectTransferMessage) error
 	prizeCfg      *prizeConfig
 	prizeCfgPath  string
+	spawnMux      sync.Mutex
 }
 
 var PrizeHandlerMessages = handlers.HandlerMessageList{
@@ -66,7 +70,19 @@ func (h *PrizeHandler) Name() string {
 	return h.court.Name() + "-prize-handler"
 }
 
+// this is a just-in-case respawner that runs every min to
+// ensure a prize exists in the location
+func (h *PrizeHandler) startBackupRespawnTimer() {
+	go func() {
+		for range time.Tick(1 * time.Minute) {
+			_ = h.spawnObject()
+		}
+	}()
+}
+
 func (h *PrizeHandler) setup() error {
+	h.startBackupRespawnTimer()
+
 	var err error
 	h.prizeCfg, err = h.parseConfig()
 	if err != nil {
@@ -133,6 +149,9 @@ func (h *PrizeHandler) currentObjectExists() (bool, error) {
 }
 
 func (h *PrizeHandler) spawnObject() error {
+	h.spawnMux.Lock()
+	defer h.spawnMux.Unlock()
+
 	exists, err := h.currentObjectExists()
 	if err != nil {
 		return err
@@ -277,13 +296,15 @@ func (h *PrizeHandler) handleTransfer(msg *jasonsgame.RequestObjectTransferMessa
 	}
 
 	// Spawn new object
-	err = h.spawnObject()
-	if err != nil {
-		h.court.log.Error(errors.Wrap(err, "error spawning new object"))
-		defer func() {
-			panic("panic on respawn")
-		}()
-	}
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	go func(ctx context.Context) {
+		err = h.spawnObject()
+		if err != nil {
+			<-ctx.Done()
+			panic(errors.Wrap(err, "error on respawn"))
+		}
+	}(ctx)
 
 	// Update object to send from wire => prize
 	cfg, err := h.parseConfig(map[string]interface{}{"PrizeDid": objectDid})
