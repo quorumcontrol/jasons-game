@@ -1,11 +1,13 @@
 package court
 
 import (
+	"context"
 	"fmt"
+	"sync"
+	"time"
 
 	"github.com/gogo/protobuf/proto"
 	"github.com/pkg/errors"
-	"github.com/prometheus/common/log"
 	"github.com/quorumcontrol/jasons-game/courts/config"
 	"github.com/quorumcontrol/jasons-game/game"
 	"github.com/quorumcontrol/jasons-game/game/trees"
@@ -38,6 +40,7 @@ type PrizeHandler struct {
 	cleanupFunc   func(msg *jasonsgame.RequestObjectTransferMessage) error
 	prizeCfg      *prizeConfig
 	prizeCfgPath  string
+	spawnMux      sync.Mutex
 }
 
 var PrizeHandlerMessages = handlers.HandlerMessageList{
@@ -63,14 +66,30 @@ func (h *PrizeHandler) Tree() *consensus.SignedChainTree {
 	return h.tree
 }
 
+func (h *PrizeHandler) Name() string {
+	return h.court.Name() + "-prize-handler"
+}
+
+// this is a just-in-case respawner that runs every min to
+// ensure a prize exists in the location
+func (h *PrizeHandler) startBackupRespawnTimer() {
+	go func() {
+		for range time.Tick(1 * time.Minute) {
+			_ = h.spawnObject()
+		}
+	}()
+}
+
 func (h *PrizeHandler) setup() error {
+	h.startBackupRespawnTimer()
+
 	var err error
 	h.prizeCfg, err = h.parseConfig()
 	if err != nil {
 		return err
 	}
 
-	h.tree, err = h.net.FindOrCreatePassphraseTree(h.court.Name() + "-prize-handler")
+	h.tree, err = h.net.FindOrCreatePassphraseTree(h.Name())
 	if err != nil {
 		return err
 	}
@@ -130,6 +149,9 @@ func (h *PrizeHandler) currentObjectExists() (bool, error) {
 }
 
 func (h *PrizeHandler) spawnObject() error {
+	h.spawnMux.Lock()
+	defer h.spawnMux.Unlock()
+
 	exists, err := h.currentObjectExists()
 	if err != nil {
 		return err
@@ -137,7 +159,7 @@ func (h *PrizeHandler) spawnObject() error {
 
 	// object still exists, skip
 	if exists {
-		log.Debugf("prizehandler: skipping spawning new object, already exists at %s", h.prizeCfg.Location)
+		h.court.log.Debugf("prizehandler: skipping spawning new object, already exists at %s", h.prizeCfg.Location)
 		return nil
 	}
 
@@ -169,7 +191,7 @@ func (h *PrizeHandler) spawnObject() error {
 		return err
 	}
 
-	log.Debugf("prizehandler: new object %s spawned at %s", objectChainTree.MustId(), cfg.Location)
+	h.court.log.Debugf("prizehandler: new object %s spawned at %s", objectChainTree.MustId(), cfg.Location)
 
 	return nil
 }
@@ -196,7 +218,6 @@ func newResponseSender(net network.Network, source *jasonsgame.RequestObjectTran
 }
 
 func (s *responseSender) Send() error {
-	log.Debugf("prizehandler: sending prize %s to %s", s.source.To, s.source.Object)
 	err := s.handler.Handle(&jasonsgame.TransferredObjectMessage{
 		From:    s.source.From,
 		To:      s.source.To,
@@ -215,7 +236,7 @@ func (s *responseSender) Errorf(str string, args ...interface{}) error {
 		From:   s.source.From,
 		To:     s.source.To,
 		Object: s.source.Object,
-		Error:  fmt.Sprintf("error on pickup: %s - try again", err.Error()),
+		Error:  fmt.Sprintf("error on pick up: %s - try again", err.Error()),
 	})
 	if handlerErr != nil {
 		err = errors.Wrap(err, handlerErr.Error())
@@ -259,7 +280,7 @@ func (h *PrizeHandler) handleTransfer(msg *jasonsgame.RequestObjectTransferMessa
 	if h.validatorFunc != nil {
 		valid, err := h.validatorFunc(msg)
 		if err != nil || !valid {
-			return sender.Errorf("could not validate %v", err)
+			return sender.Errorf("could not validate: %v", err)
 		}
 	}
 
@@ -275,13 +296,15 @@ func (h *PrizeHandler) handleTransfer(msg *jasonsgame.RequestObjectTransferMessa
 	}
 
 	// Spawn new object
-	err = h.spawnObject()
-	if err != nil {
-		log.Error(errors.Wrap(err, "error spawning new object"))
-		defer func() {
-			panic("panic on respawn")
-		}()
-	}
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	go func(ctx context.Context) {
+		err = h.spawnObject()
+		if err != nil {
+			<-ctx.Done()
+			panic(errors.Wrap(err, "error on respawn"))
+		}
+	}(ctx)
 
 	// Update object to send from wire => prize
 	cfg, err := h.parseConfig(map[string]interface{}{"PrizeDid": objectDid})
@@ -318,10 +341,11 @@ func (h *PrizeHandler) handleTransfer(msg *jasonsgame.RequestObjectTransferMessa
 	if h.cleanupFunc != nil {
 		err = h.cleanupFunc(msg)
 		if err != nil {
-			log.Error(errors.Wrap(err, "error on cleanup"))
+			h.court.log.Error(errors.Wrap(err, "error on cleanup"))
 		}
 	}
 
+	h.court.log.Debugf("prizehandler: sending prize %s to %s", msg.To, msg.Object)
 	return sender.Send()
 }
 
@@ -330,7 +354,7 @@ func (h *PrizeHandler) Handle(msg proto.Message) error {
 	case *jasonsgame.RequestObjectTransferMessage:
 		err := h.handleTransfer(msg)
 		if err != nil {
-			log.Errorf("PrizeHandler: %v", err)
+			h.court.log.Errorf("prizehandler: %v", err)
 		}
 		return nil
 	default:

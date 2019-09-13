@@ -24,7 +24,7 @@ var UnrestrictedRemoveHandlerMessages = handlers.HandlerMessageList{
 	proto.MessageName((*jasonsgame.RequestObjectTransferMessage)(nil)),
 }
 
-func NewUnrestrictedRemoveHandler(network network.Network) handlers.Handler {
+func NewUnrestrictedRemoveHandler(network network.Network) *UnrestrictedRemoveHandler {
 	return &UnrestrictedRemoveHandler{
 		network: network,
 	}

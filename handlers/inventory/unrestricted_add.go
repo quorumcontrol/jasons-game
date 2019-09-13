@@ -18,7 +18,7 @@ var UnrestrictedAddHandlerMessages = handlers.HandlerMessageList{
 	proto.MessageName((*jasonsgame.TransferredObjectMessage)(nil)),
 }
 
-func NewUnrestrictedAddHandler(network network.Network) handlers.Handler {
+func NewUnrestrictedAddHandler(network network.Network) *UnrestrictedAddHandler {
 	return &UnrestrictedAddHandler{
 		network: network,
 	}

@@ -9,6 +9,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/quorumcontrol/tupelo-go-sdk/consensus"
 
+	"github.com/quorumcontrol/jasons-game/game/trees"
 	"github.com/quorumcontrol/jasons-game/network"
 )
 
@@ -60,7 +61,7 @@ func CreateObjectOnTree(net network.Network, name string, tree *consensus.Signed
 	}
 
 	err = obj.AddInteraction(&DropObjectInteraction{
-		Command: "drop object " + name,
+		Command: "drop " + name,
 		Did:     obj.MustId(),
 	})
 	if err != nil {
@@ -68,7 +69,7 @@ func CreateObjectOnTree(net network.Network, name string, tree *consensus.Signed
 	}
 
 	err = obj.AddInteraction(&PickUpObjectInteraction{
-		Command: "pick up object " + name,
+		Command: "pick up " + name,
 		Did:     obj.MustId(),
 	})
 	if err != nil {
@@ -76,7 +77,7 @@ func CreateObjectOnTree(net network.Network, name string, tree *consensus.Signed
 	}
 
 	err = obj.AddInteraction(&GetTreeValueInteraction{
-		Command: "examine object " + name,
+		Command: "look at " + name,
 		Did:     obj.MustId(),
 		Path:    "description",
 	})
@@ -85,6 +86,14 @@ func CreateObjectOnTree(net network.Network, name string, tree *consensus.Signed
 	}
 
 	return obj, nil
+}
+
+func (o *ObjectTree) AtTip(tip cid.Cid) (*ObjectTree, error) {
+	tree, err := o.network.GetTreeByTip(tip)
+	if err != nil {
+		return nil, err
+	}
+	return NewObjectTree(o.network, tree), nil
 }
 
 func (o *ObjectTree) Id() (string, error) {
@@ -134,7 +143,7 @@ func (o *ObjectTree) AddDefaultInscriptionInteractions() error {
 	}
 
 	err = o.AddInteraction(&SetTreeValueInteraction{
-		Command:  "inscribe object " + name,
+		Command:  fmt.Sprintf("inscribe %s with", name),
 		Did:      o.MustId(),
 		Path:     "inscriptions",
 		Multiple: true,
@@ -144,7 +153,7 @@ func (o *ObjectTree) AddDefaultInscriptionInteractions() error {
 	}
 
 	err = o.AddInteraction(&GetTreeValueInteraction{
-		Command: "read inscriptions on object " + name,
+		Command: "read inscriptions on " + name,
 		Did:     o.MustId(),
 		Path:    "inscriptions",
 	})
@@ -155,26 +164,7 @@ func (o *ObjectTree) AddDefaultInscriptionInteractions() error {
 }
 
 func (o *ObjectTree) IsOwnedBy(keyAddrs []string) (bool, error) {
-	ctx := context.TODO()
-	authsUncasted, remainingPath, err := o.tree.ChainTree.Dag.Resolve(ctx, strings.Split("tree/"+consensus.TreePathForAuthentications, "/"))
-	if err != nil {
-		return false, err
-	}
-	if len(remainingPath) > 0 {
-		return false, fmt.Errorf("error resolving object: path elements remaining: %v", remainingPath)
-	}
-
-	for _, storedAddr := range authsUncasted.([]interface{}) {
-		found := false
-		for _, check := range keyAddrs {
-			found = found || (storedAddr.(string) == check)
-		}
-		if !found {
-			return false, nil
-		}
-	}
-
-	return true, nil
+	return trees.VerifyOwnership(context.Background(), o.tree.ChainTree, keyAddrs)
 }
 
 func (o *ObjectTree) ChangeChainTreeOwner(newKeys []string) error {

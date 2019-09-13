@@ -5,11 +5,12 @@ import (
 	"time"
 
 	"github.com/AsynkronIT/protoactor-go/actor"
+	"github.com/stretchr/testify/require"
+
 	"github.com/quorumcontrol/jasons-game/game/trees"
 	"github.com/quorumcontrol/jasons-game/network"
 	"github.com/quorumcontrol/jasons-game/pb/jasonsgame"
 	"github.com/quorumcontrol/jasons-game/ui"
-	"github.com/stretchr/testify/require"
 )
 
 var rootCtx = actor.EmptyRootContext
@@ -225,5 +226,22 @@ func TestCantDropFromOtherTree(t *testing.T) {
 	stream.ExpectMessage("obj-to-drop", 2*time.Second)
 	rootCtx.Send(game, &jasonsgame.UserInput{Message: "drop will succeed"})
 	rootCtx.Send(game, &jasonsgame.UserInput{Message: "look around"})
+	stream.Wait()
+}
+
+func TestCreateDupeObject(t *testing.T) {
+	net := network.NewLocalNetwork()
+	stream := ui.NewTestStream(t)
+
+	simulatedUI, game := setupUiAndGame(t, stream, net)
+	defer rootCtx.Stop(simulatedUI)
+	defer rootCtx.Stop(game)
+
+	stream.ExpectMessage("foo has been created", 2*time.Second)
+	rootCtx.Send(game, &jasonsgame.UserInput{Message: "create object foo"})
+	stream.Wait()
+
+	stream.ExpectMessage("You already have an object named \"foo\"", 2*time.Second)
+	rootCtx.Send(game, &jasonsgame.UserInput{Message: "create object foo"})
 	stream.Wait()
 }

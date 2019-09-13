@@ -1,0 +1,20 @@
+location: "{{.Locations.starting}}"
+prize:
+  data:
+    name: "test-autumn-prize"
+    description: "the test won the autumn court"
+spawn:
+  data:
+    name: "spawn-obj"
+    description: "a spawned thing to use"
+  interactions:
+  - type: ChainedInteraction
+    value:
+      command: "pick up spawn-obj"
+      interactions:
+      - type: PickUpObjectInteraction
+        value:
+          did: "{{.PrizeDid}}"
+      - type: RespondInteraction
+        value:
+          response: "test won"

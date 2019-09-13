@@ -1,0 +1,36 @@
+stage_rotation:
+  0: variation1
+  1: variation1
+  2: variation1
+  3: variation1
+  4: variation1
+  5: variation1
+  6: variation1
+  7: variation1
+  8: variation1
+  9: variation1
+  10: variation1
+  11: variation1
+  12: variation1
+  13: variation2
+  14: variation2
+  15: variation2
+  16: variation2
+  17: variation2
+  18: variation2
+  19: variation2
+  20: variation2
+  21: variation2
+  22: variation2
+  23: variation2 
+pedestals:
+  "{{.Locations.loc1}}": "inscription1"
+  "{{.Locations.loc2}}": "inscription2"
+  "{{.Locations.loc3}}": "inscription3"
+stages:
+  variation1:
+    data:
+      dynamic-value: "variation1 dynamic value"
+  variation2:
+    data:
+      dynamic-value: "variation2 dynamic value"

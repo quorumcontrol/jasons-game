@@ -82,4 +82,12 @@ func TestVerifyOwnershipAt(t *testing.T) {
 	verified, err = VerifyOwnershipAt(context.Background(), tree.ChainTree, 3, []string{crypto.PubkeyToAddress(key2.PublicKey).String()})
 	require.Nil(t, err)
 	require.True(t, verified)
+
+	verified, err = VerifyOwnership(context.Background(), tree.ChainTree, []string{crypto.PubkeyToAddress(key.PublicKey).String()})
+	require.Nil(t, err)
+	require.False(t, verified)
+
+	verified, err = VerifyOwnership(context.Background(), tree.ChainTree, []string{crypto.PubkeyToAddress(key2.PublicKey).String()})
+	require.Nil(t, err)
+	require.True(t, verified)
 }
