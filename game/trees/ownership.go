@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"sort"
 
-	"github.com/ipfs/go-cid"
+	cid "github.com/ipfs/go-cid"
 	"github.com/quorumcontrol/chaintree/chaintree"
 	"github.com/quorumcontrol/chaintree/typecaster"
 	"github.com/quorumcontrol/jasons-game/utils/stringslice"
@@ -47,10 +47,6 @@ func OwnershipChanges(ctx context.Context, tree *chaintree.ChainTree) ([]*Owners
 
 	ownershipChanges := []*OwnershipChange{}
 	tip := tree.Dag.Tip
-
-	if err != nil {
-		return ownershipChanges, err
-	}
 
 	for !tip.Equals(cid.Undef) {
 		treeAt, err := tree.At(ctx, &tip)
