@@ -27,7 +27,7 @@ func VerifyOwnership(ctx context.Context, tree *chaintree.ChainTree, expectedAut
 }
 
 // VerifyOwnershipAt checks a all expectedAuths owned the tree at a given height
-func VerifyOwnershipAt(ctx context.Context, tree *chaintree.ChainTree, height int, expectedAuths []string) (bool, error) {
+func VerifyOwnershipAt(ctx context.Context, tree *chaintree.ChainTree, height uint64, expectedAuths []string) (bool, error) {
 	treeAt, err := AtHeight(ctx, tree, height)
 	if err != nil {
 		return false, err
