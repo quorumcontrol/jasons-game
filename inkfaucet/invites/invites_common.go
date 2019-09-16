@@ -69,6 +69,12 @@ func (i *InvitesActor) Receive(actorCtx actor.Context) {
 	}
 }
 
+func (i *InvitesActor) respondWithError(actorCtx actor.Context, err error) {
+	actorCtx.Respond(&inkfaucet.InviteSubmissionResponse{
+		Error: err.Error(),
+	})
+}
+
 func (i *InvitesActor) handleInviteSubmission(actorCtx actor.Context, msg *inkfaucet.InviteSubmission) {
 	encodedKey := msg.Invite
 	serializedKey := base58.Decode(encodedKey)
@@ -77,9 +83,8 @@ func (i *InvitesActor) handleInviteSubmission(actorCtx actor.Context, msg *inkfa
 
 	key, err := crypto.ToECDSA(serializedKey)
 	if err != nil {
-		actorCtx.Respond(&inkfaucet.InviteSubmissionResponse{
-			Error: err.Error(),
-		})
+		i.respondWithError(actorCtx, err)
+
 		return
 	}
 
@@ -91,9 +96,8 @@ func (i *InvitesActor) handleInviteSubmission(actorCtx actor.Context, msg *inkfa
 
 	inviteChainTree, err := i.net.GetTree(inviteChainTreeDID)
 	if err != nil {
-		actorCtx.Respond(&inkfaucet.InviteSubmissionResponse{
-			Error: err.Error(),
-		})
+		i.respondWithError(actorCtx, err)
+
 		return
 	}
 
@@ -108,24 +112,27 @@ func (i *InvitesActor) handleInviteSubmission(actorCtx actor.Context, msg *inkfa
 
 	playerChainTree, err := i.net.CreateLocalChainTree("player")
 	if err != nil {
-		actorCtx.Respond(&inkfaucet.InviteSubmissionResponse{
-			Error: err.Error(),
-		})
+		i.respondWithError(actorCtx, err)
+
 		return
 	}
 
 	log.Debug("created new player chaintree")
 
 	inviteTree, err := inviteChainTree.ChainTree.Tree(context.TODO())
+	if err != nil {
+		i.respondWithError(actorCtx, err)
+
+		return
+	}
 
 	// TODO: Move all the ink transfer code to its own func
 	tokenLedger := consensus.NewTreeLedger(inviteTree, i.net.InkTokenName())
 
 	inkBalance, err := tokenLedger.Balance()
 	if err != nil {
-		actorCtx.Respond(&inkfaucet.InviteSubmissionResponse{
-			Error: err.Error(),
-		})
+		i.respondWithError(actorCtx, err)
+
 		return
 	}
 
@@ -134,10 +141,8 @@ func (i *InvitesActor) handleInviteSubmission(actorCtx actor.Context, msg *inkfa
 	err = i.net.DepositInk(inviteChainTree, key, inkBalance)
 	if err != nil {
 		log.Debugf("error depositing ink: %v", err)
+		i.respondWithError(actorCtx, err)
 
-		actorCtx.Respond(&inkfaucet.InviteSubmissionResponse{
-			Error: err.Error(),
-		})
 		return
 	}
 
@@ -145,9 +150,8 @@ func (i *InvitesActor) handleInviteSubmission(actorCtx actor.Context, msg *inkfa
 
 	err = i.net.DeleteTree(inviteChainTreeDID)
 	if err != nil {
-		actorCtx.Respond(&inkfaucet.InviteSubmissionResponse{
-			Error: err.Error(),
-		})
+		i.respondWithError(actorCtx, err)
+
 		return
 	}
 
