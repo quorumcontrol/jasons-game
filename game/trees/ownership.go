@@ -13,14 +13,9 @@ import (
 	"github.com/quorumcontrol/tupelo-go-sdk/consensus"
 )
 
-// VerifyOwnershipAt checks a all expectedAuths owned the tree at a given height
-func VerifyOwnershipAt(ctx context.Context, tree *chaintree.ChainTree, height int, expectedAuths []string) (bool, error) {
-	treeAt, err := AtHeight(ctx, tree, height)
-	if err != nil {
-		return false, err
-	}
-
-	auths, err := consensus.NewSignedChainTreeFromChainTree(treeAt).Authentications()
+// VerifyOwnership checks that all expectedAuths currently own the tree
+func VerifyOwnership(ctx context.Context, tree *chaintree.ChainTree, expectedAuths []string) (bool, error) {
+	auths, err := consensus.NewSignedChainTreeFromChainTree(tree).Authentications()
 	if err != nil {
 		return false, err
 	}
@@ -29,6 +24,15 @@ func VerifyOwnershipAt(ctx context.Context, tree *chaintree.ChainTree, height in
 		return stringslice.Include(auths, s)
 	})
 	return isValid, nil
+}
+
+// VerifyOwnershipAt checks a all expectedAuths owned the tree at a given height
+func VerifyOwnershipAt(ctx context.Context, tree *chaintree.ChainTree, height int, expectedAuths []string) (bool, error) {
+	treeAt, err := AtHeight(ctx, tree, height)
+	if err != nil {
+		return false, err
+	}
+	return VerifyOwnership(ctx, treeAt, expectedAuths)
 }
 
 type OwnershipChange struct {

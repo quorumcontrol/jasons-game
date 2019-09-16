@@ -28,14 +28,16 @@ const comboObjectElementsPath = "elements"
 
 type ElementCombinerHandler struct {
 	net             network.Network
-	did             string
+	tree            *consensus.SignedChainTree
+	name            string
 	location        string
 	elements        map[int]*element
 	combinationsMap elementCombinationMap
+	minRequired     int
 }
 
 type ElementCombinerHandlerConfig struct {
-	Did          string
+	Name         string
 	Network      network.Network
 	Location     string
 	Elements     []*element
@@ -50,13 +52,20 @@ var ElementCombinerHandlerMessages = handlers.HandlerMessageList{
 func NewElementCombinerHandler(cfg *ElementCombinerHandlerConfig) (*ElementCombinerHandler, error) {
 	h := &ElementCombinerHandler{
 		net:             cfg.Network,
-		did:             cfg.Did,
+		name:            cfg.Name,
 		location:        cfg.Location,
 		elements:        make(map[int]*element),
 		combinationsMap: make(elementCombinationMap),
 	}
 
 	h.combinationsMap.Fill(cfg.Combinations)
+
+	h.minRequired = len(cfg.Combinations[0].From)
+	for _, combo := range cfg.Combinations {
+		if len(combo.From) < h.minRequired {
+			h.minRequired = len(combo.From)
+		}
+	}
 
 	for _, element := range cfg.Elements {
 		h.elements[element.ID] = element
@@ -70,7 +79,21 @@ func NewElementCombinerHandler(cfg *ElementCombinerHandlerConfig) (*ElementCombi
 	return h, nil
 }
 
+func (h *ElementCombinerHandler) Name() string {
+	return h.name
+}
+
+func (h *ElementCombinerHandler) Tree() *consensus.SignedChainTree {
+	return h.tree
+}
+
 func (h *ElementCombinerHandler) setup() error {
+	var err error
+	h.tree, err = h.net.FindOrCreatePassphraseTree("element-combiner-" + h.Name())
+	if err != nil {
+		return err
+	}
+
 	locTree, err := h.net.GetTree(h.location)
 	if err != nil {
 		return errors.Wrap(err, "getting loc tree")
@@ -83,7 +106,7 @@ func (h *ElementCombinerHandler) setup() error {
 	}
 
 	location := game.NewLocationTree(h.net, locTree)
-	err = location.SetHandler(h.did)
+	err = location.SetHandler(h.Tree().MustId())
 	if err != nil {
 		return errors.Wrap(err, "getting loc tree")
 	}
@@ -92,11 +115,7 @@ func (h *ElementCombinerHandler) setup() error {
 }
 
 func (h *ElementCombinerHandler) handlerAuthentications() ([]string, error) {
-	handlerTree, err := h.net.GetTree(h.did)
-	if err != nil {
-		return nil, err
-	}
-	return handlerTree.Authentications()
+	return h.tree.Authentications()
 }
 
 func (h *ElementCombinerHandler) originAuthentications() []string {
@@ -225,13 +244,13 @@ func (h *ElementCombinerHandler) handlePickupElement(msg *jasonsgame.RequestObje
 		i++
 	}
 
-	if len(elementIds) < 2 {
+	if len(elementIds) < h.minRequired {
 		log.Debugf("handlePickupElement: not enough element: obj=%s", msg.Object)
-		return sender.Errorf("you must drop at least 2 objects to be combined")
+		return sender.Errorf("you must drop at least %d objects to be combined", h.minRequired)
 	}
 
 	newElement := h.findCombinedElement(elementIds)
-	log.Debugf("handlePickupElement: combining: obj=%s elementIds=%s newElement=%s", msg.Object, elementIds, newElement.Name())
+	log.Debugf("handlePickupElement: combining: obj=%s elementIds=%v newElement=%s", msg.Object, elementIds, newElement.Name())
 
 	existing, err := playerInventory.DidForName(newElement.Name())
 	if err != nil {
@@ -269,64 +288,25 @@ func (h *ElementCombinerHandler) handlePickupElement(msg *jasonsgame.RequestObje
 	return sender.Send()
 }
 
-func (h *ElementCombinerHandler) validateObjectOrigin(object *game.ObjectTree) (bool, error) {
-	ctx := context.Background()
+func (h *ElementCombinerHandler) isValidElement(object *game.ObjectTree) (bool, error) {
 	elementName, err := object.GetName()
 	if err != nil {
 		return false, err
 	}
 	elementID := elementNameToId(elementName)
-	log.Debugf("validateObjectOrigin: starting validation: obj=%s name=%s id=%d", object.MustId(), elementName, elementID)
+	log.Debugf("isValidElement: starting validation: obj=%s name=%s id=%d", object.MustId(), elementName, elementID)
 
 	element, ok := h.elements[elementID]
 	if !ok {
-		log.Debugf("validateObjectOrigin: element not found: obj=%s", object.MustId())
+		log.Debugf("isValidElement: element not found: obj=%s", object.MustId())
 		return false, fmt.Errorf("element %d not found", elementID)
 	}
 	if element.SkipOriginValidation {
-		log.Debugf("validateObjectOrigin: skpping origin validation: obj=%s", object.MustId())
+		log.Debugf("isValidElement: skpping origin validation: obj=%s", object.MustId())
 		return true, nil
 	}
 
-	ownershipChanges, err := trees.OwnershipChanges(ctx, object.ChainTree().ChainTree)
-	if err != nil {
-		return false, fmt.Errorf("error checking origin of element: %v", err)
-	}
-
-	if len(ownershipChanges) < 2 {
-		log.Debugf("validateObjectOrigin: invalid ownership history, less than 2 ownership changes: obj=%s", object.MustId())
-		return false, nil
-	}
-
-	beforeTransferOwnership := ownershipChanges[len(ownershipChanges)-2]
-
-	treeBeforeTransfer, err := object.ChainTree().ChainTree.At(ctx, &beforeTransferOwnership.Tip)
-	if err != nil {
-		return false, fmt.Errorf("error checking origin of element")
-	}
-
-	validOrigin, err := trees.VerifyOwnershipAt(ctx, treeBeforeTransfer, 0, h.originAuthentications())
-	if err != nil {
-		return false, fmt.Errorf("error checking origin of element")
-	}
-	if !validOrigin {
-		log.Debugf("validateObjectOrigin: invalid ownership history, authentication at block 0 was not network key: obj=%s", object.MustId())
-		return false, nil
-	}
-
-	originObject := game.NewObjectTree(h.net, consensus.NewSignedChainTreeFromChainTree(treeBeforeTransfer))
-
-	originName, err := originObject.GetName()
-	if err != nil {
-		return false, fmt.Errorf("error checking origin of element")
-	}
-
-	if elementName != originName {
-		log.Debugf("validateObjectOrigin: invalid object, name was modified: obj=%s", object.MustId())
-		return false, nil
-	}
-
-	return true, nil
+	return validateElementOrigin(object, h.originAuthentications())
 }
 
 func (h *ElementCombinerHandler) handleReceiveElement(msg *jasonsgame.TransferredObjectMessage) error {
@@ -344,7 +324,7 @@ func (h *ElementCombinerHandler) handleReceiveElement(msg *jasonsgame.Transferre
 		return fmt.Errorf("error fetching object chaintree %s: %v", msg.Object, err)
 	}
 
-	isValid, err := h.validateObjectOrigin(incomingObject)
+	isValid, err := h.isValidElement(incomingObject)
 	if err != nil {
 		log.Error(err)
 		return err
@@ -425,7 +405,7 @@ func (h *ElementCombinerHandler) handleReceiveElement(msg *jasonsgame.Transferre
 		}
 
 		err = comboObject.AddInteraction(&game.GetTreeValueInteraction{
-			Command: "examine object " + combinationObjectName,
+			Command: "look at " + combinationObjectName,
 			Did:     comboObject.MustId(),
 			Path:    "description",
 		})

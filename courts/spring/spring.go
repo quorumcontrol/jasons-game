@@ -23,12 +23,14 @@ var log = logging.Logger("spring")
 type springConfig struct {
 	Stages        map[string]*importer.ImportLocation `yaml:"stages"`
 	StageRotation map[int]string                      `yaml:"stage_rotation"`
+	Pedestals     map[string]string                   `yaml:"pedestals"`
 }
 
 type SpringCourt struct {
 	ctx        context.Context
 	net        network.Network
 	court      *court.Court
+	config     *springConfig
 	configPath string
 }
 
@@ -45,33 +47,32 @@ func (c *SpringCourt) Start() {
 	court.SpawnCourt(c.ctx, c)
 }
 
-func (c *SpringCourt) config() *springConfig {
+func (c *SpringCourt) parseConfig() (*springConfig, error) {
 	ids, err := c.court.Ids()
 	if err != nil {
-		panic(errors.Wrap(err, "error fetching court ids"))
+		return nil, errors.Wrap(err, "error fetching court ids")
 	}
 
 	cfg := &springConfig{}
 	err = config.ReadYaml(filepath.Join(c.configPath, "spring/config.yml"), cfg, ids)
 	if err != nil {
-		panic(errors.Wrap(err, "error fetching config"))
+		return nil, errors.Wrap(err, "error fetching config")
 	}
 
 	if len(cfg.StageRotation) != 24 {
-		panic("stage rotation should have 24 elements, one for each hour of the day")
+		return nil, fmt.Errorf("stage rotation should have 24 elements, one for each hour of the day")
 	}
 	for i := 0; i < 24; i++ {
 		if _, ok := cfg.StageRotation[i]; !ok {
-			panic(fmt.Sprintf("stage rotation should have 24 elements, one for each hour of the day - missing index %d", i))
+			return nil, fmt.Errorf("stage rotation should have 24 elements, one for each hour of the day - missing index %d", i)
 		}
 	}
 
-	return cfg
+	return cfg, nil
 }
 
 func (c *SpringCourt) updateTimeStage() error {
-	cfg := c.config()
-
+	cfg := c.config
 	currentHour := time.Now().UTC().Hour()
 	currentStage := cfg.StageRotation[currentHour]
 
@@ -93,13 +94,57 @@ func (c *SpringCourt) updateTimeStage() error {
 	return nil
 }
 
+func (c *SpringCourt) configurePedestals() error {
+	for pedestalDid := range c.config.Pedestals {
+		pedestalTree, err := c.net.GetTree(pedestalDid)
+		if err != nil {
+			return fmt.Errorf("could not fetch %v", pedestalDid)
+		}
+
+		_, err = c.net.UpdateChainTree(pedestalTree, "jasons-game/use-per-player-inventory", true)
+		if err != nil {
+			return errors.Wrap(err, "updating pedastal tree")
+		}
+	}
+	return nil
+}
+
+func (c *SpringCourt) spawnPrizeHandler(actorCtx actor.Context) error {
+	handler, err := NewSpringPrizeHandler(c)
+	if err != nil {
+		return errors.Wrap(err, "creating prize handler")
+	}
+
+	_, err = c.court.SpawnHandler(actorCtx, handler)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
 func (c *SpringCourt) initialize(actorCtx actor.Context) {
 	err := c.court.Import(c.configPath)
 	if err != nil {
 		panic(err)
 	}
 
+	c.config, err = c.parseConfig()
+	if err != nil {
+		panic(err)
+	}
+
 	err = c.updateTimeStage()
+	if err != nil {
+		panic(err)
+	}
+
+	err = c.configurePedestals()
+	if err != nil {
+		panic(err)
+	}
+
+	err = c.spawnPrizeHandler(actorCtx)
 	if err != nil {
 		panic(err)
 	}

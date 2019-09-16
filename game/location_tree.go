@@ -8,6 +8,7 @@ import (
 	"github.com/ipfs/go-cid"
 	"github.com/pkg/errors"
 	"github.com/quorumcontrol/chaintree/typecaster"
+	"github.com/quorumcontrol/jasons-game/game/trees"
 	"github.com/quorumcontrol/jasons-game/network"
 	"github.com/quorumcontrol/jasons-game/pb/jasonsgame"
 	"github.com/quorumcontrol/tupelo-go-sdk/consensus"
@@ -140,26 +141,7 @@ func (l *LocationTree) GetPortal() (*jasonsgame.Portal, error) {
 }
 
 func (l *LocationTree) IsOwnedBy(keyAddrs []string) (bool, error) {
-	ctx := context.TODO()
-	authsUncasted, remainingPath, err := l.tree.ChainTree.Dag.Resolve(ctx, strings.Split("tree/"+consensus.TreePathForAuthentications, "/"))
-	if err != nil {
-		return false, err
-	}
-	if len(remainingPath) > 0 {
-		return false, fmt.Errorf("error resolving tree: path elements remaining: %v", remainingPath)
-	}
-
-	for _, storedAddr := range authsUncasted.([]interface{}) {
-		found := false
-		for _, check := range keyAddrs {
-			found = found || (storedAddr.(string) == check)
-		}
-		if !found {
-			return false, nil
-		}
-	}
-
-	return true, nil
+	return trees.VerifyOwnership(context.Background(), l.tree.ChainTree, keyAddrs)
 }
 
 func (l *LocationTree) updatePath(path []string, val interface{}) error {

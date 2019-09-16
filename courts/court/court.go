@@ -2,16 +2,19 @@ package court
 
 import (
 	"context"
+	"fmt"
 	"path/filepath"
+	"time"
 
 	"github.com/AsynkronIT/protoactor-go/actor"
-
+	logging "github.com/ipfs/go-log"
 	"github.com/pkg/errors"
-
-	"github.com/quorumcontrol/jasons-game/importer"
-
-	"github.com/quorumcontrol/jasons-game/network"
 	"github.com/quorumcontrol/tupelo-go-sdk/consensus"
+
+	"github.com/quorumcontrol/jasons-game/handlers"
+	"github.com/quorumcontrol/jasons-game/importer"
+	"github.com/quorumcontrol/jasons-game/network"
+	"github.com/quorumcontrol/jasons-game/service"
 )
 
 type Court struct {
@@ -19,6 +22,7 @@ type Court struct {
 	net  network.Network
 	name string
 	did  string
+	log  logging.StandardLogger
 }
 
 func New(ctx context.Context, net network.Network, name string) *Court {
@@ -26,6 +30,7 @@ func New(ctx context.Context, net network.Network, name string) *Court {
 		ctx:  ctx,
 		net:  net,
 		name: name,
+		log:  logging.Logger(name),
 	}
 }
 
@@ -105,6 +110,30 @@ func (c *Court) Import(configPath string) error {
 		return err
 	}
 	return nil
+}
+
+type courtHandler interface {
+	handlers.Handler
+	Name() string
+	Tree() *consensus.SignedChainTree
+}
+
+func (c *Court) SpawnHandler(actorCtx actor.Context, handler courtHandler) (*actor.PID, error) {
+	servicePID, err := actorCtx.SpawnNamed(service.NewServiceActorPropsWithTree(c.net, handler, handler.Tree()), handler.Name())
+	if err != nil {
+		return nil, err
+	}
+	// This should be the same as the handler.Tree().MustId(), but just ensures it has started up
+	handlerDid, err := actorCtx.RequestFuture(servicePID, &service.GetServiceDid{}, 30*time.Second).Result()
+	if err != nil {
+		return nil, err
+	}
+	if handlerDid != handler.Tree().MustId() {
+		return nil, fmt.Errorf("mismatch dids between handler and source tree - should never happen")
+	}
+	c.log.Infof("%s handler started with did %s", handler.Name(), handler.Tree().MustId())
+
+	return servicePID, nil
 }
 
 func SpawnCourt(ctx context.Context, act actor.Actor) {

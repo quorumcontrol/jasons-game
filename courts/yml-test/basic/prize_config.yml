@@ -1,8 +1,8 @@
 location: "{{.Locations.loc3}}"
 prize:
   data:
-    name: "test-summer-prize"
-    description: "the test won the summer court"
+    name: "test-basic-prize"
+    description: "the test won the basic court"
 spawn:
   data:
     name: "spawn-obj"
@@ -17,4 +17,4 @@ spawn:
           did: "{{.PrizeDid}}"
       - type: RespondInteraction
         value:
-          response: "Woah did you kill it?"
+          response: "won basic"
