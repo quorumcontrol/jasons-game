@@ -103,6 +103,9 @@ func (t *Tupelo) sendInk(c *client.Client, source *consensus.SignedChainTree, ke
 	tokenNameString := t.NotaryGroup.Config().TransactionToken
 	tokenName := consensus.TokenNameFromString(tokenNameString)
 	tokenPayload, err := t.TokenPayloadForTransaction(source, &tokenName, txIdString, &txResp.Signature)
+	if err != nil {
+		return nil, errors.Wrap(err, "error building token payload")
+	}
 
 	return tokenPayload, nil
 }
