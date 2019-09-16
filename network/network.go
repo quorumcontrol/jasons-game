@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/ecdsa"
 	"crypto/sha256"
+	"encoding/hex"
 	"fmt"
 	"os"
 	"strings"
@@ -12,7 +13,6 @@ import (
 
 	"github.com/AsynkronIT/protoactor-go/actor"
 	"github.com/ethereum/go-ethereum/crypto"
-	"github.com/google/uuid"
 	cid "github.com/ipfs/go-cid"
 	datastore "github.com/ipfs/go-datastore"
 	logging "github.com/ipfs/go-log"
@@ -540,12 +540,12 @@ func (n *RemoteNetwork) SendInk(amount uint64, destinationChainId string) (*tran
 }
 
 func (n *RemoteNetwork) inkBurnTransaction(tree *consensus.SignedChainTree) (*transactions.Transaction, error) {
-	transactionId, err := uuid.NewRandom()
-	if err != nil {
-		return nil, errors.Wrap(err, "error generating ink burn transaction ID")
-	}
+	tipString := tree.Tip().String()
 
-	transaction, err := chaintree.NewSendTokenTransaction(transactionId.String(), n.InkTokenName().String(), n.Tupelo.NotaryGroup.Config().BurnAmount, "")
+	txIdBytes := sha256.Sum256([]byte(tipString + "burn"))
+	transactionId := hex.EncodeToString(txIdBytes[:])
+
+	transaction, err := chaintree.NewSendTokenTransaction(transactionId, n.InkTokenName().String(), n.Tupelo.NotaryGroup.Config().BurnAmount, "")
 	if err != nil {
 		return nil, errors.Wrap(err, "error generating ink burn transaction")
 	}
