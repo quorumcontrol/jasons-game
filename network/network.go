@@ -4,7 +4,6 @@ import (
 	"context"
 	"crypto/ecdsa"
 	"crypto/sha256"
-	"encoding/hex"
 	"fmt"
 	"os"
 	"strings"
@@ -537,20 +536,6 @@ func (n *RemoteNetwork) SendInk(amount uint64, destinationChainId string) (*tran
 	log.Debug("send ink saved tree metadata")
 
 	return tokenPayload, nil
-}
-
-func (n *RemoteNetwork) inkBurnTransaction(tree *consensus.SignedChainTree) (*transactions.Transaction, error) {
-	tipString := tree.Tip().String()
-
-	txIdBytes := sha256.Sum256([]byte(tipString + "burn"))
-	transactionId := hex.EncodeToString(txIdBytes[:])
-
-	transaction, err := chaintree.NewSendTokenTransaction(transactionId, n.InkTokenName().String(), n.Tupelo.NotaryGroup.Config().BurnAmount, "")
-	if err != nil {
-		return nil, errors.Wrap(err, "error generating ink burn transaction")
-	}
-
-	return transaction, nil
 }
 
 func GameBootstrappers() []string {

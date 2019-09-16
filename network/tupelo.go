@@ -2,6 +2,8 @@ package network
 
 import (
 	"crypto/ecdsa"
+	"crypto/sha256"
+	"encoding/hex"
 
 	"github.com/google/uuid"
 	cid "github.com/ipfs/go-cid"
@@ -79,7 +81,14 @@ func (t *Tupelo) SendInk(source *consensus.SignedChainTree, key *ecdsa.PrivateKe
 }
 
 func (t *Tupelo) sendInk(c *client.Client, source *consensus.SignedChainTree, key *ecdsa.PrivateKey, amount uint64, destinationChainId string) (*transactions.TokenPayload, error) {
-	transaction, transactionId, err := t.sendInkTransaction(destinationChainId, amount)
+	txId, err := uuid.NewRandom()
+	if err != nil {
+		return nil, errors.Wrap(err, "error generating send ink transaction ID")
+	}
+
+	txIdString := txId.String()
+
+	transaction, err := t.sendInkTransaction(txIdString, destinationChainId, amount)
 	if err != nil {
 		return nil, errors.Wrap(err, "error generating ink send token transaction")
 	}
@@ -93,7 +102,7 @@ func (t *Tupelo) sendInk(c *client.Client, source *consensus.SignedChainTree, ke
 
 	tokenNameString := t.NotaryGroup.Config().TransactionToken
 	tokenName := consensus.TokenNameFromString(tokenNameString)
-	tokenPayload, err := t.TokenPayloadForTransaction(source, &tokenName, transactionId.String(), &txResp.Signature)
+	tokenPayload, err := t.TokenPayloadForTransaction(source, &tokenName, txIdString, &txResp.Signature)
 
 	return tokenPayload, nil
 }
@@ -155,7 +164,7 @@ func (t *Tupelo) playTransactions(c *client.Client, tree *consensus.SignedChainT
 	}
 
 	if t.shouldBurn() {
-		burnTransaction, err := t.inkBurnTransaction()
+		burnTransaction, err := t.inkBurnTransaction(tree)
 		if err != nil {
 			return nil, errors.Wrap(err, "error generating ink burn transaction")
 		}
@@ -170,27 +179,27 @@ func (t *Tupelo) shouldBurn() bool {
 	return t.NotaryGroup.Config().BurnAmount > 0 && t.NotaryGroup.Config().TransactionToken != ""
 }
 
-func (t *Tupelo) inkBurnTransaction() (*transactions.Transaction, error) {
-	burnTx, _, err := t.sendInkTransaction("", t.NotaryGroup.Config().BurnAmount)
+func (t *Tupelo) inkBurnTransaction(sourceTree *consensus.SignedChainTree) (*transactions.Transaction, error) {
+	tipString := sourceTree.Tip().String()
+
+	txIdBytes := sha256.Sum256([]byte(tipString + "burn"))
+	txId := hex.EncodeToString(txIdBytes[:])
+
+	burnTx, err := t.sendInkTransaction(txId, "", t.NotaryGroup.Config().BurnAmount)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "error generating ink burn transaction")
 	}
 
 	return burnTx, nil
 }
 
-func (t *Tupelo) sendInkTransaction(destId string, amount uint64) (*transactions.Transaction, *uuid.UUID, error) {
-	transactionId, err := uuid.NewRandom()
+func (t *Tupelo) sendInkTransaction(txId string, destId string, amount uint64) (*transactions.Transaction, error) {
+	transaction, err := chaintree.NewSendTokenTransaction(txId, t.NotaryGroup.Config().TransactionToken, amount, destId)
 	if err != nil {
-		return nil, nil, errors.Wrap(err, "error generating send ink transaction ID")
+		return nil, errors.Wrap(err, "error generating send ink transaction")
 	}
 
-	transaction, err := chaintree.NewSendTokenTransaction(transactionId.String(), t.NotaryGroup.Config().TransactionToken, amount, destId)
-	if err != nil {
-		return nil, nil, errors.Wrap(err, "error generating send ink transaction")
-	}
-
-	return transaction, &transactionId, nil
+	return transaction, nil
 }
 
 func (t *Tupelo) receiveInkTransaction(tree *consensus.SignedChainTree, key *ecdsa.PrivateKey, tokenPayload *transactions.TokenPayload) (*transactions.Transaction, error) {
