@@ -92,7 +92,7 @@ func TestInkRequests(t *testing.T) {
 	err = proto.Unmarshal(resp.Token, &tokenPayload)
 	require.Nil(t, err)
 
-	err = devInk.Net.ReceiveInk(inkRecipient, &tokenPayload)
+	err = devInk.Net.ReceiveInk(&tokenPayload)
 	require.Nil(t, err)
 
 	recipientTree, err := inkRecipient.ChainTree.Tree(ctx)

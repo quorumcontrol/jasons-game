@@ -53,8 +53,9 @@ func TestGetTip(t *testing.T) {
 
 	tree, err := tup.CreateChainTree(key)
 	require.Nil(t, err)
-	err = net.UpdateChainTree(tree, "foo", "bar")
+	newTree, err := net.UpdateChainTree(tree, "foo", "bar")
 	require.Nil(t, err)
+	require.NotNil(t, newTree)
 
 	time.Sleep(100 * time.Millisecond)
 	tip, err := tup.GetTip(tree.MustId())
