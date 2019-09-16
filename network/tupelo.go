@@ -134,13 +134,17 @@ func (t *Tupelo) PlayTransactions(tree *consensus.SignedChainTree, key *ecdsa.Pr
 	c.Listen()
 	defer c.Stop()
 
-	depositTx, err := t.depositInk(c, key, tree, inkHolder)
-	if err != nil {
-		return nil, errors.Wrap(err, "error depositing ink")
+	if t.shouldBurn() {
+		depositTx, err := t.depositInk(c, key, tree, inkHolder)
+		if err != nil {
+			return nil, errors.Wrap(err, "error depositing ink")
+		}
+
+		txnsWithDeposit := append(transactions, depositTx)
+		return t.playTransactions(c, tree, key, txnsWithDeposit)
 	}
 
-	txnsWithDeposit := append(transactions, depositTx)
-	return t.playTransactions(c, tree, key, txnsWithDeposit)
+	return t.playTransactions(c, tree, key, transactions)
 }
 
 func (t *Tupelo) playTransactions(c *client.Client, tree *consensus.SignedChainTree, key *ecdsa.PrivateKey, transactions []*transactions.Transaction) (*consensus.AddBlockResponse, error) {
