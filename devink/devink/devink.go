@@ -66,18 +66,9 @@ func NewSource(ctx context.Context, dataStoreDir string, connectToLocalnet bool)
 
 	net := devnet.DevRemoteNetwork{RemoteNetwork: rNet}
 
-	inkSourceName := "dev-ink-source"
-
-	devInkSource, err := net.GetChainTreeByName(inkSourceName)
+	devInkSource, err := net.FindOrCreatePassphraseTree("dev-ink-source")
 	if err != nil {
 		return nil, errors.Wrap(err, "error getting ink source chaintree")
-	}
-
-	if devInkSource == nil {
-		devInkSource, err = net.CreateLocalChainTree("dev-ink-source")
-		if err != nil {
-			return nil, errors.Wrap(err, "error creating ink source chaintree")
-		}
 	}
 
 	return &DevInkSource{ChainTree: devInkSource, Net: net}, nil
