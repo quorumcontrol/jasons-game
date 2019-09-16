@@ -6,6 +6,7 @@ import (
 	"github.com/quorumcontrol/messages/build/go/transactions"
 	"github.com/quorumcontrol/tupelo-go-sdk/consensus"
 
+	"github.com/pkg/errors"
 	"github.com/quorumcontrol/jasons-game/network"
 )
 
@@ -21,14 +22,19 @@ type DevNetwork interface {
 var _ DevNetwork = &DevRemoteNetwork{}
 
 func (n *DevRemoteNetwork) PlayTransactions(tree *consensus.SignedChainTree, transactions []*transactions.Transaction) (*consensus.SignedChainTree, *consensus.AddBlockResponse, error) {
-	txResp, err := n.Tupelo.PlayTransactions(tree, n.PrivateKey(), transactions, n.RemoteNetwork.InkHolder)
+	well, err := n.RemoteNetwork.InkWell()
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, errors.Wrap(err, "error fetching remote network inkwell")
+	}
+
+	txResp, err := n.Tupelo.PlayTransactions(tree, n.PrivateKey(), transactions, well)
+	if err != nil {
+		return nil, nil, errors.Wrap(err, "error playing transaction")
 	}
 
 	err = n.TreeStore().SaveTreeMetadata(tree)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, errors.Wrap(err, "error saving tree metadata")
 	}
 
 	return tree, txResp, nil

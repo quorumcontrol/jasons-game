@@ -332,7 +332,7 @@ func (n *RemoteNetwork) CreateChainTree() (*consensus.SignedChainTree, error) {
 		return nil, errors.Wrap(err, "error creating ownership transaction for chaintree")
 	}
 
-	well, err := n.inkWell()
+	well, err := n.InkWell()
 	if err != nil {
 		return nil, errors.Wrap(err, "error fetching inkwell")
 	}
@@ -407,7 +407,7 @@ func (n *RemoteNetwork) UpdateChainTree(tree *consensus.SignedChainTree, path st
 		return nil, errors.Wrap(err, "error creating set data transaction")
 	}
 
-	well, err := n.inkWell()
+	well, err := n.InkWell()
 	if err != nil {
 		return nil, errors.Wrap(err, "error fetching inkwell")
 	}
@@ -428,7 +428,7 @@ func (n *RemoteNetwork) changeChainTreeOwner(tree *consensus.SignedChainTree, pr
 		return nil, errors.Wrap(err, "error updating chaintree")
 	}
 
-	well, err := n.inkWell()
+	well, err := n.InkWell()
 	if err != nil {
 		return nil, errors.Wrap(err, "error fetching inkwell")
 	}
@@ -493,7 +493,7 @@ func (rn *RemoteNetwork) NewCurrentStateSubscriptionProps(did string) *actor.Pro
 	})
 }
 
-func (n *RemoteNetwork) inkWell() (*consensus.SignedChainTree, error) {
+func (n *RemoteNetwork) InkWell() (*consensus.SignedChainTree, error) {
 	well, err := n.GetChainTreeByName(inkWellName)
 	if err != nil {
 		return nil, errors.Wrap(err, "error looking up inkwell chaintree")
@@ -518,7 +518,7 @@ func (n *RemoteNetwork) InkTokenName() *consensus.TokenName {
 }
 
 func (n *RemoteNetwork) SendInk(amount uint64, destinationChainId string) (*transactions.TokenPayload, error) {
-	well, err := n.inkWell()
+	well, err := n.InkWell()
 	if err != nil {
 		return nil, errors.Wrap(err, "error fetching inkwell")
 	}

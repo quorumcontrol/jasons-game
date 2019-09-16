@@ -10,7 +10,7 @@ import (
 )
 
 func (n *RemoteNetwork) DepositInk(source *consensus.SignedChainTree, key *ecdsa.PrivateKey, amount uint64) error {
-	well, err := n.inkWell()
+	well, err := n.InkWell()
 	if err != nil {
 		return errors.Wrap(err, "error fetching inkwell")
 	}
@@ -29,7 +29,7 @@ func (n *RemoteNetwork) DepositInk(source *consensus.SignedChainTree, key *ecdsa
 }
 
 func (n *RemoteNetwork) ReceiveInk(tokenPayload *transactions.TokenPayload) error {
-	inkWell, err := n.inkWell()
+	inkWell, err := n.InkWell()
 	if err != nil {
 		return errors.Wrap(err, "error fetching inkwell")
 	}
