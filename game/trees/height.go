@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/ipfs/go-cid"
+	cid "github.com/ipfs/go-cid"
 	"github.com/quorumcontrol/chaintree/chaintree"
 )
 
@@ -31,7 +31,7 @@ func Height(ctx context.Context, tree *chaintree.ChainTree) (uint64, error) {
 }
 
 // AtHeight returns the ChainTree at a given height
-func AtHeight(ctx context.Context, tree *chaintree.ChainTree, height int) (*chaintree.ChainTree, error) {
+func AtHeight(ctx context.Context, tree *chaintree.ChainTree, height uint64) (*chaintree.ChainTree, error) {
 	tip := tree.Dag.Tip
 	for !tip.Equals(cid.Undef) {
 		treeAt, err := tree.At(ctx, &tip)
