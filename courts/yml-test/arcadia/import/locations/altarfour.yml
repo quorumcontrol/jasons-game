@@ -1,0 +1,27 @@
+data:
+  description: "altar4 description"
+interactions:
+  - type: ChangeLocationInteraction
+    value:
+      command: "go main"
+      did: "{{.Locations.main}}"
+  - type: ChangeLocationInteraction
+    value:
+      command: "go altar1"
+      did: "{{.Locations.altarone}}"
+  - type: ChangeLocationInteraction
+    value:
+      command: "go altar2"
+      did: "{{.Locations.altartwo}}"
+  - type: ChangeLocationInteraction
+    value:
+      command: "go altar3"
+      did: "{{.Locations.altarthree}}"
+  - type: ChangeLocationInteraction
+    value:
+      command: "go altar4"
+      did: "{{.Locations.altarfour}}"
+  - type: ChangeLocationInteraction
+    value:
+      command: "go altar5"
+      did: "{{.Locations.altarfive}}"
