@@ -32,10 +32,10 @@ require (
 	github.com/mr-tron/base58 v1.1.2
 	github.com/pkg/errors v0.8.1
 	github.com/prometheus/common v0.6.0
-	github.com/quorumcontrol/chaintree v1.0.2-0.20190910185105-5ed2053d9dea
-	github.com/quorumcontrol/community v0.0.3-0.20190913214733-d7278b74887c
-	github.com/quorumcontrol/messages/build/go v0.0.0-20190904072359-c4c4068cde98
-	github.com/quorumcontrol/tupelo-go-sdk v0.5.6-0.20190913211125-d1bf90ce88ab
+	github.com/quorumcontrol/chaintree v1.0.2-0.20190917094057-ee67adc23862
+	github.com/quorumcontrol/community v0.0.3-0.20190917112833-c60d32cc33e9
+	github.com/quorumcontrol/messages/build/go v0.0.0-20190916172743-fed64641cd55
+	github.com/quorumcontrol/tupelo-go-sdk v0.5.6-0.20190917102151-48de66b8f770
 	github.com/rs/cors v1.7.0 // indirect
 	github.com/shibukawa/configdir v0.0.0-20170330084843-e180dbdc8da0
 	github.com/spf13/cobra v0.0.5
