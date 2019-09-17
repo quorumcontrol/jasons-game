@@ -17,7 +17,7 @@ require (
 	github.com/hashicorp/go-uuid v1.0.1
 	github.com/hashicorp/golang-lru v0.5.1
 	github.com/imdario/mergo v0.3.7
-	github.com/improbable-eng/grpc-web v0.9.5
+	github.com/improbable-eng/grpc-web v0.11.0
 	github.com/ipfs/go-blockservice v0.1.1
 	github.com/ipfs/go-cid v0.0.2
 	github.com/ipfs/go-datastore v0.0.5
@@ -25,23 +25,23 @@ require (
 	github.com/ipfs/go-ipfs-blockstore v0.0.1
 	github.com/ipfs/go-ipfs-config v0.0.6
 	github.com/ipfs/go-ipfs-exchange-offline v0.0.1
-	github.com/ipfs/go-ipld-cbor v1.5.1-0.20190302174746-59d816225550
+	github.com/ipfs/go-ipld-cbor v0.0.3
 	github.com/ipfs/go-ipld-format v0.0.2
 	github.com/ipfs/go-log v0.0.1
 	github.com/ipfs/go-merkledag v0.1.0
 	github.com/mr-tron/base58 v1.1.2
 	github.com/pkg/errors v0.8.1
 	github.com/prometheus/common v0.6.0
-	github.com/quorumcontrol/chaintree v0.8.1
-	github.com/quorumcontrol/community v0.0.3-0.20190904093829-3b0b04242da8
-	github.com/quorumcontrol/messages/build/go v0.0.0-20190904072359-c4c4068cde98cf0244eb91d63db0cfab979c42b5
-	github.com/quorumcontrol/tupelo-go-sdk v0.5.3-rc2.0.20190827115629-6406e12c2317
+	github.com/quorumcontrol/chaintree v1.0.2-0.20190917094057-ee67adc23862
+	github.com/quorumcontrol/community v0.0.3-0.20190917112833-c60d32cc33e9
+	github.com/quorumcontrol/messages/build/go v0.0.0-20190916172743-fed64641cd55
+	github.com/quorumcontrol/tupelo-go-sdk v0.5.6-0.20190917102151-48de66b8f770
 	github.com/rs/cors v1.7.0 // indirect
 	github.com/shibukawa/configdir v0.0.0-20170330084843-e180dbdc8da0
 	github.com/spf13/cobra v0.0.5
 	github.com/stretchr/testify v1.4.0
 	golang.org/x/crypto v0.0.0-20190829043050-9756ffdc2472
-	golang.org/x/net v0.0.0-20190827160401-ba9fcec4b297 // indirect
+	golang.org/x/net v0.0.0-20190827160401-ba9fcec4b297
 	golang.org/x/sys v0.0.0-20190902133755-9109b7679e13 // indirect
 	google.golang.org/grpc v1.22.0
 	gopkg.in/yaml.v2 v2.2.2

@@ -4,7 +4,8 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/ipfs/go-cid"
+	cid "github.com/ipfs/go-cid"
+	"github.com/pkg/errors"
 	"github.com/quorumcontrol/chaintree/chaintree"
 )
 
@@ -19,19 +20,18 @@ func MustHeight(ctx context.Context, tree *chaintree.ChainTree) uint64 {
 
 // Height gets the height of a chaintree
 func Height(ctx context.Context, tree *chaintree.ChainTree) (uint64, error) {
-	treeHeight, _, err := tree.Dag.Resolve(ctx, []string{"height"})
+	rootNode := chaintree.RootNode{}
+	err := tree.Dag.ResolveInto(ctx, []string{""}, &rootNode)
+
 	if err != nil {
-		return 0, err
+		return 0, errors.Wrap(err, "error resolving tree height")
 	}
-	asUint64, ok := treeHeight.(uint64)
-	if !ok {
-		return 0, fmt.Errorf("invalid ChainTree, height is not a uint64: %v", treeHeight)
-	}
-	return asUint64, nil
+
+	return rootNode.Height, nil
 }
 
 // AtHeight returns the ChainTree at a given height
-func AtHeight(ctx context.Context, tree *chaintree.ChainTree, height int) (*chaintree.ChainTree, error) {
+func AtHeight(ctx context.Context, tree *chaintree.ChainTree, height uint64) (*chaintree.ChainTree, error) {
 	tip := tree.Dag.Tip
 	for !tip.Equals(cid.Undef) {
 		treeAt, err := tree.At(ctx, &tip)
