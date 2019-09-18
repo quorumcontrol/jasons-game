@@ -66,9 +66,6 @@ func main() {
 	// Just use a memory store and expect that nodes are stored
 	// in the community blockstore from being signed
 	ds := dssync.MutexWrap(datastore.NewMapDatastore())
-	if err != nil {
-		panic(errors.Wrap(err, "error creating store"))
-	}
 
 	config := &network.RemoteNetworkConfig{
 		NotaryGroup:   notaryGroup,
