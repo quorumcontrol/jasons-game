@@ -62,6 +62,7 @@ type Network interface {
 	GetTree(did string) (*consensus.SignedChainTree, error)
 	DeleteTree(did string) error
 	UpdateChainTree(tree *consensus.SignedChainTree, path string, value interface{}) (*consensus.SignedChainTree, error)
+	PlayTransactions(tree *consensus.SignedChainTree, transactions []*transactions.Transaction) (*consensus.SignedChainTree, error)
 	TreeStore() TreeStore
 	PrivateKey() *ecdsa.PrivateKey
 	PublicKey() *ecdsa.PublicKey
@@ -396,6 +397,14 @@ func (n *RemoteNetwork) GetTreeByTip(tip cid.Cid) (*consensus.SignedChainTree, e
 func (n *RemoteNetwork) UpdateChainTree(tree *consensus.SignedChainTree, path string, value interface{}) (*consensus.SignedChainTree, error) {
 	log.Debug("updateTree", tree.MustId(), path, value)
 	err := n.Tupelo.UpdateChainTree(tree, n.PrivateKey(), path, value)
+	if err != nil {
+		return nil, errors.Wrap(err, "error updating chaintree")
+	}
+	return tree, n.TreeStore().UpdateTreeMetadata(tree)
+}
+
+func (n *RemoteNetwork) PlayTransactions(tree *consensus.SignedChainTree, transactions []*transactions.Transaction) (*consensus.SignedChainTree, error) {
+	_, err := n.Tupelo.PlayTransactions(tree, n.PrivateKey(), transactions)
 	if err != nil {
 		return nil, errors.Wrap(err, "error updating chaintree")
 	}
