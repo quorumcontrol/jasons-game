@@ -3,11 +3,14 @@ package court
 import (
 	"context"
 	"fmt"
+	"math"
 	"sync"
 	"time"
 
 	"github.com/gogo/protobuf/proto"
+	"github.com/ipfs/go-cid"
 	"github.com/pkg/errors"
+	"github.com/quorumcontrol/chaintree/chaintree"
 	"github.com/quorumcontrol/jasons-game/courts/config"
 	"github.com/quorumcontrol/jasons-game/game"
 	"github.com/quorumcontrol/jasons-game/game/trees"
@@ -16,6 +19,7 @@ import (
 	"github.com/quorumcontrol/jasons-game/importer"
 	"github.com/quorumcontrol/jasons-game/network"
 	"github.com/quorumcontrol/jasons-game/pb/jasonsgame"
+	"github.com/quorumcontrol/messages/build/go/transactions"
 	"github.com/quorumcontrol/tupelo-go-sdk/consensus"
 )
 
@@ -244,6 +248,54 @@ func (s *responseSender) Errorf(str string, args ...interface{}) error {
 	return err
 }
 
+func (h *PrizeHandler) currentPrizeNumber() (uint64, error) {
+	prizeNumUncast, _, err := h.Tree().ChainTree.Dag.Resolve(context.TODO(), []string{"tree", "data", "jasons-game", "prizeNumber"})
+	if err != nil {
+		return 0, err
+	}
+	if prizeNumUncast == nil {
+		return 0, nil
+	}
+	prizeNum, ok := prizeNumUncast.(uint64)
+	if !ok {
+		return 0, fmt.Errorf("error casting prizeNumber")
+	}
+	return prizeNum, nil
+}
+
+const prizeBucketSize = float64(100)
+
+func (h *PrizeHandler) trackPrizeDistribution(prizeTip cid.Cid, playerTip cid.Cid) error {
+	currentPrizeNum, err := h.currentPrizeNumber()
+	if err != nil {
+		return err
+	}
+	prizeNum := currentPrizeNum + 1
+
+	counterTrans, err := chaintree.NewSetDataTransaction("jasons-game/prizeNumber", prizeNum)
+	if err != nil {
+		return errors.Wrap(err, "error creating prize set num transaction")
+	}
+
+	bucket := math.Ceil(float64(prizeNum)/float64(prizeBucketSize)) * prizeBucketSize
+	winnerPath := fmt.Sprintf("jasons-game/winners/%d/%d", int64(bucket), prizeNum)
+	winnerVal := map[string]cid.Cid{
+		"player": playerTip,
+		"prize":  prizeTip,
+	}
+	winnerTrans, err := chaintree.NewSetDataTransaction(winnerPath, winnerVal)
+	if err != nil {
+		return errors.Wrap(err, "error creating prize set winner transaction")
+	}
+
+	h.tree, err = h.net.PlayTransactions(h.tree, []*transactions.Transaction{counterTrans, winnerTrans})
+	if err != nil {
+		return errors.Wrap(err, "error playing prize transactions")
+	}
+
+	return nil
+}
+
 func (h *PrizeHandler) handleTransfer(msg *jasonsgame.RequestObjectTransferMessage) error {
 	sender := newResponseSender(h.net, msg)
 
@@ -336,6 +388,11 @@ func (h *PrizeHandler) handleTransfer(msg *jasonsgame.RequestObjectTransferMessa
 	_, err = h.net.ChangeChainTreeOwner(objectTree, playerAuths)
 	if err != nil {
 		return sender.Errorf("could not update object ownership")
+	}
+
+	err = h.trackPrizeDistribution(objectTree.Tip(), playerTree.Tip())
+	if err != nil {
+		return sender.Errorf("could not distribute prize")
 	}
 
 	if h.cleanupFunc != nil {
