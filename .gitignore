@@ -49,3 +49,5 @@ courts/yml/*
 courts/yml.tar.gz
 .gitsecret/keys/random_seed
 !*.secret
+
+dids.txt

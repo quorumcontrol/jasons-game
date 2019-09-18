@@ -174,6 +174,9 @@ frontend-build: frontend/jasons-game/public/js/compiled/base.js
 frontend-dev: $(generated) $(jsmodules) frontend/jasons-game/node_modules/.bin/shadow-cljs
 	cd frontend/jasons-game && ./node_modules/.bin/shadow-cljs watch app
 
+bin/benchmark: $(generated)
+	go build -o ./bin/benchmark ./benchmark/cmd/benchmark/main.go
+
 $(FIRSTGOPATH)/bin/modvendor:
 	go get -u github.com/goware/modvendor
 
