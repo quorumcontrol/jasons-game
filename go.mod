@@ -4,6 +4,7 @@ go 1.12
 
 require (
 	github.com/AsynkronIT/protoactor-go v0.0.0-20190821183243-5bb73de32899
+	github.com/aws/aws-lambda-go v1.13.2 // indirect
 	github.com/btcsuite/btcutil v0.0.0-20190425235716-9e5f4b9a998d
 	github.com/dgraph-io/badger v1.6.0 // indirect
 	github.com/ethereum/go-ethereum v1.9.3
