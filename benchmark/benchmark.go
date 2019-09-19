@@ -13,6 +13,7 @@ type Result struct {
 	TotalDuration               time.Duration
 	AvgDuration                 time.Duration
 	NinetiethPercentileDuration time.Duration
+	NodesPerSecond              float64
 }
 
 func ReadDidsFile() ([]string, error) {

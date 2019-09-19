@@ -71,6 +71,7 @@ func LambdaHandler(ctx context.Context, params BenchmarkParams) (string, error) 
 	response += fmt.Sprintln("\tTotal Duration:", results.TotalDuration)
 	response += fmt.Sprintln("\tAverage Duration:", results.AvgDuration)
 	response += fmt.Sprintln("\t90th Percentile Duration:", results.NinetiethPercentileDuration)
+	response += fmt.Sprintln("\tNodes Per Second:", results.NodesPerSecond)
 
 	return response, nil
 }

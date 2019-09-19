@@ -69,4 +69,5 @@ func main() {
 	fmt.Println("\tTotal Duration:", results.TotalDuration)
 	fmt.Println("\tAverage Duration:", results.AvgDuration)
 	fmt.Println("\t90th Percentile Duration:", results.NinetiethPercentileDuration)
+	fmt.Println("\tNodes Per Second:", results.NodesPerSecond)
 }

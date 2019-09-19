@@ -121,6 +121,8 @@ func (bb *BitswapperBenchmark) Run(ctx context.Context) (*Result, error) {
 	}
 	results.NinetiethPercentileDuration = time.Duration(ninetiethPercentileDuration * float64(time.Second))
 
+	results.NodesPerSecond = float64(realIterations) / results.TotalDuration.Seconds()
+
 	return results, nil
 }
 
