@@ -218,7 +218,7 @@ func (ln *LocalNetwork) UpdateChainTree(tree *consensus.SignedChainTree, path st
 	if err != nil {
 		return nil, err
 	}
-	return ln.playTransactions(tree, []*transactions.Transaction{transaction})
+	return ln.PlayTransactions(tree, []*transactions.Transaction{transaction})
 }
 
 func (ln *LocalNetwork) ChangeChainTreeOwner(tree *consensus.SignedChainTree, newKeys []string) (*consensus.SignedChainTree, error) {
@@ -226,7 +226,7 @@ func (ln *LocalNetwork) ChangeChainTreeOwner(tree *consensus.SignedChainTree, ne
 	if err != nil {
 		return nil, err
 	}
-	return ln.playTransactions(tree, []*transactions.Transaction{transaction})
+	return ln.PlayTransactions(tree, []*transactions.Transaction{transaction})
 }
 
 func (ln *LocalNetwork) ChangeChainTreeOwnerWithKey(tree *consensus.SignedChainTree, privateKey *ecdsa.PrivateKey, newKeys []string) (*consensus.SignedChainTree, error) {
@@ -280,7 +280,7 @@ func (ln *LocalNetwork) ReceiveInkOnEphemeralChainTree(tree *consensus.SignedCha
 	return nil
 }
 
-func (ln *LocalNetwork) playTransactions(tree *consensus.SignedChainTree, transactions []*transactions.Transaction) (*consensus.SignedChainTree, error) {
+func (ln *LocalNetwork) PlayTransactions(tree *consensus.SignedChainTree, transactions []*transactions.Transaction) (*consensus.SignedChainTree, error) {
 	ctx := context.TODO()
 	unmarshaledRoot, err := tree.ChainTree.Dag.Get(ctx, tree.Tip())
 	if unmarshaledRoot == nil || err != nil {

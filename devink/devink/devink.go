@@ -108,7 +108,7 @@ func (dis *DevInkSource) EnsureToken(ctx context.Context) error {
 			return errors.Wrap(err, "error creating establish_token transaction for dev ink")
 		}
 
-		devInkChainTree, _, err = dis.Net.PlayTransactions(devInkChainTree, []*transactions.Transaction{establishInk})
+		devInkChainTree, err = dis.Net.PlayTransactions(devInkChainTree, []*transactions.Transaction{establishInk})
 		if err != nil {
 			return errors.Wrap(err, "error establishing dev ink token")
 		}
@@ -142,7 +142,7 @@ func (dis *DevInkSource) EnsureBalance(ctx context.Context, minimum uint64) erro
 			return errors.Wrap(err, "error creating mint_token transaction for dev ink")
 		}
 
-		devInkChainTree, _, err = dis.Net.PlayTransactions(devInkChainTree, []*transactions.Transaction{mintInk})
+		devInkChainTree, err = dis.Net.PlayTransactions(devInkChainTree, []*transactions.Transaction{mintInk})
 		if err != nil {
 			return errors.Wrap(err, "error minting dev ink token")
 		}
@@ -172,7 +172,7 @@ func (dis *DevInkSource) SendInk(ctx context.Context, destinationChainId string,
 		return nil, errors.Wrapf(err, "error creating send_token transaction for dev ink to %s", destinationChainId)
 	}
 
-	devInkSource, txResp, err := dis.Net.PlayTransactions(devInkChainTree, []*transactions.Transaction{sendInk})
+	devInkSource, txResp, err := dis.Net.PlayTransactionsWithResp(devInkChainTree, []*transactions.Transaction{sendInk})
 	if err != nil {
 		return nil, errors.Wrapf(err, "error sending dev ink token to %s", destinationChainId)
 	}

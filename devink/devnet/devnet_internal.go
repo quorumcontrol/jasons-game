@@ -16,12 +16,12 @@ type DevRemoteNetwork struct {
 
 type DevNetwork interface {
 	network.Network
-	PlayTransactions(tree *consensus.SignedChainTree, transactions []*transactions.Transaction) (*consensus.SignedChainTree, *consensus.AddBlockResponse, error)
+	PlayTransactionsWithResp(tree *consensus.SignedChainTree, transactions []*transactions.Transaction) (*consensus.SignedChainTree, *consensus.AddBlockResponse, error)
 }
 
 var _ DevNetwork = &DevRemoteNetwork{}
 
-func (n *DevRemoteNetwork) PlayTransactions(tree *consensus.SignedChainTree, transactions []*transactions.Transaction) (*consensus.SignedChainTree, *consensus.AddBlockResponse, error) {
+func (n *DevRemoteNetwork) PlayTransactionsWithResp(tree *consensus.SignedChainTree, transactions []*transactions.Transaction) (*consensus.SignedChainTree, *consensus.AddBlockResponse, error) {
 	well, err := n.RemoteNetwork.InkWell()
 	if err != nil {
 		return nil, nil, errors.Wrap(err, "error fetching remote network inkwell")
