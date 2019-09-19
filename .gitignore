@@ -51,3 +51,4 @@ courts/yml.tar.gz
 !*.secret
 
 dids.txt
+benchmark/lambda
