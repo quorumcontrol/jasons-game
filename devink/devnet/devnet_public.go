@@ -17,6 +17,6 @@ type DevRemoteNetwork struct {
 	*network.RemoteNetwork
 }
 
-func (n *DevRemoteNetwork) PlayTransactions(tree *consensus.SignedChainTree, transactions []*transactions.Transaction) (*consensus.SignedChainTree, *consensus.AddBlockResponse, error) {
+func (n *DevRemoteNetwork) PlayTransactionsWithResp(tree *consensus.SignedChainTree, transactions []*transactions.Transaction) (*consensus.SignedChainTree, *consensus.AddBlockResponse, error) {
 	return nil, nil, errors.New("unavailable in public build")
 }
