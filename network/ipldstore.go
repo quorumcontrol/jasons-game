@@ -84,20 +84,22 @@ func (ts *IPLDTreeStore) getTip(did string) (tip cid.Cid, remote bool, err error
 	cachedTip, found := ts.tipCache.Get(did)
 	if found && !cachedTip.(cid.Cid).Equals(tip) {
 		cachedTree := dag.NewDag(context.Background(), cachedTip.(cid.Cid), ts)
-		cachedHeight, _, err := cachedTree.Resolve(ctx, []string{"height"})
-		if err != nil || cachedHeight == nil {
+		cachedRoot := &chaintree.RootNode{}
+		err = cachedTree.ResolveInto(ctx, []string{}, cachedRoot)
+		if err != nil || cachedRoot == nil {
 			log.Errorf("error checking cached height, continuing with remote tip")
 			return tip, remote, nil
 		}
 
 		remoteTree := dag.NewDag(context.Background(), tip, ts)
-		remoteHeight, _, err := remoteTree.Resolve(ctx, []string{"height"})
-		if err != nil || remoteHeight == nil {
+		remoteRoot := &chaintree.RootNode{}
+		err = remoteTree.ResolveInto(ctx, []string{}, remoteRoot)
+		if err != nil || remoteRoot == nil {
 			log.Errorf("error checking remote height, continuing with remote tip")
 			return tip, remote, nil
 		}
 		// our local transactions have produced a more recent valid tip, so use it
-		if cachedHeight.(uint64) > remoteHeight.(uint64) {
+		if cachedRoot.Height > remoteRoot.Height {
 			return cachedTip.(cid.Cid), remote, nil
 		}
 	}
