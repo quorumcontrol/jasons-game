@@ -576,7 +576,7 @@ func (g *Game) handlePickUpObject(actorCtx actor.Context, interaction *PickUpObj
 
 func (g *Game) objectAlreadyExistsResponse(actorCtx actor.Context, objName string) {
 	g.sendUserMessage(actorCtx,
-		fmt.Sprintf("You already have an object named \"%s\" in your bag of hodling. Put that somewhere else and maybe you can pick this one up too.",
+		fmt.Sprintf("You already have an object named \"%s\" in your bag of hodling.",
 			objName))
 }
 
