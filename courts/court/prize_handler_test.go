@@ -70,7 +70,7 @@ func TestPrizeHandler(t *testing.T) {
 
 	prizeNum, _, err := handler.Tree().ChainTree.Dag.Resolve(ctx, []string{"tree", "data", "jasons-game", "prizeNumber"})
 	require.Nil(t, err)
-	require.Equal(t, prizeNum, uint64(1))
+	require.Equal(t, prizeNum, 1)
 
 	firstWinnerPlayer, _, err := handler.Tree().ChainTree.Dag.Resolve(ctx, []string{"tree", "data", "jasons-game", "winners", "100", "1", "player", "id"})
 	require.Nil(t, err)
@@ -91,7 +91,7 @@ func TestPrizeHandler(t *testing.T) {
 	require.Nil(t, err)
 
 	// fake lots of winners
-	handler.tree, err = net.UpdateChainTree(handler.Tree(), "jasons-game/prizeNumber", uint64(344))
+	handler.tree, err = net.UpdateChainTree(handler.Tree(), "jasons-game/prizeNumber", 344)
 	require.Nil(t, err)
 
 	player2Tree, err := net.CreateChainTree()
@@ -106,7 +106,7 @@ func TestPrizeHandler(t *testing.T) {
 
 	prizeNum, _, err = handler.Tree().ChainTree.Dag.Resolve(ctx, []string{"tree", "data", "jasons-game", "prizeNumber"})
 	require.Nil(t, err)
-	require.Equal(t, prizeNum, uint64(345))
+	require.Equal(t, prizeNum, 345)
 
 	firstWinnerPlayer, _, err = handler.Tree().ChainTree.Dag.Resolve(ctx, []string{"tree", "data", "jasons-game", "winners", "100", "1", "player", "id"})
 	require.Nil(t, err)

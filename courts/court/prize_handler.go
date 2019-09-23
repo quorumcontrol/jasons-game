@@ -248,19 +248,16 @@ func (s *responseSender) Errorf(str string, args ...interface{}) error {
 	return err
 }
 
-func (h *PrizeHandler) currentPrizeNumber() (uint64, error) {
-	prizeNumUncast, _, err := h.Tree().ChainTree.Dag.Resolve(context.TODO(), []string{"tree", "data", "jasons-game", "prizeNumber"})
+func (h *PrizeHandler) currentPrizeNumber() (int, error) {
+	ctx := context.TODO()
+	prizeNumberUncast, remaining, err := h.Tree().ChainTree.Dag.Resolve(ctx, []string{"tree", "data", "jasons-game", "prizeNumber"})
 	if err != nil {
 		return 0, err
 	}
-	if prizeNumUncast == nil {
+	if prizeNumberUncast == nil || len(remaining) > 0 {
 		return 0, nil
 	}
-	prizeNum, ok := prizeNumUncast.(uint64)
-	if !ok {
-		return 0, fmt.Errorf("error casting prizeNumber")
-	}
-	return prizeNum, nil
+	return prizeNumberUncast.(int), nil
 }
 
 const prizeBucketSize = float64(100)
