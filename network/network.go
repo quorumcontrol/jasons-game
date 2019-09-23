@@ -257,9 +257,23 @@ func (n *RemoteNetwork) PrivateKey() *ecdsa.PrivateKey {
 	return n.signingKey
 }
 
-func (n *RemoteNetwork) FindOrCreatePassphraseTree(passphrase string) (*consensus.SignedChainTree, error) {
+func (n *RemoteNetwork) passphraseToKey(passphrase string) (*ecdsa.PrivateKey, error) {
 	seed := sha256.Sum256([]byte(passphrase))
-	treeKey, err := consensus.PassPhraseKey(crypto.FromECDSA(n.PrivateKey()), seed[:32])
+
+	return consensus.PassPhraseKey(crypto.FromECDSA(n.PrivateKey()), seed[:32])
+}
+
+func (n *RemoteNetwork) takeOwnership(tree *consensus.SignedChainTree, treeKey *ecdsa.PrivateKey) (*consensus.SignedChainTree, error) {
+	newTree, err := n.ChangeChainTreeOwnerWithKey(tree, treeKey, []string{crypto.PubkeyToAddress(*n.PublicKey()).String()})
+	if err != nil {
+		return nil, errors.Wrap(err, "chowning passphrase chaintree")
+	}
+
+	return newTree, nil
+}
+
+func (n *RemoteNetwork) FindOrCreatePassphraseTree(passphrase string) (*consensus.SignedChainTree, error) {
+	treeKey, err := n.passphraseToKey(passphrase)
 	if err != nil {
 		return nil, errors.Wrap(err, "setting up passphrase tree keys")
 	}
@@ -333,12 +347,12 @@ func (n *RemoteNetwork) CreateChainTree() (*consensus.SignedChainTree, error) {
 		return nil, errors.Wrap(err, "error creating ownership transaction for chaintree")
 	}
 
-	well, err := n.InkWell()
+	well, wellKey, err := n.InkWell()
 	if err != nil {
 		return nil, errors.Wrap(err, "error fetching inkwell")
 	}
 
-	_, err = n.Tupelo.PlayTransactions(tree, key, []*transactions.Transaction{transaction}, well)
+	_, err = n.Tupelo.PlayTransactions(tree, key, []*transactions.Transaction{transaction}, well, wellKey)
 	if err != nil {
 		return nil, errors.Wrap(err, "error playing transactions")
 	}
@@ -408,12 +422,12 @@ func (n *RemoteNetwork) UpdateChainTree(tree *consensus.SignedChainTree, path st
 		return nil, errors.Wrap(err, "error creating set data transaction")
 	}
 
-	well, err := n.InkWell()
+	well, wellKey, err := n.InkWell()
 	if err != nil {
 		return nil, errors.Wrap(err, "error fetching inkwell")
 	}
 
-	_, err = n.Tupelo.PlayTransactions(tree, n.PrivateKey(), []*transactions.Transaction{transaction}, well)
+	_, err = n.Tupelo.PlayTransactions(tree, n.PrivateKey(), []*transactions.Transaction{transaction}, well, wellKey)
 	if err != nil {
 		return nil, errors.Wrap(err, "error updating chaintree")
 	}
@@ -422,12 +436,12 @@ func (n *RemoteNetwork) UpdateChainTree(tree *consensus.SignedChainTree, path st
 }
 
 func (n *RemoteNetwork) PlayTransactions(tree *consensus.SignedChainTree, transactions []*transactions.Transaction) (*consensus.SignedChainTree, error) {
-	well, err := n.InkWell()
+	well, wellKey, err := n.InkWell()
 	if err != nil {
 		return nil, errors.Wrap(err, "error fetching remote network inkwell")
 	}
 
-	_, err = n.Tupelo.PlayTransactions(tree, n.PrivateKey(), transactions, well)
+	_, err = n.Tupelo.PlayTransactions(tree, n.PrivateKey(), transactions, well, wellKey)
 	if err != nil {
 		return nil, errors.Wrap(err, "error updating chaintree")
 	}
@@ -442,12 +456,12 @@ func (n *RemoteNetwork) changeChainTreeOwner(tree *consensus.SignedChainTree, pr
 		return nil, errors.Wrap(err, "error updating chaintree")
 	}
 
-	well, err := n.InkWell()
+	well, wellKey, err := n.InkWell()
 	if err != nil {
 		return nil, errors.Wrap(err, "error fetching inkwell")
 	}
 
-	_, err = n.Tupelo.PlayTransactions(tree, privateKey, []*transactions.Transaction{transaction}, well)
+	_, err = n.Tupelo.PlayTransactions(tree, privateKey, []*transactions.Transaction{transaction}, well, wellKey)
 	if err != nil {
 		return nil, errors.Wrap(err, "error updating chaintree")
 	}
@@ -507,22 +521,25 @@ func (rn *RemoteNetwork) NewCurrentStateSubscriptionProps(did string) *actor.Pro
 	})
 }
 
-func (n *RemoteNetwork) InkWell() (*consensus.SignedChainTree, error) {
-	well, err := n.GetChainTreeByName(inkWellName)
+func (n *RemoteNetwork) InkWell() (*consensus.SignedChainTree, *ecdsa.PrivateKey, error) {
+	inkWellKey, err := n.passphraseToKey("inkwell")
 	if err != nil {
-		return nil, errors.Wrap(err, "error looking up inkwell chaintree")
+		return nil, nil, errors.Wrap(err, "creating inkwell key")
 	}
 
-	if well != nil {
-		return well, nil
-	}
-
-	well, err = n.CreateNamedChainTree(inkWellName)
+	inkWell, err := n.GetTree(consensus.EcdsaPubkeyToDid(inkWellKey.PublicKey))
 	if err != nil {
-		return nil, errors.Wrap(err, "error creating inkwell chaintree")
+		return nil, nil, errors.Wrap(err, "getting inkwell")
 	}
 
-	return well, nil
+	if inkWell == nil {
+		inkWell, err = n.CreateChainTreeWithKey(inkWellKey)
+		if err != nil {
+			return nil, nil, errors.Wrap(err, "creating inkwell")
+		}
+	}
+
+	return inkWell, inkWellKey, nil
 }
 
 func (n *RemoteNetwork) InkTokenName() *consensus.TokenName {
@@ -532,12 +549,12 @@ func (n *RemoteNetwork) InkTokenName() *consensus.TokenName {
 }
 
 func (n *RemoteNetwork) SendInk(amount uint64, destinationChainId string) (*transactions.TokenPayload, error) {
-	well, err := n.InkWell()
+	well, wellKey, err := n.InkWell()
 	if err != nil {
 		return nil, errors.Wrap(err, "error fetching inkwell")
 	}
 
-	tokenPayload, err := n.Tupelo.SendInk(well, n.PrivateKey(), amount, destinationChainId)
+	tokenPayload, err := n.Tupelo.SendInk(well, wellKey, amount, destinationChainId)
 	if err != nil {
 		return nil, errors.Wrap(err, "error getting token payload for ink send")
 	}

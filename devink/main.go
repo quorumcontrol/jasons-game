@@ -34,7 +34,10 @@ func main() {
 		panic(errors.Wrap(err, "error initializing dev ink"))
 	}
 
-	devInkChainTree := devInkSource.ChainTree
+	devInkChainTree, _, err := devInkSource.Net.InkWell()
+	if err != nil {
+		panic(err)
+	}
 
 	devInkDID := devInkChainTree.MustId()
 

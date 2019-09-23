@@ -21,8 +21,7 @@ import (
 var log = logging.Logger("devink")
 
 type DevInkSource struct {
-	ChainTree *consensus.SignedChainTree
-	Net       devnet.DevRemoteNetwork
+	Net devnet.DevRemoteNetwork
 }
 
 func inkSendTxId() (string, error) {
@@ -66,16 +65,15 @@ func NewSource(ctx context.Context, dataStoreDir string, connectToLocalnet bool)
 
 	net := devnet.DevRemoteNetwork{RemoteNetwork: rNet}
 
-	devInkSource, err := net.FindOrCreatePassphraseTree("dev-ink-source")
-	if err != nil {
-		return nil, errors.Wrap(err, "error getting ink source chaintree")
-	}
-
-	return &DevInkSource{ChainTree: devInkSource, Net: net}, nil
+	return &DevInkSource{Net: net}, nil
 }
 
 func (dis *DevInkSource) tokenLedger(ctx context.Context) (*consensus.TreeLedger, error) {
-	devInkChainTree := dis.ChainTree
+	devInkChainTree, _, err := dis.Net.InkWell()
+	if err != nil {
+		return nil, errors.Wrap(err, "error fetching dev ink chaintree")
+	}
+
 	devInkSourceTree, err := devInkChainTree.ChainTree.Tree(ctx)
 	if err != nil {
 		return nil, errors.Wrap(err, "error getting ink source tree")
@@ -87,7 +85,10 @@ func (dis *DevInkSource) tokenLedger(ctx context.Context) (*consensus.TreeLedger
 }
 
 func (dis *DevInkSource) EnsureToken(ctx context.Context) error {
-	devInkChainTree := dis.ChainTree
+	devInkChainTree, devInkKey, err := dis.Net.InkWell()
+	if err != nil {
+		return errors.Wrap(err, "error fetching dev ink chaintree")
+	}
 
 	devInkLedger, err := dis.tokenLedger(ctx)
 	if err != nil {
@@ -108,19 +109,25 @@ func (dis *DevInkSource) EnsureToken(ctx context.Context) error {
 			return errors.Wrap(err, "error creating establish_token transaction for dev ink")
 		}
 
-		devInkChainTree, err = dis.Net.PlayTransactions(devInkChainTree, []*transactions.Transaction{establishInk})
+		_, err = dis.Net.Tupelo.PlayTransactionsWithoutInk(devInkChainTree, devInkKey, []*transactions.Transaction{establishInk})
 		if err != nil {
 			return errors.Wrap(err, "error establishing dev ink token")
 		}
 
-		dis.ChainTree = devInkChainTree
+		err = dis.Net.TreeStore().UpdateTreeMetadata(devInkChainTree)
+		if err != nil {
+			return errors.Wrap(err, "error saving dev ink chaintree")
+		}
 	}
 
 	return nil
 }
 
 func (dis *DevInkSource) EnsureBalance(ctx context.Context, minimum uint64) error {
-	devInkChainTree := dis.ChainTree
+	devInkChainTree, devInkKey, err := dis.Net.InkWell()
+	if err != nil {
+		return errors.Wrap(err, "error fetching dev ink chaintree")
+	}
 
 	devInkLedger, err := dis.tokenLedger(ctx)
 	if err != nil {
@@ -142,19 +149,26 @@ func (dis *DevInkSource) EnsureBalance(ctx context.Context, minimum uint64) erro
 			return errors.Wrap(err, "error creating mint_token transaction for dev ink")
 		}
 
-		devInkChainTree, err = dis.Net.PlayTransactions(devInkChainTree, []*transactions.Transaction{mintInk})
+		_, err = dis.Net.Tupelo.PlayTransactionsWithoutInk(devInkChainTree, devInkKey, []*transactions.Transaction{mintInk})
 		if err != nil {
 			return errors.Wrap(err, "error minting dev ink token")
 		}
 
-		dis.ChainTree = devInkChainTree
+		err = dis.Net.TreeStore().UpdateTreeMetadata(devInkChainTree)
+		if err != nil {
+			return errors.Wrap(err, "error saving dev ink chaintree")
+		}
 	}
 
 	return nil
 }
 
 func (dis *DevInkSource) SendInk(ctx context.Context, destinationChainId string, amount uint64) (*transactions.TokenPayload, error) {
-	devInkChainTree := dis.ChainTree
+	devInkChainTree, devInkKey, err := dis.Net.InkWell()
+	if err != nil {
+		return nil, errors.Wrap(err, "error fetching dev ink chaintree")
+	}
+
 	devInkDID := devInkChainTree.MustId()
 
 	tokenName, err := consensus.CanonicalTokenName(devInkChainTree.ChainTree.Dag, devInkDID, "ink", true)
@@ -172,7 +186,7 @@ func (dis *DevInkSource) SendInk(ctx context.Context, destinationChainId string,
 		return nil, errors.Wrapf(err, "error creating send_token transaction for dev ink to %s", destinationChainId)
 	}
 
-	devInkSource, txResp, err := dis.Net.PlayTransactionsWithResp(devInkChainTree, []*transactions.Transaction{sendInk})
+	devInkSource, txResp, err := dis.Net.PlayTransactionsWithResp(devInkChainTree, devInkKey, []*transactions.Transaction{sendInk})
 	if err != nil {
 		return nil, errors.Wrapf(err, "error sending dev ink token to %s", destinationChainId)
 	}

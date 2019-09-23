@@ -132,8 +132,8 @@ func (t *Tupelo) receiveInk(c *client.Client, tree *consensus.SignedChainTree, p
 	return nil
 }
 
-func (t *Tupelo) depositInk(c *client.Client, key *ecdsa.PrivateKey, tree *consensus.SignedChainTree, inkHolder *consensus.SignedChainTree) (*transactions.Transaction, error) {
-	depositPayload, err := t.sendInk(c, inkHolder, key, t.NotaryGroup.Config().BurnAmount, tree.MustId())
+func (t *Tupelo) depositInk(c *client.Client, tree *consensus.SignedChainTree, key *ecdsa.PrivateKey, inkHolder *consensus.SignedChainTree, inkKey *ecdsa.PrivateKey) (*transactions.Transaction, error) {
+	depositPayload, err := t.sendInk(c, inkHolder, inkKey, t.NotaryGroup.Config().BurnAmount, tree.MustId())
 	if err != nil {
 		return nil, errors.Wrap(err, "error sending ink")
 	}
@@ -141,13 +141,13 @@ func (t *Tupelo) depositInk(c *client.Client, key *ecdsa.PrivateKey, tree *conse
 	return t.receiveInkTransaction(tree, key, depositPayload)
 }
 
-func (t *Tupelo) PlayTransactions(tree *consensus.SignedChainTree, key *ecdsa.PrivateKey, transactions []*transactions.Transaction, inkHolder *consensus.SignedChainTree) (*consensus.AddBlockResponse, error) {
+func (t *Tupelo) PlayTransactions(tree *consensus.SignedChainTree, key *ecdsa.PrivateKey, transactions []*transactions.Transaction, inkHolder *consensus.SignedChainTree, inkKey *ecdsa.PrivateKey) (*consensus.AddBlockResponse, error) {
 	c := client.New(t.NotaryGroup, tree.MustId(), t.PubSubSystem)
 	c.Listen()
 	defer c.Stop()
 
 	if t.shouldBurn() {
-		depositTx, err := t.depositInk(c, key, tree, inkHolder)
+		depositTx, err := t.depositInk(c, tree, key, inkHolder, inkKey)
 		if err != nil {
 			return nil, errors.Wrap(err, "error depositing ink")
 		}
@@ -155,6 +155,14 @@ func (t *Tupelo) PlayTransactions(tree *consensus.SignedChainTree, key *ecdsa.Pr
 		txnsWithDeposit := append(transactions, depositTx)
 		return t.playTransactions(c, tree, key, txnsWithDeposit)
 	}
+
+	return t.playTransactions(c, tree, key, transactions)
+}
+
+func (t *Tupelo) PlayTransactionsWithoutInk(tree *consensus.SignedChainTree, key *ecdsa.PrivateKey, transactions []*transactions.Transaction) (*consensus.AddBlockResponse, error) {
+	c := client.New(t.NotaryGroup, tree.MustId(), t.PubSubSystem)
+	c.Listen()
+	defer c.Stop()
 
 	return t.playTransactions(c, tree, key, transactions)
 }

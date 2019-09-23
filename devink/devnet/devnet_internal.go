@@ -3,6 +3,8 @@
 package devnet
 
 import (
+	"crypto/ecdsa"
+
 	"github.com/quorumcontrol/messages/build/go/transactions"
 	"github.com/quorumcontrol/tupelo-go-sdk/consensus"
 
@@ -16,18 +18,13 @@ type DevRemoteNetwork struct {
 
 type DevNetwork interface {
 	network.Network
-	PlayTransactionsWithResp(tree *consensus.SignedChainTree, transactions []*transactions.Transaction) (*consensus.SignedChainTree, *consensus.AddBlockResponse, error)
+	PlayTransactionsWithResp(tree *consensus.SignedChainTree, key *ecdsa.PrivateKey, transactions []*transactions.Transaction) (*consensus.SignedChainTree, *consensus.AddBlockResponse, error)
 }
 
 var _ DevNetwork = &DevRemoteNetwork{}
 
-func (n *DevRemoteNetwork) PlayTransactionsWithResp(tree *consensus.SignedChainTree, transactions []*transactions.Transaction) (*consensus.SignedChainTree, *consensus.AddBlockResponse, error) {
-	well, err := n.RemoteNetwork.InkWell()
-	if err != nil {
-		return nil, nil, errors.Wrap(err, "error fetching remote network inkwell")
-	}
-
-	txResp, err := n.Tupelo.PlayTransactions(tree, n.PrivateKey(), transactions, well)
+func (n *DevRemoteNetwork) PlayTransactionsWithResp(tree *consensus.SignedChainTree, key *ecdsa.PrivateKey, transactions []*transactions.Transaction) (*consensus.SignedChainTree, *consensus.AddBlockResponse, error) {
+	txResp, err := n.Tupelo.PlayTransactionsWithoutInk(tree, key, transactions)
 	if err != nil {
 		return nil, nil, errors.Wrap(err, "error playing transaction")
 	}
