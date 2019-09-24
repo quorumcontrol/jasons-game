@@ -917,7 +917,7 @@ func (g *Game) interactionCommandsFor(actorCtx actor.Context, pid *actor.PID) (c
 				continue
 			}
 		case *DropObjectInteraction:
-			// Filter out DropUpObject if NOT in player inventory
+			// Filter out DropObject if NOT in player inventory
 			if g.inventoryActor != pid {
 				continue
 			}
