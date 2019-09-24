@@ -908,14 +908,27 @@ func (g *Game) interactionCommandsFor(actorCtx actor.Context, pid *actor.PID) (c
 	}
 
 	interactions := interactionsResponse.Interactions
-	interactionCommands := make(commandList, len(interactions))
-	for i, interactionResp := range interactions {
-		interactionCommands[i] = &interactionCommand{
+	interactionCommands := make(commandList, 0)
+	for _, interactionResp := range interactions {
+		switch interactionResp.Interaction.(type) {
+		case *PickUpObjectInteraction:
+			// Filter out PickUpObject if in player inventory
+			if g.inventoryActor == pid {
+				continue
+			}
+		case *DropObjectInteraction:
+			// Filter out DropUpObject if NOT in player inventory
+			if g.inventoryActor != pid {
+				continue
+			}
+		}
+
+		interactionCommands = append(interactionCommands, &interactionCommand{
 			parse:       interactionResp.Interaction.GetCommand(),
 			interaction: interactionResp.Interaction,
 			helpGroup:   interactionResp.AttachedTo,
 			did:         interactionResp.AttachedToDid,
-		}
+		})
 	}
 	return interactionCommands, nil
 }
