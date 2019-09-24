@@ -116,7 +116,9 @@ func (i *Importer) loadBasicData(tree *consensus.SignedChainTree, data map[strin
 
 	for _, key := range sortedKeys {
 		val := flatPaths[key]
+		log.Debugf("attempting to set %s to %s", fmt.Sprintf("jasons-game/%s", key), val)
 		tree, err = i.network.UpdateChainTree(tree, fmt.Sprintf("jasons-game/%s", key), val)
+		log.Debugf("did set %s to %s", fmt.Sprintf("jasons-game/%s", key), val)
 
 		if err != nil {
 			return tree, errors.Wrap(err, "updating location data")
@@ -404,6 +406,7 @@ func (i *Importer) updateTreeIfChanged(did string, treeData interface{}, updateF
 
 	// needs updated
 	if !hashValStrOk || newHashStr != hashValStr {
+		log.Debugf("attempting to store empty state")
 		// reset tree back to an empty state for reimporting
 		tree, err = i.network.UpdateChainTree(tree, "", make(map[string]interface{}))
 		if err != nil {

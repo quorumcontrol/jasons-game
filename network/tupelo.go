@@ -1,7 +1,9 @@
 package network
 
 import (
+	"context"
 	"crypto/ecdsa"
+	"fmt"
 
 	"github.com/ipfs/go-cid"
 
@@ -93,7 +95,26 @@ func (t *Tupelo) PlayTransactions(tree *consensus.SignedChainTree, key *ecdsa.Pr
 		tipPtr = &tip
 	}
 
-	return c.PlayTransactions(tree, key, tipPtr, transactions)
+	var prevTip cid.Cid
+
+	previousBlockUncast, _, _ := tree.ChainTree.Dag.Resolve(context.Background(), []string{"chain", "end"})
+	if previousBlockUncast != nil {
+		previousBlock, _ := previousBlockUncast.(map[string]interface{})
+		prevTip, _ = previousBlock["previousTip"].(cid.Cid)
+	}
+
+	abr, err := c.PlayTransactions(tree, key, tipPtr, transactions)
+
+	if err != nil {
+		panic(err)
+	}
+
+	fmt.Println("-------------------------------------------------------------------------")
+	fmt.Printf("PlayTransactions for %s - tip %s - lastTip %s - abrTip %s \n", tree.MustId(), tree.Tip().String(), prevTip.String(), abr.Tip.String())
+	fmt.Printf("%v\n", tree.ChainTree.Dag.Dump(context.Background()))
+	fmt.Println("-------------------------------------------------------------------------")
+
+	return abr, err
 }
 
 func (t *Tupelo) TokenPayloadForTransaction(tree *consensus.SignedChainTree, tokenName *consensus.TokenName, sendTokenTxId string, sendTxSig *signatures.Signature) (*transactions.TokenPayload, error) {
