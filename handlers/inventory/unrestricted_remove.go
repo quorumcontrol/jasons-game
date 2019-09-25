@@ -4,10 +4,9 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/pkg/errors"
-
 	"github.com/AsynkronIT/protoactor-go/actor"
 	"github.com/gogo/protobuf/proto"
+	"github.com/pkg/errors"
 	"github.com/quorumcontrol/jasons-game/game/trees"
 	"github.com/quorumcontrol/jasons-game/handlers"
 	broadcastHandlers "github.com/quorumcontrol/jasons-game/handlers/broadcast"
@@ -33,11 +32,15 @@ func NewUnrestrictedRemoveHandler(network network.Network) *UnrestrictedRemoveHa
 func (h *UnrestrictedRemoveHandler) Handle(msg proto.Message) error {
 	switch msg := msg.(type) {
 	case *jasonsgame.RequestObjectTransferMessage:
-		rollbacks := make([]func(error) error, 0)
+		rollbacks := make([]func() error, 0)
 
-		handleRollbacks := func(err error, rollbackFuncs []func(error) error) error {
+		handleRollbacks := func(err error, rollbackFuncs []func() error) error {
 			for _, rbFn := range rollbackFuncs {
-				err = rbFn(err)
+				newErr := rbFn()
+				// if one of the rollbacks fails, don't continue
+				if newErr != nil {
+					return errors.Wrap(err, fmt.Sprintf("error on rollback: %v", newErr.Error()))
+				}
 			}
 			return err
 		}
@@ -93,10 +96,8 @@ func (h *UnrestrictedRemoveHandler) Handle(msg proto.Message) error {
 		if err != nil {
 			return fmt.Errorf("error changing object owner: %v", err)
 		}
-		rollbacks = append(rollbacks, func(err error) error {
-			if _, newErr := h.network.ChangeChainTreeOwner(objectTree, sourceAuths); newErr != nil {
-				err = errors.Wrap(err, fmt.Sprintf("error rolling back ownership: %v", newErr.Error()))
-			}
+		rollbacks = append(rollbacks, func() error {
+			_, err := h.network.ChangeChainTreeOwner(objectTree, sourceAuths)
 			return err
 		})
 
@@ -104,11 +105,8 @@ func (h *UnrestrictedRemoveHandler) Handle(msg proto.Message) error {
 		if err != nil {
 			return fmt.Errorf("error updating objects in inventory: %v", handleRollbacks(err, rollbacks))
 		}
-		rollbacks = append(rollbacks, func(err error) error {
-			if newErr := sourceInventory.Add(msg.Object); newErr != nil {
-				err = errors.Wrap(err, fmt.Sprintf("error rolling back inventory: %v", newErr.Error()))
-			}
-			return err
+		rollbacks = append(rollbacks, func() error {
+			return sourceInventory.Add(msg.Object)
 		})
 
 		future := actor.NewFuture(20 * time.Second)
