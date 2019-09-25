@@ -10,12 +10,14 @@ import (
 
 	"github.com/AsynkronIT/protoactor-go/actor"
 	"github.com/ipfs/go-cid"
+	"github.com/ipfs/go-datastore"
 	logging "github.com/ipfs/go-log"
 	"github.com/pkg/errors"
 	"gopkg.in/yaml.v2"
 
 	"github.com/quorumcontrol/tupelo-go-sdk/consensus"
 
+	"github.com/quorumcontrol/jasons-game/config"
 	"github.com/quorumcontrol/jasons-game/inkfaucet/inkfaucet"
 	"github.com/quorumcontrol/jasons-game/inkfaucet/invites"
 	"github.com/quorumcontrol/jasons-game/network"
@@ -48,6 +50,7 @@ type Game struct {
 	behavior             actor.Behavior
 	inkDID               string
 	invitesActor         *actor.PID
+	ds                   datastore.Batching
 }
 
 type GameConfig struct {
@@ -55,11 +58,14 @@ type GameConfig struct {
 	UiActor    *actor.PID
 	Network    network.Network
 	InkDID     string
+	DataStore  datastore.Batching
 }
 
 type StateChange struct {
 	PID *actor.PID
 }
+
+var lastLocationKey = datastore.NewKey("last-location")
 
 func NewGameProps(cfg *GameConfig) *actor.Props {
 	g := &Game{
@@ -69,6 +75,11 @@ func NewGameProps(cfg *GameConfig) *actor.Props {
 		playerTree: cfg.PlayerTree,
 		behavior:   actor.NewBehavior(),
 		inkDID:     cfg.InkDID,
+		ds:         cfg.DataStore,
+	}
+
+	if g.ds == nil {
+		g.ds = config.MemoryDataStore()
 	}
 
 	if g.playerTree == nil {
@@ -176,7 +187,12 @@ func (g *Game) initializeGame(actorCtx actor.Context) {
 		panic(errors.Wrap(err, "error attaching interactions for inventory"))
 	}
 
-	g.setLocation(actorCtx, g.playerTree.HomeLocation.MustId())
+	locDidBytes, _ := g.ds.Get(lastLocationKey)
+	if locDidBytes == nil {
+		locDidBytes = []byte(g.playerTree.HomeLocation.MustId())
+	}
+
+	g.setLocation(actorCtx, string(locDidBytes))
 
 	g.sendUserMessage(
 		actorCtx,
@@ -825,9 +841,13 @@ func (g *Game) setLocation(actorCtx actor.Context, locationDid string) {
 		PlayerDid: g.playerTree.Did(),
 	}))
 	g.locationDid = locationDid
+	err := g.ds.Put(lastLocationKey, []byte(locationDid))
+	if err != nil {
+		panic(errors.Wrap(err, "error saving last location"))
+	}
 
 	log.Debug("replacing interactions for new location")
-	err := g.replaceInteractionsFor(actorCtx, g.locationActor, oldLocationActor)
+	err = g.replaceInteractionsFor(actorCtx, g.locationActor, oldLocationActor)
 	if err != nil {
 		panic(errors.Wrap(err, "error attaching interactions for location"))
 	}
