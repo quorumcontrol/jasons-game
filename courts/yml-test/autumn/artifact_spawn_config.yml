@@ -1,0 +1,4 @@
+locations:
+  - "{{.Locations.artifact_spawn}}"
+forgers:
+  - forged1
