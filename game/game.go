@@ -10,12 +10,15 @@ import (
 
 	"github.com/AsynkronIT/protoactor-go/actor"
 	"github.com/ipfs/go-cid"
+	"github.com/ipfs/go-datastore"
 	logging "github.com/ipfs/go-log"
 	"github.com/pkg/errors"
 	"gopkg.in/yaml.v2"
 
 	"github.com/quorumcontrol/tupelo-go-sdk/consensus"
 
+	"github.com/quorumcontrol/jasons-game/config"
+	"github.com/quorumcontrol/jasons-game/game/static"
 	"github.com/quorumcontrol/jasons-game/inkfaucet/inkfaucet"
 	"github.com/quorumcontrol/jasons-game/inkfaucet/invites"
 	"github.com/quorumcontrol/jasons-game/network"
@@ -48,6 +51,7 @@ type Game struct {
 	behavior             actor.Behavior
 	inkDID               string
 	invitesActor         *actor.PID
+	ds                   datastore.Batching
 }
 
 type GameConfig struct {
@@ -55,11 +59,14 @@ type GameConfig struct {
 	UiActor    *actor.PID
 	Network    network.Network
 	InkDID     string
+	DataStore  datastore.Batching
 }
 
 type StateChange struct {
 	PID *actor.PID
 }
+
+var lastLocationKey = datastore.NewKey("last-location")
 
 func NewGameProps(cfg *GameConfig) *actor.Props {
 	g := &Game{
@@ -69,6 +76,11 @@ func NewGameProps(cfg *GameConfig) *actor.Props {
 		playerTree: cfg.PlayerTree,
 		behavior:   actor.NewBehavior(),
 		inkDID:     cfg.InkDID,
+		ds:         cfg.DataStore,
+	}
+
+	if g.ds == nil {
+		g.ds = config.MemoryDataStore()
 	}
 
 	if g.playerTree == nil {
@@ -176,7 +188,7 @@ func (g *Game) initializeGame(actorCtx actor.Context) {
 		panic(errors.Wrap(err, "error attaching interactions for inventory"))
 	}
 
-	g.setLocation(actorCtx, g.playerTree.HomeLocation.MustId())
+	g.setLocation(actorCtx, g.getDefaultLocation())
 
 	g.sendUserMessage(
 		actorCtx,
@@ -194,6 +206,22 @@ func (g *Game) initializeGame(actorCtx actor.Context) {
 	}
 
 	g.sendUserMessage(actorCtx, l)
+}
+
+// Try to get the last visited location, else go
+// to ArcadiaStart, else go to player home
+func (g *Game) getDefaultLocation() string {
+	locDidBytes, _ := g.ds.Get(lastLocationKey)
+	if locDidBytes != nil {
+		return string(locDidBytes)
+	}
+
+	locDid, _ := static.Get(g.network, "ArcadiaStart")
+	if locDid != "" {
+		return locDid
+	}
+
+	return g.playerTree.HomeLocation.MustId()
 }
 
 func (g *Game) acknowledgeReceipt(actorCtx actor.Context) {
@@ -387,10 +415,9 @@ func (g *Game) handleInteractionInput(actorCtx actor.Context, cmd *interactionCo
 	case *DeletePortalInteraction:
 		err = g.handleDeletePortal(actorCtx, args)
 	case *ChangeLocationInteraction:
-		log.Debugf("setting new location to %s", interaction.Did)
-		g.setLocation(actorCtx, interaction.Did)
-		log.Debug("sending new location to UI")
-		g.sendUILocation(actorCtx)
+		g.handleChangeLocation(actorCtx, interaction.Did)
+	case *ChangeNamedLocationInteraction:
+		g.handleChangeNamedLocation(actorCtx, interaction.Name)
 	case *DropObjectInteraction:
 		err = g.handleDropObject(actorCtx, cmd, interaction)
 	case *PickUpObjectInteraction:
@@ -433,6 +460,38 @@ func (g *Game) handleInteractionInput(actorCtx actor.Context, cmd *interactionCo
 	}
 
 	return err
+}
+
+func (g *Game) handleChangeLocation(actorCtx actor.Context, did string) {
+	log.Debugf("setting new location to %s", did)
+	g.setLocation(actorCtx, did)
+	log.Debug("sending new location to UI")
+	g.sendUILocation(actorCtx)
+}
+
+func (g *Game) handleChangeNamedLocation(actorCtx actor.Context, name string) {
+	var did string
+
+	switch name {
+	case "last-location":
+		locDidBytes, _ := g.ds.Get(lastLocationKey)
+		if locDidBytes != nil {
+			did = string(locDidBytes)
+		}
+		if did == "" {
+			did, _ = static.Get(g.network, "ArcadiaStartAgain")
+		}
+	case "home":
+		did = g.playerTree.HomeLocation.MustId()
+	default:
+		did, _ = static.Get(g.network, name)
+	}
+
+	if did == "" {
+		did = g.playerTree.HomeLocation.MustId()
+	}
+
+	g.handleChangeLocation(actorCtx, did)
 }
 
 func (g *Game) handleSetTreeValueInteraction(actorCtx actor.Context, interaction *SetTreeValueInteraction, args string) error {
@@ -839,6 +898,14 @@ func (g *Game) setLocation(actorCtx actor.Context, locationDid string) {
 	}))
 	g.locationDid = locationDid
 
+	// store previous location, except for when changing to home
+	if locationDid != g.playerTree.HomeLocation.MustId() {
+		err := g.ds.Put(lastLocationKey, []byte(locationDid))
+		if err != nil {
+			panic(errors.Wrap(err, "error saving last location"))
+		}
+	}
+
 	log.Debug("replacing interactions for new location")
 	err := g.replaceInteractionsFor(actorCtx, g.locationActor, oldLocationActor)
 	if err != nil {
@@ -943,6 +1010,18 @@ func (g *Game) interactionCommandsFor(actorCtx actor.Context, pid *actor.PID) (c
 			did:         interactionResp.AttachedToDid,
 		})
 	}
+
+	// if the location is not the players home, add portal to home command
+	if pid == g.locationActor && g.locationDid != g.playerTree.HomeLocation.MustId() {
+		interactionCommands = append(interactionCommands, &interactionCommand{
+			parse: "portal home",
+			interaction: &ChangeNamedLocationInteraction{
+				Command: "portal home",
+				Name:    "home",
+			},
+		})
+	}
+
 	return interactionCommands, nil
 }
 
