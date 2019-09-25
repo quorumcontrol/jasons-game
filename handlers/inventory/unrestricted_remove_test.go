@@ -6,10 +6,10 @@ import (
 	"time"
 
 	"github.com/gogo/protobuf/proto"
-	messages "github.com/quorumcontrol/messages/build/go/community"
 	"github.com/quorumcontrol/jasons-game/game/trees"
 	"github.com/quorumcontrol/jasons-game/network"
 	"github.com/quorumcontrol/jasons-game/pb/jasonsgame"
+	messages "github.com/quorumcontrol/messages/build/go/community"
 	"github.com/stretchr/testify/require"
 )
 
@@ -72,7 +72,7 @@ func TestUnrestrictedRemoveHandler(t *testing.T) {
 			require.Equal(t, receivedMsg.From, msg.From)
 			require.Equal(t, receivedMsg.To, msg.To)
 			require.Equal(t, receivedMsg.Object, msg.Object)
-		case <-time.After(2 * time.Second):
+		case <-time.After(10 * time.Second):
 			require.Fail(t, "timeout waiting for transferred message")
 		}
 	})
@@ -104,7 +104,7 @@ func TestUnrestrictedRemoveHandler(t *testing.T) {
 			require.Equal(t, receivedMsg.From, msg.From)
 			require.Equal(t, receivedMsg.To, msg.To)
 			require.Equal(t, receivedMsg.Object, msg.Object)
-		case <-time.After(2 * time.Second):
+		case <-time.After(10 * time.Second):
 			require.Fail(t, "timeout waiting for transferred message")
 		}
 	})
