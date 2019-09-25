@@ -555,6 +555,19 @@ func (g *Game) handlePickUpObject(actorCtx actor.Context, interaction *PickUpObj
 		return fmt.Errorf("error casting pick up object response")
 	}
 
+	if resp.Error == ErrExists {
+		objectTree, err := FindObjectTree(g.network, objectDid)
+		if err != nil {
+			return err
+		}
+		objName, _ := objectTree.GetName() // nolint: golint
+		if objName == "" {
+			objName = "object"
+		}
+		g.sendUserMessage(actorCtx, fmt.Sprintf("'%s' is already in your bag of hodling", objName))
+		return nil
+	}
+
 	if resp.Error != nil {
 		return resp.Error
 	}
