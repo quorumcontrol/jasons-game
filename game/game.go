@@ -18,6 +18,7 @@ import (
 	"github.com/quorumcontrol/tupelo-go-sdk/consensus"
 
 	"github.com/quorumcontrol/jasons-game/config"
+	"github.com/quorumcontrol/jasons-game/game/static"
 	"github.com/quorumcontrol/jasons-game/inkfaucet/inkfaucet"
 	"github.com/quorumcontrol/jasons-game/inkfaucet/invites"
 	"github.com/quorumcontrol/jasons-game/network"
@@ -187,12 +188,7 @@ func (g *Game) initializeGame(actorCtx actor.Context) {
 		panic(errors.Wrap(err, "error attaching interactions for inventory"))
 	}
 
-	locDidBytes, _ := g.ds.Get(lastLocationKey)
-	if locDidBytes == nil {
-		locDidBytes = []byte(g.playerTree.HomeLocation.MustId())
-	}
-
-	g.setLocation(actorCtx, string(locDidBytes))
+	g.setLocation(actorCtx, g.getDefaultLocation())
 
 	g.sendUserMessage(
 		actorCtx,
@@ -210,6 +206,22 @@ func (g *Game) initializeGame(actorCtx actor.Context) {
 	}
 
 	g.sendUserMessage(actorCtx, l)
+}
+
+// Try to get the last visited location, else go
+// to ArcadiaStart, else go to player home
+func (g *Game) getDefaultLocation() string {
+	locDidBytes, _ := g.ds.Get(lastLocationKey)
+	if locDidBytes != nil {
+		return string(locDidBytes)
+	}
+
+	locDid, _ := static.Get(g.network, "ArcadiaStart")
+	if locDid != "" {
+		return locDid
+	}
+
+	return g.playerTree.HomeLocation.MustId()
 }
 
 func (g *Game) acknowledgeReceipt(actorCtx actor.Context) {
