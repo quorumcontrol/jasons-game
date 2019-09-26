@@ -95,6 +95,7 @@ ifeq ($(PLATFORM), all)
 else
   ifeq ($(PLATFORM), win32)
     TARGET=squirrel.windows
+    EXE_SUFFIX=.exe
   else
     TARGET=zip/$(PLATFORM)
   endif
