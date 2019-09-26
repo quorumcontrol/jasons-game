@@ -3,6 +3,7 @@ package autumn
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/gogo/protobuf/proto"
@@ -18,10 +19,11 @@ import (
 )
 
 const combinationObjectName = "bowl"
-const combinationSuccessMsg = "your elements have been combined"
-const combinationFailureMsg = "error combining: %s - try again"
-
-const failElementID = 15
+const combinationSuccessMsg = "Your offering has been accepted, a new element is now yours."
+const combinationBaseFailureMsg = "error combining: %s - try again"
+const combinationFailureMsg = "The %s gave you nothing for your offering. It must not have been deemed acceptable."
+const combinationBlockedFailureMsg = "The Fae are especially susceptible to silver therefore transmuting elements into silver can not be allowed. Your offering has not been deemed worthy."
+const combinationNumFailureMsg = "A proper offering must include %d elements."
 
 const comboObjectPlayerPath = "player"
 const comboObjectElementsPath = "elements"
@@ -162,7 +164,7 @@ func (s *responseSender) Errorf(str string, args ...interface{}) error {
 		From:   s.source.From,
 		To:     s.source.To,
 		Object: s.source.Object,
-		Error:  fmt.Sprintf(combinationFailureMsg, err.Error()),
+		Error:  err.Error(),
 	})
 	if handlerErr != nil {
 		err = errors.Wrap(err, handlerErr.Error())
@@ -170,14 +172,18 @@ func (s *responseSender) Errorf(str string, args ...interface{}) error {
 	return err
 }
 
+func baseErr(str string, args ...interface{}) string {
+	return fmt.Sprintf(combinationBaseFailureMsg, fmt.Sprintf(str, args...))
+}
+
 func (h *ElementCombinerHandler) findCombinedElement(ids []int) *element {
 	newElementID, ok := h.combinationsMap.Find(ids)
 	if !ok {
-		newElementID = failElementID
+		return nil
 	}
 	newElement, ok := h.elements[newElementID]
 	if !ok {
-		newElement = h.elements[failElementID]
+		return nil
 	}
 	return newElement
 }
@@ -189,52 +195,52 @@ func (h *ElementCombinerHandler) handlePickupElement(msg *jasonsgame.RequestObje
 
 	inventory, err := trees.FindInventoryTree(h.net, msg.From)
 	if err != nil {
-		return sender.Errorf("could not fetch current inventory")
+		return sender.Errorf(baseErr("could not fetch current inventory"))
 	}
 
 	comboDid, err := inventory.DidForName(combinationObjectName)
 	if err != nil {
-		return sender.Errorf("could not fetch current inventory")
+		return sender.Errorf(baseErr("could not fetch current inventory"))
 	}
 
 	if comboDid == "" {
 		log.Debugf("handlePickupElement: no combination object not in inventory: from=%s obj=%s", msg.From, msg.Object)
-		return sender.Errorf("no elements to combine")
+		return sender.Errorf(baseErr("no elements to combine"))
 	}
 
 	if comboDid != msg.Object {
 		log.Debugf("handlePickupElement: wrong combination object in inventory: from=%s obj=%s combo=%s", msg.From, msg.Object, comboDid)
-		return sender.Errorf("wrong object did for %s", combinationObjectName)
+		return sender.Errorf(baseErr("wrong object did for %s", combinationObjectName))
 	}
 
 	comboObject, err := game.FindObjectTree(h.net, comboDid)
 	if err != nil {
-		return sender.Errorf("could not fetch object")
+		return sender.Errorf(baseErr("could not fetch object"))
 	}
 
 	playerDidUncast, err := comboObject.GetPath([]string{comboObjectPlayerPath})
 	if err != nil {
-		return sender.Errorf("could not fetch object")
+		return sender.Errorf(baseErr("could not fetch object"))
 	}
 	if playerDidUncast == nil || playerDidUncast.(string) != msg.To {
-		return sender.Errorf("incorrect player did for object")
+		return sender.Errorf(baseErr("incorrect player did for object"))
 	}
 	playerTree, err := h.net.GetTree(msg.To)
 	if err != nil {
-		return sender.Errorf("could not fetch player tree")
+		return sender.Errorf(baseErr("could not fetch player tree"))
 	}
 	playerAuths, err := playerTree.Authentications()
 	if err != nil {
-		return sender.Errorf("could not fetch player tree")
+		return sender.Errorf(baseErr("could not fetch player tree"))
 	}
 	playerInventory := trees.NewInventoryTree(h.net, playerTree)
 
 	elementsUncast, err := comboObject.GetPath([]string{comboObjectElementsPath})
 	if err != nil {
-		return sender.Errorf("could not fetch object")
+		return sender.Errorf(baseErr("could not fetch object"))
 	}
 	if elementsUncast == nil {
-		return sender.Errorf("no elements to combine")
+		return sender.Errorf(baseErr("no elements to combine"))
 	}
 
 	elementIds := make([]int, len(elementsUncast.(map[string]interface{})))
@@ -246,43 +252,61 @@ func (h *ElementCombinerHandler) handlePickupElement(msg *jasonsgame.RequestObje
 
 	if len(elementIds) < h.minRequired {
 		log.Debugf("handlePickupElement: not enough element: obj=%s", msg.Object)
-		return sender.Errorf("you must drop at least %d objects to be combined", h.minRequired)
+		return sender.Errorf(combinationNumFailureMsg, h.minRequired)
 	}
 
 	newElement := h.findCombinedElement(elementIds)
+	// if nil, its a failed combo
+	if newElement == nil {
+		log.Debugf("handlePickupElement: combining failed: obj=%s elementIds=%v", msg.Object, elementIds)
+		err = inventory.Remove(comboObject.MustId())
+		if err != nil {
+			log.Errorf("could not remove object from location")
+		}
+		return sender.Errorf(combinationFailureMsg, strings.Title(h.Name()))
+	}
+
 	log.Debugf("handlePickupElement: combining: obj=%s elementIds=%v newElement=%s", msg.Object, elementIds, newElement.Name())
+
+	if newElement.ID == -1 {
+		err = inventory.Remove(comboObject.MustId())
+		if err != nil {
+			log.Errorf("could not remove object from location")
+		}
+		return sender.Errorf(combinationBlockedFailureMsg)
+	}
 
 	existing, err := playerInventory.DidForName(newElement.Name())
 	if err != nil {
-		return sender.Errorf("could not fetch player inventory")
+		return sender.Errorf(baseErr("could not fetch player inventory"))
 	}
 	// if player already has object, return error
 	if len(existing) > 0 {
-		return sender.Errorf("can not pick up %s, one already exists in your inventory", newElement.Name())
+		return sender.Errorf(baseErr("can not pick up %s, one already exists in your inventory", newElement.Name()))
 	}
 
 	err = inventory.Remove(comboObject.MustId())
 	if err != nil {
-		return sender.Errorf("could not remove object from location")
+		return sender.Errorf(baseErr("could not remove object from location"))
 	}
 	// This resets the object back to a vanilla state
 	err = comboObject.UpdatePath([]string{}, make(map[string]interface{}))
 	if err != nil {
-		return sender.Errorf("could not update new element tree")
+		return sender.Errorf(baseErr("could not update new element tree"))
 	}
 	comboObject, err = game.CreateObjectOnTree(h.net, newElement.Name(), comboObject.ChainTree())
 	if err != nil {
-		return sender.Errorf("could not update new element tree")
+		return sender.Errorf(baseErr("could not update new element tree"))
 	}
 	err = comboObject.SetDescription(newElement.Description)
 	if err != nil {
-		return sender.Errorf("could not update new element tree")
+		return sender.Errorf(baseErr("could not update new element tree"))
 	}
 	// TODO inscribe origin elements descriptions ordered by id
 
 	err = comboObject.ChangeChainTreeOwner(playerAuths)
 	if err != nil {
-		return sender.Errorf("could not update new element tree")
+		return sender.Errorf(baseErr("could not update new element tree"))
 	}
 
 	return sender.Send()
