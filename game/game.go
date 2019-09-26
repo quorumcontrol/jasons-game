@@ -628,7 +628,8 @@ func (g *Game) handlePickUpObject(actorCtx actor.Context, interaction *PickUpObj
 	}
 
 	if resp.Error != nil {
-		return resp.Error
+		g.sendUserMessage(actorCtx, resp.Error.Error())
+		return nil
 	}
 
 	changeEvent := <-changeEventCh
