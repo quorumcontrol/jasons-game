@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"reflect"
 	"regexp"
+	"sort"
 	"strings"
 	"time"
 
@@ -338,7 +339,7 @@ func (g *Game) handleUserInput(actorCtx actor.Context, input *jasonsgame.UserInp
 }
 
 func (g *Game) handleHelp(actorCtx actor.Context, args string) error {
-	toSend := indentedList{"available commands:"}
+	toSend := []string{}
 
 	for _, c := range g.commands {
 		if !c.Hidden() && c.HelpGroup() == args && !stringslice.Include(toSend, c.Parse()) {
@@ -346,13 +347,24 @@ func (g *Game) handleHelp(actorCtx actor.Context, args string) error {
 		}
 	}
 
-	if len(toSend) <= 1 {
+	if len(toSend) == 0 {
 		g.sendUserMessage(actorCtx, fmt.Sprintf("Sorry, I am not sure how I can help with '%s'...\n"+
 			"Maybe you can try looking around, asking for help on the location or help on an object.", args))
 		return nil
 	}
 
-	g.sendUserMessage(actorCtx, toSend)
+	sort.Slice(toSend, func(i, j int) bool {
+		// push help commands down
+		if strings.HasPrefix(toSend[i], "help") {
+			return false
+		}
+		if strings.HasPrefix(toSend[j], "help") {
+			return true
+		}
+		return toSend[i] < toSend[j]
+	})
+
+	g.sendUserMessage(actorCtx, append(indentedList{"available commands:"}, toSend...))
 	return nil
 }
 
