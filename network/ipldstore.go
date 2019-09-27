@@ -5,7 +5,7 @@ import (
 
 	lru "github.com/hashicorp/golang-lru"
 	cid "github.com/ipfs/go-cid"
-	"github.com/ipfs/go-datastore"
+	datastore "github.com/ipfs/go-datastore"
 	cbornode "github.com/ipfs/go-ipld-cbor"
 	format "github.com/ipfs/go-ipld-format"
 
@@ -91,6 +91,10 @@ func (ts *IPLDTreeStore) getTip(did string) (tip cid.Cid, remote bool, err error
 			return tip, remote, nil
 		}
 
+		if tip == cid.Undef {
+			log.Errorf("remote tip was undefined. continuing with cached tip")
+			return cachedTip.(cid.Cid), false, nil
+		}
 		remoteTree := dag.NewDag(context.Background(), tip, ts)
 		remoteRoot := &chaintree.RootNode{}
 		err = remoteTree.ResolveInto(ctx, []string{}, remoteRoot)
@@ -140,6 +144,7 @@ func (ts *IPLDTreeStore) GetTree(did string) (*consensus.SignedChainTree, error)
 		if err != nil {
 			return nil, errors.Wrap(err, "error getting signatures")
 		}
+
 		signedTree.Signatures = sigs
 	}
 
@@ -239,6 +244,9 @@ func (ts *IPLDTreeStore) getRemoteTip(did string) (cid.Cid, error) {
 func (ts *IPLDTreeStore) getSignatures(did string) (consensus.SignatureMap, error) {
 	signatures, err := ts.keyValueApi.Get(didSignatureKey(did))
 	if err != nil {
+		if err == datastore.ErrNotFound {
+			return nil, nil
+		}
 		return nil, errors.Wrap(err, "error getting signatures")
 	}
 

@@ -529,10 +529,11 @@ func (n *RemoteNetwork) InkWell() (*consensus.SignedChainTree, *ecdsa.PrivateKey
 
 	inkWell, err := n.GetTree(consensus.EcdsaPubkeyToDid(inkWellKey.PublicKey))
 	if err != nil {
-		return nil, nil, errors.Wrap(err, "getting inkwell")
+		return nil, nil, errors.Wrap(err, "error getting inkwell chaintree")
 	}
 
 	if inkWell == nil {
+		log.Debugf("inkwell is missing, creating\n\n")
 		inkWell, err = n.CreateChainTreeWithKey(inkWellKey)
 		if err != nil {
 			return nil, nil, errors.Wrap(err, "creating inkwell")
