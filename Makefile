@@ -95,6 +95,7 @@ ifeq ($(PLATFORM), all)
 else
   ifeq ($(PLATFORM), win32)
     TARGET=squirrel.windows
+    EXE_SUFFIX=.exe
   else
     TARGET=zip/$(PLATFORM)
   endif
@@ -173,6 +174,18 @@ frontend-build: frontend/jasons-game/public/js/compiled/base.js
 
 frontend-dev: $(generated) $(jsmodules) frontend/jasons-game/node_modules/.bin/shadow-cljs
 	cd frontend/jasons-game && ./node_modules/.bin/shadow-cljs watch app
+
+dids.txt:
+	ssh ec2-user@52.11.88.27 'for cid in $$(docker ps -q); do docker logs $$cid 2>&1 | grep -o -P "did:tupelo:0x[a-fA-F0-9]+"; done | uniq' > $@
+
+bin/benchmark: $(generated) $(gosources) dids.txt
+	go build -o $@ ./benchmark/cmd/cli/main.go
+
+benchmark/lambda/benchmark.zip: $(generated) $(gosources) dids.txt
+	mkdir -p benchmark/lambda
+	go build -o benchmark/lambda/benchmark ./benchmark/cmd/lambda/main.go
+	cp dids.txt benchmark/lambda/
+	zip -D $@ $(@D)/*
 
 $(FIRSTGOPATH)/bin/modvendor:
 	go get -u github.com/goware/modvendor

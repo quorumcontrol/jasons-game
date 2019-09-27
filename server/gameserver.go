@@ -122,6 +122,7 @@ func (gs *GameServer) getOrCreateSession(sess *jasonsgame.Session, stream jasons
 			PlayerTree: playerTree,
 			UiActor:    uiActor,
 			Network:    net,
+			DataStore:  ds,
 		}
 		actor.EmptyRootContext.Spawn(game.NewGameProps(gameCfg))
 	}

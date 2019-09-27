@@ -2,10 +2,16 @@ prize_fail_msg: "prize fail message"
 winning_element: 600
 
 elements:
-- id: 15
+- id: -1
   description: "fail element"
 - id: 100
   description: "element with id of 100"
+  skip_origin_validation: true
+- id: 101
+  description: "element with id of 101"
+  skip_origin_validation: true
+- id: 102
+  description: "element with id of 102"
   skip_origin_validation: true
 - id: 200
   description: "element with id of 200"
@@ -18,6 +24,8 @@ elements:
 weaver:
 - from: [100, 200]
   to: 300
+- from: [101, 102]
+  to: -1
 binder:
 - from: [100, 200, 300]
   to: 600

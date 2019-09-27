@@ -15,33 +15,26 @@ func createHome(n network.Network) (*LocationTree, error) {
 
 	homeLocation := NewLocationTree(n, homeTree)
 
-	err = homeLocation.SetDescription("hi, welcome")
+	err = homeLocation.SetDescription(`You are home in a small cozy, rustic room. There are shelves on the walls where you
+can leave things and a fireplace in the corner lit with a warm fire.
+This is your space. Not exactly part of fae proper, but also not part of your physical world.
+
+You can use your powers to 'portal to fae' or 'portal to mountain' from here.`)
 	if err != nil {
-		return nil, errors.Wrap(err, "error updating home tree")
+		return nil, errors.Wrap(err, "error setting description on home tree")
 	}
 
-	northTree, err := n.CreateChainTree()
-	if err != nil {
-		return nil, errors.Wrap(err, "error creating tree")
-	}
-
-	northLocation := NewLocationTree(n, northTree)
-	err = northLocation.SetDescription("north of welcome")
-	if err != nil {
-		return nil, errors.Wrap(err, "error updating north tree")
-	}
-
-	err = northLocation.AddInteraction(&ChangeLocationInteraction{
-		Command: "south",
-		Did:     homeTree.MustId(),
+	err = homeLocation.AddInteraction(&ChangeNamedLocationInteraction{
+		Command: "portal to fae",
+		Name:    "last-location",
 	})
 	if err != nil {
-		return nil, errors.Wrap(err, "error adding interaction to north tree")
+		return nil, errors.Wrap(err, "error adding interaction to home tree")
 	}
 
-	err = homeLocation.AddInteraction(&ChangeLocationInteraction{
-		Command: "north",
-		Did:     northLocation.MustId(),
+	err = homeLocation.AddInteraction(&ChangeNamedLocationInteraction{
+		Command: "portal to mountain",
+		Name:    "ArcadiaMountain",
 	})
 	if err != nil {
 		return nil, errors.Wrap(err, "error adding interaction to home tree")

@@ -24,6 +24,8 @@ func init() {
 	typecaster.AddType(RespondInteraction{})
 	cbor.RegisterCborType(ChangeLocationInteraction{})
 	typecaster.AddType(ChangeLocationInteraction{})
+	cbor.RegisterCborType(ChangeNamedLocationInteraction{})
+	typecaster.AddType(ChangeNamedLocationInteraction{})
 	cbor.RegisterCborType(CreateObjectInteraction{})
 	typecaster.AddType(CreateObjectInteraction{})
 	cbor.RegisterCborType(PickUpObjectInteraction{})

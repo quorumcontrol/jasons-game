@@ -57,7 +57,7 @@ func TestAutumnCourt(t *testing.T) {
 	for name, did := range ids["Locations"].(map[string]interface{}) {
 		locationIds[name] = did.(string)
 	}
-	require.Len(t, locationIds, 5)
+	require.Len(t, locationIds, 6)
 
 	cmdsAndResponses := []string{
 		"build portal to " + locationIds["starting"], "built a portal",
@@ -86,14 +86,15 @@ func TestAutumnCourt(t *testing.T) {
 		"drop element-12c", "object has been dropped",
 		"submit offering", combinationSuccessMsg,
 		"look in bag", "element-258",
+		"go back", "test autumn court hub",
 		"pick up spawn-obj", "test won",
-		"look in bag", "test-spring-prize",
+		"look in bag", "test-autumn-prize",
 	}
 
 	for i := 0; i < len(cmdsAndResponses); i = i + 2 {
 		cmd := cmdsAndResponses[i]
 		response := cmdsAndResponses[i+1]
-		stream.ExpectMessage(response, 30*time.Second)
+		stream.ExpectMessage(response, 60*time.Second)
 		rootCtx.Send(gamePid, &jasonsgame.UserInput{Message: cmd})
 		stream.Wait()
 	}

@@ -16,6 +16,12 @@ message ChangeLocationInteraction {
   bool   hidden = 3;
 }
 
+message ChangeNamedLocationInteraction {
+  string command = 1;
+  string name = 2;
+  bool   hidden = 3;
+}
+
 message PickUpObjectInteraction {
   string command = 1;
   string did = 2;

@@ -267,7 +267,7 @@ func (inv *InventoryActor) handleTransferObject(actorCtx actor.Context, msg *Tra
 
 	if existsInDest {
 		// short circuit here w/o error so that this is idempotent
-		actorCtx.Respond(&TransferObjectResponse{})
+		actorCtx.Respond(&TransferObjectResponse{Error: ErrExists})
 		return
 	}
 

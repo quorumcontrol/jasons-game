@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"math"
-	"strings"
 	"sync"
 	"time"
 
@@ -25,7 +24,7 @@ import (
 	"github.com/quorumcontrol/tupelo-go-sdk/consensus"
 )
 
-const prizePath = "jasons-game/prize"
+const prizePath = "jasons-game/prizeNumber"
 
 func init() {
 	cbornode.RegisterCborType(Prize{})
@@ -105,20 +104,9 @@ func (h *PrizeHandler) setup() error {
 		return err
 	}
 
-	t, err := h.net.FindOrCreatePassphraseTree(h.Name())
+	h.tree, err = h.net.FindOrCreatePassphraseTree(h.Name())
 	if err != nil {
 		return err
-	}
-
-	initialPrize := Prize{}
-	prizeTxn, err := chaintree.NewSetDataTransaction(prizePath, initialPrize)
-	if err != nil {
-		return errors.Wrap(err, "error creating initial prize transaction")
-	}
-
-	h.tree, err = h.net.PlayTransactions(t, []*transactions.Transaction{prizeTxn})
-	if err != nil {
-		return errors.Wrap(err, "error playing prize transactions")
 	}
 
 	if h.prizeCfg.Location == "" {
@@ -271,24 +259,16 @@ func (s *responseSender) Errorf(str string, args ...interface{}) error {
 	return err
 }
 
-func (h *PrizeHandler) resolvePrize() (Prize, error) {
-	prizePathSubComponents := strings.Split(prizePath, "/")
-	fullPrizePathComponents := append([]string{"tree", "data"}, prizePathSubComponents...)
-	prize := Prize{}
-
-	err := h.Tree().ChainTree.Dag.ResolveInto(context.TODO(), fullPrizePathComponents, &prize)
-
-	return prize, err
-}
-
-func (h *PrizeHandler) currentPrizeNumber() (uint64, error) {
-	prize, err := h.resolvePrize()
-
+func (h *PrizeHandler) currentPrizeNumber() (int, error) {
+	ctx := context.TODO()
+	prizeNumberUncast, remaining, err := h.Tree().ChainTree.Dag.Resolve(ctx, []string{"tree", "data", "jasons-game", "prizeNumber"})
 	if err != nil {
 		return 0, errors.Wrap(err, "failed to resolve prize")
 	}
-
-	return prize.Count, nil
+	if prizeNumberUncast == nil || len(remaining) > 0 {
+		return 0, nil
+	}
+	return prizeNumberUncast.(int), nil
 }
 
 const prizeBucketSize = float64(100)
@@ -300,9 +280,8 @@ func (h *PrizeHandler) trackPrizeDistribution(prizeTip cid.Cid, playerTip cid.Ci
 	}
 
 	prizeNum := currentPrizeNum + 1
-	prize := Prize{Count: prizeNum}
 
-	counterTrans, err := chaintree.NewSetDataTransaction(prizePath, prize)
+	counterTrans, err := chaintree.NewSetDataTransaction(prizePath, prizeNum)
 	if err != nil {
 		return errors.Wrap(err, "error creating prize set num transaction")
 	}
