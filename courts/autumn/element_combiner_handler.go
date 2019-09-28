@@ -22,7 +22,7 @@ const combinationObjectName = "bowl"
 const combinationSuccessMsg = "Your offering has been accepted, a new element is now yours."
 const combinationBaseFailureMsg = "error combining: %s - try again"
 const combinationFailureMsg = "The %s gave you nothing for your offering. It must not have been deemed acceptable."
-const combinationBlockedFailureMsg = "The Fae are especially susceptible to silver therefore transmuting elements into silver can not be allowed. Your offering has not been deemed worthy."
+const combinationBlockedFailureMsg = "The Fae are especially susceptible to silver therefore transmuting elements into silver can not be allowed.\nYour offering has not been deemed worthy."
 const combinationNumFailureMsg = "A proper offering must include %d elements."
 
 const comboObjectPlayerPath = "player"
