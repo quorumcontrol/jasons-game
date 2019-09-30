@@ -5,7 +5,6 @@ import (
 	"crypto/ecdsa"
 	"fmt"
 
-	ipfsconfig "github.com/ipfs/go-ipfs-config"
 	"github.com/quorumcontrol/tupelo-go-sdk/p2p"
 
 	"github.com/ipfs/go-datastore"
@@ -29,19 +28,12 @@ var addrFilters = []string{
 	"240.0.0.0/4",
 }
 
-var IpfsBootstrappers = append(ipfsconfig.DefaultBootstrapAddresses)
-
-const DiscoveryNamespace = "jasons-game-tupelo"
-
-// var DefaultBootstrappers = []string{scalewayPeer}
-
 // TODO just switch these two out with options builder and call the NewHosts directly
 func NewIPLDClient(ctx context.Context, key *ecdsa.PrivateKey, ds datastore.Batching, addlOpts ...p2p.Option) (*p2p.LibP2PHost, *p2p.BitswapPeer, error) {
 	opts := append([]p2p.Option{
 		p2p.WithListenIP("0.0.0.0", 0),
 		p2p.WithKey(key),
 		p2p.WithDatastore(ds),
-		p2p.WithDiscoveryNamespaces(DiscoveryNamespace),
 		p2p.WithAddrFilters(addrFilters),
 	}, addlOpts...)
 
@@ -60,7 +52,6 @@ func NewLibP2PHost(ctx context.Context, key *ecdsa.PrivateKey, addlOpts ...p2p.O
 	opts := append([]p2p.Option{
 		p2p.WithListenIP("0.0.0.0", 0),
 		p2p.WithKey(key),
-		p2p.WithDiscoveryNamespaces(DiscoveryNamespace),
 		p2p.WithAddrFilters(addrFilters),
 	}, addlOpts...)
 
