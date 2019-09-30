@@ -29,7 +29,7 @@ type RespawnActor struct {
 	network          network.Network
 	locations        []string
 	forgers          []string
-	cfg              *artifactsConfig
+	cfg              *ArtifactsConfig
 }
 
 type RespawnActorConfig struct {
@@ -40,7 +40,7 @@ type RespawnActorConfig struct {
 }
 
 func NewRespawnActor(ctx context.Context, cfg *RespawnActorConfig) (*RespawnActor, error) {
-	artifactCfg, err := newArtifactsConfig(filepath.Join(cfg.ConfigPath, "artifacts"))
+	artifactCfg, err := NewArtifactsConfig(filepath.Join(cfg.ConfigPath, "artifacts"))
 	if err != nil {
 		return nil, err
 	}

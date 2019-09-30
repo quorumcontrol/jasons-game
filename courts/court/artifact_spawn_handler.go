@@ -97,7 +97,7 @@ func (h *ArtifactSpawnHandler) setup(configPath string) error {
 		}
 
 		if locationHandler != nil && locationHandler.Did() != handlerDid {
-			return errors.Wrap(err, fmt.Sprintf("location %s already has a handler attached, cannot use artifact spawner here", spawnLocation))
+			return fmt.Errorf("location %s already has a handler attached, cannot use artifact spawner here", spawnLocation)
 		}
 
 		if locationHandler == nil {

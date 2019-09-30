@@ -1,0 +1,20 @@
+location: "{{.Locations.main}}"
+prize:
+  data:
+    name: "test-arcadia-prize"
+    description: "the test won the arcadia court"
+spawn:
+  data:
+    name: "spawn-obj"
+    description: "a spawned thing to use"
+  interactions:
+  - type: ChainedInteraction
+    value:
+      command: "pick up spawn-obj"
+      interactions:
+      - type: PickUpObjectInteraction
+        value:
+          did: "{{.PrizeDid}}"
+      - type: RespondInteraction
+        value:
+          response: "won arcadia"

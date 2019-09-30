@@ -9,7 +9,8 @@ import (
 	"github.com/quorumcontrol/jasons-game/courts/config"
 )
 
-type artifact struct {
+type Artifact struct {
+	OriginAuth   string `yaml:"origin_auth"`
 	Inscriptions struct {
 		Type     string `yaml:"type"`
 		Material string `yaml:"material"`
@@ -19,16 +20,16 @@ type artifact struct {
 	}
 }
 
-type artifactsConfig struct {
-	Artifacts      []*artifact
+type ArtifactsConfig struct {
+	Artifacts      []*Artifact
 	NamesPool      []string
 	ObjectTemplate []byte
 }
 
 var inscribeableKeys = []string{"Type", "Material", "Age", "Weight"}
 
-func newArtifactsConfig(path string) (*artifactsConfig, error) {
-	cfg := &artifactsConfig{}
+func NewArtifactsConfig(path string) (*ArtifactsConfig, error) {
+	cfg := &ArtifactsConfig{}
 	err := config.ReadYaml(filepath.Join(path, "artifacts.yml"), cfg)
 	if err != nil {
 		return nil, errors.Wrap(err, "error processing artifacts.yml")
@@ -54,7 +55,7 @@ func newArtifactsConfig(path string) (*artifactsConfig, error) {
 	return cfg, nil
 }
 
-func (c *artifactsConfig) validate() error {
+func (c *ArtifactsConfig) validate() error {
 	var err error
 
 	for i, artifact := range c.Artifacts {
@@ -88,11 +89,11 @@ func (c *artifactsConfig) validate() error {
 	return nil
 }
 
-func (c *artifactsConfig) inscribeableKeys() []string {
+func (c *ArtifactsConfig) inscribeableKeys() []string {
 	return inscribeableKeys
 }
 
-func (c *artifactsConfig) inscribeableValuesFor(key string) []string {
+func (c *ArtifactsConfig) inscribeableValuesFor(key string) []string {
 	values := make([]string, len(c.Artifacts))
 	for i, artifact := range c.Artifacts {
 		switch key {
