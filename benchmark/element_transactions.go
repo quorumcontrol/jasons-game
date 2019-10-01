@@ -14,7 +14,7 @@ import (
 
 func autumConfig() (*autumn.AutumnConfig, error) {
 	cfg := &autumn.AutumnConfig{}
-	cfgPath, err := filepath.Abs("./courts/yml-test/autumn/config.yml")
+	cfgPath, err := filepath.Abs("./courts/yml/autumn/config.yml")
 	if err != nil {
 		return nil, err
 	}
