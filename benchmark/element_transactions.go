@@ -75,7 +75,7 @@ func (tb *TransactionsBenchmark) combineWeaverElementsOnTrees(cfg *autumn.Autumn
 		Service: weaverTree.MustId(),
 	}
 
-	return combineElements(weaverClient, []int{100, 200}, 300)
+	return combineElements(weaverClient, cfg.Weaver[0].From, cfg.Weaver[0].To)
 }
 
 func (tb *TransactionsBenchmark) combineWeaverElements() error {
@@ -97,7 +97,7 @@ func (tb *TransactionsBenchmark) combineWeaverElements() error {
 	return tb.combineWeaverElementsOnTrees(cfg, weaverTree, playerTree)
 }
 
-// NB: Doesn't work currently b/c element 300 is test only
+// NB: Doesn't work currently
 // func (tb *TransactionsBenchmark) combineBinderElements() error {
 // 	cfg, err := autumConfig()
 // 	if err != nil {
@@ -109,7 +109,7 @@ func (tb *TransactionsBenchmark) combineWeaverElements() error {
 // 		return err
 // 	}
 //
-// 	// do the weaver thing first to get element 300
+// 	// do the weaver thing first to get needed element
 // 	weaverTree, err := tb.net.CreateChainTree()
 // 	if err != nil {
 // 		return err
@@ -143,5 +143,5 @@ func (tb *TransactionsBenchmark) combineWeaverElements() error {
 // 		Service: binderTree.MustId(),
 // 	}
 //
-// 	return combineElements(binderClient, []int{100, 200, 300}, 600)
+// 	return combineElements(binderClient, cfg.Binder[0].From, cfg.Binder[0].To)
 // }
