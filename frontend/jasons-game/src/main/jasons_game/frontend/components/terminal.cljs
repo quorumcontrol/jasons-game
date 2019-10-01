@@ -36,9 +36,23 @@
                          (commands/add-all (commands/empty-mapping)))]
     (.setCommandMapping state new-mapping)))
 
+(def password-command "password: ")
+
+(defn handle-on-input-change [new-input current-input submission-val]
+  (if (string/starts-with? new-input password-command)
+    (let [input-length-diff (- (count new-input) (count submission-val))
+      password-val (cond
+        (= input-length-diff 1) (str submission-val (subs new-input (count submission-val)))
+        (= input-length-diff -1) (subs submission-val 0 (count new-input))
+        :default password-command)]
+      (re-frame/dispatch [::update-submission-val password-val])
+      (reset! current-input (str password-command (apply str (repeat (- (count password-val) (count password-command)) "*")))))
+    (do (re-frame/dispatch [::update-submission-val new-input])
+        (reset! current-input new-input))))
+
 (defn show []
   (let [current-input (r/atom "")]
-    (fn [state read-only?]
+    (fn [state submission-val read-only?]
       [:> ReactTerminalStateless {:emulatorState state
                                   :acceptInput (not read-only?)
                                   :inputStr @current-input
@@ -55,16 +69,23 @@
                                   :promptSymbol "$ >"
                                   :clickToFocus true
                                   :onInputChange (fn [new-input]
-                                                   (reset! current-input new-input))
+                                                   (handle-on-input-change new-input current-input submission-val))
                                   :onStateChange (fn [new-state]
+                                                   (.log js/console "submitting " state)
                                                    (re-frame/dispatch [::disable-input])
                                                    (reset! current-input "")
+                                                   (re-frame/dispatch [::update-submission-val ""])
                                                    (re-frame/dispatch [::change-state new-state]))}])))
 
 (re-frame/reg-sub
  ::state
  (fn [{::keys [state] :as db} _]
    state))
+
+(re-frame/reg-sub
+ ::submission-val
+ (fn [{::keys [submission-val] :as db} _]
+   submission-val))
 
 (re-frame/reg-sub
  ::read-only?
@@ -75,6 +96,11 @@
  ::change-state
  (fn [db [_ new-state]]
    (assoc db ::state new-state)))
+
+(re-frame/reg-event-db
+ ::update-submission-val
+ (fn [db [_ new-val]]
+   (assoc db ::submission-val new-val)))
 
 (re-frame/reg-event-db
  ::disable-input

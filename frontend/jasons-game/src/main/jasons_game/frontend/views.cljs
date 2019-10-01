@@ -10,5 +10,6 @@
 
 (defn app-root []
   (let [state (subscribe [::terminal/state])
-        read-only? (subscribe [::terminal/read-only?])]
-    [terminal/show @state @read-only?]))
+        read-only? (subscribe [::terminal/read-only?])
+        submission-val (subscribe [::terminal/submission-val])]
+    [terminal/show @state @submission-val @read-only?]))
