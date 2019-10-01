@@ -80,15 +80,28 @@ func NewGameProps(cfg *GameConfig) *actor.Props {
 		ds:         cfg.DataStore,
 	}
 
+	// Should only be used in tests
 	if g.ds == nil {
 		g.ds = config.MemoryDataStore()
 	}
 
-	if g.playerTree == nil {
-		g.behavior.Become(g.ReceiveInvitation)
-	} else {
-		g.behavior.Become(g.ReceiveGame)
-	}
+	login := NewLogin(g)
+
+	g.behavior.Become(login.Receive)
+
+	// hasState, err := login.HasState()
+	// if err != nil {
+	// 	panic(err)
+	// }
+	// if hasState {
+	// } else {
+	// 	g.behavior.Become(login.Receive)
+	// }
+	// if g.playerTree == nil {
+	// 	g.behavior.Become(g.ReceiveInvitation)
+	// } else {
+	// 	g.behavior.Become(g.ReceiveGame)
+	// }
 
 	return actor.PropsFromProducer(func() actor.Actor {
 		return g

@@ -2,13 +2,17 @@ package server
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"path/filepath"
 	"time"
 
 	"github.com/AsynkronIT/protoactor-go/actor"
+	"github.com/ethereum/go-ethereum/crypto"
 	logging "github.com/ipfs/go-log"
 	"github.com/pkg/errors"
+	"github.com/tyler-smith/go-bip32"
+	"github.com/tyler-smith/go-bip39"
 
 	"github.com/quorumcontrol/tupelo-go-sdk/gossip3/types"
 
@@ -88,6 +92,50 @@ func (gs *GameServer) ReceiveStatMessages(sess *jasonsgame.Session, stream jason
 
 func (gs *GameServer) getOrCreateSession(sess *jasonsgame.Session, stream jasonsgame.GameService_ReceiveUIMessagesServer) *actor.PID {
 	uiActor, ok := gs.sessions[sess.Uuid]
+
+	entropy, err := bip39.NewEntropy(256)
+	if err != nil {
+		panic(errors.Wrap(err, "error creating seed"))
+	}
+	mnemonic, err := bip39.NewMnemonic(entropy)
+	if err != nil {
+		panic(errors.Wrap(err, "error creating mnemonic"))
+	}
+
+	mnemonic = "trial chronic voice setup embody puppy gospel bundle priority word drastic draft film view agent zone cancel blanket cost stay pulp section snack frown"
+
+	seed := bip39.NewSeed(mnemonic, "test@example.com")
+
+	masterKey, err := bip32.NewMasterKey(seed)
+	if err != nil {
+		panic(errors.Wrap(err, "error creating master key"))
+	}
+
+	publicKey := masterKey.PublicKey()
+
+	fmt.Printf("mnemonic is %v\n", mnemonic)
+
+	fmt.Printf("pubkey is %v\n", publicKey)
+
+	ckey1, err := masterKey.NewChildKey(0)
+	if err != nil {
+		panic(errors.Wrap(err, "error creating master key"))
+	}
+
+	fmt.Printf("pubkey child is %v\n", ckey1.PublicKey())
+
+	key, err := crypto.ToECDSA(ckey1.Key)
+	if err != nil {
+		panic(errors.Wrap(err, "error casting pub"))
+	}
+	fmt.Printf("Key is %v\n", crypto.PubkeyToAddress(key.PublicKey).String())
+
+	keyAlt, err := crypto.ToECDSA(masterKey.Key)
+	if err != nil {
+		panic(errors.Wrap(err, "error casting pub"))
+	}
+	fmt.Printf("Key is %v\n", crypto.PubkeyToAddress(keyAlt.PublicKey).String())
+
 	if !ok {
 		// use filepath.Base as a "cleaner" here to not allow setting arbitrary directories with, for example, uuid: "../../etc/passwd"
 		statePath := filepath.Join(gs.sessionPath, filepath.Base(sess.Uuid))
