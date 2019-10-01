@@ -38,12 +38,15 @@ func NewBitswapperBenchmark(cfg *BitswapperBenchmarkConfig) (*BitswapperBenchmar
 		return nil, err
 	}
 
-	bb := &BitswapperBenchmark{}
-
-	bb.netCfg = cfg.NetCfg
-	bb.dids = cfg.Dids
-	bb.requestedIterations = cfg.Iterations
-	bb.concurrency = cfg.Concurrency
+	bb := &BitswapperBenchmark{
+		BenchmarkCommon: BenchmarkCommon{
+			netCfg:              cfg.NetCfg,
+			requestedIterations: cfg.Iterations,
+			concurrency:         cfg.Concurrency,
+			iterationsRun:       cfg.Iterations,
+		},
+		dids: cfg.Dids,
+	}
 
 	return bb, nil
 }
