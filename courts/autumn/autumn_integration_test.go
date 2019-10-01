@@ -32,7 +32,7 @@ func TestAutumnCourt(t *testing.T) {
 	court := New(ctx, courtNet, "../yml-test")
 	court.Start()
 
-	playerChain, err := net.CreateLocalChainTree("player")
+	playerChain, err := net.CreateLocalChainTree("Player")
 	require.Nil(t, err)
 	playerTree, err := game.CreatePlayerTree(net, playerChain.MustId())
 	require.Nil(t, err)
@@ -50,7 +50,7 @@ func TestAutumnCourt(t *testing.T) {
 
 	time.Sleep(10 * time.Second)
 
-	ids, err := court.ids()
+	ids, err := court.Ids()
 	require.Nil(t, err)
 	require.NotNil(t, ids)
 	locationIds := make(map[string]string)

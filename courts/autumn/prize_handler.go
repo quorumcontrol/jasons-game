@@ -42,13 +42,13 @@ func (h *AutumnPrizeHandler) validatorFunc(msg *jasonsgame.RequestObjectTransfer
 	playerInventory, err := trees.FindInventoryTree(h.net, msg.To)
 	if err != nil {
 		log.Error(err)
-		return false, fmt.Errorf("could not fetch player inventory")
+		return false, fmt.Errorf("could not fetch Player inventory")
 	}
 
 	elementDid, err := playerInventory.DidForName(winningElementName)
 	if err != nil {
 		log.Error(err)
-		return false, fmt.Errorf("could not fetch player inventory")
+		return false, fmt.Errorf("could not fetch Player inventory")
 	}
 
 	if elementDid == "" {

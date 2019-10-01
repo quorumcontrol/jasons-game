@@ -68,6 +68,7 @@ func (ts *IPLDTreeStore) getTip(did string) (tip cid.Cid, remote bool, err error
 	}
 
 	if !tip.Equals(cid.Undef) {
+		log.Debug("found local tip", tip)
 		return tip, remote, nil
 	}
 
@@ -78,11 +79,19 @@ func (ts *IPLDTreeStore) getTip(did string) (tip cid.Cid, remote bool, err error
 		return tip, remote, errors.Wrap(err, "error getting remote tip")
 	}
 
+	log.Debug("found remote tip", tip)
+
 	// ensure that remote signer didn't return us a stale tip
 	// this can happen when blocks are played rapidly
 	// and not all signers have processed the block
 	cachedTip, found := ts.tipCache.Get(did)
+
+	if found && tip.Equals(cid.Undef) {
+		return cachedTip.(cid.Cid), remote, nil
+	}
+
 	if found && !cachedTip.(cid.Cid).Equals(tip) {
+		log.Debug("found different cached tip", cachedTip.(cid.Cid))
 		cachedTree := dag.NewDag(context.Background(), cachedTip.(cid.Cid), ts)
 		cachedRoot := &chaintree.RootNode{}
 		err = cachedTree.ResolveInto(ctx, []string{}, cachedRoot)
@@ -109,6 +118,8 @@ func (ts *IPLDTreeStore) getTip(did string) (tip cid.Cid, remote bool, err error
 
 func (ts *IPLDTreeStore) GetTree(did string) (*consensus.SignedChainTree, error) {
 	ctx := context.TODO()
+
+	log.Debug("IPLDTreeStore: GetTree did", did)
 
 	tip, remote, err := ts.getTip(did)
 	if err != nil {
@@ -167,19 +178,24 @@ func (ts *IPLDTreeStore) UpdateTreeMetadata(tree *consensus.SignedChainTree) err
 		return errors.Wrap(err, "error getting id")
 	}
 
+	log.Debug("UpdateTreeMetadata: Got chaintree DID: %s", did)
+
 	has, err := ts.keyValueApi.Has(didStoreKey(did))
 	if err != nil {
 		return errors.Wrap(err, "error checking if tree metadata exists")
 	}
 	if has {
+		log.Debug("UpdateTreeMetadata: Found chaintree in KV store")
 		return ts.SaveTreeMetadata(tree)
 	}
 
+	log.Debug("UpdateTreeMetadata: Adding chaintree to tip cache")
 	ts.tipCache.Add(did, tree.Tip())
 	return nil
 }
 
 func (ts *IPLDTreeStore) Get(ctx context.Context, nodeCid cid.Cid) (format.Node, error) {
+	log.Debug("IPLDTreeStore: Get node", nodeCid)
 	return ts.blockApi.Get(ctx, nodeCid)
 }
 

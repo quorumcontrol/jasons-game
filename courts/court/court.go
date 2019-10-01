@@ -17,6 +17,8 @@ import (
 	"github.com/quorumcontrol/jasons-game/service"
 )
 
+var log = logging.Logger("court")
+
 type Court struct {
 	ctx  context.Context
 	net  network.Network
@@ -91,20 +93,28 @@ func (c *Court) Resolve(path []string) (interface{}, error) {
 
 // Import court chaintress from path
 func (c *Court) Import(configPath string) error {
+	log.Info("importing config from", configPath)
+
 	tree, err := c.ChainTree()
 	if err != nil {
 		return errors.Wrap(err, "setting up court tree")
 	}
+
+	log.Debug("created court chaintree")
 
 	importIds, err := importer.New(c.net).Import(filepath.Join(configPath, c.name, "import"))
 	if err != nil {
 		return err
 	}
 
+	log.Debug("created court importer")
+
 	_, err = c.net.UpdateChainTree(tree, "ids", map[string]interface{}{
 		"Locations": importIds.Locations,
 		"Objects":   importIds.Objects,
 	})
+
+	log.Debug("court DAG:", tree.ChainTree.Dag.Dump(context.TODO()))
 
 	if err != nil {
 		return err

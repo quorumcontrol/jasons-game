@@ -8,29 +8,31 @@ import (
 	"time"
 
 	logging "github.com/ipfs/go-log"
-	"github.com/montanaflynn/stats"
 
 	"github.com/quorumcontrol/jasons-game/network"
 )
 
-var log = logging.Logger("benchmark")
-
 type BitswapperBenchmarkConfig struct {
-	NetCfg      *network.RemoteNetworkConfig
-	Dids        []string
-	Iterations  int
-	Concurrency int
+	BenchmarkConfig
+	Dids []string
 }
 
 type BitswapperBenchmark struct {
-	net           *network.RemoteNetwork
-	dids          []string
-	rand          *rand.Rand
-	maxIterations int
-	concurrency   int
+	BenchmarkCommon
+	dids []string
+	rand *rand.Rand
 }
 
-func NewBitswapperBenchmark(ctx context.Context, cfg *BitswapperBenchmarkConfig) (*BitswapperBenchmark, error) {
+type BitswapperResult struct {
+	ResultCommon
+	NodesPerSecond float64
+}
+
+var _ Benchmark = &BitswapperBenchmark{}
+
+var _ Result = &BitswapperResult{}
+
+func NewBitswapperBenchmark(cfg *BitswapperBenchmarkConfig) (*BitswapperBenchmark, error) {
 	err := logging.SetLogLevel("benchmark", "warning")
 	if err != nil {
 		return nil, err
@@ -38,106 +40,78 @@ func NewBitswapperBenchmark(ctx context.Context, cfg *BitswapperBenchmarkConfig)
 
 	bb := &BitswapperBenchmark{}
 
-	net, err := network.NewRemoteNetworkWithConfig(ctx, cfg.NetCfg)
-	if err != nil {
-		return nil, err
-	}
-
-	bb.net = net
-
+	bb.netCfg = cfg.NetCfg
 	bb.dids = cfg.Dids
-	bb.maxIterations = cfg.Iterations
+	bb.requestedIterations = cfg.Iterations
 	bb.concurrency = cfg.Concurrency
 
 	return bb, nil
 }
 
-func (bb *BitswapperBenchmark) Run(ctx context.Context) (*Result, error) {
-	results := &Result{}
-
-	realIterations := bb.maxIterations
+func (bb *BitswapperBenchmark) Iterations() int {
+	realIterations := bb.requestedIterations
 	if realIterations == 0 {
 		realIterations = len(bb.dids)
 	}
 
-	wg := &sync.WaitGroup{}
-	wg.Add(realIterations)
+	return realIterations
+}
 
-	errChan := make(chan error, bb.concurrency)
-	iterChan := make(chan time.Duration, bb.concurrency)
+func (bb *BitswapperBenchmark) Concurrency() int {
+	concy := bb.concurrency
+	iters := bb.Iterations()
+	if concy > iters {
+		log.Warningf("concurrency %d is larger than max iterations %d; running %d concurrently", concy, iters, iters)
+		bb.concurrency = iters // so we only get warned once
+		return iters
+	}
 
-	go func(ec chan error) {
-		for {
-			err, ok := <- ec
-			if !ok {
-				break
-			}
-			log.Error(err)
-			results.Errors += 1
+	return concy
+}
+
+func (bb *BitswapperBenchmark) Run(ctx context.Context) (Result, error) {
+	if bb.net == nil {
+		net, err := network.NewRemoteNetworkWithConfig(ctx, bb.netCfg)
+		if err != nil {
+			return nil, err
 		}
-	}(errChan)
 
-	durations := make([]float64, realIterations)
-
-	go func(ic chan time.Duration) {
-		for {
-			d, ok := <- ic
-			if !ok {
-				bb.dids = []string{} // make additional chained RunOne's return early
-				break
-			}
-			results.Iterations += 1
-			durations = append(durations, d.Seconds())
-		}
-	}(iterChan)
-
-	realConcurrency := bb.concurrency
-	if bb.maxIterations > 0 && bb.concurrency > bb.maxIterations {
-		log.Warningf("concurrency %d is larger than max iterations %d; running %d concurrently", bb.concurrency, bb.maxIterations, bb.maxIterations)
-		realConcurrency = bb.maxIterations
+		bb.net = net
 	}
 
-	start := time.Now()
-	for i := 0; i < realConcurrency; i++ {
-		bb.RunOne(ctx, wg, iterChan, errChan)
-	}
-
-	wg.Wait()
-
-	close(errChan)
-	close(iterChan)
-
-	results.TotalDuration = time.Since(start)
-
-	sumIterationDurations := 0.0
-	for _, d := range durations {
-		sumIterationDurations += d
-	}
-
-	results.AvgDuration = time.Duration((sumIterationDurations / float64(results.Iterations)) * float64(time.Second))
-	ninetiethPercentileDuration, err := stats.Percentile(durations, 90.0)
+	r, err := runCommon(ctx, bb)
 	if err != nil {
 		return nil, err
 	}
-	results.NinetiethPercentileDuration = time.Duration(ninetiethPercentileDuration * float64(time.Second))
 
-	results.NodesPerSecond = float64(realIterations) / results.TotalDuration.Seconds()
+	rc := *r.(*ResultCommon)
 
-	return results, nil
+	br := &BitswapperResult{
+		ResultCommon: rc,
+		NodesPerSecond: float64(rc.Iterations) / rc.TotalDuration.Seconds(),
+	}
+
+	return br, nil
 }
 
-func (bb *BitswapperBenchmark) RunOne(ctx context.Context, wg *sync.WaitGroup, iterChan chan time.Duration, errChan chan error) {
-	index, did := bb.RandDid()
+func (bb *BitswapperBenchmark) runOne(ctx context.Context, wg *sync.WaitGroup, iterChan chan time.Duration, errChan chan error) {
+	if bb.Iterations() <= bb.iterationsRun {
+		return
+	}
+
+	index, did := bb.randDid()
 
 	if index < 0 {
 		return
 	}
 
+	bb.iterationsRun += 1
+
 	// remove selected DID from slice since it will now be cached
 	bb.dids = append(bb.dids[:index], bb.dids[index+1:]...)
 
 	go func(wg *sync.WaitGroup, ic chan time.Duration, ec chan error) {
-		defer bb.RunOne(ctx, wg, ic, ec)
+		defer bb.runOne(ctx, wg, ic, ec)
 		start := time.Now()
 		err := bb.processDid(ctx, did)
 		ic <- time.Since(start)
@@ -148,7 +122,7 @@ func (bb *BitswapperBenchmark) RunOne(ctx context.Context, wg *sync.WaitGroup, i
 	}(wg, iterChan, errChan)
 }
 
-func (bb *BitswapperBenchmark) RandDid() (int, string) {
+func (bb *BitswapperBenchmark) randDid() (int, string) {
 	if len(bb.dids) == 0 {
 		return -1, ""
 	}
@@ -186,4 +160,16 @@ func (bb *BitswapperBenchmark) processDid(ctx context.Context, did string) error
 	fmt.Printf("%s : %v\n", did, duration)
 
 	return nil
+}
+
+func (bb *BitswapperBenchmark) finish() {
+	bb.dids = []string{}
+}
+
+func (br *BitswapperResult) Sprint() string {
+	r := br.sprintCommon()
+
+	r += fmt.Sprintln("\tNodes Per Second:", br.NodesPerSecond)
+
+	return r
 }
