@@ -6,6 +6,7 @@ import (
 	"os"
 	"os/signal"
 
+	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/quorumcontrol/jasons-game/courts/arcadia"
 	"github.com/quorumcontrol/jasons-game/courts/autumn"
 	"github.com/quorumcontrol/jasons-game/courts/basic"
@@ -34,6 +35,8 @@ var runCourts = &cobra.Command{
 
 		mustSetLogLevel("importer", logLevel)
 		mustSetLogLevel("respawner", logLevel)
+
+		fmt.Printf("Court authentication address is %s\n", crypto.PubkeyToAddress(*net.PublicKey()).String())
 
 		for _, courtName := range courtsList {
 			var court courtStarter

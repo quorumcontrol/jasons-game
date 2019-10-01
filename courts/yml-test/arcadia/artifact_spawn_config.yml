@@ -1,0 +1,4 @@
+locations:
+  - "{{.Locations.loc1}}"
+forgers:
+  - forged1

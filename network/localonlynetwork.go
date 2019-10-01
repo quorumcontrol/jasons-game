@@ -5,7 +5,6 @@ import (
 	"crypto/ecdsa"
 	"crypto/sha256"
 	"fmt"
-	"time"
 
 	"github.com/AsynkronIT/protoactor-go/actor"
 	"github.com/AsynkronIT/protoactor-go/eventstream"
@@ -87,20 +86,6 @@ func (ln *LocalNetwork) PrivateKey() *ecdsa.PrivateKey {
 
 func (ln *LocalNetwork) Community() *Community {
 	return ln.community
-}
-
-func (ln *LocalNetwork) StartDiscovery(_ string) error {
-	//noop
-	return nil
-}
-
-func (ln *LocalNetwork) StopDiscovery(_ string) {
-	//noop
-}
-
-func (ln *LocalNetwork) WaitForDiscovery(ns string, num int, dur time.Duration) error {
-	//noop
-	return nil
 }
 
 func (ln *LocalNetwork) CreateLocalChainTree(name string) (*consensus.SignedChainTree, error) {
