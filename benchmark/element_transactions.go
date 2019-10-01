@@ -132,6 +132,9 @@ func (tb *TransactionsBenchmark) combineBinderElements() error {
 		Elements:     cfg.Elements,
 		Combinations: cfg.Binder,
 	})
+	if err != nil {
+		return err
+	}
 
 	binderClient := &autumn.MockElementClient{
 		Net:     tb.net,
