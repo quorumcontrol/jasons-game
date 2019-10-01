@@ -24,7 +24,7 @@ type BenchmarkConfig struct {
 
 type BenchmarkCommon struct {
 	netCfg              *network.RemoteNetworkConfig
-	net                 *network.RemoteNetwork // nolint: golint
+	net                 *network.RemoteNetwork // nolint: unused
 	requestedIterations int
 	concurrency         int
 	iterationsRun       int
