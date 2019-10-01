@@ -50,7 +50,7 @@ func combineElements(client *autumn.MockElementClient, combineIds []int, resultI
 	}
 
 	if !client.HasElement(resultId) {
-		return errors.New(fmt.Sprintf("expected element id %d but client.HasElement returned false", resultId))
+		return fmt.Errorf("expected element id %d but client.HasElement returned false", resultId)
 	}
 
 	return nil
@@ -98,50 +98,50 @@ func (tb *TransactionsBenchmark) combineWeaverElements() error {
 }
 
 // NB: Doesn't work currently b/c element 300 is test only
-func (tb *TransactionsBenchmark) combineBinderElements() error {
-	cfg, err := autumConfig()
-	if err != nil {
-		return err
-	}
-
-	playerTree, err := tb.net.CreateLocalChainTree("player")
-	if err != nil {
-		return err
-	}
-
-	// do the weaver thing first to get element 300
-	weaverTree, err := tb.net.CreateChainTree()
-	if err != nil {
-		return err
-	}
-
-	err = tb.combineWeaverElementsOnTrees(cfg, weaverTree, playerTree)
-	if err != nil {
-		return err
-	}
-
-	binderTree, err := tb.net.CreateChainTree()
-	if err != nil {
-		return err
-	}
-
-	binder, err := autumn.NewElementCombinerHandler(&autumn.ElementCombinerHandlerConfig{
-		Name:         "binder",
-		Network:      tb.net,
-		Location:     binderTree.MustId(),
-		Elements:     cfg.Elements,
-		Combinations: cfg.Binder,
-	})
-	if err != nil {
-		return err
-	}
-
-	binderClient := &autumn.MockElementClient{
-		Net:     tb.net,
-		H:       binder,
-		Player:  playerTree.MustId(),
-		Service: binderTree.MustId(),
-	}
-
-	return combineElements(binderClient, []int{100, 200, 300}, 600)
-}
+// func (tb *TransactionsBenchmark) combineBinderElements() error {
+// 	cfg, err := autumConfig()
+// 	if err != nil {
+// 		return err
+// 	}
+//
+// 	playerTree, err := tb.net.CreateLocalChainTree("player")
+// 	if err != nil {
+// 		return err
+// 	}
+//
+// 	// do the weaver thing first to get element 300
+// 	weaverTree, err := tb.net.CreateChainTree()
+// 	if err != nil {
+// 		return err
+// 	}
+//
+// 	err = tb.combineWeaverElementsOnTrees(cfg, weaverTree, playerTree)
+// 	if err != nil {
+// 		return err
+// 	}
+//
+// 	binderTree, err := tb.net.CreateChainTree()
+// 	if err != nil {
+// 		return err
+// 	}
+//
+// 	binder, err := autumn.NewElementCombinerHandler(&autumn.ElementCombinerHandlerConfig{
+// 		Name:         "binder",
+// 		Network:      tb.net,
+// 		Location:     binderTree.MustId(),
+// 		Elements:     cfg.Elements,
+// 		Combinations: cfg.Binder,
+// 	})
+// 	if err != nil {
+// 		return err
+// 	}
+//
+// 	binderClient := &autumn.MockElementClient{
+// 		Net:     tb.net,
+// 		H:       binder,
+// 		Player:  playerTree.MustId(),
+// 		Service: binderTree.MustId(),
+// 	}
+//
+// 	return combineElements(binderClient, []int{100, 200, 300}, 600)
+// }
