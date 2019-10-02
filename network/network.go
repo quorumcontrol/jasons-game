@@ -240,6 +240,10 @@ func (n *RemoteNetwork) PrivateKey() *ecdsa.PrivateKey {
 	return n.signingKey
 }
 
+func (n *RemoteNetwork) SetPrivateKey(k *ecdsa.PrivateKey) {
+	n.signingKey = k
+}
+
 func (n *RemoteNetwork) FindOrCreatePassphraseTree(passphrase string) (*consensus.SignedChainTree, error) {
 	seed := sha256.Sum256([]byte(passphrase))
 	treeKey, err := consensus.PassPhraseKey(crypto.FromECDSA(n.PrivateKey()), seed[:32])

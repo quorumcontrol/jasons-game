@@ -36,19 +36,24 @@
                          (commands/add-all (commands/empty-mapping)))]
     (.setCommandMapping state new-mapping)))
 
-(def password-command "password: ")
+(def login-command "login ")
+(def set-password-command "set-password ")
 
 (defn handle-on-input-change [new-input current-input submission-val]
-  (if (string/starts-with? new-input password-command)
-    (let [input-length-diff (- (count new-input) (count submission-val))
-      password-val (cond
-        (= input-length-diff 1) (str submission-val (subs new-input (count submission-val)))
-        (= input-length-diff -1) (subs submission-val 0 (count new-input))
-        :default password-command)]
-      (re-frame/dispatch [::update-submission-val password-val])
-      (reset! current-input (str password-command (apply str (repeat (- (count password-val) (count password-command)) "*")))))
-    (do (re-frame/dispatch [::update-submission-val new-input])
-        (reset! current-input new-input))))
+  (let [protected-command (cond
+                            (string/starts-with? new-input login-command) login-command
+                            (string/starts-with? new-input set-password-command) set-password-command
+                            :default "")]
+    (if (not-empty protected-command)
+      (let [input-length-diff (- (count new-input) (count submission-val))
+        protected-val (cond
+          (= input-length-diff 1) (str submission-val (subs new-input (count submission-val)))
+          (= input-length-diff -1) (subs submission-val 0 (count new-input))
+          :default protected-command)]
+        (re-frame/dispatch [::update-submission-val protected-val])
+        (reset! current-input (str protected-command (apply str (repeat (- (count protected-val) (count protected-command)) "*")))))
+      (do (re-frame/dispatch [::update-submission-val new-input])
+          (reset! current-input new-input)))))
 
 (defn show []
   (let [current-input (r/atom "")]
@@ -71,7 +76,6 @@
                                   :onInputChange (fn [new-input]
                                                    (handle-on-input-change new-input current-input submission-val))
                                   :onStateChange (fn [new-state]
-                                                   (.log js/console "submitting " state)
                                                    (re-frame/dispatch [::disable-input])
                                                    (reset! current-input "")
                                                    (re-frame/dispatch [::update-submission-val ""])
