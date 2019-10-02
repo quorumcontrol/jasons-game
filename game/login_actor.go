@@ -64,13 +64,17 @@ func (l *Login) Receive(actorCtx actor.Context) {
 
 		cmdComponents := strings.Split(msg.Message, " ")
 		switch cmd := cmdComponents[0]; cmd {
-		case "signup":
+		case "password":
+			l.game.sendUserMessage(actorCtx, "received "+msg.Message)
+		case "sign up":
 			if l.HasState() {
 				panic("restart")
 			}
 
 			l.cmds = []string{"email:"}
 			l.game.sendUserMessage(actorCtx, "please enter your email by type `email: `:")
+		case "help":
+			l.game.sendUserMessage(actorCtx, append(indentedList{"available commands:"}, l.cmds...))
 		}
 
 		log.Debugf("login actor received user input in: %+v", msg)
