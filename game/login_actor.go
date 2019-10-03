@@ -26,7 +26,7 @@ var loginRecoveryMessage = fmt.Sprintf("Please type `%s` followed by the recover
 const loginRecoverySuccessMessage = "Account recovery successful! Transporting you to the land of the fae to continue your adventure."
 const loginRecoveryFailureMessage = "No account exists for that email and recovery phrase."
 const loginEmailErrorMessage = "You must provide a valid email after `%s`."
-const loginProvideSeedMessage = `Signing up with %s
+const loginProvideSeedMessage = `Signing up with %s.
 
 Below is your recovery phrase. Please write this down in a safe place.
 
@@ -68,6 +68,11 @@ func (l *Login) commandUpdate(actorCtx actor.Context) {
 	actorCtx.Send(l.ui, cmdUpdate)
 }
 
+func (l *Login) setDefaultCommands(actorCtx actor.Context) {
+	l.cmds = []string{loginCmdSignUp, loginCmdRecover}
+	l.commandUpdate(actorCtx)
+}
+
 func (l *Login) sendUserMessage(actorCtx actor.Context, mesgInter interface{}) {
 	if sender := actorCtx.Sender(); sender != nil {
 		actorCtx.Respond(&jasonsgame.CommandReceived{})
@@ -85,8 +90,7 @@ func (l *Login) Receive(actorCtx actor.Context) {
 
 	switch msg := actorCtx.Message().(type) {
 	case *actor.Started:
-		l.cmds = []string{loginCmdSignUp, loginCmdRecover}
-		l.commandUpdate(actorCtx)
+		l.setDefaultCommands(actorCtx)
 		l.sendUserMessage(actorCtx, loginWelcomeMessage)
 	case *actor.Stopping:
 		log.Info("login actor stopping")
@@ -134,7 +138,10 @@ func (l *Login) Receive(actorCtx actor.Context) {
 		case strings.HasPrefix(m, loginCmdRecoveryPhrase):
 			mnemonic := strings.TrimSpace(strings.TrimPrefix(m, loginCmdRecoveryPhrase))
 
-			key, err := consensus.PassPhraseKey([]byte(mnemonic), []byte(l.state["email"]))
+			email := l.state["email"]
+			delete(l.state, "email")
+
+			key, err := consensus.PassPhraseKey([]byte(mnemonic), []byte(email))
 			if err != nil {
 				panic(errors.Wrap(err, "error generating key"))
 			}
@@ -153,6 +160,7 @@ func (l *Login) Receive(actorCtx actor.Context) {
 			}
 
 			if playerTree == nil {
+				l.setDefaultCommands(actorCtx)
 				l.sendUserMessage(actorCtx, loginRecoveryFailureMessage)
 				return
 			}
@@ -166,7 +174,6 @@ func (l *Login) Receive(actorCtx actor.Context) {
 				panic(errors.Wrap(err, "error saving key"))
 			}
 
-			delete(l.state, "email")
 			l.sendUserMessage(actorCtx, loginRecoverySuccessMessage)
 			actorCtx.Stop(actorCtx.Self())
 			return

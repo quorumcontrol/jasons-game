@@ -5,6 +5,12 @@ import (
 	"github.com/quorumcontrol/jasons-game/network"
 )
 
+const homeLocationDescription = `You are home in a small cozy, rustic room. There are shelves on the walls where you
+can leave things and a fireplace in the corner lit with a warm fire.
+This is your space. Not exactly part of fae proper, but also not part of your physical world.
+
+You can use your powers to 'portal to fae' or 'portal to mountain' from here.`
+
 func createHome(n network.Network) (*LocationTree, error) {
 	log.Debug("creating new home")
 
@@ -15,11 +21,7 @@ func createHome(n network.Network) (*LocationTree, error) {
 
 	homeLocation := NewLocationTree(n, homeTree)
 
-	err = homeLocation.SetDescription(`You are home in a small cozy, rustic room. There are shelves on the walls where you
-can leave things and a fireplace in the corner lit with a warm fire.
-This is your space. Not exactly part of fae proper, but also not part of your physical world.
-
-You can use your powers to 'portal to fae' or 'portal to mountain' from here.`)
+	err = homeLocation.SetDescription(homeLocationDescription)
 	if err != nil {
 		return nil, errors.Wrap(err, "error setting description on home tree")
 	}
