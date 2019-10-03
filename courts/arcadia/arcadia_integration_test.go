@@ -45,7 +45,7 @@ func setupTestArcadiaCourt(t *testing.T, ctx context.Context) (*ui.TestStream, *
 
 	rootCtx := actor.EmptyRootContext
 	stream := ui.NewTestStream(t)
-	simulatedUI, err := rootCtx.SpawnNamed(ui.NewUIProps(stream, net), t.Name()+"-ui")
+	simulatedUI, err := rootCtx.SpawnNamed(ui.NewUIProps(stream), t.Name()+"-ui")
 	require.Nil(t, err)
 
 	gameCfg := &game.GameConfig{PlayerTree: playerTree, UiActor: simulatedUI, Network: net}
