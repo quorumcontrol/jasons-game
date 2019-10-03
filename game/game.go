@@ -852,10 +852,8 @@ func (g *Game) sendUILocation(actorCtx actor.Context) {
 	g.sendUserMessage(actorCtx, l)
 }
 
-func (g *Game) sendUserMessage(actorCtx actor.Context, mesgInter interface{}) {
-	msgToUser := &jasonsgame.MessageToUser{
-		Sequence: g.messageSequence,
-	}
+func formatUserMessage(mesgInter interface{}) *jasonsgame.MessageToUser {
+	msgToUser := &jasonsgame.MessageToUser{}
 	switch msg := mesgInter.(type) {
 	case string:
 		msgToUser.Message = msg
@@ -873,6 +871,12 @@ func (g *Game) sendUserMessage(actorCtx actor.Context, mesgInter interface{}) {
 	default:
 		log.Errorf("error, unknown message type: %v", msg)
 	}
+	return msgToUser
+}
+
+func (g *Game) sendUserMessage(actorCtx actor.Context, mesgInter interface{}) {
+	msgToUser := formatUserMessage(mesgInter)
+	msgToUser.Sequence = g.messageSequence
 	actorCtx.Send(g.ui, msgToUser)
 	g.messageSequence++
 }
