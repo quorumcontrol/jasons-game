@@ -63,11 +63,23 @@ module.exports = {
         }
     ],
     "packagerConfig": {
+        "appBundleId": "com.quorumcontrol.jasonsgame",
         "packageManager": "npm",
         "asar": {
             "unpackDir": 'bin'
         },
-        "ignore": ignorePath
+        "ignore": ignorePath,
+        "osxSign": {
+            "hardenedRuntime": true,
+            "identity": "Developer ID Application: Quorum Control GmbH (8U6NQ9QZ9N)",
+            "gatekeeper-assess": false,
+            "entitlements": "frontend/entitlements.plist",
+            "entitlements-inherit": "frontend/entitlements.plist"
+        },
+        "osxNotarize": {
+            "appleId": "tech@quorumcontrol.com",
+            "appleIdPassword": "@keychain:jasons-game-notarization-password"
+        }
     },
     "electronWinstallerConfig": {
         "name": "jasons_game"
