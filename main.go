@@ -8,27 +8,18 @@ import (
 	"net/http/pprof"
 	"os"
 
+	"github.com/gobuffalo/packr/v2"
 	"github.com/gorilla/mux"
 	"github.com/improbable-eng/grpc-web/go/grpcweb"
-	logging "github.com/ipfs/go-log"
-	"github.com/pkg/errors"
-
-	"github.com/gobuffalo/packr/v2"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/reflection"
 
 	"github.com/quorumcontrol/jasons-game/build"
+	"github.com/quorumcontrol/jasons-game/config"
 	"github.com/quorumcontrol/jasons-game/pb/jasonsgame"
 	"github.com/quorumcontrol/jasons-game/server"
 	"github.com/quorumcontrol/jasons-game/ui"
 )
-
-func mustSetLogLevel(name, level string) {
-	err := logging.SetLogLevel(name, level)
-	if err != nil {
-		panic(errors.Wrap(err, fmt.Sprintf("error setting log level (%s %s)", name, level)))
-	}
-}
 
 var inkDID string // set by an ldflag at compile time (e.g. go build -ldflags "-X main.inkDID=did:tupelo:blahblah")
 
@@ -52,17 +43,17 @@ func main() {
 		}()
 	}
 
-	mustSetLogLevel("*", "INFO")
-	mustSetLogLevel("swarm2", "error")
-	mustSetLogLevel("pubsub", "error")
-	mustSetLogLevel("relay", "error")
-	mustSetLogLevel("autonat", "info")
-	mustSetLogLevel("dht", "error")
-	mustSetLogLevel("uiserver", "debug")
-	mustSetLogLevel("game", "debug")
-	mustSetLogLevel("gameserver", "debug")
-	mustSetLogLevel("gamenetwork", "debug")
-	mustSetLogLevel("invites", "debug")
+	config.MustSetLogLevel("*", "INFO")
+	config.MustSetLogLevel("swarm2", "error")
+	config.MustSetLogLevel("pubsub", "error")
+	config.MustSetLogLevel("relay", "error")
+	config.MustSetLogLevel("autonat", "info")
+	config.MustSetLogLevel("dht", "error")
+	config.MustSetLogLevel("uiserver", "debug")
+	config.MustSetLogLevel("game", "debug")
+	config.MustSetLogLevel("gameserver", "debug")
+	config.MustSetLogLevel("gamenetwork", "debug")
+	config.MustSetLogLevel("invites", "debug")
 
 	port := 8080
 	grpcServer := grpc.NewServer()

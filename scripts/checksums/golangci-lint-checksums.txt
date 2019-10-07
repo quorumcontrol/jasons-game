@@ -4,3 +4,9 @@ da6f2a181cc0de7744c1e009fb3802dda537105078dd25103beef79b28a36630  golangci-lint-
 0a143e22e248fba1ed04338cbd3605444eee18ca6da7a433d8ef44ad60a2db9a  golangci-lint-1.15.0-windows-386.zip
 f37f4a15eb309578b0546703da5ea96bc5bd472f45f204338051aaca6fbbfc5b  golangci-lint-1.15.0-linux-amd64.tar.gz
 f047e2dc7ee3b88600c316f4445edf1fb89107449eeec61e96be79a8d84117a8  golangci-lint-1.15.0-windows-amd64.zip
+f0534be9cde3f7fda16a18d2d77d3b62f58c3eddfebdf9e4159ab6cb96e5ba5d  golangci-lint-1.19.1-darwin-386.tar.gz
+b6e0719a6e2d2e8aefe67ab33e67d7be81790fec41da6412e152cd77f37cf955  golangci-lint-1.19.1-darwin-amd64.tar.gz
+963c6c7f2332234b568fbd2db1acdfae1fa781ff53a11c392141374433e713bd  golangci-lint-1.19.1-linux-386.tar.gz
+03ca6a77734720581b11a78e5fd4ce6d6bfd8f36768b214bb9890980b6db261f  golangci-lint-1.19.1-linux-amd64.tar.gz
+5f9269cf8211ee2dc1824a35749662100f2c61548c281dae47ca575e93d2fc76  golangci-lint-1.19.1-windows-386.zip
+9adb30ca0d25e0d0816291095c3fa7788bc8a16f343f9ee7a91e5cfc089e4adf  golangci-lint-1.19.1-windows-amd64.zip

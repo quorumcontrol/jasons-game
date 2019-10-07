@@ -3,7 +3,7 @@ jobs:
   build:
     resource_class: medium+
     docker:
-      - image: circleci/golang:1.12.5
+      - image: circleci/golang:1.13.0
     steps:
       - checkout
       - setup_remote_docker

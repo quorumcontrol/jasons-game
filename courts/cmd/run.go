@@ -7,11 +7,13 @@ import (
 	"os/signal"
 
 	"github.com/ethereum/go-ethereum/crypto"
+	"github.com/spf13/cobra"
+
+	"github.com/quorumcontrol/jasons-game/config"
 	"github.com/quorumcontrol/jasons-game/courts/arcadia"
 	"github.com/quorumcontrol/jasons-game/courts/autumn"
 	"github.com/quorumcontrol/jasons-game/courts/basic"
 	"github.com/quorumcontrol/jasons-game/courts/spring"
-	"github.com/spf13/cobra"
 )
 
 var courtsList []string
@@ -33,8 +35,8 @@ var runCourts = &cobra.Command{
 			panic("must specify at least one --court")
 		}
 
-		mustSetLogLevel("importer", logLevel)
-		mustSetLogLevel("respawner", logLevel)
+		config.MustSetLogLevel("importer", logLevel)
+		config.MustSetLogLevel("respawner", logLevel)
 
 		fmt.Printf("Court authentication address is %s\n", crypto.PubkeyToAddress(*net.PublicKey()).String())
 
@@ -55,7 +57,7 @@ var runCourts = &cobra.Command{
 			default:
 				panic("unknown court named " + courtName)
 			}
-			mustSetLogLevel(courtName, logLevel)
+			config.MustSetLogLevel(courtName, logLevel)
 			court.Start()
 		}
 

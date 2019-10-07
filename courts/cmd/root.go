@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"os"
 
-	logging "github.com/ipfs/go-log"
 	"github.com/spf13/cobra"
 )
 
@@ -35,12 +34,6 @@ func init() {
 	rootCmd.PersistentFlags().StringVarP(&logLevel, "log-level", "L", "info", "logging level (debug|info|warn|error)")
 	rootCmd.PersistentFlags().StringVar(&configDir, "config", "", "path to yaml config directory")
 	if err := rootCmd.MarkPersistentFlagRequired("config"); err != nil {
-		panic(err)
-	}
-}
-
-func mustSetLogLevel(name string, level string) {
-	if err := logging.SetLogLevel(name, level); err != nil {
 		panic(err)
 	}
 }

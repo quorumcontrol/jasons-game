@@ -16,7 +16,7 @@ import (
 
 var log = logging.Logger("autumn")
 
-type autumnConfig struct {
+type AutumnConfig struct {
 	PrizeFailMsg   string                `yaml:"prize_fail_msg"`
 	WinningElement int                   `yaml:"winning_element"`
 	Elements       []*element            `yaml:"elements"`
@@ -28,7 +28,7 @@ type AutumnCourt struct {
 	ctx        context.Context
 	net        network.Network
 	court      *court.Court
-	config     *autumnConfig
+	config     *AutumnConfig
 	configPath string
 }
 
@@ -45,17 +45,20 @@ func (c *AutumnCourt) Start() {
 	court.SpawnCourt(c.ctx, c)
 }
 
-func (c *AutumnCourt) ids() (map[string]interface{}, error) {
+func (c *AutumnCourt) Ids() (map[string]interface{}, error) {
 	return c.court.Ids()
 }
 
-func (c *AutumnCourt) parseConfig() *autumnConfig {
-	ids, err := c.ids()
+func (c *AutumnCourt) parseConfig() *AutumnConfig {
+	log.Info("parsing config")
+	ids, err := c.Ids()
 	if err != nil {
-		panic(errors.Wrap(err, "error fetching court ids"))
+		panic(errors.Wrap(err, "error fetching court Ids"))
 	}
 
-	cfg := &autumnConfig{}
+	log.Debugf("IDs: %+v", ids)
+
+	cfg := &AutumnConfig{}
 	err = config.ReadYaml(filepath.Join(c.configPath, "autumn/config.yml"), cfg, ids)
 	if err != nil {
 		panic(errors.Wrap(err, "error fetching config"))
@@ -99,7 +102,7 @@ func (c *AutumnCourt) setupArtifactHandler(actorCtx actor.Context) {
 }
 
 func (c *AutumnCourt) setupCombinationHandler(actorCtx actor.Context, name string, elements []*element, combinations []*elementCombination) {
-	locationDidUncast, err := c.court.Resolve([]string{"tree", "data", "ids", "Locations", name})
+	locationDidUncast, err := c.court.Resolve([]string{"tree", "data", "Ids", "Locations", name})
 	if err != nil {
 		panic(err)
 	}
@@ -127,6 +130,7 @@ func (c *AutumnCourt) setupCombinationHandler(actorCtx actor.Context, name strin
 func (c *AutumnCourt) initialize(actorCtx actor.Context) {
 	err := c.court.Import(c.configPath)
 	if err != nil {
+		log.Errorf("error importing config from %s: %v", c.configPath, err)
 		panic(err)
 	}
 
@@ -141,6 +145,7 @@ func (c *AutumnCourt) initialize(actorCtx actor.Context) {
 func (c *AutumnCourt) Receive(actorCtx actor.Context) {
 	switch actorCtx.Message().(type) {
 	case *actor.Started:
+		log.Info("initializing autumn court actor")
 		c.initialize(actorCtx)
 	}
 }

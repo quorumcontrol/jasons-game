@@ -5,57 +5,34 @@ import (
 	"flag"
 	"fmt"
 
+	"github.com/ethereum/go-ethereum/crypto"
+
 	"github.com/quorumcontrol/jasons-game/benchmark"
 	"github.com/quorumcontrol/jasons-game/config"
 	"github.com/quorumcontrol/jasons-game/network"
 )
 
-func main() {
-	ctx := context.Background()
-
-	benchmarkType := flag.String("type", "bitswap", "type of benchmark to run")
-	iterations := flag.Int("iterations", 0, "iterations to run (0 means all DIDs)")
-	concurrency := flag.Int("concurrency", 10, "number to run in parallel")
-	flag.Parse()
-
-	// change this once we support more than one type of benchmark
-	if *benchmarkType != "bitswap" {
-		panic(fmt.Errorf("benchmark type %s not supported", *benchmarkType))
-	}
-
+func runBitswapBenchmark(ctx context.Context, netCfg *network.RemoteNetworkConfig, iterations, concurrency int) {
 	dids, err := benchmark.ReadDidsFile()
 	if err != nil {
 		panic(err)
 	}
 
-	notaryGroup, err := network.SetupTupeloNotaryGroup(ctx, false)
-	if err != nil {
-		panic(err)
-	}
-
-	netCfg := &network.RemoteNetworkConfig{
-		NotaryGroup:   notaryGroup,
-		KeyValueStore: config.MemoryDataStore(),
-	}
-
 	cfg := &benchmark.BitswapperBenchmarkConfig{
-		NetCfg:      netCfg,
-		Dids:        dids,
-		Iterations:  *iterations,
-		Concurrency: *concurrency,
+		BenchmarkConfig: benchmark.BenchmarkConfig{
+			NetCfg:      netCfg,
+			Iterations:  iterations,
+			Concurrency: concurrency,
+		},
+		Dids: dids,
 	}
 
-	bench, err := benchmark.NewBitswapperBenchmark(ctx, cfg)
+	bench, err := benchmark.NewBitswapperBenchmark(cfg)
 	if err != nil {
 		panic(err)
 	}
 
-	displayIterations := *iterations
-	if displayIterations == 0 {
-		displayIterations = len(dids)
-	}
-
-	fmt.Printf("Benchmarking %d DIDs over %d iterations with concurrency %d\n", len(dids), displayIterations, *concurrency)
+	fmt.Printf("Benchmarking %d DIDs over %d iterations with concurrency %d\n", len(dids), bench.Iterations(), concurrency)
 
 	results, err := bench.Run(ctx)
 	if err != nil {
@@ -63,11 +40,67 @@ func main() {
 	}
 
 	fmt.Println()
-	fmt.Println("Results:")
-	fmt.Println("\tIterations:", results.Iterations)
-	fmt.Println("\tErrors:", results.Errors)
-	fmt.Println("\tTotal Duration:", results.TotalDuration)
-	fmt.Println("\tAverage Duration:", results.AvgDuration)
-	fmt.Println("\t90th Percentile Duration:", results.NinetiethPercentileDuration)
-	fmt.Println("\tNodes Per Second:", results.NodesPerSecond)
+	fmt.Println(results.Sprint())
+}
+
+func runTransactionsBenchmark(ctx context.Context, netCfg *network.RemoteNetworkConfig, iterations, concurrency int) {
+	cfg := &benchmark.TransactionsBenchmarkConfig{
+		BenchmarkConfig: benchmark.BenchmarkConfig{
+			NetCfg:      netCfg,
+			Iterations:  iterations,
+			Concurrency: concurrency,
+		},
+	}
+
+	bench, err := benchmark.NewTransactionsBenchmark(cfg)
+	if err != nil {
+		panic(err)
+	}
+
+	fmt.Printf("Benchmarking transactions over %d iterations with concurrency %d\n", bench.Iterations(), bench.Concurrency())
+
+	results, err := bench.Run(ctx)
+	if err != nil {
+		panic(err)
+	}
+
+	fmt.Println()
+	fmt.Println(results.Sprint())
+}
+
+func main() {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	benchmarkType := flag.String("type", "bitswap", "type of benchmark to run (bitswap or transactions)")
+	iterations := flag.Int("iterations", 0, "iterations to run (0 means all DIDs)")
+	concurrency := flag.Int("concurrency", 10, "number to run in parallel")
+	flag.Parse()
+
+	if *benchmarkType != "bitswap" && *benchmarkType != "transactions" {
+		panic(fmt.Errorf("benchmark type %s not supported", *benchmarkType))
+	}
+
+	notaryGroup, err := network.SetupTupeloNotaryGroup(ctx, false)
+	if err != nil {
+		panic(err)
+	}
+
+	signingKey, err := crypto.GenerateKey()
+	if err != nil {
+		panic(err)
+	}
+
+	netCfg := &network.RemoteNetworkConfig{
+		NotaryGroup:   notaryGroup,
+		KeyValueStore: config.MemoryDataStore(),
+		SigningKey:    signingKey,
+	}
+
+	switch *benchmarkType {
+	case "bitswap":
+		runBitswapBenchmark(ctx, netCfg, *iterations, *concurrency)
+	case "transactions":
+		runTransactionsBenchmark(ctx, netCfg, *iterations, *concurrency)
+	}
 }

@@ -12,32 +12,26 @@ import (
 	"github.com/AsynkronIT/protoactor-go/actor"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/gogo/protobuf/proto"
-	logging "github.com/ipfs/go-log"
 	"github.com/pkg/errors"
 	"github.com/quorumcontrol/messages/build/go/transactions"
 
 	"github.com/quorumcontrol/jasons-game/build"
+	cfg "github.com/quorumcontrol/jasons-game/config"
 	"github.com/quorumcontrol/jasons-game/inkfaucet/config"
 	"github.com/quorumcontrol/jasons-game/inkfaucet/depositor"
 	"github.com/quorumcontrol/jasons-game/inkfaucet/inkfaucet"
 	"github.com/quorumcontrol/jasons-game/inkfaucet/server"
 )
 
-func mustSetLogLevel(name, level string) {
-	if err := logging.SetLogLevel(name, level); err != nil {
-		panic(errors.Wrapf(err, "error setting log level of %s to %s", name, level))
-	}
-}
-
 func main() {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	mustSetLogLevel("*", "warning")
-	mustSetLogLevel("pubsub", "error")
-	mustSetLogLevel("invites", "debug")
-	mustSetLogLevel("inkFaucet", "debug")
-	mustSetLogLevel("gamenetwork", "info")
+	cfg.MustSetLogLevel("*", "warning")
+	cfg.MustSetLogLevel("pubsub", "error")
+	cfg.MustSetLogLevel("invites", "debug")
+	cfg.MustSetLogLevel("inkFaucet", "debug")
+	cfg.MustSetLogLevel("gamenetwork", "info")
 
 	local := flag.Bool("local", false, "connect to localnet")
 	deposit := flag.String("deposit", "", "token payload for ink deposit")
