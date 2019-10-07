@@ -102,7 +102,7 @@ func (c *AutumnCourt) setupArtifactHandler(actorCtx actor.Context) {
 }
 
 func (c *AutumnCourt) setupCombinationHandler(actorCtx actor.Context, name string, elements []*element, combinations []*elementCombination) {
-	locationDidUncast, err := c.court.Resolve([]string{"tree", "data", "Ids", "Locations", name})
+	locationDidUncast, err := c.court.Resolve([]string{"tree", "data", "ids", "Locations", name})
 	if err != nil {
 		panic(err)
 	}
