@@ -20,6 +20,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/quorumcontrol/chaintree/typecaster"
 	"github.com/quorumcontrol/jasons-game/game"
+	"github.com/quorumcontrol/jasons-game/game/static"
 	"github.com/quorumcontrol/jasons-game/game/trees"
 	"github.com/quorumcontrol/jasons-game/importer/flatmap"
 	"github.com/quorumcontrol/jasons-game/network"
@@ -34,6 +35,7 @@ type nameToDidMap map[string]string
 type NameToDids struct {
 	Locations nameToDidMap
 	Objects   nameToDidMap
+	Static    nameToDidMap
 }
 
 type ImportInteraction struct {
@@ -68,9 +70,15 @@ func New(network network.Network) *Importer {
 }
 
 func (i *Importer) createTrees(data *ImportPayload) (*NameToDids, error) {
+	staticVals, err := static.GetAll(i.network)
+	if err != nil {
+		return nil, err
+	}
+
 	ids := &NameToDids{
 		Locations: make(nameToDidMap),
 		Objects:   make(nameToDidMap),
+		Static:    staticVals,
 	}
 
 	for key := range data.Locations {
