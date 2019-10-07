@@ -8,8 +8,6 @@ import (
 	"github.com/AsynkronIT/protoactor-go/actor"
 	"github.com/gogo/protobuf/proto"
 	logging "github.com/ipfs/go-log"
-
-	"github.com/quorumcontrol/jasons-game/network"
 	"github.com/quorumcontrol/jasons-game/pb/jasonsgame"
 )
 
@@ -23,15 +21,13 @@ type doneChan chan struct{}
 
 type UIServer struct {
 	game     *actor.PID
-	network  network.Network
 	stream   remoteStream
 	doneChan doneChan
 }
 
-func NewUIProps(stream remoteStream, net network.Network) *actor.Props {
+func NewUIProps(stream remoteStream) *actor.Props {
 	return actor.PropsFromProducer(func() actor.Actor {
 		return &UIServer{
-			network: net,
 			stream:  stream,
 		}
 	})

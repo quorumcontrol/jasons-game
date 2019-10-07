@@ -16,7 +16,7 @@ import (
 var rootCtx = actor.EmptyRootContext
 
 func setupUiAndGame(t *testing.T, stream *ui.TestStream, net network.Network) (simulatedUI, game *actor.PID) {
-	simulatedUI, err := rootCtx.SpawnNamed(ui.NewUIProps(stream, net), t.Name()+"-ui")
+	simulatedUI, err := rootCtx.SpawnNamed(ui.NewUIProps(stream), t.Name()+"-ui")
 	require.Nil(t, err)
 
 	playerChain, err := net.CreateLocalChainTree("player")

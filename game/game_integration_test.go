@@ -31,7 +31,7 @@ func TestFullIntegration(t *testing.T) {
 
 	stream := ui.NewTestStream(t)
 
-	uiActor, err := rootCtx.SpawnNamed(ui.NewUIProps(stream, net), "test-integration-ui")
+	uiActor, err := rootCtx.SpawnNamed(ui.NewUIProps(stream), "test-integration-ui")
 	require.Nil(t, err)
 	defer rootCtx.Stop(uiActor)
 

@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 	"time"
 
+	"github.com/99designs/keyring"
 	"github.com/AsynkronIT/protoactor-go/actor"
 	logging "github.com/ipfs/go-log"
 	"github.com/pkg/errors"
@@ -86,48 +87,70 @@ func (gs *GameServer) ReceiveStatMessages(sess *jasonsgame.Session, stream jason
 	return nil
 }
 
+var secureKeyringBackends = []keyring.BackendType{
+	keyring.WinCredBackend,
+	keyring.KeychainBackend,
+	keyring.SecretServiceBackend,
+	keyring.KWalletBackend,
+	keyring.PassBackend,
+}
+
+const insecureKeyringMessage = "WARNING: Jasons' Game was unable to find a secure keystore on your system.\nPlease consider using one of the backends listed here: https://github.com/99designs/keyring"
+
 func (gs *GameServer) getOrCreateSession(sess *jasonsgame.Session, stream jasonsgame.GameService_ReceiveUIMessagesServer) *actor.PID {
 	uiActor, ok := gs.sessions[sess.Uuid]
+
 	if !ok {
-		// use filepath.Base as a "cleaner" here to not allow setting arbitrary directories with, for example, uuid: "../../etc/passwd"
-		statePath := filepath.Join(gs.sessionPath, filepath.Base(sess.Uuid))
-		if err := os.MkdirAll(statePath, 0750); err != nil {
-			panic(errors.Wrap(err, "error creating session storage"))
-		}
-
-		ds, err := config.LocalDataStore(statePath)
-		if err != nil {
-			panic(errors.Wrap(err, "error getting store"))
-		}
-
-		net, err := network.NewRemoteNetwork(gs.parentCtx, gs.group, ds)
-		if err != nil {
-			panic(errors.Wrap(err, "setting up network"))
-		}
-
 		if sess == nil {
 			// TODO: do this more gracefully
 			log.Errorf("no session")
 			panic("must supply a valid session")
 		}
 
+		// use filepath.Base as a "cleaner" here to not allow setting arbitrary directories with, for example, uuid: "../../etc/passwd"
+		statePath := filepath.Join(gs.sessionPath, filepath.Base(sess.Uuid))
+		if err := os.MkdirAll(statePath, 0750); err != nil {
+			panic(errors.Wrap(err, "error creating session storage"))
+		}
+
+		ds, err := config.LocalDataStore(filepath.Join(statePath, "data"))
+		if err != nil {
+			panic(errors.Wrap(err, "error getting store"))
+		}
+
 		log.Debugf("creating actors")
-		uiActor = actor.EmptyRootContext.Spawn(ui.NewUIProps(stream, net))
+		uiActor = actor.EmptyRootContext.Spawn(ui.NewUIProps(stream))
 		gs.sessions[sess.Uuid] = uiActor
 
-		playerTree, err := game.GetPlayerTree(net)
-		if err != nil {
-			panic(errors.Wrap(err, "error getting player tree"))
+		kr, err := keyring.Open(keyring.Config{
+			ServiceName:                    "Jasons Game",
+			KeychainTrustApplication:       true,
+			KeychainAccessibleWhenUnlocked: true,
+			AllowedBackends:                secureKeyringBackends,
+		})
+
+		// Fallback to insecure file store, warn user
+		if kr == nil {
+			actor.EmptyRootContext.Send(uiActor, &jasonsgame.MessageToUser{Message: insecureKeyringMessage})
+			kr, err = keyring.Open(keyring.Config{
+				FileDir:         filepath.Join(statePath, "keys"),
+				AllowedBackends: []keyring.BackendType{keyring.FileBackend},
+				FilePasswordFunc: func(_ string) (string, error) {
+					return "insecure", nil
+				},
+			})
 		}
 
-		gameCfg := &game.GameConfig{
-			PlayerTree: playerTree,
-			UiActor:    uiActor,
-			Network:    net,
-			InkDID:     gs.inkDID,
-			DataStore:  ds,
+		if err != nil {
+			panic(errors.Wrap(err, "error opening keyring"))
 		}
-		actor.EmptyRootContext.Spawn(game.NewGameProps(gameCfg))
+
+		actor.EmptyRootContext.Spawn(game.NewAuthenticatedSessionProps(gs.parentCtx, &game.AuthenticatedSessionConfig{
+			UiActor:     uiActor,
+			DataStore:   ds,
+			NotaryGroup: gs.group,
+			Keyring:     kr,
+		}))
 	}
 	return uiActor
 }

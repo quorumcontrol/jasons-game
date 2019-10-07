@@ -39,7 +39,7 @@ func TestAutumnCourt(t *testing.T) {
 
 	rootCtx := actor.EmptyRootContext
 	stream := ui.NewTestStream(t)
-	simulatedUI, err := rootCtx.SpawnNamed(ui.NewUIProps(stream, net), t.Name()+"-ui")
+	simulatedUI, err := rootCtx.SpawnNamed(ui.NewUIProps(stream), t.Name()+"-ui")
 	require.Nil(t, err)
 	defer rootCtx.Stop(simulatedUI)
 
