@@ -21,3 +21,21 @@ func Get(net network.Network, key string) (string, error) {
 
 	return val.(string), nil
 }
+
+func GetAll(net network.Network) (map[string]string, error) {
+	ret := make(map[string]string)
+	tree, err := net.GetTree(STATIC_DID)
+	if err != nil || tree == nil {
+		return ret, err
+	}
+
+	val, _, err := tree.ChainTree.Dag.Resolve(context.Background(), []string{"tree", "data", "jasons-game", "values"})
+	if err != nil || val == nil {
+		return ret, err
+	}
+
+	for k, v := range val.(map[string]interface{}) {
+		ret[k] = v.(string)
+	}
+	return ret, nil
+}
