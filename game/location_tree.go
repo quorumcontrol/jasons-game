@@ -37,6 +37,10 @@ func (l *LocationTree) MustId() string {
 	return l.tree.MustId()
 }
 
+func (l *LocationTree) Tree() *consensus.SignedChainTree {
+	return l.tree
+}
+
 func (l *LocationTree) Tip() cid.Cid {
 	return l.tree.Tip()
 }
