@@ -5,21 +5,23 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/gogo/protobuf/proto"
 
 	messages "github.com/quorumcontrol/messages/build/go/community"
 
 	"github.com/quorumcontrol/jasons-game/game"
 	"github.com/quorumcontrol/jasons-game/game/trees"
+	"github.com/quorumcontrol/jasons-game/handlers"
 	"github.com/quorumcontrol/jasons-game/network"
 	"github.com/quorumcontrol/jasons-game/pb/jasonsgame"
 )
 
 type MockElementClient struct {
-	Net     network.Network
-	H       *ElementCombinerHandler
-	Player  string
-	Service string
+	Net      network.Network
+	H        handlers.Handler
+	Player   string
+	Location string
 }
 
 func (e *MockElementClient) Send(id int) error {
@@ -27,9 +29,20 @@ func (e *MockElementClient) Send(id int) error {
 	if err != nil {
 		return err
 	}
+
+	auths, err := e.serviceAuthentications()
+	if err != nil {
+		return err
+	}
+
+	_, err = e.Net.ChangeChainTreeOwner(el.ChainTree(), append(auths, crypto.PubkeyToAddress(*e.Net.PublicKey()).String()))
+	if err != nil {
+		return err
+	}
+
 	msg := &jasonsgame.TransferredObjectMessage{
 		From:   e.Player,
-		To:     e.Service,
+		To:     e.Location,
 		Object: el.MustId(),
 	}
 	return e.H.Handle(msg)
@@ -54,7 +67,7 @@ func (e *MockElementClient) PickupBowl() (*jasonsgame.TransferredObjectMessage, 
 	defer e.Net.Community().Unsubscribe(sub) // nolint
 
 	msg := &jasonsgame.RequestObjectTransferMessage{
-		From:   e.Service,
+		From:   e.Location,
 		To:     e.Player,
 		Object: e.Bowl(),
 	}
@@ -64,13 +77,22 @@ func (e *MockElementClient) PickupBowl() (*jasonsgame.TransferredObjectMessage, 
 	select {
 	case msg := <-received:
 		return msg, nil
-	case <-time.After(10 * time.Second):
+	case <-time.After(60 * time.Second):
 		return nil, fmt.Errorf("timeout waiting for transferred message")
 	}
 }
 
+func (e *MockElementClient) serviceAuthentications() ([]string, error) {
+	tree, err := e.Net.GetTree(e.Location)
+	if err != nil {
+		return nil, err
+	}
+
+	return tree.Authentications()
+}
+
 func (e *MockElementClient) Bowl() string {
-	serviceInventory, err := trees.FindInventoryTree(e.Net, e.Service)
+	serviceInventory, err := trees.FindInventoryTree(e.Net, e.Location)
 	if err != nil {
 		return ""
 	}
