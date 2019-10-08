@@ -33,10 +33,10 @@ func TestElementCombinerHandler(t *testing.T) {
 	require.Nil(t, err)
 
 	client := &MockElementClient{
-		Net:     net,
-		H:       h,
-		Player:  playerTree.MustId(),
-		Service: serviceTree.MustId(),
+		Net:      net,
+		H:        h,
+		Player:   playerTree.MustId(),
+		Location: serviceTree.MustId(),
 	}
 
 	t.Run("with a correct combination", func(t *testing.T) {
@@ -89,5 +89,3 @@ func TestElementCombinerHandler(t *testing.T) {
 		require.True(t, client.HasBowl())
 	})
 }
-
-
