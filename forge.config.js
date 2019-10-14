@@ -52,14 +52,32 @@ function deleteOtherPlatforms(forgeConfig, buildPath, electronVersion, platform,
     });
 }
 
+function deleteExtraWindowsCrap(forgeConfig, results) {
+    let newResults = results;
+
+    results.forEach((r, i) => {
+        if (r['platform'] === "win32") {
+            let newArtifacts = [];
+            r['artifacts'].forEach((a) => {
+                if (a.endsWith(".exe")) {
+                    newArtifacts.push(a);
+                }
+            });
+            newResults[i]['artifacts'] = newArtifacts;
+        }
+    });
+
+    return newResults;
+}
+
 module.exports = {
     "makers": [
         {
-            name: '@electron-forge/maker-zip',
-            platforms: ['darwin', 'linux']
+            "name": '@electron-forge/maker-zip',
+            "platforms": ['darwin', 'linux']
         },
         {
-            name: '@electron-forge/maker-squirrel'
+            "name": '@electron-forge/maker-squirrel'
         }
     ],
     "packagerConfig": {
@@ -95,6 +113,19 @@ module.exports = {
         "name": "JasonsGame"
     },
     "hooks": {
-        "packageAfterPrune": deleteOtherPlatforms
-    }
+        "packageAfterPrune": deleteOtherPlatforms,
+        "postMake": deleteExtraWindowsCrap
+    },
+    "publishers": [
+        {
+            "name": "@electron-forge/publisher-github",
+            "config": {
+                "repository": {
+                    "owner": "quorumcontrol",
+                    "name": "jasons-game"
+                },
+                "prerelease": true
+            }
+        }
+    ]
 };
