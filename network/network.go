@@ -121,6 +121,7 @@ func NewRemoteNetworkWithConfig(ctx context.Context, config *RemoteNetworkConfig
 	if err != nil {
 		return nil, errors.Wrap(err, "error creating IPLD client")
 	}
+	log.Debugf("IPLD net host identity is %s", ipldNetHost.Identity())
 	net.Ipld = lite
 	net.community = NewJasonCommunity(ctx, ipldKey, ipldNetHost)
 
@@ -146,6 +147,7 @@ func NewRemoteNetworkWithConfig(ctx context.Context, config *RemoteNetworkConfig
 	if err != nil {
 		return nil, fmt.Errorf("error setting up p2p host: %s", err)
 	}
+	log.Debugf("Tupelo net host identity is %s", tupeloP2PHost.Identity())
 
 	remote.NewRouter(tupeloP2PHost)
 	group.SetupAllRemoteActors(&networkKey.PublicKey)

@@ -3,10 +3,13 @@ package cmd
 import (
 	"context"
 	"fmt"
+	"net/http"
+	"net/http/pprof"
 	"os"
 	"os/signal"
 
 	"github.com/ethereum/go-ethereum/crypto"
+	"github.com/gorilla/mux"
 	"github.com/spf13/cobra"
 
 	"github.com/quorumcontrol/jasons-game/config"
@@ -29,14 +32,36 @@ var runCourts = &cobra.Command{
 		ctx, cancel := context.WithCancel(context.Background())
 		defer cancel()
 
+		config.MustSetLogLevel("importer", logLevel)
+		config.MustSetLogLevel("respawner", logLevel)
+		config.MustSetLogLevel("swarm2", logLevel)
+		config.MustSetLogLevel("pubsub", logLevel)
+		config.MustSetLogLevel("autonat", logLevel)
+		config.MustSetLogLevel("dht", logLevel)
+		config.MustSetLogLevel("bitswap", logLevel)
+		config.MustSetLogLevel("gamenetwork", logLevel)
+
 		net := setupNetwork(ctx, newFileStore("courts"), localNetworkFlag)
 
 		if len(courtsList) == 0 {
 			panic("must specify at least one --court")
 		}
 
-		config.MustSetLogLevel("importer", logLevel)
-		config.MustSetLogLevel("respawner", logLevel)
+		go func() {
+			debugR := mux.NewRouter()
+			debugR.HandleFunc("/debug/pprof/", pprof.Index)
+			debugR.HandleFunc("/debug/pprof/cmdline", pprof.Cmdline)
+			debugR.HandleFunc("/debug/pprof/profile", pprof.Profile)
+			debugR.HandleFunc("/debug/pprof/symbol", pprof.Symbol)
+			debugR.Handle("/debug/pprof/heap", pprof.Handler("heap"))
+			debugR.Handle("/debug/pprof/goroutine", pprof.Handler("goroutine"))
+			debugR.Handle("/debug/pprof/block", pprof.Handler("block"))
+			debugR.Handle("/debug/pprof/threadcreate", pprof.Handler("threadcreate"))
+			err := http.ListenAndServe(":8080", debugR)
+			if err != nil {
+				fmt.Println(err.Error())
+			}
+		}()
 
 		fmt.Printf("Court authentication address is %s\n", crypto.PubkeyToAddress(*net.PublicKey()).String())
 
