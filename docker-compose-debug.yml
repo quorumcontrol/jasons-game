@@ -1,0 +1,36 @@
+version: "3"
+services:
+  autumncourt:
+    build: ./devdocker
+    command: ["go", "run", "courts/main.go", "run", "--court", "autumn", "--config", "courts/yml/", "--log-level", "error", "--local", "true"]
+    volumes:
+      - .:/app:delegated
+      - ./devdocker/.tmp:/root/.cache:delegated
+      - $GOPATH/pkg/mod:/go/pkg/mod:delegated
+    environment:
+      GOPATH: /go
+      TUPELO_BOOTSTRAP_NODES: /ip4/172.16.239.10/tcp/34001/ipfs/16Uiu2HAm3TGSEKEjagcCojSJeaT5rypaeJMKejijvYSnAjviWwV5
+      JASON_BOOTSTRAP_NODES: "/ip4/172.16.239.100/tcp/34001/ipfs/16Uiu2HAmBL6Xz9ichyunCexiqomcHyzVpKKmxAMgUusksBZzzM3K,/ip4/172.16.239.101/tcp/34001/ipfs/16Uiu2HAmKnEU1n5H3ET2uQNF5kq4uC2xgHJhnrjN7tudFA3EP73u"
+      JASONS_GAME_ECDSA_KEY_HEX: "0xfb357f092776e1facd9643ca0867f3239deb637cdf3cdf7a7e74060a9f06e7bc"
+
+  benchmark:
+    build: ./devdocker
+    depends_on: 
+      - autumncourt
+    command: ["go", "run", "benchmark/cmd/cli/main.go", "-type", "transactions", "-concurrency", "10", "-iterations", "500", "-local", "true"]
+    volumes:
+      - .:/app:delegated
+      - ./devdocker/.tmp:/root/.cache:delegated
+      - $GOPATH/pkg/mod:/go/pkg/mod:delegated
+    environment:
+      GOPATH: /go
+      TUPELO_BOOTSTRAP_NODES: /ip4/172.16.239.10/tcp/34001/ipfs/16Uiu2HAm3TGSEKEjagcCojSJeaT5rypaeJMKejijvYSnAjviWwV5
+      JASON_BOOTSTRAP_NODES: "/ip4/172.16.239.100/tcp/34001/ipfs/16Uiu2HAmBL6Xz9ichyunCexiqomcHyzVpKKmxAMgUusksBZzzM3K,/ip4/172.16.239.101/tcp/34001/ipfs/16Uiu2HAmKnEU1n5H3ET2uQNF5kq4uC2xgHJhnrjN7tudFA3EP73u"
+
+networks:
+  default:
+    driver: bridge
+    ipam:
+      driver: default
+      config:
+        - subnet: 172.16.239.0/24

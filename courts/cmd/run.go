@@ -34,11 +34,11 @@ var runCourts = &cobra.Command{
 
 		config.MustSetLogLevel("importer", logLevel)
 		config.MustSetLogLevel("respawner", logLevel)
-		config.MustSetLogLevel("swarm2", logLevel)
-		config.MustSetLogLevel("pubsub", logLevel)
-		config.MustSetLogLevel("autonat", logLevel)
-		config.MustSetLogLevel("dht", logLevel)
-		config.MustSetLogLevel("bitswap", logLevel)
+		// config.MustSetLogLevel("swarm2", logLevel)
+		// config.MustSetLogLevel("pubsub", logLevel)
+		// config.MustSetLogLevel("autonat", logLevel)
+		// config.MustSetLogLevel("dht", logLevel)
+		// config.MustSetLogLevel("bitswap", logLevel)
 		config.MustSetLogLevel("gamenetwork", logLevel)
 
 		net := setupNetwork(ctx, newFileStore("courts"), localNetworkFlag)

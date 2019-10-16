@@ -15,7 +15,9 @@ import (
 	"github.com/quorumcontrol/messages/build/go/signatures"
 )
 
-const weaverServiceDid = "did:tupelo:0x55e6099c0a47c8516e72e402B10b9e02601ADa6C"
+const remoteWeaverServiceDid = "did:tupelo:0x55e6099c0a47c8516e72e402B10b9e02601ADa6C"
+const localWeaverServiceDid = "did:tupelo:0x3534411c3e9e25ba4d02eAFeB3CCd9149773Ebd6"
+const weaverServiceDid = localWeaverServiceDid
 
 // const binderServiceDid = "did:tupelo:0x99bcF7ECC24F028dB1080a9d76b20D08526327BF"
 

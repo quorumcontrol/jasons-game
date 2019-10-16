@@ -31,7 +31,7 @@ var _ Benchmark = &TransactionsBenchmark{}
 var _ Result = &TransactionsResult{}
 
 func NewTransactionsBenchmark(cfg *TransactionsBenchmarkConfig) (*TransactionsBenchmark, error) {
-	appcfg.MustSetLogLevel("benchmark", "info")
+	appcfg.MustSetLogLevel("benchmark", "debug")
 	appcfg.MustSetLogLevel("autumn", "info")
 
 	tb := &TransactionsBenchmark{

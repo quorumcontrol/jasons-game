@@ -4,6 +4,7 @@ import (
 	"context"
 	"flag"
 	"fmt"
+	"time"
 
 	"github.com/ethereum/go-ethereum/crypto"
 
@@ -75,13 +76,17 @@ func main() {
 	benchmarkType := flag.String("type", "bitswap", "type of benchmark to run (bitswap or transactions)")
 	iterations := flag.Int("iterations", 0, "iterations to run (0 means all DIDs)")
 	concurrency := flag.Int("concurrency", 10, "number to run in parallel")
+	localNetwork := flag.Bool("local", false, "use local docker-compose net?")
+
+	time.Sleep(80 * time.Second)
+
 	flag.Parse()
 
 	if *benchmarkType != "bitswap" && *benchmarkType != "transactions" {
 		panic(fmt.Errorf("benchmark type %s not supported", *benchmarkType))
 	}
 
-	notaryGroup, err := network.SetupTupeloNotaryGroup(ctx, false)
+	notaryGroup, err := network.SetupTupeloNotaryGroup(ctx, *localNetwork)
 	if err != nil {
 		panic(err)
 	}
