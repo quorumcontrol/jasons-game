@@ -1,5 +1,5 @@
 NotaryGroupConfig = "../notarygroup.toml"
-Key = "0xff20bbd4f65b2cd30eeb78ec49d83b42574d9d81d77196e111a243d01c6259fd"
+Key = "0x91314a17c141f39a0b53a1d3ed7534e3dc829d144663bd5e18515c24edd81c04"
 Port = 34001
 
 Name = "jasonsgame"
