@@ -1,7 +1,7 @@
 version: "3"
 services:
   bootstrap:
-    image: quorumcontrol/tupelo:master
+    image: quorumcontrol/tupelo:upgrade-tupelo-go-sdk
     command: ["bootstrap-node", "--config", "/configs/bootstrap/config.toml", "-L", "${TUPELO_LOG_LEVEL:-error}"]
     volumes:
       - ./devdocker/localkeys:/configs      
@@ -10,7 +10,7 @@ services:
         ipv4_address: 172.16.239.10
 
   community:
-    image: quorumcontrol/community:master
+    image: quorumcontrol/community:upgrade-tupelo-go-sdk
     depends_on:
       - bootstrap
     command: ["-c", "/configs/community/config.toml"]
@@ -21,7 +21,7 @@ services:
         ipv4_address: 172.16.239.100
   
   community2:
-    image: quorumcontrol/community:master
+    image: quorumcontrol/community:upgrade-tupelo-go-sdk
     depends_on:
       - bootstrap
     command: ["-c", "/configs/community2/config.toml"]
@@ -32,7 +32,7 @@ services:
         ipv4_address: 172.16.239.101
 
   node0:
-    image: quorumcontrol/tupelo:master
+    image: quorumcontrol/tupelo:upgrade-tupelo-go-sdk
     depends_on:
       - bootstrap
     command: ["test-node", "--config", "/configs/node0/config.toml", "-L", "${TUPELO_LOG_LEVEL:-error}"]
@@ -40,7 +40,7 @@ services:
       - ./devdocker/localkeys:/configs
 
   node1:
-    image: quorumcontrol/tupelo:master
+    image: quorumcontrol/tupelo:upgrade-tupelo-go-sdk
     depends_on:
       - bootstrap
     command: ["test-node", "--config", "/configs/node1/config.toml", "-L", "${TUPELO_LOG_LEVEL:-error}"]
@@ -48,7 +48,7 @@ services:
       - ./devdocker/localkeys:/configs
   
   node2:
-    image: quorumcontrol/tupelo:master
+    image: quorumcontrol/tupelo:upgrade-tupelo-go-sdk
     depends_on:
       - bootstrap
     command: ["test-node", "--config", "/configs/node2/config.toml", "-L", "${TUPELO_LOG_LEVEL:-error}"]
