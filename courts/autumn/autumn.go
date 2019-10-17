@@ -12,9 +12,12 @@ import (
 	"github.com/quorumcontrol/jasons-game/courts/config"
 	"github.com/quorumcontrol/jasons-game/courts/court"
 	"github.com/quorumcontrol/jasons-game/network"
+	"github.com/quorumcontrol/jasons-game/service"
 )
 
 var log = logging.Logger("autumn")
+
+const elementCombinerConcurrency = 10
 
 type AutumnConfig struct {
 	PrizeFailMsg   string                `yaml:"prize_fail_msg"`
@@ -121,7 +124,16 @@ func (c *AutumnCourt) setupCombinationHandler(actorCtx actor.Context, name strin
 	if err != nil {
 		panic(err)
 	}
-	_, err = c.court.SpawnHandler(actorCtx, handler)
+
+	_, err = actorCtx.SpawnNamed(service.NewServiceActorPropsWithConfig(&service.ServiceActorConfig{
+		Network:     c.net,
+		Handler:     handler,
+		Tree:        handler.Tree(),
+		Concurrency: elementCombinerConcurrency,
+	}), handler.Name())
+
+	log.Infof("%s handler started with did %s", handler.Name(), handler.Tree().MustId())
+
 	if err != nil {
 		panic(err)
 	}
