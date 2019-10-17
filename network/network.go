@@ -143,7 +143,7 @@ func NewRemoteNetworkWithConfig(ctx context.Context, config *RemoteNetworkConfig
 	}()
 
 	tupeloDiscoveryNs := TupueloDiscoveryNamespace
-	tupeloP2PHost, err := NewLibP2PHost(ctx, networkKey, p2p.WithDiscoveryNamespaces(tupeloDiscoveryNs))
+	tupeloP2PHost, err := NewLibP2PHost(ctx, networkKey, p2p.WithClientOnlyDHT(true), p2p.WithDiscoveryNamespaces(tupeloDiscoveryNs))
 	if err != nil {
 		return nil, fmt.Errorf("error setting up p2p host: %s", err)
 	}
