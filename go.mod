@@ -34,7 +34,7 @@ require (
 	github.com/quorumcontrol/chaintree v0.8.6-0.20191007111216-51a819c15c38
 	github.com/quorumcontrol/community v0.0.3-0.20190924213249-7b989784c22d
 	github.com/quorumcontrol/messages/build/go v0.0.0-20190916172743-fed64641cd55
-	github.com/quorumcontrol/tupelo-go-sdk v0.5.8-0.20191017180259-4ec3d42d7136
+	github.com/quorumcontrol/tupelo-go-sdk v0.5.8
 	github.com/rs/cors v1.7.0 // indirect
 	github.com/shibukawa/configdir v0.0.0-20170330084843-e180dbdc8da0
 	github.com/spf13/cobra v0.0.5
