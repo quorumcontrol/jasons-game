@@ -30,6 +30,8 @@ import (
 
 var log = logging.Logger("game")
 
+const hasArtifactHint = "-"
+
 var shoutChannel = []byte("jasons-game-shouting-players")
 
 type ping struct{}
@@ -477,8 +479,14 @@ func (g *Game) handleInteractionInput(actorCtx actor.Context, cmd *interactionCo
 func (g *Game) handleChangeLocation(actorCtx actor.Context, did string) {
 	log.Debugf("setting new location to %s", did)
 	g.setLocation(actorCtx, did)
+
+	// we can ignore the error here, if it fails, no big deal since its just
+	// a hint that an artifact exists
+	inventoryList, _ := g.getInventoryList(actorCtx, g.locationActor)
+
 	log.Debug("sending new location to UI")
 	g.sendUILocation(actorCtx)
+	g.sendArtifactHint(actorCtx, inventoryList)
 }
 
 func (g *Game) handleChangeNamedLocation(actorCtx actor.Context, name string) {
@@ -777,6 +785,8 @@ func (g *Game) handleLocationInventoryList(actorCtx actor.Context) error {
 		g.sendUserMessage(actorCtx, fmt.Sprintf("you see a mysterious portal leading to %s", l.Portal.To))
 	}
 
+	g.sendArtifactHint(actorCtx, inventoryList)
+
 	return nil
 }
 
@@ -872,6 +882,17 @@ func formatUserMessage(mesgInter interface{}) *jasonsgame.MessageToUser {
 		log.Errorf("error, unknown message type: %v", msg)
 	}
 	return msgToUser
+}
+
+func (g *Game) sendArtifactHint(actorCtx actor.Context, inventoryList *InventoryListResponse) {
+	if inventoryList != nil && len(inventoryList.Objects) > 0 {
+		for objName := range inventoryList.Objects {
+			if strings.HasPrefix(objName, "artifact-") {
+				g.sendUserMessage(actorCtx, hasArtifactHint)
+				break
+			}
+		}
+	}
 }
 
 func (g *Game) sendUserMessage(actorCtx actor.Context, mesgInter interface{}) {
