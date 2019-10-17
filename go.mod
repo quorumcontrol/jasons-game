@@ -50,4 +50,4 @@ replace github.com/libp2p/go-libp2p-pubsub v0.1.0 => github.com/quorumcontrol/go
 
 replace github.com/gobuffalo/packr/v2 v2.5.1 => github.com/gobuffalo/packr/v2 v2.5.3-0.20190708182234-662c20c19dde
 
-replace github.com/libp2p/go-libp2p-core => github.com/quorumcontrol/go-libp2p-core v0.2.3
+replace github.com/libp2p/go-libp2p-core => github.com/quorumcontrol/go-libp2p-core v0.2.4-0.20191017172042-69fe90d32d39
