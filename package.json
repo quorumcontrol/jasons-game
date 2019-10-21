@@ -18,6 +18,7 @@
     "electron-prebuilt-compile": "4.0.0"
   },
   "dependencies": {
+    "electron-log": "^3.0.8",
     "electron-squirrel-startup": "^1.0.0",
     "jasons-game-frontend": "file:frontend/jasons-game"
   },

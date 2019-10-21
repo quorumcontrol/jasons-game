@@ -10,7 +10,9 @@ function ignorePath(path) {
         /\/bin\//,
         /\/frontend$/,
         /\/frontend\/jasons-game$/,
-        /\/frontend\/main\.js$/
+        /\/frontend\/main\.js$/,
+        /\/frontend\/update\.html$/,
+        /\/frontend\/preload\.js$/
     ];
 
     let ignore = true;
@@ -50,24 +52,6 @@ function deleteOtherPlatforms(forgeConfig, buildPath, electronVersion, platform,
             }
         })
     });
-}
-
-function deleteExtraWindowsCrap(forgeConfig, results) {
-    let newResults = results;
-
-    results.forEach((r, i) => {
-        if (r['platform'] === "win32") {
-            let newArtifacts = [];
-            r['artifacts'].forEach((a) => {
-                if (a.endsWith(".exe")) {
-                    newArtifacts.push(a);
-                }
-            });
-            newResults[i]['artifacts'] = newArtifacts;
-        }
-    });
-
-    return newResults;
 }
 
 module.exports = {
@@ -113,8 +97,7 @@ module.exports = {
         "name": "JasonsGame"
     },
     "hooks": {
-        "packageAfterPrune": deleteOtherPlatforms,
-        "postMake": deleteExtraWindowsCrap
+        "packageAfterPrune": deleteOtherPlatforms
     },
     "publishers": [
         {
