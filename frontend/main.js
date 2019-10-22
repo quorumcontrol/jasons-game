@@ -5,19 +5,26 @@ const fs = require('fs');
 const os = require('os');
 const log = require('electron-log');
 
-const backendURL = 'http://localhost:8080/';
-const updateFile = path.resolve(__dirname, 'update.html');
-
 if (require('electron-squirrel-startup')) {
     // Windows squirrel installer launches the app during install.
     // This cuts down on the weirdness from that.
     return app.quit();
 }
 
+const backendURL = 'http://localhost:8080/';
+const updateFile = path.resolve(__dirname, 'update.html');
+
+if (process.env.JGDEBUG) {
+    log.transports.file.level = 'debug';
+} else {
+    log.transports.file.level = 'info';
+}
+
 let win;
 let game;
 let gameKilled = false;
-let updating = false;
+let updateAvailable = false;
+let quitting = false;
 
 autoUpdater.setFeedURL({'url': `https://hazel.quorumcontrol.now.sh/update/${process.platform}/${app.getVersion()}`});
 
@@ -29,11 +36,13 @@ autoUpdater.on('error', (message) => {
 function killGame() {
     log.info('Killing game backend process');
     gameKilled = true;
-    game.kill();
+    if (game) {
+        game.kill();
+    }
 }
 
 autoUpdater.on('update-available', () => {
-    updating = true;
+    updateAvailable = true;
 
     if (game) {
         killGame();
@@ -45,7 +54,10 @@ autoUpdater.on('update-available', () => {
         log.info('Loading update into existing window');
         win.loadFile(updateFile);
     } else {
-        createMainWindow();
+        // Presumably we haven't created it yet and will notice the
+        // updateAvailable flag when we do. Trying to create one here
+        // got pretty race-y.
+        log.info('No existing window found for update');
     }
 });
 
@@ -68,7 +80,7 @@ function startUpdater() {
 function startGame() {
     runBackend();
     // TODO: Would be better if the backend signaled us when it was ready...
-    setTimeout(() => { createMainWindow() }, 1000);
+    setTimeout(() => { if (!win) { createMainWindow() } }, 1000);
 }
 
 function runBackendExecutable(exePath) {
@@ -135,19 +147,31 @@ function createWindow (url, file) {
     win.once('ready-to-show', () => {
         win.show();
 
-        if (process.env.DEBUG) {
+        if (process.env.JGDEBUG) {
             win.webContents.openDevTools();
         }
 
     });
 
+    win.on('close', () => {
+        log.debug('window event: close');
+
+        if (quitting) {
+            win = null;
+        }
+    });
+
     win.on('closed', () => {
+        log.debug('window event: closed');
+
         win = null;
     })
 }
 
 function createMainWindow() {
-    if (updating) {
+    log.info(`Creating main window (updateAvailable: ${updateAvailable})`);
+
+    if (updateAvailable) {
         createWindow(null, updateFile);
     } else {
         createWindow(backendURL);
@@ -205,6 +229,8 @@ app.on('error', (err) => {
 });
 
 app.on('ready', () => {
+    log.debug('event: ready');
+
     setupMenu();
 
     startUpdater();
@@ -213,14 +239,20 @@ app.on('ready', () => {
 });
 
 app.on('window-all-closed', () => {
+    log.debug('event: window-all-closed');
+
     // On macOS it is common for applications and their menu bar
     // to stay active until the user quits explicitly with Cmd + Q
-    if (process.platform !== 'darwin') {
+    if (quitting || process.platform !== 'darwin') {
         app.quit();
     }
 });
 
 app.on('before-quit', () => {
+    log.debug('event: before-quit');
+
+    quitting = true;
+
     if (win) {
         win.close();
     }
@@ -231,6 +263,8 @@ app.on('before-quit', () => {
 });
 
 app.on('activate', () => {
+    log.debug('event: activate');
+
     // On macOS it's common to re-create a window in the app when the
     // dock icon is clicked and there are no other windows open.
     if (win === null) {
