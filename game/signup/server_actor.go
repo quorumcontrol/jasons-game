@@ -21,6 +21,8 @@ import (
 	"github.com/quorumcontrol/tupelo-go-sdk/gossip3/middleware"
 )
 
+var SignupsPath = []string{"tree", "data", "track"}
+
 type ServerActor struct {
 	middleware.LogAwareHolder
 
@@ -81,7 +83,7 @@ func (s *ServerActor) handleSignup(actorCtx actor.Context, msg *jasonsgame.Signu
 
 	idSha := sha256.Sum256(storageEncrypted)
 	id := hex.EncodeToString(idSha[:32])
-	s.tree, err = s.network.UpdateChainTree(s.tree, strings.Join([]string{"track", id[0:1], id[1:2], id[2:3], id, "z"}, "/"), storageEncrypted)
+	s.tree, err = s.network.UpdateChainTree(s.tree, strings.Join(append(SignupsPath[2:], id[0:1], id[1:2], id[2:3], id, "z"), "/"), storageEncrypted)
 	if err != nil {
 		s.Log.Error(errors.Wrap(err, "error updating chain tree"))
 		panic("error updating chain tree")
