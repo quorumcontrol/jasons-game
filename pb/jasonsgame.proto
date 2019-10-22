@@ -102,6 +102,15 @@ message RequestObjectTransferMessage {
     string object = 3;
 }
 
+message SignupMessageEncrypted {
+    bytes encrypted = 1;
+}
+
+message SignupMessage {
+    string email = 1;
+    string did = 2;
+}
+
 service GameService {
     rpc SendCommand(UserInput) returns (CommandReceived) {}
     rpc ReceiveUIMessages(Session) returns (stream UserInterfaceMessage) {}
