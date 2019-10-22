@@ -224,10 +224,6 @@ function setupMenu() {
     }
 }
 
-app.on('error', (err) => {
-    log.error(`application error: ${err}`);
-});
-
 app.on('ready', () => {
     log.debug('event: ready');
 
