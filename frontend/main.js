@@ -11,6 +11,25 @@ if (require('electron-squirrel-startup')) {
     return app.quit();
 }
 
+let win;
+
+const gotTheLock = app.requestSingleInstanceLock();
+
+if (!gotTheLock) {
+    log.info('Quitting because an instance is already running');
+    app.quit();
+} else {
+    app.on('second-instance', (event, commandLine, workingDirectory) => {
+        // someone tried to run a second instance, we should focus our window
+        if (win) {
+            if (win.isMinimized()) {
+                win.restore();
+            }
+            win.focus();
+        }
+    });
+}
+
 const backendURL = 'http://localhost:8080/';
 const updateFile = path.resolve(__dirname, 'update.html');
 
@@ -20,7 +39,6 @@ if (process.env.JGDEBUG) {
     log.transports.file.level = 'info';
 }
 
-let win;
 let game;
 let gameKilled = false;
 let updateAvailable = false;
