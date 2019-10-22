@@ -12,6 +12,7 @@ function ignorePath(path) {
         /\/frontend\/jasons-game$/,
         /\/frontend\/main\.js$/,
         /\/frontend\/update\.html$/,
+        /\/frontend\/update\.css$/,
         /\/frontend\/preload\.js$/
     ];
 
