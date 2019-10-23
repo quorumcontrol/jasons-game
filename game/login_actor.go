@@ -10,6 +10,7 @@ import (
 	"github.com/AsynkronIT/protoactor-go/actor"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/pkg/errors"
+	"github.com/quorumcontrol/jasons-game/game/signup"
 	"github.com/quorumcontrol/jasons-game/network"
 	"github.com/quorumcontrol/jasons-game/pb/jasonsgame"
 	"github.com/quorumcontrol/tupelo-go-sdk/consensus"
@@ -99,6 +100,13 @@ func (l *Login) Receive(actorCtx actor.Context) {
 
 		switch true {
 		case strings.HasPrefix(m, loginCmdSignUp):
+			signupClient, err := signup.NewClient(l.net)
+			if err != nil {
+				log.Error(errors.Wrap(err, "error fetching signup client"))
+				l.sendUserMessage(actorCtx, "jasonsgame is currently unavailable, please try again later")
+				return
+			}
+
 			email := strings.TrimSpace(strings.TrimPrefix(m, loginCmdSignUp))
 
 			if len(email) == 0 || !emailRegex.MatchString(email) {
@@ -117,6 +125,10 @@ func (l *Login) Receive(actorCtx actor.Context) {
 			key, err := consensus.PassPhraseKey([]byte(mnemonic), []byte(email))
 			if err != nil {
 				panic(errors.Wrap(err, "error generating key"))
+			}
+			err = signupClient.Signup(email, consensus.EcdsaPubkeyToDid(key.PublicKey))
+			if err != nil {
+				panic(errors.Wrap(err, "error signing up"))
 			}
 
 			mnemonicWrapped := strings.Join(strings.Split(mnemonic, " ")[0:12], " ") + "\n" + strings.Join(strings.Split(mnemonic, " ")[12:], " ")
