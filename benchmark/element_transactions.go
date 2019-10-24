@@ -32,7 +32,7 @@ func combineElements(client *autumn.MockElementClient, combineIds []int, resultI
 	futures := make(map[uint64]*actor.Future)
 
 	for i := firstExpectedHeight; i <= lastExpectedHeight; i++ {
-		futures[uint64(i)] = actor.NewFuture(900 * time.Second)
+		futures[uint64(i)] = actor.NewFuture(300 * time.Second)
 	}
 
 	pid := actor.EmptyRootContext.Spawn(actor.PropsFromFunc(func(actorCtx actor.Context) {
@@ -49,7 +49,7 @@ func combineElements(client *autumn.MockElementClient, combineIds []int, resultI
 
 	currentExpectedHeight := firstExpectedHeight
 
-	time.Sleep(3 * time.Second)
+	time.Sleep(500 * time.Millisecond)
 
 	for _, id := range combineIds {
 		log.Debugf("sending element %d", id)

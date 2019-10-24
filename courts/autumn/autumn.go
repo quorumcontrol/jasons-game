@@ -17,7 +17,7 @@ import (
 
 var log = logging.Logger("autumn")
 
-const elementCombinerConcurrency = 50
+const elementCombinerConcurrency = 100
 
 type AutumnConfig struct {
 	PrizeFailMsg   string                `yaml:"prize_fail_msg"`
