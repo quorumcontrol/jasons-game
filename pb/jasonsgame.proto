@@ -94,6 +94,7 @@ message TransferredObjectMessage {
     string object = 3;
     string message = 4;
     string error = 5;
+    repeated bytes blocks = 6;
 }
 
 message RequestObjectTransferMessage {

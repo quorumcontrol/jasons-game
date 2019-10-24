@@ -145,12 +145,13 @@ func newResponseSender(net network.Network, source *jasonsgame.RequestObjectTran
 	}
 }
 
-func (s *responseSender) Send() error {
+func (s *responseSender) Send(blocks [][]byte) error {
 	err := s.handler.Handle(&jasonsgame.TransferredObjectMessage{
 		From:    s.source.From,
 		To:      s.source.To,
 		Object:  s.source.Object,
 		Message: combinationSuccessMsg,
+		Blocks:  blocks,
 	})
 	if err != nil {
 		return errors.Wrap(err, "error transferring object")
@@ -309,7 +310,12 @@ func (h *ElementCombinerHandler) handlePickupElement(msg *jasonsgame.RequestObje
 		return sender.Errorf(baseErr("could not update new element tree"))
 	}
 
-	return sender.Send()
+	blocks, err := trees.NodesAsBytes(context.Background(), comboObject.ChainTree().ChainTree)
+	if err != nil {
+		log.Errorf("Error fetching combo object nodes %s: %v", comboObject.MustId(), err)
+	}
+
+	return sender.Send(blocks)
 }
 
 func (h *ElementCombinerHandler) isValidElement(object *game.ObjectTree) (bool, error) {
@@ -341,6 +347,11 @@ func (h *ElementCombinerHandler) handleReceiveElement(msg *jasonsgame.Transferre
 	targetInventory, err := trees.FindInventoryTree(h.net, msg.To)
 	if err != nil {
 		return fmt.Errorf("error fetching inventory chaintree: %v", err)
+	}
+
+	err = trees.LoadNodesFromBytes(ctx, h.net.TreeStore(), msg.Blocks)
+	if err != nil {
+		log.Errorf("Error importing nodes from message: %v", err)
 	}
 
 	incomingObject, err := game.FindObjectTree(h.net, msg.Object)

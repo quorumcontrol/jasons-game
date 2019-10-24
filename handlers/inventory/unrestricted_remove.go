@@ -1,6 +1,7 @@
 package inventory
 
 import (
+	"context"
 	"fmt"
 	"time"
 
@@ -70,6 +71,11 @@ func (h *UnrestrictedRemoveHandler) Handle(msg proto.Message) error {
 			return fmt.Errorf("error fetching object chaintree %s: %v", msg.Object, err)
 		}
 
+		objectNodes, err := trees.NodesAsBytes(context.Background(), objectTree.ChainTree)
+		if err != nil {
+			return fmt.Errorf("error fetching object nodes %s: %v", msg.Object, err)
+		}
+
 		remoteTargetHandler, err := handlers.FindHandlerForTree(h.network, msg.To)
 		if err != nil {
 			return fmt.Errorf("error fetching handler for %v", msg.To)
@@ -85,6 +91,7 @@ func (h *UnrestrictedRemoveHandler) Handle(msg proto.Message) error {
 			From:   msg.From,
 			To:     msg.To,
 			Object: msg.Object,
+			Blocks: objectNodes,
 		}
 
 		if !targetHandler.Supports(transferredObjectMessage) {
