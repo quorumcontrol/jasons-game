@@ -221,13 +221,12 @@ func newResponseSender(net network.Network, source *jasonsgame.RequestObjectTran
 	}
 }
 
-func (s *responseSender) Send(blocks [][]byte) error {
+func (s *responseSender) Send() error {
 	err := s.handler.Handle(&jasonsgame.TransferredObjectMessage{
 		From:    s.source.From,
 		To:      s.source.To,
 		Object:  s.source.Object,
 		Message: " ",
-		Blocks:  blocks,
 	})
 	if err != nil {
 		return errors.Wrap(err, "error transferring object")
@@ -393,11 +392,6 @@ func (h *PrizeHandler) handleTransfer(msg *jasonsgame.RequestObjectTransferMessa
 		return sender.Errorf("could not distribute prize")
 	}
 
-	blocks, err := trees.NodesAsBytes(context.Background(), objectTree.ChainTree)
-	if err != nil {
-		h.court.log.Errorf("Error fetching prize object nodes %s: %v", objectTree.MustId(), err)
-	}
-
 	if h.cleanupFunc != nil {
 		err = h.cleanupFunc(msg)
 		if err != nil {
@@ -406,7 +400,7 @@ func (h *PrizeHandler) handleTransfer(msg *jasonsgame.RequestObjectTransferMessa
 	}
 
 	h.court.log.Debugf("prizehandler: sending prize %s to %s", msg.To, msg.Object)
-	return sender.Send(blocks)
+	return sender.Send()
 }
 
 func (h *PrizeHandler) Handle(msg proto.Message) error {

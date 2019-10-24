@@ -40,29 +40,10 @@ func (e *MockElementClient) Send(id int) error {
 		return err
 	}
 
-	objectBlocks, _ := trees.NodesAsBytes(context.Background(), el.ChainTree().ChainTree)
-
-	playerTree, err := e.Net.GetTree(e.Player)
-	if err != nil {
-		return err
-	}
-
-	playerBlocks, _ := trees.NodesAsBytes(context.Background(), playerTree.ChainTree)
-
-	locationTree, err := e.Net.GetTree(e.Location)
-	if err != nil {
-		return err
-	}
-
-	locationBlocks, _ := trees.NodesAsBytes(context.Background(), locationTree.ChainTree)
-
-	allBlocks := append(append(objectBlocks, playerBlocks...), locationBlocks...)
-
 	msg := &jasonsgame.TransferredObjectMessage{
 		From:   e.Player,
 		To:     e.Location,
 		Object: el.MustId(),
-		Blocks: allBlocks,
 	}
 	return e.H.Handle(msg)
 }
@@ -76,7 +57,6 @@ func (e *MockElementClient) PickupBowl() (*jasonsgame.TransferredObjectMessage, 
 	sub, err := e.Net.Community().Subscribe(playerInventory.BroadcastTopic(), func(ctx context.Context, _ *messages.Envelope, msg proto.Message) {
 		castMsg := msg.(*jasonsgame.TransferredObjectMessage)
 		if castMsg != nil && castMsg.Object != "" && castMsg.Error == "" {
-			_ = trees.LoadNodesFromBytes(ctx, e.Net.TreeStore(), castMsg.Blocks)
 			_ = playerInventory.ForceAdd(castMsg.Object)
 		}
 		received <- castMsg

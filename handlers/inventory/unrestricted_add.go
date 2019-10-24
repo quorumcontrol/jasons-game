@@ -1,7 +1,6 @@
 package inventory
 
 import (
-	"context"
 	"fmt"
 
 	"github.com/gogo/protobuf/proto"
@@ -28,9 +27,6 @@ func NewUnrestrictedAddHandler(network network.Network) *UnrestrictedAddHandler 
 func (h *UnrestrictedAddHandler) Handle(msg proto.Message) error {
 	switch msg := msg.(type) {
 	case *jasonsgame.TransferredObjectMessage:
-		// can ignore error here, its a performance convenience, but not required
-		_ = trees.LoadNodesFromBytes(context.Background(), h.network.TreeStore(), msg.Blocks)
-
 		targetInventory, err := trees.FindInventoryTree(h.network, msg.To)
 		if err != nil {
 			return fmt.Errorf("error fetching inventory chaintree: %v", err)
