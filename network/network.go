@@ -37,6 +37,7 @@ var DefaultGameBootstrappers = []string{
 	"/ip4/34.212.243.16/tcp/34011/ipfs/16Uiu2HAmL3JgeNJGcqZjUgzaq5nhPwDXgGpxah5ssBokaUbKo6ds",
 	"/ip4/52.57.153.71/tcp/34011/ipfs/16Uiu2HAkuUHpfEjMmiGQozSZLw74enRbzDBqsX9AiSAcHAEhVYTj",
 	"/ip4/13.250.221.143/tcp/34011/ipfs/16Uiu2HAmJbmqFNKzVNFaAXYFxtmPBN8zAC1kxvgQjQNPDDXTyDMk",
+	"/ip4/52.11.88.27/tcp/34021/ipfs/16Uiu2HAm5S3rwFr4b15C3NPAY9LCu3rDzfjGsVwWp7Ecm7g8ZK12",
 }
 
 type InkNetwork interface {
@@ -73,6 +74,7 @@ type Network interface {
 type RemoteNetwork struct {
 	Tupelo        *Tupelo
 	Ipld          *p2p.BitswapPeer
+	IpldHost      *p2p.LibP2PHost
 	KeyValueStore datastore.Batching
 	treeStore     TreeStore
 	community     *Community
@@ -85,6 +87,8 @@ type RemoteNetworkConfig struct {
 	SigningKey    *ecdsa.PrivateKey
 	NetworkKey    *ecdsa.PrivateKey
 	IpldKey       *ecdsa.PrivateKey
+	PublicIP      string
+	PublicPort    int
 }
 
 var _ Network = &RemoteNetwork{}
@@ -117,12 +121,28 @@ func NewRemoteNetworkWithConfig(ctx context.Context, config *RemoteNetworkConfig
 	}
 
 	discoveryNs := CommunityDiscoveryNamespace
-	ipldNetHost, lite, err := NewIPLDClient(ctx, ipldKey, net.KeyValueStore, p2p.WithClientOnlyDHT(true), p2p.WithDiscoveryNamespaces(discoveryNs))
+
+	ipldP2pOpts := []p2p.Option{
+		p2p.WithClientOnlyDHT(true),
+		p2p.WithDiscoveryNamespaces(discoveryNs),
+	}
+
+	if config.PublicIP != "" {
+		ipldP2pOpts = append(ipldP2pOpts, p2p.WithExternalIP(config.PublicIP, config.PublicPort), p2p.WithListenIP("0.0.0.0", config.PublicPort))
+	}
+
+	ipldNetHost, lite, err := NewIPLDClient(ctx, ipldKey, net.KeyValueStore, ipldP2pOpts...)
 	if err != nil {
 		return nil, errors.Wrap(err, "error creating IPLD client")
 	}
+	net.IpldHost = ipldNetHost
 	net.Ipld = lite
 	net.community = NewJasonCommunity(ctx, ipldKey, ipldNetHost)
+
+	fmt.Println("Ipld node running at:")
+	for _, addr := range net.IpldHost.Addresses() {
+		fmt.Println(addr)
+	}
 
 	// bootstrap to the game async so we can also setup the tupelo node, etc
 	// while this happens.
@@ -139,8 +159,18 @@ func NewRemoteNetworkWithConfig(ctx context.Context, config *RemoteNetworkConfig
 			log.Errorf("waiting for discovery failed %s", err)
 			return
 		}
+		if err := ipldNetHost.WaitForBootstrap(len(GameBootstrappers()), 30*time.Second); err != nil {
+			log.Errorf("waiting for discovery failed %s", err)
+			return
+		}
 	}()
 
+	// go func() {
+	// 	for {
+	// 		time.Sleep(20 * time.Second)
+	// 		net.IpldHost.NewStreamWithPeerID()
+	// 	}
+	// }()
 	tupeloDiscoveryNs := TupueloDiscoveryNamespace
 	tupeloP2PHost, err := NewLibP2PHost(ctx, networkKey, p2p.WithClientOnlyDHT(true), p2p.WithDiscoveryNamespaces(tupeloDiscoveryNs))
 	if err != nil {

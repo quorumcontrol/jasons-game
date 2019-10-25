@@ -5,6 +5,7 @@ import (
 	"crypto/ecdsa"
 	"os"
 	"path/filepath"
+	"strconv"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/crypto"
@@ -48,6 +49,20 @@ func setupNetwork(ctx context.Context, ds datastore.Batching, localNetwork bool)
 		KeyValueStore: ds,
 		SigningKey:    signingKey,
 		NetworkKey:    networkKey,
+	}
+
+	publicIP, ok := os.LookupEnv("JASONS_GAME_PUBLIC_IP")
+	if ok {
+		networkConfig.PublicIP = publicIP
+	}
+
+	publicPortStr, ok := os.LookupEnv("JASONS_GAME_PUBLIC_PORT")
+	if ok {
+		networkConfig.PublicPort, err = strconv.Atoi(publicPortStr)
+
+		if err != nil {
+			panic(errors.Wrap(err, "error parsing port"))
+		}
 	}
 
 	net, err := network.NewRemoteNetworkWithConfig(ctx, networkConfig)

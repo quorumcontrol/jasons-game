@@ -7,6 +7,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/libp2p/go-libp2p-core/peer"
+	"github.com/multiformats/go-multiaddr"
 	appcfg "github.com/quorumcontrol/jasons-game/config"
 	"github.com/quorumcontrol/jasons-game/network"
 )
@@ -33,6 +35,8 @@ var _ Result = &TransactionsResult{}
 func NewTransactionsBenchmark(cfg *TransactionsBenchmarkConfig) (*TransactionsBenchmark, error) {
 	appcfg.MustSetLogLevel("benchmark", "debug")
 	appcfg.MustSetLogLevel("autumn", "info")
+	// appcfg.MustSetLogLevel("bitswap", "debug")
+	// appcfg.MustSetLogLevel("swarm2", "debug")
 
 	tb := &TransactionsBenchmark{
 		BenchmarkCommon: BenchmarkCommon{
@@ -69,6 +73,40 @@ func (tb *TransactionsBenchmark) Run(ctx context.Context) (Result, error) {
 		if err != nil {
 			return nil, err
 		}
+
+		// net.IpldHost.Bootstrap([]string{
+		// 	"/ip4/52.11.88.27/tcp/34021/ipfs/16Uiu2HAmTgBeoz8KH7VNztNnobyY8sYvYf3X4vG9UqNnfz3QRnUN",
+		// })
+
+		// err = net.IpldHost.WaitForBootstrap(5, 20*time.Second)
+		// if err != nil {
+		// 	panic(err)
+		// }
+
+		// /ip4/52.11.88.27/tcp/34021/ipfs/16Uiu2HAmLS13hSgLKQ1buJP7MBCV4RhyeD4KfrGejb4gCwuoxxYJ
+
+		maddr, err := multiaddr.NewMultiaddr(network.GameBootstrappers()[len(network.GameBootstrappers())-1])
+		if err != nil {
+			panic(err)
+		}
+
+		info, err := peer.AddrInfoFromP2pAddr(maddr)
+		if err != nil {
+			panic(err)
+		}
+
+		// time.Sleep(5 * time.Second)
+		s, err := net.IpldHost.NewStreamWithPeerID(ctx, info.ID, "ping/1.0")
+		if err != nil {
+			panic(err)
+		}
+
+		go func() {
+			for {
+				fmt.Printf("NETSTAT %v\n", s.Stat())
+				time.Sleep(20 * time.Second)
+			}
+		}()
 
 		tb.net = net
 	}

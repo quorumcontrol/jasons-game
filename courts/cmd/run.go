@@ -5,15 +5,18 @@ import (
 	"fmt"
 	"os"
 	"os/signal"
+	"time"
 
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/spf13/cobra"
 
+	libp2pnet "github.com/libp2p/go-libp2p-core/network"
 	"github.com/quorumcontrol/jasons-game/config"
 	"github.com/quorumcontrol/jasons-game/courts/arcadia"
 	"github.com/quorumcontrol/jasons-game/courts/autumn"
 	"github.com/quorumcontrol/jasons-game/courts/basic"
 	"github.com/quorumcontrol/jasons-game/courts/spring"
+	"github.com/quorumcontrol/jasons-game/network"
 )
 
 var courtsList []string
@@ -47,6 +50,14 @@ var runCourts = &cobra.Command{
 			case "arcadia":
 				court = arcadia.New(ctx, net, configDir)
 			case "autumn":
+				// config.MustSetLogLevel("bitswap", "debug")
+				net.(*network.RemoteNetwork).IpldHost.SetStreamHandler("ping/1.0", func(as libp2pnet.Stream) {
+					for {
+						fmt.Printf("NETSTAT %v\n", as.Stat())
+						time.Sleep(20 * time.Second)
+					}
+				})
+
 				court = autumn.New(ctx, net, configDir)
 			case "spring":
 				court = spring.New(ctx, net, configDir)
