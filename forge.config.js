@@ -13,7 +13,8 @@ function ignorePath(path) {
         /\/frontend\/main\.js$/,
         /\/frontend\/update\.html$/,
         /\/frontend\/update\.css$/,
-        /\/frontend\/preload\.js$/
+        /\/frontend\/preload\.js$/,
+        /\/frontend\/restart\.html$/,
     ];
 
     let ignore = true;

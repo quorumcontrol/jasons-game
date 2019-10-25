@@ -1,0 +1,17 @@
+<html>
+  <head>
+    <link rel="stylesheet" href="update.css" />
+  </head>
+  <body>
+    <h1>Update is ready</h1>
+    <p>
+      <button id="restart">Install and relaunch</button>
+    </p>
+    <script>
+      document.getElementById('restart').addEventListener('click', (event) => {
+        event.preventDefault();
+        autoUpdaterQuitAndInstall();
+      });
+    </script>
+  </body>
+</html>

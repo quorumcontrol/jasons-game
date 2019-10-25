@@ -1,4 +1,4 @@
-const { app, BrowserWindow, Menu, autoUpdater } = require('electron');
+const { app, BrowserWindow, Menu, autoUpdater, ipcMain } = require('electron');
 const { spawn } = require('child_process');
 const path = require('path');
 const fs = require('fs');
@@ -32,6 +32,7 @@ if (!gotTheLock) {
 
 const backendURL = 'http://localhost:8080/';
 const updateFile = path.resolve(__dirname, 'update.html');
+const restartFile = path.resolve(__dirname, 'restart.html');
 
 if (process.env.JGDEBUG) {
     log.transports.file.level = 'debug';
@@ -80,11 +81,17 @@ autoUpdater.on('update-available', () => {
 });
 
 autoUpdater.on('checking-for-update', () => {
-    log.info('Checking for update');
+    log.info(`Checking for update (current version is ${app.getVersion()})`);
 });
 
 autoUpdater.on('update-not-available', () => {
     log.info('No update available');
+});
+
+autoUpdater.on('update-downloaded', () => {
+    log.info('Update has been downloaded');
+
+    win.loadFile(restartFile);
 });
 
 function startUpdater() {
@@ -262,9 +269,7 @@ app.on('window-all-closed', () => {
     }
 });
 
-app.on('before-quit', () => {
-    log.debug('event: before-quit');
-
+function shutdown() {
     quitting = true;
 
     if (win) {
@@ -274,6 +279,18 @@ app.on('before-quit', () => {
     if (game) {
         killGame();
     }
+}
+
+app.on('before-quit', () => {
+    log.debug('event: before-quit');
+
+    shutdown();
+});
+
+autoUpdater.on('before-quit-for-update', () => {
+    log.debug('event: before-quit-for-update');
+
+    shutdown();
 });
 
 app.on('activate', () => {
@@ -283,5 +300,11 @@ app.on('activate', () => {
     // dock icon is clicked and there are no other windows open.
     if (win === null) {
         createMainWindow();
+    }
+});
+
+ipcMain.on('auto-updater', (event, message) => {
+    if (message === 'quitAndInstall') {
+        autoUpdater.quitAndInstall();
     }
 });
