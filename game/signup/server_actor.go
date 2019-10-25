@@ -71,8 +71,6 @@ func (s *ServerActor) handleSignup(actorCtx actor.Context, msg *jasonsgame.Signu
 		return
 	}
 
-	s.Log.Infof("signup received for %s with %s", signup.GetDid(), signup.GetEmail())
-
 	storageEncrypted, err := ecies.Encrypt(rand.Reader, ecies.ImportECDSAPublic(s.network.PublicKey()), transitDecrypted, nil, nil)
 	if err != nil {
 		s.Log.Error(errors.Wrap(err, "error encrypting for storage"))
