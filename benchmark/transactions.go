@@ -2,11 +2,13 @@ package benchmark
 
 import (
 	"context"
+	"crypto/ecdsa"
 	"fmt"
 	"math/rand"
 	"sync"
 	"time"
 
+	libp2pcrypto "github.com/libp2p/go-libp2p-core/crypto"
 	"github.com/libp2p/go-libp2p-core/peer"
 	appcfg "github.com/quorumcontrol/jasons-game/config"
 	"github.com/quorumcontrol/jasons-game/network"
@@ -88,9 +90,50 @@ func (tb *TransactionsBenchmark) Run(ctx context.Context) (Result, error) {
 		if err != nil {
 			panic(err)
 		}
-		info := &peer.AddrInfo{ID: pid}
+		pubkey, err := pid.ExtractPublicKey()
+		if err != nil {
+			panic(err)
+		}
 
-		// targetNode := "/ip4/52.11.88.27/tcp/34021/ipfs/16Uiu2HAmKZTNnNzoZmcyJwZ69M841qyaEuc7QKwKP9XGQvn1ryeL"
+		asSecp256k1PublicKey, ok := pubkey.(*libp2pcrypto.Secp256k1PublicKey)
+		if !ok {
+			panic("err")
+		}
+
+		ecdsaKey := (*ecdsa.PublicKey)(asSecp256k1PublicKey)
+
+		err = net.IpldHost.Connect(context.Background(), ecdsaKey)
+		if err != nil {
+			panic(err)
+		}
+		fmt.Println("---------------------------------------- CONNECT END")
+
+		// go func() {
+		// 	time.Sleep(10 * time.Second)
+		// 	net.IpldHost.Disconnect(context.Background(), ecdsaKey)
+		// }()
+
+		// // (*btcec.PublicKey)(k)
+		// // (*ecdsa.PublicKey)(p)
+
+		// // ecdsaKey, err := (*ecdsa.PublicKey)(pubkey)
+		// // if err != nil {
+		// // 	panic(err)
+		// // }
+
+		// fmt.Printf("pubkey type is %v\n", pubkey.Type())
+		// fmt.Printf("pubkey type 2 is %T\n", ecdsaKey)
+
+		// panic("exit")
+
+		// ecdsaPubkey, err := crypto.UnmarshalPubkey(pubkeyBytes)
+		// if err != nil {
+		// 	panic(err)
+		// }
+
+		// fmt.Printf("pubkey is %v", ecdsaPubkey)
+
+		// targetNode := "/ip4/52.11.88.27/tcp/34021/ipfs/16Uiu2mKZTNnNzoZmcyJwZ69M841qyaEuc7QKwKP9XGQvn1ryeL"
 
 		// maddr, err := multiaddr.NewMultiaddr(targetNode)
 		// if err != nil {
@@ -122,18 +165,18 @@ func (tb *TransactionsBenchmark) Run(ctx context.Context) (Result, error) {
 		// }
 		// fmt.Println("---------------------------------------- BOOTSTRAP END")
 
-		fmt.Println("---------------------------------------- CONNECT START")
-		// _, err = net.IpldHost.Bootstrap([]string{targetNode})
-		err = net.IpldHost.Host().Connect(context.Background(), *info)
-		if err != nil {
-			panic(err)
-		}
-		fmt.Println("---------------------------------------- CONNECT END")
+		// fmt.Println("---------------------------------------- CONNECT START")
+		// // _, err = net.IpldHost.Bootstrap([]string{targetNode})
+		// err = net.IpldHost.Connect(context.Background(), pubkey)
+		// if err != nil {
+		// 	panic(err)
+		// }
+		// fmt.Println("---------------------------------------- CONNECT END")
 
-		go func() {
-			time.Sleep(10 * time.Second)
-			net.IpldHost.Host().Network().ClosePeer(pid)
-		}()
+		// go func() {
+		// 	time.Sleep(10 * time.Second)
+		// 	net.IpldHost.Disconnect(context.Background(), pubkey)
+		// }()
 
 		tb.net = net
 	}
