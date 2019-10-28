@@ -37,7 +37,6 @@ var DefaultGameBootstrappers = []string{
 	"/ip4/34.212.243.16/tcp/34011/ipfs/16Uiu2HAmL3JgeNJGcqZjUgzaq5nhPwDXgGpxah5ssBokaUbKo6ds",
 	"/ip4/52.57.153.71/tcp/34011/ipfs/16Uiu2HAkuUHpfEjMmiGQozSZLw74enRbzDBqsX9AiSAcHAEhVYTj",
 	"/ip4/13.250.221.143/tcp/34011/ipfs/16Uiu2HAmJbmqFNKzVNFaAXYFxtmPBN8zAC1kxvgQjQNPDDXTyDMk",
-	"/ip4/52.11.88.27/tcp/34021/ipfs/16Uiu2HAm5S3rwFr4b15C3NPAY9LCu3rDzfjGsVwWp7Ecm7g8ZK12",
 }
 
 type InkNetwork interface {
