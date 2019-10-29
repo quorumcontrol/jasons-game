@@ -2,6 +2,7 @@ package game
 
 import (
 	"context"
+	"crypto/ecdsa"
 	"fmt"
 	"strings"
 	"time"
@@ -20,12 +21,14 @@ import (
 
 type LocationActor struct {
 	middleware.LogAwareHolder
-	did            string
-	playerDid      string
-	location       *LocationTree
-	network        network.Network
-	inventoryActor *actor.PID
-	inventoryDid   string
+	did             string
+	playerDid       string
+	location        *LocationTree
+	network         network.Network
+	inventoryActor  *actor.PID
+	inventoryDid    string
+	locationHandler *handlers.RemoteHandler
+	connectedPeers  []*ecdsa.PublicKey
 }
 
 type LocationActorConfig struct {
@@ -78,6 +81,8 @@ func (l *LocationActor) Receive(actorCtx actor.Context) {
 	switch msg := actorCtx.Message().(type) {
 	case *actor.Started:
 		l.initialize(actorCtx)
+	case *actor.Stopping:
+		l.handleStopping(actorCtx)
 	case *GetLocation:
 		desc, err := l.location.GetDescription()
 		if err != nil {
@@ -161,6 +166,11 @@ func (l *LocationActor) initialize(actorCtx actor.Context) {
 
 	l.location = NewLocationTree(l.network, tree)
 
+	l.locationHandler, err = handlers.FindHandlerForTree(l.network, l.did)
+	if err != nil {
+		panic(errors.Wrap(err, "error fetching location handler"))
+	}
+
 	actorCtx.Spawn(l.network.NewCurrentStateSubscriptionProps(l.did))
 
 	_, err = l.network.Community().SubscribeActor(actorCtx.Self(), l.network.Community().TopicFor(l.did))
@@ -168,9 +178,48 @@ func (l *LocationActor) initialize(actorCtx actor.Context) {
 		panic(errors.Wrap(err, "error spawning land actor subscription"))
 	}
 
+	go l.establishPeerConenctions()
+
 	err = l.spawnInventoryActor(actorCtx)
 	if err != nil {
 		panic(errors.Wrap(err, "error spawning inventory actor"))
+	}
+}
+
+func (l *LocationActor) handleStopping(actorCtx actor.Context) {
+	if l.connectedPeers != nil {
+		ctx := context.Background()
+		for _, k := range l.connectedPeers {
+			err := l.network.IpldHost().Disconnect(ctx, k)
+			if err != nil {
+				l.Log.Error(errors.Wrap(err, "could not disconnect from peer"))
+			}
+		}
+	}
+}
+
+func (l *LocationActor) establishPeerConenctions() {
+	if l.locationHandler != nil {
+		peerPubKeys, err := l.locationHandler.PeerPublicKeys()
+		if err != nil {
+			l.Log.Error(errors.Wrap(err, "error fetching handler pubkeys"))
+		}
+
+		if peerPubKeys == nil {
+			return
+		}
+
+		ctx := context.Background()
+
+		for _, k := range peerPubKeys {
+			err = l.network.IpldHost().Connect(ctx, k)
+			if err != nil {
+				l.Log.Error(errors.Wrap(err, "could not connect to peer"))
+				continue
+			}
+
+			l.connectedPeers = append(l.connectedPeers, k)
+		}
 	}
 }
 
@@ -223,15 +272,10 @@ func (l *LocationActor) spawnInventoryActor(actorCtx actor.Context) error {
 				return errors.Wrap(err, "error fetching inventory auths")
 			}
 
-			locationHandler, err := handlers.FindHandlerForTree(l.network, l.did)
-			if err != nil {
-				return errors.Wrap(err, "error fetching inventory handler")
-			}
-
 			var additionalAuths []string
 
-			if locationHandler != nil {
-				handlerTree, err := l.network.GetTree(locationHandler.Did())
+			if l.locationHandler != nil {
+				handlerTree, err := l.network.GetTree(l.locationHandler.Did())
 				if err != nil {
 					return errors.Wrap(err, "error fetching handler tree")
 				}

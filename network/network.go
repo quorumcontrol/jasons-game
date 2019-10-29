@@ -66,6 +66,7 @@ type Network interface {
 	PrivateKey() *ecdsa.PrivateKey
 	PublicKey() *ecdsa.PublicKey
 	NewCurrentStateSubscriptionProps(did string) *actor.Props
+	IpldHost() *p2p.LibP2PHost
 }
 
 // RemoteNetwork implements the Network interface. Note this is *not* considered a secure system and private keys
@@ -73,6 +74,7 @@ type Network interface {
 type RemoteNetwork struct {
 	Tupelo        *Tupelo
 	Ipld          *p2p.BitswapPeer
+	ipldHost      *p2p.LibP2PHost
 	KeyValueStore datastore.Batching
 	treeStore     TreeStore
 	community     *Community
@@ -85,6 +87,8 @@ type RemoteNetworkConfig struct {
 	SigningKey    *ecdsa.PrivateKey
 	NetworkKey    *ecdsa.PrivateKey
 	IpldKey       *ecdsa.PrivateKey
+	ExternalIP    string
+	ExternalPort  int
 }
 
 var _ Network = &RemoteNetwork{}
@@ -117,12 +121,24 @@ func NewRemoteNetworkWithConfig(ctx context.Context, config *RemoteNetworkConfig
 	}
 
 	discoveryNs := CommunityDiscoveryNamespace
-	ipldNetHost, lite, err := NewIPLDClient(ctx, ipldKey, net.KeyValueStore, p2p.WithClientOnlyDHT(true), p2p.WithDiscoveryNamespaces(discoveryNs))
+
+	ipldP2pOpts := []p2p.Option{
+		p2p.WithClientOnlyDHT(true),
+		p2p.WithDiscoveryNamespaces(discoveryNs),
+	}
+
+	if config.ExternalIP != "" {
+		// assume when external ip / port are used, its forwarding to 4001
+		ipldP2pOpts = append(ipldP2pOpts, p2p.WithExternalIP(config.ExternalIP, config.ExternalPort), p2p.WithListenIP("0.0.0.0", 4001))
+	}
+
+	ipldNetHost, lite, err := NewIPLDClient(ctx, ipldKey, net.KeyValueStore, ipldP2pOpts...)
 	if err != nil {
 		return nil, errors.Wrap(err, "error creating IPLD client")
 	}
 	net.Ipld = lite
 	net.community = NewJasonCommunity(ctx, ipldKey, ipldNetHost)
+	net.ipldHost = ipldNetHost
 
 	// bootstrap to the game async so we can also setup the tupelo node, etc
 	// while this happens.
@@ -194,6 +210,10 @@ func NewRemoteNetwork(ctx context.Context, group *types.NotaryGroup, ds datastor
 		NetworkKey:    key,
 		KeyValueStore: ds,
 	})
+}
+
+func (rn *RemoteNetwork) IpldHost() *p2p.LibP2PHost {
+	return rn.ipldHost
 }
 
 func (rn *RemoteNetwork) TreeStore() TreeStore {

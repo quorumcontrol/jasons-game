@@ -39,6 +39,7 @@ type LocalNetwork struct {
 	treeStore        TreeStore
 	community        *Community
 	mockTupeloEvents *eventstream.EventStream
+	ipldHost         *p2p.LibP2PHost
 }
 
 var _ Network = &LocalNetwork{}
@@ -69,7 +70,12 @@ func NewLocalNetwork() *LocalNetwork {
 		treeStore:        ipldstore,
 		community:        NewJasonCommunity(context.Background(), key, ipldNetHost),
 		mockTupeloEvents: new(eventstream.EventStream),
+		ipldHost:         ipldNetHost,
 	}
+}
+
+func (ln *LocalNetwork) IpldHost() *p2p.LibP2PHost {
+	return ln.ipldHost
 }
 
 func (ln *LocalNetwork) TreeStore() TreeStore {

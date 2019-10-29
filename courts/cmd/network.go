@@ -3,8 +3,10 @@ package cmd
 import (
 	"context"
 	"crypto/ecdsa"
+	"crypto/sha256"
 	"os"
 	"path/filepath"
+	"strconv"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/crypto"
@@ -15,6 +17,7 @@ import (
 
 	"github.com/quorumcontrol/jasons-game/config"
 	"github.com/quorumcontrol/jasons-game/network"
+	"github.com/quorumcontrol/tupelo-go-sdk/consensus"
 )
 
 func setupNetwork(ctx context.Context, ds datastore.Batching, localNetwork bool) network.Network {
@@ -48,6 +51,25 @@ func setupNetwork(ctx context.Context, ds datastore.Batching, localNetwork bool)
 		KeyValueStore: ds,
 		SigningKey:    signingKey,
 		NetworkKey:    networkKey,
+	}
+
+	externalIP := os.Getenv("JASONS_GAME_EXTERNAL_IP")
+	externalPortStr := os.Getenv("JASONS_GAME_EXTERNAL_PORT")
+
+	if externalIP != "" && externalPortStr != "" {
+		networkConfig.ExternalIP = externalIP
+		networkConfig.ExternalPort, err = strconv.Atoi(externalPortStr)
+
+		if err != nil {
+			panic(errors.Wrap(err, "error parsing port, must be integer"))
+		}
+
+		// Generate static IPLD net key from private key + ip + port
+		ipldKeySeed := sha256.Sum256([]byte(networkConfig.ExternalIP + externalPortStr))
+		networkConfig.IpldKey, err = consensus.PassPhraseKey(crypto.FromECDSA(signingKey), ipldKeySeed[:32])
+		if err != nil {
+			panic(errors.Wrap(err, "error generate IPLD network key"))
+		}
 	}
 
 	net, err := network.NewRemoteNetworkWithConfig(ctx, networkConfig)
