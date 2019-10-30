@@ -43,7 +43,6 @@ func NewBitswapperBenchmark(cfg *BitswapperBenchmarkConfig) (*BitswapperBenchmar
 			netCfg:              cfg.NetCfg,
 			requestedIterations: cfg.Iterations,
 			concurrency:         cfg.Concurrency,
-			iterationsRun:       cfg.Iterations,
 		},
 		dids: cfg.Dids,
 	}
