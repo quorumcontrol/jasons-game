@@ -89,7 +89,13 @@ func FindHandlerForTree(net network.Network, did string) (*RemoteHandler, error)
 		return nil, nil
 	}
 
-	handlerTree, err := net.GetTree(handlerDid.(string))
+	return GetRemoteHandler(net, handlerDid.(string))
+}
+
+func GetRemoteHandler(net network.Network, handlerDid string) (*RemoteHandler, error) {
+	ctx := context.TODO()
+
+	handlerTree, err := net.GetTree(handlerDid)
 	if err != nil {
 		return nil, err
 	}
@@ -108,7 +114,7 @@ func FindHandlerForTree(net network.Network, did string) (*RemoteHandler, error)
 	}
 
 	return &RemoteHandler{
-		did:               handlerDid.(string),
+		did:               handlerDid,
 		net:               net,
 		supportedMessages: supportedMessages,
 	}, nil
