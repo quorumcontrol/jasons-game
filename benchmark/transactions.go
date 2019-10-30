@@ -73,6 +73,12 @@ func (tb *TransactionsBenchmark) Run(ctx context.Context) (Result, error) {
 		tb.net = net
 	}
 
+	disconnector, err := tb.connectToWeaver()
+	if err != nil {
+		return nil, fmt.Errorf("Could not connect to weaver: %v", err)
+	}
+	defer disconnector()
+
 	tb.transactionFuncs = []func() error{
 		tb.combineWeaverElements,
 		// tb.combineBinderElements,

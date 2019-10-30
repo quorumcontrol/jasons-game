@@ -2,7 +2,6 @@ package benchmark
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"time"
 
@@ -11,8 +10,11 @@ import (
 	"github.com/quorumcontrol/jasons-game/courts/autumn"
 	"github.com/quorumcontrol/jasons-game/game"
 	"github.com/quorumcontrol/jasons-game/game/trees"
+	"github.com/quorumcontrol/jasons-game/handlers"
 	"github.com/quorumcontrol/jasons-game/handlers/broadcast"
 	"github.com/quorumcontrol/messages/build/go/signatures"
+
+	"github.com/pkg/errors"
 )
 
 const weaverServiceDid = "did:tupelo:0x55e6099c0a47c8516e72e402B10b9e02601ADa6C"
@@ -107,6 +109,38 @@ func (tb *TransactionsBenchmark) combineWeaverElements() error {
 	}
 
 	return combineElements(weaverClient, []int{24, 26}, 25)
+}
+
+func (tb *TransactionsBenchmark) connectToWeaver() (func(), error) {
+	handler, err := handlers.GetRemoteHandler(tb.net, weaverServiceDid)
+	if err != nil {
+		return nil, errors.Wrap(err, "error fetching handler")
+	}
+
+	peerPubKeys, err := handler.PeerPublicKeys()
+	if err != nil {
+		return nil, errors.Wrap(err, "error fetching handler pubkeys")
+	}
+
+	if peerPubKeys == nil {
+		return nil, errors.Wrap(err, "pubkeys is empty for weaver")
+	}
+
+	ctx := context.Background()
+
+	for _, k := range peerPubKeys {
+		err = tb.net.IpldHost().Connect(ctx, k)
+		if err != nil {
+			return nil, errors.Wrap(err, "error connecting to service ipld node")
+		}
+	}
+
+	return func() {
+		ctx := context.Background()
+		for _, k := range peerPubKeys {
+			_ = tb.net.IpldHost().Disconnect(ctx, k)
+		}
+	}, nil
 }
 
 // NB: Doesn't work currently
