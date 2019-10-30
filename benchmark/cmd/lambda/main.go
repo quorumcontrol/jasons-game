@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"github.com/aws/aws-lambda-go/lambda"
+	"github.com/ethereum/go-ethereum/crypto"
 
 	"github.com/quorumcontrol/jasons-game/benchmark"
 	"github.com/quorumcontrol/jasons-game/config"
@@ -87,9 +88,15 @@ func LambdaHandler(ctx context.Context, params BenchmarkParams) (string, error) 
 		return "", err
 	}
 
+	signingKey, err := crypto.GenerateKey()
+	if err != nil {
+		panic(err)
+	}
+
 	netCfg := &network.RemoteNetworkConfig{
 		NotaryGroup:   notaryGroup,
 		KeyValueStore: config.MemoryDataStore(),
+		SigningKey:    signingKey,
 	}
 
 	switch params.BenchmarkType {
