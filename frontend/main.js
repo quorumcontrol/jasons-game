@@ -4,11 +4,12 @@ const path = require('path');
 const fs = require('fs');
 const os = require('os');
 const log = require('electron-log');
+const fetch = require('node-fetch');
 
 if (require('electron-squirrel-startup')) {
     // Windows squirrel installer launches the app during install.
     // This cuts down on the weirdness from that.
-    return app.quit();
+    return
 }
 
 let win;
@@ -32,6 +33,7 @@ if (!gotTheLock) {
 
 const backendURL = 'http://localhost:8080/';
 const updateFile = path.resolve(__dirname, 'update.html');
+const updateFileLinux = path.resolve(__dirname, 'update_linux.html');
 const restartFile = path.resolve(__dirname, 'restart.html');
 
 if (process.env.JGDEBUG) {
@@ -45,7 +47,9 @@ let gameKilled = false;
 let updateAvailable = false;
 let quitting = false;
 
-autoUpdater.setFeedURL({'url': `https://hazel.quorumcontrol.now.sh/update/${process.platform}/${app.getVersion()}`});
+const autoUpdateFeedURL = `https://hazel.quorumcontrol.now.sh/update/${process.platform}/${app.getVersion()}`;
+
+autoUpdater.setFeedURL({'url': autoUpdateFeedURL });
 
 autoUpdater.on('error', (message) => {
     log.error('There was a problem updating the application');
@@ -60,7 +64,7 @@ function killGame() {
     }
 }
 
-autoUpdater.on('update-available', () => {
+function updateAvailableHandler() {
     updateAvailable = true;
 
     if (game) {
@@ -71,14 +75,20 @@ autoUpdater.on('update-available', () => {
 
     if (win) {
         log.info('Loading update into existing window');
-        win.loadFile(updateFile);
+        if (process.platform === 'linux') {
+            win.loadFile(updateFileLinux);
+        } else {
+            win.loadFile(updateFile);
+        }
     } else {
         // Presumably we haven't created it yet and will notice the
         // updateAvailable flag when we do. Trying to create one here
         // got pretty race-y.
         log.info('No existing window found for update');
     }
-});
+}
+
+autoUpdater.on('update-available', updateAvailableHandler);
 
 autoUpdater.on('checking-for-update', () => {
     log.info(`Checking for update (current version is ${app.getVersion()})`);
@@ -94,11 +104,30 @@ autoUpdater.on('update-downloaded', () => {
     win.loadFile(restartFile);
 });
 
+// Linux isn't supported by the built-in autoUpdater 🙄
+function checkForUpdatesLinux() {
+    log.info(`Checking for update (current version is ${app.getVersion()})`);
+
+    fetch(autoUpdateFeedURL).then(response => {
+        if (response.status === 200) {
+            updateAvailableHandler();
+        }
+    });
+}
+
+function checkForUpdates() {
+    if (process.platform === 'linux') {
+        checkForUpdatesLinux();
+    } else {
+        autoUpdater.checkForUpdates();
+    }
+}
+
 function startUpdater() {
-    autoUpdater.checkForUpdates();
+    checkForUpdates();
 
     setInterval(() => {
-        autoUpdater.checkForUpdates();
+        checkForUpdates();
     }, 15 * 60 * 1000);
 }
 
@@ -197,7 +226,11 @@ function createMainWindow() {
     log.info(`Creating main window (updateAvailable: ${updateAvailable})`);
 
     if (updateAvailable) {
-        createWindow(null, updateFile);
+        if (process.platform === 'linux') {
+            createWindow(null, updateFileLinux);
+        } else {
+            createWindow(null, updateFile);
+        }
     } else {
         createWindow(backendURL);
     }

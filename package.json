@@ -20,7 +20,8 @@
   "dependencies": {
     "electron-log": "^3.0.8",
     "electron-squirrel-startup": "^1.0.0",
-    "jasons-game-frontend": "file:frontend/jasons-game"
+    "jasons-game-frontend": "file:frontend/jasons-game",
+    "node-fetch": "^2.6.0"
   },
   "scripts": {
     "start": "electron-forge start",
