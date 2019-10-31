@@ -2,9 +2,13 @@ package handlers
 
 import (
 	"context"
+	"crypto/ecdsa"
 
 	"github.com/gogo/protobuf/proto"
+	"github.com/libp2p/go-libp2p-core/peer"
+	"github.com/pkg/errors"
 	"github.com/quorumcontrol/jasons-game/network"
+	"github.com/quorumcontrol/tupelo-go-sdk/p2p"
 )
 
 type RemoteHandler struct {
@@ -32,6 +36,40 @@ func (h *RemoteHandler) SupportedMessages() []string {
 
 func (h *RemoteHandler) Did() string {
 	return h.did
+}
+
+func (h *RemoteHandler) PeerPublicKeys() ([]*ecdsa.PublicKey, error) {
+	ctx := context.Background()
+
+	tree, err := h.net.GetTree(h.Did())
+
+	if err != nil {
+		return nil, errors.Wrap(err, "error fetching handler tree")
+	}
+
+	peersUncast, _, err := tree.ChainTree.Dag.Resolve(ctx, []string{"tree", "data", "jasons-game", "handler", "peers"})
+	if err != nil {
+		return nil, errors.Wrap(err, "error fetching handler tree")
+	}
+
+	if peersUncast == nil {
+		return nil, nil
+	}
+
+	peerPubKeys := make([]*ecdsa.PublicKey, len(peersUncast.([]interface{})))
+	for i, peerIDStr := range peersUncast.([]interface{}) {
+		peerID, err := peer.IDB58Decode(peerIDStr.(string))
+		if err != nil {
+			return nil, errors.Wrap(err, "error decoding peer id")
+		}
+
+		peerPubKeys[i], err = p2p.EcdsaKeyFromPeer(peerID)
+		if err != nil {
+			return nil, errors.Wrap(err, "error getting handler peer pubkeys")
+		}
+	}
+
+	return peerPubKeys, nil
 }
 
 func FindHandlerForTree(net network.Network, did string) (*RemoteHandler, error) {

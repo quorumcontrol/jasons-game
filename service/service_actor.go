@@ -104,6 +104,11 @@ func (s *ServiceActor) initialize(actorCtx actor.Context) {
 		panic(errors.Wrap(err, "error updating handler/supports on service tree"))
 	}
 
+	s.tree, err = s.network.UpdateChainTree(s.tree, "jasons-game/handler/peers", []string{s.network.IpldHost().Identity()})
+	if err != nil {
+		panic(errors.Wrap(err, "error updating handler/pubkeys on service tree"))
+	}
+
 	topic := s.network.Community().TopicFor(s.tree.MustId())
 
 	s.handlerPool = actorCtx.Spawn(router.NewRoundRobinPool(s.handlerConcurrency).WithFunc(func(poolCtx actor.Context) {
