@@ -27,15 +27,15 @@ require (
 	github.com/ipfs/go-ipld-format v0.0.2
 	github.com/ipfs/go-log v0.0.1
 	github.com/ipfs/go-merkledag v0.1.0
-	github.com/libp2p/go-libp2p-core v0.2.3
+	github.com/libp2p/go-libp2p-core v0.2.4
 	github.com/montanaflynn/stats v0.5.0
 	github.com/mr-tron/base58 v1.1.2
 	github.com/mwitkow/go-conntrack v0.0.0-20161129095857-cc309e4a2223 // indirect
 	github.com/pkg/errors v0.8.1
-	github.com/quorumcontrol/chaintree v0.8.6-0.20191007111216-51a819c15c38
-	github.com/quorumcontrol/community v0.0.3-0.20190924213249-7b989784c22d
+	github.com/quorumcontrol/chaintree v0.8.7
+	github.com/quorumcontrol/community v0.0.3
 	github.com/quorumcontrol/messages/build/go v0.0.0-20190916172743-fed64641cd55
-	github.com/quorumcontrol/tupelo-go-sdk v0.5.10-0.20191028225355-bc20406201a3
+	github.com/quorumcontrol/tupelo-go-sdk v0.5.11
 	github.com/rs/cors v1.7.0 // indirect
 	github.com/shibukawa/configdir v0.0.0-20170330084843-e180dbdc8da0
 	github.com/spf13/cobra v0.0.5
@@ -43,7 +43,6 @@ require (
 	github.com/tyler-smith/go-bip39 v1.0.2
 	golang.org/x/crypto v0.0.0-20191011191535-87dc89f01550
 	golang.org/x/net v0.0.0-20190827160401-ba9fcec4b297 // indirect
-	google.golang.org/appengine v1.4.0 // indirect
 	google.golang.org/grpc v1.22.0
 	gopkg.in/yaml.v2 v2.2.2
 )
@@ -51,5 +50,3 @@ require (
 replace github.com/libp2p/go-libp2p-pubsub v0.1.0 => github.com/quorumcontrol/go-libp2p-pubsub v0.0.4-0.20190528094025-e4e719f73e7a
 
 replace github.com/gobuffalo/packr/v2 v2.5.1 => github.com/gobuffalo/packr/v2 v2.5.3-0.20190708182234-662c20c19dde
-
-replace github.com/libp2p/go-libp2p-core => github.com/quorumcontrol/go-libp2p-core v0.2.4-0.20191017172042-69fe90d32d39
