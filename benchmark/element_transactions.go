@@ -17,9 +17,9 @@ import (
 	"github.com/pkg/errors"
 )
 
-const weaverServiceDid = "did:tupelo:0x55e6099c0a47c8516e72e402B10b9e02601ADa6C"
+const weaverServiceDid = "did:tupelo:0x1a155241496C46e4Ee543c50375Eb90a910AD0FA"
 
-// const binderServiceDid = "did:tupelo:0x99bcF7ECC24F028dB1080a9d76b20D08526327BF"
+// const binderServiceDid = "did:tupelo:0x00ab0a97cC06B9f541221Ed9eF1702C78A8D979c"
 
 func combineElements(client *autumn.MockElementClient, combineIds []int, resultId int) error {
 	locationTree, err := client.Net.GetTree(client.Location)
