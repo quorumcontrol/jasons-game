@@ -176,7 +176,7 @@ frontend-dev: $(generated) $(jsmodules) frontend/jasons-game/node_modules/.bin/s
 	cd frontend/jasons-game && ./node_modules/.bin/shadow-cljs watch app
 
 dids.txt:
-	ssh ec2-user@52.11.88.27 'for cid in $$(docker ps -q); do docker logs $$cid 2>&1 | grep -o -P "did:tupelo:0x[a-fA-F0-9]+"; done | uniq' > $@
+	ssh ec2-user@54.149.56.75 'for cid in $$(docker ps -q); do docker logs $$cid 2>&1 | grep -o -P "did:tupelo:0x[a-fA-F0-9]+"; done | sort | uniq' > $@
 
 bin/benchmark: $(generated) $(gosources) dids.txt
 	go build -o $@ ./benchmark/cmd/cli/main.go
