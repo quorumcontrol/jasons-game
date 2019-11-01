@@ -159,7 +159,7 @@ func recursiveSignupExport(ctx context.Context, net *network.RemoteNetwork, f *o
 	for _, v := range dataAsMap {
 		switch asType := v.(type) {
 		case cid.Cid:
-			someNode, err := net.Ipld.Get(ctx, asType)
+			someNode, err := net.Ipld().Get(ctx, asType)
 			if err != nil {
 				panic(err)
 			}

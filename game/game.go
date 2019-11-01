@@ -18,6 +18,7 @@ import (
 
 	"github.com/quorumcontrol/tupelo-go-sdk/consensus"
 
+	"github.com/quorumcontrol/jasons-game/cache"
 	"github.com/quorumcontrol/jasons-game/config"
 	"github.com/quorumcontrol/jasons-game/game/static"
 	"github.com/quorumcontrol/jasons-game/inkfaucet/inkfaucet"
@@ -172,8 +173,34 @@ func (g *Game) initializeInvitation(actorCtx actor.Context) {
 	g.sendUserMessage(actorCtx, "Welcome to Jason's Game! Please enter your invite code like this: `invitation [code]`.")
 }
 
+func (g *Game) loadCache() {
+	key := datastore.NewKey("cacheLoaded")
+	cacheLoaded, err := g.ds.Get(key)
+	if err != nil && err != datastore.ErrNotFound {
+		log.Warning(errors.Wrap(err, "error loading cache check key"))
+		return
+	}
+	if string(cacheLoaded) != "true" {
+		err := cache.Load(g.network.Ipld())
+		if err != nil {
+			log.Warning(err)
+			return
+		}
+		err = g.ds.Put(key, []byte("true"))
+		if err != nil {
+			log.Warning(err)
+		}
+	}
+}
+
 func (g *Game) initializeGame(actorCtx actor.Context) {
 	log.Debug("initializing game actor in game mode")
+
+	// Only load cache when its a remote network
+	switch g.network.(type) {
+	case *network.RemoteNetwork:
+		go g.loadCache()
+	}
 
 	g.initializeCommon(actorCtx)
 

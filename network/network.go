@@ -67,13 +67,14 @@ type Network interface {
 	PublicKey() *ecdsa.PublicKey
 	NewCurrentStateSubscriptionProps(did string) *actor.Props
 	IpldHost() *p2p.LibP2PHost
+	Ipld() *p2p.BitswapPeer
 }
 
 // RemoteNetwork implements the Network interface. Note this is *not* considered a secure system and private keys
 // are stored on disk in plain text. It's "game-ready" security not "money-ready" security.
 type RemoteNetwork struct {
 	Tupelo        *Tupelo
-	Ipld          *p2p.BitswapPeer
+	ipld          *p2p.BitswapPeer
 	ipldHost      *p2p.LibP2PHost
 	KeyValueStore datastore.Batching
 	treeStore     TreeStore
@@ -136,7 +137,7 @@ func NewRemoteNetworkWithConfig(ctx context.Context, config *RemoteNetworkConfig
 	if err != nil {
 		return nil, errors.Wrap(err, "error creating IPLD client")
 	}
-	net.Ipld = lite
+	net.ipld = lite
 	net.community = NewJasonCommunity(ctx, ipldKey, ipldNetHost)
 	net.ipldHost = ipldNetHost
 
@@ -210,6 +211,10 @@ func NewRemoteNetwork(ctx context.Context, group *types.NotaryGroup, ds datastor
 		NetworkKey:    key,
 		KeyValueStore: ds,
 	})
+}
+
+func (rn *RemoteNetwork) Ipld() *p2p.BitswapPeer {
+	return rn.ipld
 }
 
 func (rn *RemoteNetwork) IpldHost() *p2p.LibP2PHost {

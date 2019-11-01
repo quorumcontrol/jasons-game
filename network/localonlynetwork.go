@@ -40,6 +40,7 @@ type LocalNetwork struct {
 	community        *Community
 	mockTupeloEvents *eventstream.EventStream
 	ipldHost         *p2p.LibP2PHost
+	ipld             *p2p.BitswapPeer
 }
 
 var _ Network = &LocalNetwork{}
@@ -57,7 +58,7 @@ func NewLocalNetwork() *LocalNetwork {
 		panic(errors.Wrap(err, "error generating key"))
 	}
 
-	ipldNetHost, _, err := NewIPLDClient(context.Background(), key, ds, p2p.WithClientOnlyDHT(true))
+	ipldNetHost, ipld, err := NewIPLDClient(context.Background(), key, ds, p2p.WithClientOnlyDHT(true))
 	if err != nil {
 		panic(errors.Wrap(err, "error creating IPLD client"))
 	}
@@ -71,7 +72,12 @@ func NewLocalNetwork() *LocalNetwork {
 		community:        NewJasonCommunity(context.Background(), key, ipldNetHost),
 		mockTupeloEvents: new(eventstream.EventStream),
 		ipldHost:         ipldNetHost,
+		ipld:             ipld,
 	}
+}
+
+func (ln *LocalNetwork) Ipld() *p2p.BitswapPeer {
+	return ln.ipld
 }
 
 func (ln *LocalNetwork) IpldHost() *p2p.LibP2PHost {
