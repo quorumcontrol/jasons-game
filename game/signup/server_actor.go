@@ -2,8 +2,6 @@ package signup
 
 import (
 	"context"
-	"crypto/ecdsa"
-	"crypto/rand"
 	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
@@ -11,9 +9,8 @@ import (
 
 	"github.com/AsynkronIT/protoactor-go/actor"
 	"github.com/AsynkronIT/protoactor-go/plugin"
+	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/crypto"
-	"github.com/ethereum/go-ethereum/crypto/ecies"
-	"github.com/gogo/protobuf/proto"
 	"github.com/pkg/errors"
 	"github.com/quorumcontrol/jasons-game/network"
 	"github.com/quorumcontrol/jasons-game/pb/jasonsgame"
@@ -21,12 +18,12 @@ import (
 	"github.com/quorumcontrol/tupelo-go-sdk/gossip3/middleware"
 )
 
+const encryptionPubKey = "0x04ff1f17da517684f232afbae0a347ed459f339a636de30ae51c1cd49c71968d9e966ad4ffdff949ef1728f016b1129e372b139eaafdf88232df13fb64e8b38d66"
+
 type ServerActor struct {
 	middleware.LogAwareHolder
-
-	network       network.Network
-	encryptionKey *ecdsa.PrivateKey
-	tree          *consensus.SignedChainTree
+	network network.Network
+	tree    *consensus.SignedChainTree
 }
 
 func NewServerProps(net network.Network) *actor.Props {
@@ -52,34 +49,13 @@ func (s *ServerActor) Receive(actorCtx actor.Context) {
 }
 
 func (s *ServerActor) handleSignup(actorCtx actor.Context, msg *jasonsgame.SignupMessageEncrypted) {
+	var err error
 	if len(msg.Encrypted) == 0 {
 		return
 	}
-
-	eciesKey := ecies.ImportECDSA(s.encryptionKey)
-
-	transitDecrypted, err := eciesKey.Decrypt(msg.Encrypted, nil, nil)
-	if err != nil {
-		s.Log.Error(errors.Wrap(err, "error decrypting"))
-		return
-	}
-
-	signup := &jasonsgame.SignupMessage{}
-	err = proto.Unmarshal(transitDecrypted, signup)
-	if err != nil {
-		s.Log.Error(errors.Wrap(err, "error unmarshaling decrypted payload"))
-		return
-	}
-
-	storageEncrypted, err := ecies.Encrypt(rand.Reader, ecies.ImportECDSAPublic(s.network.PublicKey()), transitDecrypted, nil, nil)
-	if err != nil {
-		s.Log.Error(errors.Wrap(err, "error encrypting for storage"))
-		return
-	}
-
-	idSha := sha256.Sum256(storageEncrypted)
+	idSha := sha256.Sum256(msg.Encrypted)
 	id := hex.EncodeToString(idSha[:32])
-	s.tree, err = s.network.UpdateChainTree(s.tree, strings.Join([]string{"track", id[0:1], id[1:2], id[2:3], id, "z"}, "/"), storageEncrypted)
+	s.tree, err = s.network.UpdateChainTree(s.tree, strings.Join([]string{"track", id[0:1], id[1:2], id[2:3], id, "z"}, "/"), msg.Encrypted)
 	if err != nil {
 		s.Log.Error(errors.Wrap(err, "error updating chain tree"))
 		panic("error updating chain tree")
@@ -96,14 +72,19 @@ func (s *ServerActor) initialize(actorCtx actor.Context) {
 
 	fmt.Printf("Signup service started with %s\n", s.tree.MustId())
 
-	encryptionKeySeed := sha256.Sum256([]byte("signups-encyrption"))
-	s.encryptionKey, err = consensus.PassPhraseKey(crypto.FromECDSA(s.network.PrivateKey()), encryptionKeySeed[:32])
+	ecdsaPubkeyBytes, err := hexutil.Decode(encryptionPubKey)
 	if err != nil {
-		panic(errors.Wrap(err, "setting up passphrase encryption keys"))
+		panic(fmt.Sprintf("error hexutil decoding storage encryption key: %v", err))
+	}
+
+	// This is just to ensure its valid key, but bytes on decode and FromECDSAPub should be the same
+	ecdsaPubKey, err := crypto.UnmarshalPubkey(ecdsaPubkeyBytes)
+	if err != nil {
+		panic(fmt.Sprintf("error unmarshalling storage encryption key: %v", err))
 	}
 
 	if storedPubKey, _, _ := s.tree.ChainTree.Dag.Resolve(context.Background(), encryptionPubKeyPath); storedPubKey == nil {
-		s.tree, err = s.network.UpdateChainTree(s.tree, strings.Join(encryptionPubKeyPath[2:], "/"), crypto.FromECDSAPub(&s.encryptionKey.PublicKey))
+		s.tree, err = s.network.UpdateChainTree(s.tree, strings.Join(encryptionPubKeyPath[2:], "/"), crypto.FromECDSAPub(ecdsaPubKey))
 
 		if err != nil {
 			panic(errors.Wrap(err, "setting encryption key"))

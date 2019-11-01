@@ -2,6 +2,7 @@ package signup
 
 import (
 	"context"
+	"crypto/ecdsa"
 	"crypto/rand"
 	"fmt"
 
@@ -45,20 +46,29 @@ func (c *Client) Topic() []byte {
 	return []byte(c.Did())
 }
 
-func (c *Client) Signup(email string, playerDid string) error {
+func (c *Client) EncryptionPubKey() (*ecdsa.PublicKey, error) {
 	tree, err := c.network.GetTree(c.Did())
 	if err != nil {
-		return errors.Wrap(err, "error finding tree")
+		return nil, errors.Wrap(err, "error finding tree")
 	}
 
 	encryptionPubKeyRaw, _, err := tree.ChainTree.Dag.Resolve(context.Background(), encryptionPubKeyPath)
 	if err != nil || encryptionPubKeyRaw == nil {
-		return fmt.Errorf("error finding pubkey: %v", err)
+		return nil, fmt.Errorf("error finding pubkey: %v", err)
 	}
 
 	encryptionPubKey, err := crypto.UnmarshalPubkey(encryptionPubKeyRaw.([]byte))
 	if err != nil {
-		return errors.Wrap(err, "error converting pubkey")
+		return nil, errors.Wrap(err, "error converting pubkey")
+	}
+
+	return encryptionPubKey, nil
+}
+
+func (c *Client) Signup(email string, playerDid string) error {
+	encryptionPubKey, err := c.EncryptionPubKey()
+	if err != nil {
+		return err
 	}
 
 	msg := &jasonsgame.SignupMessage{
