@@ -51,7 +51,12 @@ courts/yml.tar.gz
 .gitsecret/keys/random_seed
 !*.secret
 
-dids.txt
+/dids.txt
 benchmark/lambda
 
 signups.csv
+
+benchmark/terraform/package.zip
+benchmark/terraform/package/lambda-linux-amd64
+benchmark/terraform/*.tfstate
+benchmark/terraform/.terraform

@@ -34,13 +34,15 @@ func combineElements(client *autumn.MockElementClient, combineIds []int, resultI
 	futures := make(map[uint64]*actor.Future)
 
 	for i := firstExpectedHeight; i <= lastExpectedHeight; i++ {
-		futures[uint64(i)] = actor.NewFuture(60 * time.Second)
+		futures[uint64(i)] = actor.NewFuture(120 * time.Second)
 	}
 
+	subscriptionReadyFuture := actor.NewFuture(1 * time.Second)
 	pid := actor.EmptyRootContext.Spawn(actor.PropsFromFunc(func(actorCtx actor.Context) {
 		switch msg := actorCtx.Message().(type) {
 		case *actor.Started:
 			actorCtx.Spawn(client.Net.NewCurrentStateSubscriptionProps(locationTree.MustId()))
+			actorCtx.Send(subscriptionReadyFuture.PID(), true)
 		case *signatures.CurrentState:
 			if future, ok := futures[msg.Signature.Height]; ok {
 				actorCtx.Send(future.PID(), msg)
@@ -48,6 +50,11 @@ func combineElements(client *autumn.MockElementClient, combineIds []int, resultI
 		}
 	}))
 	defer actor.EmptyRootContext.Stop(pid)
+
+	_, err = subscriptionReadyFuture.Result()
+	if err != nil {
+		return fmt.Errorf("error waiting for subscription to be ready")
+	}
 
 	currentExpectedHeight := firstExpectedHeight
 

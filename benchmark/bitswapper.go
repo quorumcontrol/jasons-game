@@ -43,7 +43,6 @@ func NewBitswapperBenchmark(cfg *BitswapperBenchmarkConfig) (*BitswapperBenchmar
 			netCfg:              cfg.NetCfg,
 			requestedIterations: cfg.Iterations,
 			concurrency:         cfg.Concurrency,
-			iterationsRun:       cfg.Iterations,
 		},
 		dids: cfg.Dids,
 	}
@@ -153,14 +152,14 @@ func (bb *BitswapperBenchmark) processDid(ctx context.Context, did string) error
 		return err
 	}
 
-	_, err = chainTree.Nodes(ctx)
+	nodes, err := chainTree.Nodes(ctx)
 	if err != nil {
 		return err
 	}
 
 	duration := time.Since(start)
 
-	fmt.Printf("%s : %v\n", did, duration)
+	fmt.Printf("%s (%d nodes) : %v\n", did, len(nodes), duration)
 
 	return nil
 }
