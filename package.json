@@ -10,15 +10,18 @@
     "@electron-forge/cli": "^6.0.0-beta.45",
     "@electron-forge/maker-squirrel": "^6.0.0-beta.45",
     "@electron-forge/maker-zip": "^6.0.0-beta.45",
+    "@electron-forge/publisher-github": "^6.0.0-beta.45",
     "babel-plugin-transform-async-to-generator": "^6.24.1",
     "babel-preset-env": "^1.7.0",
     "babel-preset-react": "^6.24.1",
-    "electron": "^6.0.11",
+    "electron": "^6.0.12",
     "electron-prebuilt-compile": "4.0.0"
   },
   "dependencies": {
+    "electron-log": "^3.0.8",
     "electron-squirrel-startup": "^1.0.0",
-    "jasons-game-frontend": "file:frontend/jasons-game"
+    "jasons-game-frontend": "file:frontend/jasons-game",
+    "node-fetch": "^2.6.0"
   },
   "scripts": {
     "start": "electron-forge start",
@@ -26,7 +29,10 @@
     "make": "electron-forge make",
     "make-win32": "electron-forge make --platform=win32",
     "make-darwin": "electron-forge make --platform=darwin",
-    "make-linux": "electron-forge make --platform=linux"
+    "make-linux": "electron-forge make --platform=linux",
+    "publish-win32": "electron-forge publish --platform=win32",
+    "publish-darwin": "electron-forge publish --platform=darwin",
+    "publish-linux": "electron-forge publish --platform=linux"
   },
   "config": {
     "forge": "./forge.config.js"

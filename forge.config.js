@@ -10,7 +10,12 @@ function ignorePath(path) {
         /\/bin\//,
         /\/frontend$/,
         /\/frontend\/jasons-game$/,
-        /\/frontend\/main\.js$/
+        /\/frontend\/main\.js$/,
+        /\/frontend\/update\.html$/,
+        /\/frontend\/update_linux\.html$/,
+        /\/frontend\/update\.css$/,
+        /\/frontend\/preload\.js$/,
+        /\/frontend\/restart\.html$/,
     ];
 
     let ignore = true;
@@ -55,11 +60,11 @@ function deleteOtherPlatforms(forgeConfig, buildPath, electronVersion, platform,
 module.exports = {
     "makers": [
         {
-            name: '@electron-forge/maker-zip',
-            platforms: ['darwin', 'linux']
+            "name": '@electron-forge/maker-zip',
+            "platforms": ['darwin', 'linux']
         },
         {
-            name: '@electron-forge/maker-squirrel'
+            "name": '@electron-forge/maker-squirrel'
         }
     ],
     "packagerConfig": {
@@ -96,5 +101,17 @@ module.exports = {
     },
     "hooks": {
         "packageAfterPrune": deleteOtherPlatforms
-    }
+    },
+    "publishers": [
+        {
+            "name": "@electron-forge/publisher-github",
+            "config": {
+                "repository": {
+                    "owner": "quorumcontrol",
+                    "name": "jasons-game"
+                },
+                "prerelease": true
+            }
+        }
+    ]
 };

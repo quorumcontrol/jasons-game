@@ -21,7 +21,7 @@ const loginCmdSignUp = "sign up"
 const loginCmdRecover = "recover"
 const loginCmdRecoveryPhrase = "recovery phrase"
 
-var loginWelcomeMessage = fmt.Sprintf("Welcome to Jason's Game!\nPlease type `%s` or `%s` followed by your email to continue.", loginCmdSignUp, loginCmdRecover)
+var loginWelcomeMessage = fmt.Sprintf("Please type `%s` or `%s` followed by your email to continue.", loginCmdSignUp, loginCmdRecover)
 var loginRecoveryMessage = fmt.Sprintf("Please type `%s` followed by the recovery phrase that was provided when you signed up.", loginCmdRecoveryPhrase)
 
 const loginRecoverySuccessMessage = "Account recovery successful! Transporting you to the land of the fae to continue your adventure."

@@ -1,0 +1,23 @@
+<html>
+  <head>
+    <link rel="stylesheet" href="update.css" />
+  </head>
+  <body>
+    <h1>Please update your game</h1>
+    <p>
+      To play Jason's Game you'll need to download and run the latest version
+      available from our download page:
+    </p>
+    <p>
+      <a id="downloadLink" href="https://hazel.quorumcontrol.now.sh">Download the latest version</a>
+    </p>
+    <script>
+        let downloadLink = document.getElementById('downloadLink');
+
+        downloadLink.addEventListener('click', (e) => {
+            e.preventDefault();
+            openExternal(e.target.getAttribute('href'));
+        })
+    </script>
+  </body>
+</html>

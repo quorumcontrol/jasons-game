@@ -62,33 +62,38 @@ $(FIRSTGOPATH)/bin/golangci-lint:
 	./scripts/download-golangci-lint.sh
 
 $(FIRSTGOPATH)/bin/gotestsum:
-	go get gotest.tools/gotestsum
+	env GO111MODULE=off go get gotest.tools/gotestsum
 
-bin/jasonsgame-darwin-$(BUILD): $(gosources) $(generated) go.mod go.sum
+$(FIRSTGOPATH)/bin/xgo:
+	env GO111MODULE=off go get src.techknowlogick.com/xgo
+
+bin/jasonsgame-darwin-$(BUILD): $(gosources) $(generated) go.mod go.sum $(FIRSTGOPATH)/bin/xgo
 	mkdir -p bin
 	xgo -tags='public' -targets='darwin-10.10/amd64,' -ldflags="-X main.inkDID=${INK_DID}" ./
 	mv github.com/quorumcontrol/jasons-game-darwin-* bin/jasonsgame-darwin-$(BUILD)
 
-bin/jasonsgame-win32-$(BUILD).exe: $(gosources) $(generated) go.mod go.sum
+bin/jasonsgame-win32-$(BUILD).exe: $(gosources) $(generated) go.mod go.sum $(FIRSTGOPATH)/bin/xgo
 	mkdir -p bin
 	xgo -tags='public' -targets='windows-6.0/amd64,' -ldflags="-X main.inkDID=${INK_DID}" ./
 	mv github.com/quorumcontrol/jasons-game-windows-* bin/jasonsgame-win32-$(BUILD).exe
 
-bin/jasonsgame-linux-$(BUILD): $(gosources) $(generated) go.mod go.sum
+bin/jasonsgame-linux-$(BUILD): $(gosources) $(generated) go.mod go.sum $(FIRSTGOPATH)/bin/xgo
 	mkdir -p bin
 	xgo -tags='public' -targets='linux/amd64,' -ldflags="-X main.inkDID=${INK_DID}" ./
 	mv github.com/quorumcontrol/jasons-game-linux-* bin/jasonsgame-linux-$(BUILD)
 
-out/make/zip/darwin: frontend/main.js forge.config.js
+out/make/zip/darwin: bin/jasonsgame-darwin-$(BUILD) frontend/main.js forge.config.js
 	npm run make-darwin
 
-out/make/zip/linux: frontend/main.js forge.config.js
+out/make/zip/linux: bin/jasonsgame-linux-$(BUILD) frontend/main.js forge.config.js
 	npm run make-linux
 
-out/make/squirrel.windows: frontend/main.js forge.config.js
+out/make/squirrel.windows: bin/jasonsgame-win32-$(BUILD).exe frontend/main.js forge.config.js
 	npm run make-win32
 
-build-all: out/make/zip/darwin out/make/zip/linux out/make/squirrel.windows
+all-go-binaries: bin/jasonsgame-win32-$(BUILD).exe bin/jasonsgame-linux-$(BUILD) bin/jasonsgame-darwin-$(BUILD)
+
+all-platforms: out/make/zip/darwin out/make/zip/linux out/make/squirrel.windows
 
 ifeq ($(PLATFORM), all)
   build: $(jsmodules) bin/jasonsgame-win32-$(BUILD).exe bin/jasonsgame-darwin-$(BUILD) bin/jasonsgame-linux-$(BUILD) build-all
@@ -101,6 +106,11 @@ else
   endif
   build: $(jsmodules) bin/jasonsgame-$(PLATFORM)-$(BUILD)$(EXE_SUFFIX) out/make/$(TARGET)
 endif
+
+release: $(jsmodules) all-go-binaries all-platforms
+	npm run publish-win32
+	npm run publish-darwin
+	npm run publish-linux
 
 lint: $(FIRSTGOPATH)/bin/golangci-lint $(generated)
 	$(FIRSTGOPATH)/bin/golangci-lint run --build-tags 'integration public'
