@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"context"
 	"crypto/ecdsa"
 	"fmt"
@@ -103,6 +104,17 @@ func main() {
 				panic(err)
 			}
 
+			encryptionPubKey, err := signupClient.EncryptionPubKey()
+			if err != nil {
+				panic(err)
+			}
+
+			encryptionPubKeyBytes := crypto.FromECDSAPub(encryptionPubKey)
+
+			if !bytes.Equal(encryptionPubKeyBytes, crypto.FromECDSAPub(net.PublicKey())) {
+				panic(fmt.Sprintf("wrong JASONS_GAME_ECDSA_KEY_HEX, use the private key matching the public key %s", hexutil.Encode(encryptionPubKeyBytes)))
+			}
+
 			tree, err := net.GetTree(signupClient.Did())
 			if err != nil {
 				panic(err)
@@ -136,12 +148,12 @@ func main() {
 
 func recursiveSignupExport(ctx context.Context, net *network.RemoteNetwork, f *os.File, data interface{}) {
 	if data == nil {
-		panic("bad data")
+		panic("empty data")
 	}
 
 	dataAsMap, ok := data.(map[string]interface{})
 	if !ok {
-		panic("bad data")
+		panic("bad map data")
 	}
 
 	for _, v := range dataAsMap {
