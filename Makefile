@@ -214,7 +214,7 @@ vendor: go.mod go.sum $(FIRSTGOPATH)/bin/modvendor
 	go mod vendor
 	modvendor -copy="**/*.c **/*.h"
 
-prepare: $(gosources) $(generated) $(packr) $(vendor)
+prepare: $(gosources) $(generated) $(packr) vendor
 
 $(FIRSTGOPATH)/bin/packr2:
 	env GO111MODULE=off go get -u github.com/gobuffalo/packr/v2/packr2
