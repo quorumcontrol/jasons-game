@@ -67,17 +67,17 @@ $(FIRSTGOPATH)/bin/gotestsum:
 $(FIRSTGOPATH)/bin/xgo:
 	env GO111MODULE=off go get src.techknowlogick.com/xgo
 
-bin/jasonsgame-darwin-$(BUILD): $(gosources) $(generated) go.mod go.sum $(FIRSTGOPATH)/bin/xgo
+bin/jasonsgame-darwin-$(BUILD): $(gosources) $(generated) go.mod go.sum vendor $(FIRSTGOPATH)/bin/xgo
 	mkdir -p bin
 	xgo -tags='public' -targets='darwin-10.10/amd64,' -ldflags="-X main.inkDID=${INK_DID}" ./
 	mv github.com/quorumcontrol/jasons-game-darwin-* bin/jasonsgame-darwin-$(BUILD)
 
-bin/jasonsgame-win32-$(BUILD).exe: $(gosources) $(generated) go.mod go.sum $(FIRSTGOPATH)/bin/xgo
+bin/jasonsgame-win32-$(BUILD).exe: $(gosources) $(generated) go.mod go.sum vendor $(FIRSTGOPATH)/bin/xgo
 	mkdir -p bin
 	xgo -tags='public' -targets='windows-6.0/amd64,' -ldflags="-X main.inkDID=${INK_DID}" ./
 	mv github.com/quorumcontrol/jasons-game-windows-* bin/jasonsgame-win32-$(BUILD).exe
 
-bin/jasonsgame-linux-$(BUILD): $(gosources) $(generated) go.mod go.sum $(FIRSTGOPATH)/bin/xgo
+bin/jasonsgame-linux-$(BUILD): $(gosources) $(generated) go.mod go.sum vendor $(FIRSTGOPATH)/bin/xgo
 	mkdir -p bin
 	xgo -tags='public' -targets='linux/amd64,' -ldflags="-X main.inkDID=${INK_DID}" ./
 	mv github.com/quorumcontrol/jasons-game-linux-* bin/jasonsgame-linux-$(BUILD)
