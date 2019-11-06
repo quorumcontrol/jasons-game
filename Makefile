@@ -185,8 +185,18 @@ frontend-build: frontend/jasons-game/public/js/compiled/base.js
 frontend-dev: $(generated) $(jsmodules) frontend/jasons-game/node_modules/.bin/shadow-cljs
 	cd frontend/jasons-game && ./node_modules/.bin/shadow-cljs watch app
 
+fetchdids = ssh ec2-user@54.149.56.75 'for cid in $$(docker ps -q); do docker logs $$cid 2>&1 | grep -o -P "did:tupelo:0x[a-fA-F0-9]+"; done | sort | uniq' > $@
+
 dids.txt:
-	ssh ec2-user@54.149.56.75 'for cid in $$(docker ps -q); do docker logs $$cid 2>&1 | grep -o -P "did:tupelo:0x[a-fA-F0-9]+"; done | sort | uniq' > $@
+	$(fetchdids)
+
+cache/dids.txt:
+	$(fetchdids)
+
+cache/out/nodes.gz: cache/dids.txt
+	go run cache/cmd/main.go
+
+node-cache: cache/out/nodes.gz
 
 bin/benchmark: $(generated) $(gosources) dids.txt
 	go build -o $@ ./benchmark/cmd/cli/main.go
@@ -233,4 +243,4 @@ encrypt: courts/yml/
 decrypt: courts/yml.tar.gz.secret
 	git secret cat courts/yml.tar.gz.secret | tar -zxf -
 
-.PHONY: all build build-all test integration-test localnet clean lint game-server importer jason inkfaucet devink game2 mac-app prepare generated dev down encrypt decrypt
+.PHONY: all build build-all test integration-test localnet clean lint game-server importer jason inkfaucet devink game2 mac-app prepare generated dev down encrypt decrypt node-cache
