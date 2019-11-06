@@ -67,19 +67,19 @@ $(FIRSTGOPATH)/bin/gotestsum:
 $(FIRSTGOPATH)/bin/xgo:
 	env GO111MODULE=off go get src.techknowlogick.com/xgo
 
-bin/jasonsgame-darwin-$(BUILD): $(gosources) $(generated) go.mod go.sum $(FIRSTGOPATH)/bin/xgo
+bin/jasonsgame-darwin-$(BUILD): $(gosources) $(generated) go.mod go.sum vendor $(FIRSTGOPATH)/bin/xgo
 	mkdir -p bin
-	xgo -tags='public' -targets='darwin-10.10/amd64,' -ldflags="-X main.inkDID=${INK_DID}" ./
+	xgo -go go-1.13.4 -tags='public' -targets='darwin-10.10/amd64,' -ldflags="-X main.inkDID=${INK_DID}" ./
 	mv github.com/quorumcontrol/jasons-game-darwin-* bin/jasonsgame-darwin-$(BUILD)
 
-bin/jasonsgame-win32-$(BUILD).exe: $(gosources) $(generated) go.mod go.sum $(FIRSTGOPATH)/bin/xgo
+bin/jasonsgame-win32-$(BUILD).exe: $(gosources) $(generated) go.mod go.sum vendor $(FIRSTGOPATH)/bin/xgo
 	mkdir -p bin
-	xgo -tags='public' -targets='windows-6.0/amd64,' -ldflags="-X main.inkDID=${INK_DID}" ./
+	xgo -go go-1.13.4 -tags='public' -targets='windows-6.0/amd64,' -ldflags="-X main.inkDID=${INK_DID}" ./
 	mv github.com/quorumcontrol/jasons-game-windows-* bin/jasonsgame-win32-$(BUILD).exe
 
-bin/jasonsgame-linux-$(BUILD): $(gosources) $(generated) go.mod go.sum $(FIRSTGOPATH)/bin/xgo
+bin/jasonsgame-linux-$(BUILD): $(gosources) $(generated) go.mod go.sum vendor $(FIRSTGOPATH)/bin/xgo
 	mkdir -p bin
-	xgo -tags='public' -targets='linux/amd64,' -ldflags="-X main.inkDID=${INK_DID}" ./
+	xgo -go go-1.13.4 -tags='public' -targets='linux/amd64,' -ldflags="-X main.inkDID=${INK_DID}" ./
 	mv github.com/quorumcontrol/jasons-game-linux-* bin/jasonsgame-linux-$(BUILD)
 
 out/make/zip/darwin: bin/jasonsgame-darwin-$(BUILD) frontend/main.js forge.config.js
@@ -214,7 +214,7 @@ vendor: go.mod go.sum $(FIRSTGOPATH)/bin/modvendor
 	go mod vendor
 	modvendor -copy="**/*.c **/*.h"
 
-prepare: $(gosources) $(generated) $(packr) $(vendor)
+prepare: $(gosources) $(generated) $(packr) vendor
 
 $(FIRSTGOPATH)/bin/packr2:
 	env GO111MODULE=off go get -u github.com/gobuffalo/packr/v2/packr2
