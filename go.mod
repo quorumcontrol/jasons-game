@@ -8,6 +8,7 @@ require (
 	github.com/aws/aws-lambda-go v1.13.2
 	github.com/btcsuite/btcutil v0.0.0-20190425235716-9e5f4b9a998d
 	github.com/dgraph-io/badger v1.6.0 // indirect
+	github.com/elastic/go-sysinfo v1.1.1 // indirect
 	github.com/ethereum/go-ethereum v1.9.3
 	github.com/gobuffalo/packr/v2 v2.5.3-0.20190708182234-662c20c19dde
 	github.com/gogo/protobuf v1.3.1
@@ -41,8 +42,9 @@ require (
 	github.com/spf13/cobra v0.0.5
 	github.com/stretchr/testify v1.4.0
 	github.com/tyler-smith/go-bip39 v1.0.2
-	golang.org/x/crypto v0.0.0-20191011191535-87dc89f01550
+	golang.org/x/crypto v0.0.0-20191029031824-8986dd9e96cf
 	golang.org/x/net v0.0.0-20190827160401-ba9fcec4b297 // indirect
+	golang.org/x/sys v0.0.0-20191029155521-f43be2a4598c // indirect
 	google.golang.org/grpc v1.22.0
 	gopkg.in/yaml.v2 v2.2.2
 )
