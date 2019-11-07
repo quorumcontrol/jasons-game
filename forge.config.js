@@ -109,8 +109,7 @@ module.exports = {
                 "repository": {
                     "owner": "quorumcontrol",
                     "name": "jasons-game"
-                },
-                "prerelease": true
+                }
             }
         }
     ]
