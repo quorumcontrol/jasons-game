@@ -57,6 +57,8 @@ function deleteOtherPlatforms(forgeConfig, buildPath, electronVersion, platform,
     });
 }
 
+const preRelease = process.env.PRERELEASE !== null && process.env.PRERELEASE !== "";
+
 module.exports = {
     "makers": [
         {
@@ -109,7 +111,8 @@ module.exports = {
                 "repository": {
                     "owner": "quorumcontrol",
                     "name": "jasons-game"
-                }
+                },
+                "prerelease": preRelease
             }
         }
     ]
