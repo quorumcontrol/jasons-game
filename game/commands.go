@@ -12,11 +12,10 @@ var defaultCommandList = commandList{
 	newCommand("help", "help"),
 	newCommand("help", "help location"),
 	newCommand("help", "help [name of object]"),
-	newHiddenCommand("tip-zoom", "go to tip"),
+	//  newHiddenCommand("tip-zoom", "go to tip"),
 	newHiddenCommand("create-location", "create location"),
 	newHiddenCommand("connect-location", "connect location"),
 	newHiddenCommand("exit", "exit"),
-	newHiddenCommand("open-portal", "open portal"),
 	newHiddenCommand("refresh", "refresh"),
 }
 
