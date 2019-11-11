@@ -96,7 +96,7 @@ func (i *BuildPortalInteraction) GetCommand() string {
 }
 
 func (i *BuildPortalInteraction) GetHidden() bool {
-	return false
+	return true
 }
 
 type DeletePortalInteraction struct {
