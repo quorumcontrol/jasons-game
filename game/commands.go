@@ -6,20 +6,16 @@ import (
 
 type commandList []command
 
-// for now the string parsing is not working
 var defaultCommandList = commandList{
 	newCommand("create-object", "create object"),
 	newCommand("player-inventory-list", "look in bag"),
 	newCommand("help", "help"),
 	newCommand("help", "help location"),
 	newCommand("help", "help [name of object]"),
-	newHiddenCommand("tip-zoom", "go to tip"),
+	//  newHiddenCommand("tip-zoom", "go to tip"),
 	newHiddenCommand("create-location", "create location"),
 	newHiddenCommand("connect-location", "connect location"),
 	newHiddenCommand("exit", "exit"),
-	newHiddenCommand("say", "say"),
-	newHiddenCommand("shout", "shout"),
-	newHiddenCommand("open-portal", "open portal"),
 	newHiddenCommand("refresh", "refresh"),
 }
 
