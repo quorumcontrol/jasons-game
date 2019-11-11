@@ -33,8 +33,6 @@ var log = logging.Logger("game")
 
 const hasArtifactHint = "-"
 
-var shoutChannel = []byte("jasons-game-shouting-players")
-
 type ping struct{}
 
 type indentedList []string
@@ -47,10 +45,8 @@ type Game struct {
 	messageSequence      uint64
 	locationDid          string
 	locationActor        *actor.PID
-	chatActor            *actor.PID
 	inventoryActor       *actor.PID
 	inventoryHandler     *PlayerInventoryHandler
-	shoutActor           *actor.PID
 	commandsByActorCache map[*actor.PID]commandList
 	behavior             actor.Behavior
 	inkDID               string
@@ -137,9 +133,6 @@ func (g *Game) ReceiveGame(actorCtx actor.Context) {
 	case *jasonsgame.CommandUpdate:
 		log.Debugf("actor received command update request: %+v", msg)
 		g.sendCommandUpdate(actorCtx)
-	case *jasonsgame.ChatMessage, *jasonsgame.ShoutMessage:
-		log.Debugf("actor received chat / shout message: %+v", msg)
-		g.sendUserMessage(actorCtx, msg)
 	case *StateChange:
 		log.Debugf("actor received state change message: %+v", msg)
 		g.handleStateChange(actorCtx, msg)
@@ -203,8 +196,6 @@ func (g *Game) initializeGame(actorCtx actor.Context) {
 	}
 
 	g.initializeCommon(actorCtx)
-
-	g.shoutActor = actorCtx.Spawn(g.network.Community().NewSubscriberProps(shoutChannel))
 
 	g.inventoryHandler = NewPlayerInventoryHandler(g.network, g.playerTree.Did())
 
@@ -339,12 +330,6 @@ func (g *Game) handleUserInput(actorCtx actor.Context, input *jasonsgame.UserInp
 	case "refresh":
 		err = g.refreshAllInteractions(actorCtx)
 		g.sendUILocation(actorCtx)
-	case "say":
-		actorCtx.Send(g.chatActor, args)
-	case "shout":
-		if err := g.network.Community().Send(shoutChannel, &jasonsgame.ShoutMessage{Message: args}); err != nil {
-			log.Errorf("failed to broadcast ShoutMessage: %s", err)
-		}
 	case "create-object":
 		err = g.handleCreateObjectFromArgs(actorCtx, args)
 	case "player-inventory-list":
@@ -901,10 +886,6 @@ func formatUserMessage(mesgInter interface{}) *jasonsgame.MessageToUser {
 	case *jasonsgame.Location:
 		msgToUser.Location = msg
 		msgToUser.Message = msg.Description
-	case *jasonsgame.ChatMessage:
-		msgToUser.Message = fmt.Sprintf("Someone here says: %s", msg.Message)
-	case *jasonsgame.ShoutMessage:
-		msgToUser.Message = fmt.Sprintf("Someone SHOUTED: %s", msg.Message)
 	default:
 		log.Errorf("error, unknown message type: %v", msg)
 	}
@@ -976,17 +957,6 @@ func (g *Game) setLocation(actorCtx actor.Context, locationDid string) {
 	if err != nil {
 		panic(errors.Wrap(err, "error attaching interactions for location"))
 	}
-
-	if g.chatActor != nil {
-		log.Debug("chat actor found; sending stop message")
-		actorCtx.Stop(g.chatActor)
-	}
-
-	log.Debug("spawning new chat actor")
-	g.chatActor = actorCtx.Spawn(NewChatActorProps(&ChatActorConfig{
-		Did:       locationDid,
-		Community: g.network.Community(),
-	}))
 }
 
 func (g *Game) setCommands(actorCtx actor.Context, newCommands commandList) {
