@@ -27,6 +27,7 @@ import (
 	"github.com/quorumcontrol/jasons-game/pb/jasonsgame"
 	"github.com/quorumcontrol/jasons-game/ui"
 	"github.com/quorumcontrol/jasons-game/utils/stringslice"
+	"github.com/quorumcontrol/messages/build/go/signatures"
 )
 
 var log = logging.Logger("game")
@@ -340,6 +341,10 @@ func (g *Game) handleUserInput(actorCtx actor.Context, input *jasonsgame.UserInp
 		err = g.handleCreateLocation(actorCtx, args)
 	case "connect-location":
 		err = g.handleConnectLocation(actorCtx, args)
+	case "transfer-object":
+		err = g.handleTransferObjectCmd(actorCtx, args)
+	case "receive-object":
+		err = g.handleReceiveObjectCmd(actorCtx, args)
 	case "help":
 		err = g.handleHelp(actorCtx, args)
 	case "interaction":
@@ -350,6 +355,144 @@ func (g *Game) handleUserInput(actorCtx actor.Context, input *jasonsgame.UserInp
 	if err != nil {
 		g.sendUserMessage(actorCtx, fmt.Sprintf("error with your command: %v", err))
 	}
+}
+
+var transferRegex = regexp.MustCompile(`(.*) to (did:tupelo:[0-9A-Za-z]{42}){1}\s?$`)
+
+func (g *Game) handleTransferObjectCmd(actorCtx actor.Context, args string) error {
+	matches := transferRegex.FindStringSubmatch(args)
+	if len(matches) < 3 {
+		return fmt.Errorf("transfer object requires the following syntax:\n\n`transfer object {object name} to {player DID}`")
+	}
+
+	objectName := strings.TrimSpace(matches[1])
+	targetDid := matches[2]
+
+	inventoryList, err := g.getInventoryList(actorCtx, g.inventoryActor)
+	if err != nil {
+		return fmt.Errorf("error getting player inventory list: %v", err)
+	}
+
+	if len(inventoryList.Objects) == 0 {
+		g.sendUserMessage(actorCtx, fmt.Sprintf("can't transfer %s, your bag of hodling appears to be empty", objectName))
+		return nil
+	}
+
+	var objectDid string
+
+	for invObjName, invObj := range inventoryList.Objects {
+		if invObjName == objectName {
+			objectDid = invObj.Did
+			break
+		}
+	}
+
+	if len(objectDid) == 0 {
+		g.sendUserMessage(actorCtx, fmt.Sprintf("can't transfer %s, its not in your bag of hodling", objectName))
+		return nil
+	}
+
+	// This is a workaround to avoid rewriting the inventory handlers to deal with
+	// "unacked" transfers. Essentially this just waits till the inventory handler
+	// does its chown to the new owner, then sets an additional attribute here,
+	// which then triggers the UnrestrictedRemoveHandlers "ack", allowing the
+	// TransferObjectRequest future to complete below
+	go func() {
+		future := actor.NewFuture(30 * time.Second)
+		pid := actorCtx.Spawn(actor.PropsFromFunc(func(subActorCtx actor.Context) {
+			switch msg := subActorCtx.Message().(type) {
+			case *actor.Started:
+				subActorCtx.Spawn(g.network.NewCurrentStateSubscriptionProps(objectDid))
+			case *signatures.CurrentState:
+				subActorCtx.Send(future.PID(), msg)
+			}
+		}))
+		defer actorCtx.Stop(pid)
+
+		// object changed owners inside UnrestrictedRemoveHandler
+		_, err := future.Result()
+		if err != nil {
+			log.Error(err)
+			return
+		}
+
+		newTree, err := g.network.GetTree(objectDid)
+		if err != nil {
+			log.Error(err)
+			return
+		}
+
+		_, err = g.network.UpdateChainTree(newTree, "jasons-game/transferred-from", g.playerTree.tree.MustId())
+		if err != nil {
+			log.Error(err)
+		}
+	}()
+
+	response, err := actorCtx.RequestFuture(g.inventoryActor, &TransferObjectRequest{
+		Did: objectDid,
+		To:  targetDid,
+	}, 30*time.Second).Result()
+
+	if err != nil {
+		return errors.Wrap(err, "error executing transfer object request")
+	}
+
+	resp, ok := response.(*TransferObjectResponse)
+	if !ok {
+		return fmt.Errorf("error casting transfer object response")
+	}
+
+	if resp.Error != nil {
+		return resp.Error
+	}
+
+	g.sendUserMessage(actorCtx, fmt.Sprintf("%s has been sent for transfer - the receiving player must now type:\n\n`receive object %s`\n\nif you wish to cancel the transfer, you may run the preceding command to add the object back to your bag of hodling", objectName, objectDid))
+	return nil
+}
+
+func (g *Game) handleReceiveObjectCmd(actorCtx actor.Context, args string) error {
+	objectDid := args
+
+	if matched, _ := regexp.MatchString(`did:tupelo:[0-9A-Za-z]{42}`, objectDid); !matched {
+		return fmt.Errorf("must specify an DID to recieve object")
+	}
+
+	object, err := FindObjectTree(g.network, objectDid)
+	if err != nil {
+		return errors.Wrap(err, "object not found")
+	}
+
+	if object == nil {
+		g.sendUserMessage(actorCtx, fmt.Sprintf("object %s not found", objectDid))
+		return nil
+	}
+
+	objName, err := object.GetName()
+	if err != nil {
+		return errors.Wrap(err, "error getting object name")
+	}
+
+	changeEventCh := make(chan *InventoryChangeEvent, 1)
+	subscription := g.inventoryHandler.Subscribe(objectDid, func(evt *InventoryChangeEvent) {
+		changeEventCh <- evt
+	})
+	defer g.inventoryHandler.Unsubscribe(subscription)
+
+	g.inventoryHandler.ExpectObject(objectDid)
+
+	actorCtx.Send(g.inventoryActor, &jasonsgame.TransferredObjectMessage{
+		To:     g.playerTree.Did(),
+		Object: objectDid,
+	})
+
+	changeEvent := <-changeEventCh
+
+	if changeEvent.Error != "" {
+		return fmt.Errorf(changeEvent.Error)
+	}
+
+	g.sendUserMessage(actorCtx, fmt.Sprintf("%s (%s) has been transferred into your bag of hodling", objName, objectDid))
+	return nil
 }
 
 func (g *Game) handleHelp(actorCtx actor.Context, args string) error {
