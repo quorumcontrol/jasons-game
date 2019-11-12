@@ -99,8 +99,13 @@ func (r *RespawnActor) generateRandomArtifact(salt []byte) (*consensus.SignedCha
 
 	inscribeableKeys := r.cfg.inscribeableKeys()
 	for _, inscriptionKey := range inscribeableKeys {
-		// Andrew wanted blanks in here 2/7 of time
-		inscribeableValues := append(r.cfg.inscribeableValuesFor(inscriptionKey), []string{"", ""}...)
+		// Andrew wanted blanks in here 2/7 of time, except for Age
+		var inscribeableValues []string
+		if inscriptionKey == "Age" {
+			inscribeableValues = r.cfg.inscribeableValuesFor(inscriptionKey)
+		} else {
+			inscribeableValues = append(r.cfg.inscribeableValuesFor(inscriptionKey), []string{"", ""}...)
+		}
 		randomInscriptionValue := inscribeableValues[random.Intn(len(inscribeableValues))]
 		variables[inscriptionKey] = randomInscriptionValue
 	}
