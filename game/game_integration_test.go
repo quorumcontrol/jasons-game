@@ -5,6 +5,7 @@ package game
 import (
 	"context"
 	"fmt"
+	"strings"
 	"testing"
 	"time"
 
@@ -12,6 +13,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/quorumcontrol/jasons-game/config"
+	"github.com/quorumcontrol/jasons-game/game/trees"
 	"github.com/quorumcontrol/jasons-game/network"
 	"github.com/quorumcontrol/jasons-game/pb/jasonsgame"
 	"github.com/quorumcontrol/jasons-game/ui"
@@ -38,6 +40,9 @@ func TestFullIntegration(t *testing.T) {
 	playerChain, err := net.CreateLocalChainTree("player")
 	require.Nil(t, err)
 	playerTree, err := CreatePlayerTree(net, playerChain.MustId())
+	require.Nil(t, err)
+
+	otherPlayerTree, err := net.CreateChainTree()
 	require.Nil(t, err)
 
 	gameCfg := &GameConfig{PlayerTree: playerTree, UiActor: uiActor, Network: net}
@@ -76,11 +81,52 @@ func TestFullIntegration(t *testing.T) {
 	rootCtx.Send(gameActor, &jasonsgame.UserInput{Message: "atesthiddencommand"})
 	stream.Wait()
 
+	stream.ExpectMessage("transfer-test has been created", 3*time.Second)
+	rootCtx.Send(gameActor, &jasonsgame.UserInput{Message: "create object transfer-test"})
+	stream.Wait()
+
+	inv, err := trees.FindInventoryTree(net, playerTree.tree.MustId())
+	require.Nil(t, err)
+
+	objDid, err := inv.DidForName("transfer-test")
+	require.Nil(t, err)
+	require.NotEmpty(t, objDid)
+
+	stream.ExpectMessage("transfer-test", 5*time.Second)
+	rootCtx.Send(gameActor, &jasonsgame.UserInput{Message: "look in bag"})
+	stream.Wait()
+
+	stream.ExpectMessage("transfer-test has been sent for transfer", 5*time.Second)
+	rootCtx.Send(gameActor, &jasonsgame.UserInput{Message: "transfer object transfer-test to " + otherPlayerTree.MustId()})
+	stream.Wait()
+
+	err = stream.ClearMessages()
+	require.Nil(t, err)
+	rootCtx.Send(gameActor, &jasonsgame.UserInput{Message: "look in bag"})
+	time.Sleep(300 * time.Millisecond)
+	msgs := filterUserMessages(t, stream.GetMessages())
+
+	includesTransferTestObj := false
+	for _, msg := range msgs {
+		if strings.Contains(msg.Message, "transfer-test") {
+			includesTransferTestObj = true
+		}
+	}
+	require.False(t, includesTransferTestObj)
+
+	stream.ExpectMessage(fmt.Sprintf("transfer-test (%s) has been transferred", objDid), 5*time.Second)
+	rootCtx.Send(gameActor, &jasonsgame.UserInput{Message: "receive object " + objDid})
+	stream.Wait()
+
+	stream.ExpectMessage("transfer-test", 5*time.Second)
+	rootCtx.Send(gameActor, &jasonsgame.UserInput{Message: "look in bag"})
+	stream.Wait()
+
 	err = stream.ClearMessages()
 	require.Nil(t, err)
 	rootCtx.Send(gameActor, &jasonsgame.UserInput{Message: "help location"})
 	time.Sleep(100 * time.Millisecond)
-	msgs := filterUserMessages(t, stream.GetMessages())
+	msgs = filterUserMessages(t, stream.GetMessages())
 	includesHidden := false
 	for _, msg := range msgs {
 		if msg.Message == "atesthiddencommand" {
