@@ -214,6 +214,10 @@ func (g *Game) initializeGame(actorCtx actor.Context) {
 
 	g.sendUserMessage(actorCtx, fmt.Sprintf("Welcome Player %s", g.playerTree.Did()))
 
+	if flash, _ := static.Get(g.network, "FlashMessage"); len(flash) > 0 {
+		g.sendUserMessage(actorCtx, flash)
+	}
+
 	l, err := g.getCurrentLocation(actorCtx)
 
 	if err != nil {
