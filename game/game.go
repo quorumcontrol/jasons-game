@@ -212,14 +212,11 @@ func (g *Game) initializeGame(actorCtx actor.Context) {
 
 	g.setLocation(actorCtx, g.getDefaultLocation())
 
-	g.sendUserMessage(
-		actorCtx,
-		fmt.Sprintf("Created Player %s \n( %s )\nHome: %s \n( %s )",
-			g.playerTree.Did(),
-			g.playerTree.Tip().String(),
-			g.playerTree.HomeLocation.MustId(),
-			g.playerTree.HomeLocation.Tip().String()),
-	)
+	g.sendUserMessage(actorCtx, fmt.Sprintf("Welcome Player %s", g.playerTree.Did()))
+
+	if flash, _ := static.Get(g.network, "FlashMessage"); len(flash) > 0 {
+		g.sendUserMessage(actorCtx, flash)
+	}
 
 	l, err := g.getCurrentLocation(actorCtx)
 
