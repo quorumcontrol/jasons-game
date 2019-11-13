@@ -3,11 +3,13 @@ package inventory
 import (
 	"fmt"
 
+	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/gogo/protobuf/proto"
 	"github.com/quorumcontrol/jasons-game/game/trees"
 	"github.com/quorumcontrol/jasons-game/handlers"
 	"github.com/quorumcontrol/jasons-game/network"
 	"github.com/quorumcontrol/jasons-game/pb/jasonsgame"
+	"github.com/quorumcontrol/jasons-game/utils/stringslice"
 )
 
 type UnrestrictedAddHandler struct {
@@ -45,14 +47,25 @@ func (h *UnrestrictedAddHandler) Handle(msg proto.Message) error {
 			return nil
 		}
 
-		err = targetInventory.Add(msg.Object)
-		if err != nil {
-			return err
-		}
-
 		objectTree, err := h.network.GetTree(msg.Object)
 		if err != nil {
 			return fmt.Errorf("error fetching object chaintree %s: %v", msg.Object, err)
+		}
+
+		objectAuths, err := objectTree.Authentications()
+		if err != nil {
+			return fmt.Errorf("error fetching object chaintree authentications %s; error: %v", msg.Object, err)
+		}
+
+		ownerAddr := crypto.PubkeyToAddress(*h.network.PublicKey()).String()
+		isOwner := stringslice.Include(objectAuths, ownerAddr)
+		if !isOwner {
+			return fmt.Errorf("can not transfer %s, current player is not an owner", msg.Object)
+		}
+
+		err = targetInventory.Add(msg.Object)
+		if err != nil {
+			return err
 		}
 
 		_, err = h.network.ChangeChainTreeOwner(objectTree, targetAuths)
