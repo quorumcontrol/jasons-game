@@ -22,6 +22,11 @@
     :dispatch [::terminal/enable-input]}))
 
 (re-frame/reg-event-fx
+ :user/error
+ (fn [{:keys [db]} [_ error-msg]]
+   {:db (update db ::terminal/state terminal/add-error-message error-msg)}))
+
+(re-frame/reg-event-fx
   :user/heartbeat
   (fn [_ _]
     {:dispatch [::terminal/enable-input]}))

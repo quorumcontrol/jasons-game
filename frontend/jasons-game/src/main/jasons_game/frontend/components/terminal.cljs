@@ -13,21 +13,42 @@
 (defn text->output [txt]
   (.makeTextOutput OutputFactory txt))
 
-(defn msg->output [msg]
+(defn text->error-output [txt]
+  (.makeErrorOutput OutputFactory
+                    (clj->js {:source "game"
+                              :type txt})))
+
+(defn msg->output* [msg]
   (-> msg
       :message
-      (str "\n\n")
+      (str "\n\n")))
+
+(defn msg->output [msg]
+  (-> msg
+      msg->output*
       text->output))
 
-(defn add-output [outputs new-output]
+(defn msg->error-output [msg]
+  (-> msg
+      msg->output*
+      text->error-output))
+
+(defn add-output-record [outputs new-output]
   (.addRecord Outputs outputs new-output))
+
+(defn add-output [state output]
+  (-> state
+      .getOutputs
+      (add-output-record output)
+      (as-> new-outputs (.setOutputs state new-outputs))))
 
 (defn add-text-message [state msg]
   (let [msg-output (msg->output msg)]
-    (-> state
-        .getOutputs
-        (add-output msg-output)
-        (as-> new-outputs (.setOutputs state new-outputs)))))
+    (add-output state msg-output)))
+
+(defn add-error-message [state msg]
+  (let [err-output (msg->error-output msg)]
+    (add-output state err-output)))
 
 (defn update-commands [state commands]
   (let [new-mapping (->> commands
