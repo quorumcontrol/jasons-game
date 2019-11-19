@@ -35,3 +35,11 @@
  :command/update
  (fn [db [_ command-update]]
    (update db ::terminal/state terminal/update-commands command-update)))
+
+(re-frame/reg-event-fx
+ ::remote/game-end
+ (fn [{:keys [db]} _]
+   (.log js/console "Handling game-end event")
+   {:dispatch [:user/error
+               {:message "Communication failure. Please quit and restart the app."
+                :heartbeat false}]}))

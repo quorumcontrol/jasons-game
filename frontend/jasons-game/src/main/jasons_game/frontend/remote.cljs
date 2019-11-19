@@ -83,7 +83,7 @@
 
 (defn handle-game-end [resp]
   (.log js/console "game end, redoing" resp)
-  (re-frame/dispatch [::listen]))
+  (re-frame/dispatch [::game-end]))
 
 (re-frame/reg-fx
  ::listen
