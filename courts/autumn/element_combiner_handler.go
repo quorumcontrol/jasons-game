@@ -18,14 +18,14 @@ import (
 	"github.com/quorumcontrol/tupelo-go-sdk/consensus"
 )
 
-const combinationObjectName = "Bowl"
+const combinationObjectName = "bowl"
 const combinationSuccessMsg = "Your offering has been accepted, a new element is now yours."
 const combinationBaseFailureMsg = "error combining: %s - try again"
 const combinationFailureMsg = "The %s gave you nothing for your offering. It must not have been deemed acceptable."
 const combinationBlockedFailureMsg = "The Fae are especially susceptible to silver therefore transmuting elements into silver can not be allowed.\nYour offering has not been deemed worthy."
 const combinationNumFailureMsg = "A proper offering must include %d elements."
 
-const comboObjectPlayerPath = "Player"
+const comboObjectPlayerPath = "player"
 const comboObjectElementsPath = "elements"
 
 type ElementCombinerHandler struct {
@@ -101,8 +101,8 @@ func (h *ElementCombinerHandler) setup() error {
 		return errors.Wrap(err, "getting loc tree")
 	}
 
-	// Use a unique inventory per Player
-	locTree, err = h.net.UpdateChainTree(locTree, "jasons-game/use-per-Player-inventory", true)
+	// Use a unique inventory per player
+	locTree, err = h.net.UpdateChainTree(locTree, "jasons-game/use-per-player-inventory", true)
 	if err != nil {
 		return errors.Wrap(err, "updating loc tree")
 	}
@@ -223,15 +223,15 @@ func (h *ElementCombinerHandler) handlePickupElement(msg *jasonsgame.RequestObje
 		return sender.Errorf(baseErr("could not fetch object"))
 	}
 	if playerDidUncast == nil || playerDidUncast.(string) != msg.To {
-		return sender.Errorf(baseErr("incorrect Player did for object"))
+		return sender.Errorf(baseErr("incorrect player did for object"))
 	}
 	playerTree, err := h.net.GetTree(msg.To)
 	if err != nil {
-		return sender.Errorf(baseErr("could not fetch Player tree"))
+		return sender.Errorf(baseErr("could not fetch player tree"))
 	}
 	playerAuths, err := playerTree.Authentications()
 	if err != nil {
-		return sender.Errorf(baseErr("could not fetch Player tree"))
+		return sender.Errorf(baseErr("could not fetch player tree"))
 	}
 	playerInventory := trees.NewInventoryTree(h.net, playerTree)
 
@@ -278,9 +278,9 @@ func (h *ElementCombinerHandler) handlePickupElement(msg *jasonsgame.RequestObje
 
 	existing, err := playerInventory.DidForName(newElement.Name())
 	if err != nil {
-		return sender.Errorf(baseErr("could not fetch Player inventory"))
+		return sender.Errorf(baseErr("could not fetch player inventory"))
 	}
-	// if Player already has object, return error
+	// if player already has object, return error
 	if len(existing) > 0 {
 		return sender.Errorf(baseErr("can not pick up %s, one already exists in your inventory", newElement.Name()))
 	}
