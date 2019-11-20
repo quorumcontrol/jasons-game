@@ -22,6 +22,11 @@
     :dispatch [::terminal/enable-input]}))
 
 (re-frame/reg-event-fx
+ :user/error
+ (fn [{:keys [db]} [_ error-msg]]
+   {:db (update db ::terminal/state terminal/add-error-message error-msg)}))
+
+(re-frame/reg-event-fx
   :user/heartbeat
   (fn [_ _]
     {:dispatch [::terminal/enable-input]}))
@@ -30,3 +35,11 @@
  :command/update
  (fn [db [_ command-update]]
    (update db ::terminal/state terminal/update-commands command-update)))
+
+(re-frame/reg-event-fx
+ ::remote/game-end
+ (fn [{:keys [db]} _]
+   (.log js/console "Handling game-end event")
+   {:dispatch [:user/error
+               {:message "Communication failure. Please quit and restart the app."
+                :heartbeat false}]}))
