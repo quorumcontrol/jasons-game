@@ -43,7 +43,7 @@ func main() {
 		}
 		defer f.Close()
 
-		_, err = f.Write([]byte("num,player DID,prize DID\n"))
+		_, err = f.Write([]byte("num,player DID,prize DID,signup key\n"))
 		if err != nil {
 			panic(err)
 		}
@@ -76,14 +76,17 @@ func main() {
 					panic(err)
 				}
 
-				// winnerTree, err := net.GetTree(winner.(string))
-				// if err != nil {
-				// 	panic(err)
-				// }
-				// fmt.Println(winnerTree.ChainTree.Dag.Dump(ctx))
-				// panic("exit")
+				winnerTree, err := net.GetTree(winner.(string))
+				if err != nil {
+					panic(err)
+				}
 
-				_, err = f.Write([]byte(strings.Join([]string{winnerNum, winner.(string), prize.(string)}, ",") + "\n"))
+				auths, err := winnerTree.Authentications()
+				if err != nil {
+					panic(err)
+				}
+
+				_, err = f.Write([]byte(strings.Join([]string{winnerNum, winner.(string), prize.(string), auths[0]}, ",") + "\n"))
 				if err != nil {
 					panic(err)
 				}
